@@ -1,0 +1,12 @@
+flowchart LR
+    O["Outlook classico<br/>Store aperti e originali"] -->|"OOM: thread UI"| A["Add-in COM<br/>Ribbon e WebView2"]
+    A -->|"Richiesta secondo profilo e policy"| L["Client IA<br/>Ollama locale o provider cloud"]
+    A -->|"Copie temporanee"| X["AttachmentExtractor<br/>Processo isolato"]
+    A <-->|"Dati semplici: pipe locale con verifica SID"| T["ConfigTool / tray<br/>ArchiveEngine"]
+    T <-->|"Unico proprietario"| D[("SQLite cifrato<br/>Metadati, indice e schede")]
+    C["ConfigTool GUI / CLI"] --> F["config.json e vault DPAPI LocalMachine"]
+    F -.-> A
+    F -.-> T
+    K["Core: modelli, prompt, regole senza COM"] -.-> A
+    K -.-> T
+    D --- P["Chiave archivio DPAPI CurrentUser"]

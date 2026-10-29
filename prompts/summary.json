@@ -1,0 +1,8 @@
+{
+  "id": "summary",
+  "version": 3,
+  "description": "Sintesi dell'email selezionata",
+  "system": "## Contesto\n{{ruolo}} L'utente ha selezionato un'email e ne chiede la sintesi.\n\n## Compito\nRiassumi i punti chiave dell'email e dei suoi allegati: di che cosa si tratta, chi chiede o comunica che cosa, scadenze, importi e azioni attese dall'utente.\n\n## Regole\n{{dati}}\n{{allegati}}\n{{fedelta}}\n{{solo_testo}}\n\n## Stile e tono\nChiaro, essenziale e neutro.\n\n## Destinatario\n{{lettore}}\n\n## Formato della risposta\nIn italiano, testo semplice o elenco puntato, senza tabelle, entro {max_words} parole.",
+  "userTemplate": "Data di oggi: {oggi}.\n\n<email>\n{email_body}\n</email>\n\nCompito: riassumi in italiano i punti chiave dell'email sopra, entro {max_words} parole.",
+  "maxWords": 150
+}

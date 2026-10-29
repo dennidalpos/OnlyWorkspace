@@ -1,0 +1,14 @@
+---
+name: onlyworkspace-assets
+description: Maintain OnlyWorkspace visual generators, branding, application icons, social PNGs, presentation or product-sheet exports, and installed-build screenshots. Use for the repository asset pipeline rather than arbitrary image generation.
+---
+
+# Visual asset workflow
+
+- Sources are `scripts/generate-assets.py` and `scripts/generate-social-assets.py`; outputs and copy are under `assets/`. Compare functional claims with `docs/` and open work in the SecondBrain dossier tracker `02-areas/products/OnlyWorkspace/tracker.json`; generated output is not evidence of implemented or qualified behavior.
+- The full generator writes brand/architecture/deck/print assets, their PDFs, `src/OnlyWorkspace.ConfigTool/Assets/OnlyWorkspace.ico`, and `src/OnlyWorkspace.Outlook/UI/ribbon-icon-16.png`/`ribbon-icon-32.png`, then calls the social generator. A run can therefore change production resources as well as marketing files. It rasterizes and removes SVGs throughout `assets/`; use a copied fixture tree when only verifying commands.
+- Full generation requires Python with Pillow/ReportLab, Node and an existing Sharp package. `python scripts/generate-assets.py --help` is read-only. For generation, `python scripts/generate-assets.py --node-modules $modulesDir` accepts an existing directory containing Sharp; verify module resolution before running it. There is no output-directory or dry-run option.
+- Social-only generation is `python scripts/generate-social-assets.py`, using Pillow and Windows Segoe UI fonts (Arial fallback). It has no argument parser: adding `--help` does not make it read-only. It writes seven 1080×1350 PNGs in `assets/social/`, not a social PDF.
+- Screenshot inputs are the three PNGs in `assets/screenshots/installed/`; the full generator's `embed` checks their PNG signature, while the social generator opens images through Pillow. Social cards 01–04 visibly identify the installed captures dated 21/10/2026 on synthetic mail; 05–07 identify themselves as illustrations. Keep those labels and `assets/social_copy.md` aligned with any future captures. Use synthetic mail for new captures; do not label an illustration or an older capture as a current UI trial.
+- The full generator's deck embeds `assets/architecture/system.png` before that run rasterizes the new architecture SVG. After changing its drawing or shared `mark()`, use a second pass to refresh the embedded deck image; check icon resources too. Preserve screenshot PNG inputs and keep unrelated SVGs out of the copied render tree during isolated trials.
+- Verify output inventory/dimensions and inspect affected PNGs, PDF pages and application icon sizes. Rendering proves file production and layout, not privacy guarantees or runtime qualification. Installed UI captures, signing and publication are separate workflows; [packaging](../onlyworkspace-packaging/SKILL.md) covers deployment.

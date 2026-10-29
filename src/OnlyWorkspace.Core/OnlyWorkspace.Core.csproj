@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net48;net10.0</TargetFrameworks>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <RootNamespace>OnlyWorkspace.Core</RootNamespace>
+    <AssemblyName>OnlyWorkspace.Core</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MimeKitLite" Version="4.18.1" />
+    <PackageReference Include="Nager.PublicSuffix" Version="3.8.0" />
+    <EmbeddedResource Include="Security\public_suffix_list.dat" />
+    <InternalsVisibleTo Include="OnlyWorkspace.Tests" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+    <Reference Include="System.Web" />
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="All" />
+    <PackageReference Include="System.Text.Json" Version="10.0.13" />
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="10.0.13" />
+  </ItemGroup>
+</Project>

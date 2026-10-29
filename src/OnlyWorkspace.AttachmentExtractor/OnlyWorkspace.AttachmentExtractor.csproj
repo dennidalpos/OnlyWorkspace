@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net48</TargetFramework>
+    <Platforms>AnyCPU</Platforms>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <RootNamespace>OnlyWorkspace.AttachmentExtractor</RootNamespace>
+    <AssemblyName>OnlyWorkspace.AttachmentExtractor</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="All" />
+    <PackageReference Include="PdfPig" Version="0.1.16" />
+    <PackageReference Include="DocumentFormat.OpenXml" Version="3.5.1" />
+    <PackageReference Include="OpenMcdf" Version="3.3.0" />
+    <PackageReference Include="ExcelDataReader" Version="3.9.0" />
+    <!-- Lite: MIME parser only, without the S/MIME and PGP stack (BouncyCastle). -->
+    <PackageReference Include="MimeKitLite" Version="4.18.1" />
+    <!-- E8: Windows Runtime metadata for Windows.Media.Ocr and Windows.Data.Pdf, part of Windows 10+; compile time only,
+         nothing is copied: https://learn.microsoft.com/en-us/windows/apps/desktop/modernize/desktop-to-uwp-enhance -->
+    <PackageReference Include="Microsoft.Windows.SDK.Contracts" Version="10.0.19041.1" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- ODF (zip + content.xml), RTF (RichTextBox) and .p7m (SignedCms) readers: framework assemblies only. -->
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.Security" />
+    <Reference Include="System.Windows.Forms" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\OnlyWorkspace.Core\OnlyWorkspace.Core.csproj" />
+  </ItemGroup>
+</Project>

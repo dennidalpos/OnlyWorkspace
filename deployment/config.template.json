@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "defaultProfile": "ollama-lan",
+  "attachmentOcr": true,
+  "limits": {
+    "maxSearchItems": 50,
+    "followUpDays": 5,
+    "maxAnalysisEmails": 300
+  },
+  "history": {
+    "enabled": true,
+    "retentionDays": 90,
+    "maxConversations": 200
+  },
+  "logging": {
+    "level": "Information"
+  },
+  "archive": {
+    "enabled": true,
+    "indexAttachmentText": true
+  },
+  "profiles": [
+    {
+      "id": "ollama-lan",
+      "displayName": "Ollama locale",
+      "type": "ollama",
+      "baseUrl": "http://127.0.0.1:11434",
+      "authType": "none",
+      "model": "qwen3.5:9b",
+      "contextBudgetTokens": 12698,
+      "maxOutputTokens": 2048,
+      "temperature": 0.3,
+      "numCtx": 16384,
+      "keepAlive": "30m",
+      "disableThinking": true,
+      "firstTokenTimeoutSeconds": 120,
+      "idleTimeoutSeconds": 60,
+      "useSystemProxy": false,
+      "external": false,
+      "allowAttachmentUpload": false
+    }
+  ]
+}

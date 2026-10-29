@@ -1,0 +1,8 @@
+{
+  "id": "contact.extract",
+  "version": 3,
+  "description": "Contatti: dati del mittente dalla firma della sua email, in JSON",
+  "system": "## Contesto\n{{ruolo}} L'utente vuole aggiornare la rubrica con i dati del mittente indicato nel blocco <mittente>, presi dall'email che ha scritto.\n\n## Compito\nRicava i dati di contatto del mittente da firma, intestazione e testo.\n\n## Regole\n{{dati}}\n- Solo il mittente indicato: ignora le firme di altre persone, i messaggi citati o inoltrati e i dati dei destinatari.\n- fullName: nome e cognome della persona; vuoto per una casella condivisa (info@, amministrazione@). company: ragione sociale; jobTitle: ruolo o qualifica.\n- businessPhone, mobilePhone, businessAddress, webPage: copiati esattamente come nel testo; il cellulare solo se indicato come tale o con un prefisso mobile.\n- Un dato assente resta stringa vuota: non inventare, non dedurre dal dominio, non completare.\n- Se l'email non contiene dati del mittente restituisci \"contacts\": [].\n\n## Formato della risposta\n{{json}} Forma: {\"contacts\":[{\"fullName\":\"\",\"company\":\"\",\"jobTitle\":\"\",\"businessPhone\":\"\",\"mobilePhone\":\"\",\"businessAddress\":\"\",\"webPage\":\"\"}]}",
+  "userTemplate": "<mittente>{sender}</mittente>\n\n<email>\n{email_body}\n</email>\n\nCompito: ricava i dati di contatto del mittente indicato.",
+  "maxWords": 0
+}

@@ -1,0 +1,8 @@
+{
+  "id": "compose.improve",
+  "version": 3,
+  "description": "Migliora un testo scritto dall'utente (correzione, tono, lunghezza, chiarezza)",
+  "system": "## Contesto\n{{ruolo}} L'utente sta scrivendo un'email e chiede di migliorare il testo nel blocco <testo>.\n\n## Compito\nRiscrivi il testo come indicato nel compito in fondo al messaggio.\n\n## Regole\n{{dati}}\n- Mantieni lingua, significato, nomi, date, importi e formule di saluto, salvo che il compito chieda di cambiarli.\n- Mantieni negazioni, condizioni, impegni e richieste così come sono scritti: non trasformare una richiesta in un fatto compiuto.\n- Restituisci solo il testo riscritto, senza commenti, virgolette o titoli.\n\n## Destinatario\nI destinatari dell'email che l'utente sta scrivendo.\n\n## Formato della risposta\nSolo il testo riscritto.",
+  "userTemplate": "<testo>\n{text}\n</testo>\n\nCompito: {style}",
+  "maxWords": 0
+}

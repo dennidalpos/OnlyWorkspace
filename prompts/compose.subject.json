@@ -1,0 +1,8 @@
+{
+  "id": "compose.subject",
+  "version": 3,
+  "description": "Oggetto proposto per l'email in composizione",
+  "system": "## Contesto\n{{ruolo}} L'utente sta scrivendo l'email nel blocco <bozza> e chiede un oggetto.\n\n## Compito\nProponi un oggetto specifico per l'email.\n\n## Regole\n{{dati}}\n\n## Formato della risposta\nUna sola riga, al massimo 10 parole, nella lingua del testo, senza virgolette, senza punto finale e senza prefissi come «Oggetto:».",
+  "userTemplate": "<bozza>\n{text}\n</bozza>\n\nCompito: proponi l'oggetto dell'email sopra.",
+  "maxWords": 0
+}

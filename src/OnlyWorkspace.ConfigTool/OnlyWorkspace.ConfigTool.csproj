@@ -1,0 +1,51 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFrameworks>net48;net10.0-windows</TargetFrameworks>
+    <UseWindowsForms>true</UseWindowsForms>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <RootNamespace>OnlyWorkspace.ConfigTool</RootNamespace>
+    <AssemblyName>OnlyWorkspace.ConfigTool</AssemblyName>
+    <ApplicationIcon>Assets\OnlyWorkspace.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Assets\OnlyWorkspace.ico" LogicalName="OnlyWorkspace.ConfigTool.AppIcon.ico" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="All" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Security" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.IO.Compression.FileSystem" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Same package and version as the add-in, already shipped next to the ConfigTool: prints the data egress report to PDF. -->
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4258.31" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\OnlyWorkspace.Core\OnlyWorkspace.Core.csproj" />
+    <ProjectReference Include="..\OnlyWorkspace.Infrastructure\OnlyWorkspace.Infrastructure.csproj" />
+    <InternalsVisibleTo Include="OnlyWorkspace.Tests" />
+  </ItemGroup>
+
+  <!-- WinForms host only: the package references its WPF assembly (net10, from build/Common.targets) and copies it (net48). -->
+  <Target Name="DropWebView2WpfReference" BeforeTargets="ResolveAssemblyReferences">
+    <ItemGroup>
+      <Reference Remove="@(Reference)" Condition="'%(Filename)' == 'Microsoft.Web.WebView2.Wpf'" />
+    </ItemGroup>
+  </Target>
+  <Target Name="DropWebView2Wpf" AfterTargets="ResolveAssemblyReferences">
+    <ItemGroup>
+      <ReferenceCopyLocalPaths Remove="@(ReferenceCopyLocalPaths)" Condition="'%(Filename)' == 'Microsoft.Web.WebView2.Wpf'" />
+    </ItemGroup>
+  </Target>
+</Project>

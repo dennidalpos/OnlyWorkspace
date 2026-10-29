@@ -1,0 +1,6 @@
+<Project>
+  <!-- Single source of the product version: assemblies (ProductInfo.Version) and installer (scripts\build-installer.ps1). -->
+  <PropertyGroup>
+    <Version>1.0.0</Version>
+  </PropertyGroup>
+</Project>
