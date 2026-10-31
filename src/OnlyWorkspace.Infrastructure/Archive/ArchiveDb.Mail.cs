@@ -456,7 +456,6 @@ public sealed partial class ArchiveDb
         }
         RemoveCheckedStoreSources("store_id=$s", new[] { ("$s", (object?)storeId) }, tx);
         Put(StoreOwnAddresses.MetaKey, StoreOwnAddresses.Without(Meta(StoreOwnAddresses.MetaKey), storeId));
-        Exec("delete from contact_rejects where store_id collate nocase = $s", tx, ("$s", storeId));
     }
 
     private int Count(string sql, SqliteTransaction tx, params (string Name, object? Value)[] args)

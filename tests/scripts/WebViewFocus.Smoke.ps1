@@ -55,7 +55,7 @@ try {
     Wait-Until {Field $pane '_pageReady'} 'first page ready'
     Wait-Until {$pane.ContainsFocus -and (Script $pane 'document.hasFocus() && document.activeElement.id === "userPrompt"') -eq 'true'} 'queued explicit focus'
 
-    foreach ($screen in @(@('toggle_info','infoTitle'),@('toggle_contacts','contactsTitle'),@('toggle_history','historyTitle'))) {
+    foreach ($screen in @(@('toggle_info','infoTitle'),@('toggle_party','partyTitle'),@('toggle_history','historyTitle'))) {
         [void]$button.Focus()
         if (!$button.Focused) { throw 'Synthetic ribbon did not own focus' }
         [void]$focus.Invoke($pane,@())
@@ -132,7 +132,7 @@ try {
     }
     $form.ClientSize = $savedSize
     'PASS A201 real WebView layout: minimum 340 CSS pixels and horizontal reachability at 380/190/120 px'
-    'PASS real WebView2 focus: queued and ready ribbon actions, Chat/Status/Contacts/History, no background or delayed focus theft'
+    'PASS real WebView2 focus: queued and ready ribbon actions, Chat/Status/Persone/History, no background or delayed focus theft'
     "Runtime=$((Field $second '_environment').BrowserVersionString); SDK=$((Get-Item (Join-Path $output 'Microsoft.Web.WebView2.Core.dll')).VersionInfo.FileVersion)"
     Add-Type -ReferencedAssemblies (Join-Path $output 'OnlyWorkspace.Outlook.dll') -TypeDefinition @'
 using OnlyWorkspace.Outlook.Interop;

@@ -171,15 +171,13 @@ public sealed class P1DispatchPolicyTests
     }
 
     [Fact]
-    public async Task RenderedWritingAndContactsOverhead_IsCheckedAtDispatch_WhileValidInputIsUnchanged()
+    public async Task RenderedWritingOverhead_IsCheckedAtDispatch_WhileValidInputIsUnchanged()
     {
         var p = Local();
         var recorder = new RecordingClient();
         using var dispatch = new LlmRequestDispatcher(recorder, p);
         var improve = PromptCatalog.CreateImprovePrompt(new string('x', 3500), "professionale");
         await Assert.ThrowsAsync<ContextTooLongException>(async () => { await foreach (var _ in dispatch.StreamChatAsync(improve)) { } });
-        await Assert.ThrowsAsync<ContextTooLongException>(() => dispatch.CompleteStructuredAsync(
-            PromptCatalog.CreateContactPrompt(new string('x', 3400), "Name", "test@example.test"), PromptCatalog.ContactJsonSchema));
         Assert.Equal(0, recorder.Calls);
         var valid = new[] { ChatMessage.System("Rules"), ChatMessage.Assistant("HISTORY"), ChatMessage.User("WHOLE-BODY-END"), ChatMessage.System("WEB-END") };
         await dispatch.CompleteStructuredAsync(valid, "{}");

@@ -22,9 +22,9 @@ public sealed class ContextBuilder : IContextBuilder
 
     /// <summary>
     /// Body without HTML, quoted replies and disclaimers. A forward keeps the forwarded message (marker line or
-    /// forward subject): it is the content, not history. <paramref name="senderTextOnly"/> cuts it as well.
+    /// forward subject): it is the content, not history.
     /// </summary>
-    public string CleanEmailBody(string rawBody, string? subject = null, bool senderTextOnly = false)
+    public string CleanEmailBody(string rawBody, string? subject = null)
     {
         if (string.IsNullOrWhiteSpace(rawBody)) return string.Empty;
 
@@ -41,7 +41,7 @@ public sealed class ContextBuilder : IContextBuilder
             while ((l = reader.ReadLine()) != null) lines.Add(l);
         }
 
-        bool keepForward = !senderTextOnly;
+        bool keepForward = true;
         bool forwardSubject = subject != null && ForwardSubjectRegex.IsMatch(subject);
         var sb = new StringBuilder();
         string previous = string.Empty;

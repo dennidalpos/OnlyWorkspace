@@ -49,11 +49,6 @@ public sealed partial class ArchiveClient
         nameof(ArchiveDb.FindAddresses),
         nameof(ArchiveDb.CounterpartyOf),
         nameof(ArchiveDb.FindCounterparties),
-        nameof(ArchiveDb.ScopeFolders),
-        nameof(ArchiveDb.ContactCandidates),
-        nameof(ArchiveDb.RejectContacts),
-        nameof(ArchiveDb.UnrejectContact),
-        nameof(ArchiveDb.RejectedContacts),
     };
 
     public Task ConfirmInitialInventoryAsync(CancellationToken ct = default) => CallAsync<object?>(nameof(ArchiveDb.ConfirmInitialInventory), Array.Empty<object?>(), ct);
@@ -176,19 +171,4 @@ public sealed partial class ArchiveClient
 
     public Task<IReadOnlyList<Counterparty>> FindCounterpartiesAsync(string? text, int max, CancellationToken ct = default) =>
         CallAsync<IReadOnlyList<Counterparty>>(nameof(ArchiveDb.FindCounterparties), new object?[] { text, max }, ct);
-
-    public Task<IReadOnlyList<ArchiveScopeFolder>> ScopeFoldersAsync(CancellationToken ct = default) =>
-        CallAsync<IReadOnlyList<ArchiveScopeFolder>>(nameof(ArchiveDb.ScopeFolders), Array.Empty<object?>(), ct);
-
-    public Task<IReadOnlyList<ContactCandidate>> ContactCandidatesAsync(IReadOnlyCollection<long> folderIds, string destinationStoreId, CancellationToken ct = default) =>
-        CallAsync<IReadOnlyList<ContactCandidate>>(nameof(ArchiveDb.ContactCandidates), new object?[] { folderIds, destinationStoreId }, ct);
-
-    public Task RejectContactsAsync(string storeId, IReadOnlyCollection<string> addresses, CancellationToken ct = default) =>
-        CallAsync<object?>(nameof(ArchiveDb.RejectContacts), new object?[] { storeId, addresses }, ct);
-
-    public Task UnrejectContactAsync(string storeId, string address, CancellationToken ct = default) =>
-        CallAsync<object?>(nameof(ArchiveDb.UnrejectContact), new object?[] { storeId, address }, ct);
-
-    public Task<IReadOnlyList<ContactRejection>> RejectedContactsAsync(string storeId, CancellationToken ct = default) =>
-        CallAsync<IReadOnlyList<ContactRejection>>(nameof(ArchiveDb.RejectedContacts), new object?[] { storeId }, ct);
 }

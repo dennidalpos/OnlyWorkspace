@@ -1074,13 +1074,6 @@ public sealed partial class OutlookDataService
         }
     }
 
-    /// <summary>Company domains of the user's accounts and of the PSTs' own addresses (mailbox providers excluded).</summary>
-    public IReadOnlyList<string> GetOwnDomainList()
-    {
-        EnsureUiThread();
-        return GetOwnDomains();
-    }
-
     /// <summary>
     /// SMTP domains of the profile's accounts (cached: accounts don't change while Outlook runs) and of the PSTs' own
     /// addresses, mailbox providers excepted.

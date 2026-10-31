@@ -4,18 +4,17 @@ using System.Threading;
 namespace OnlyWorkspace.Outlook.UI;
 
 /// <summary>
-/// Cancellation of the pane's running turn and of the Contatti analysis, on the UI thread. Interrompi (ribbon,
-/// pane button, Esc) stops both, and the stopped turn keeps what it has done so far; any other cancel (a new
-/// operation, Nuova chat, a conversation from the history, Outlook closing) drops the turn's result.
+/// Cancellation of the pane's running turn, on the UI thread. Interrompi (ribbon, pane button, Esc) stops it and
+/// the stopped turn keeps what it has done so far; any other cancel (a new operation, Nuova chat, a conversation
+/// from the history, Outlook closing) drops the turn's result.
 /// COM-free so tests can drive it.
 /// </summary>
 internal sealed class PaneOperations
 {
     private CancellationTokenSource? _active;
     private CancellationTokenSource? _stopped;
-    private CancellationTokenSource? _contacts;
 
-    public bool HasWork => _active != null || _stopped != null || _contacts != null;
+    public bool HasWork => _active != null || _stopped != null;
 
     /// <summary>A new turn supersedes the running one, which loses its result.</summary>
     public CancellationTokenSource Begin()
@@ -39,19 +38,18 @@ internal sealed class PaneOperations
         cts.Dispose();
     }
 
-    /// <summary>Drops the running turn and its result. The Contatti analysis goes on.</summary>
+    /// <summary>Drops the running turn and its result.</summary>
     public void Cancel()
     {
         _stopped = null;
         Cancel(ref _active);
     }
 
-    /// <summary>Interrompi: the running turn ends with what it has done, the Contatti analysis stops.</summary>
+    /// <summary>Interrompi: the running turn ends with what it has done.</summary>
     public void Stop()
     {
         if (_active != null) _stopped = _active;
         Cancel(ref _active);
-        CancelContacts();
     }
 
     /// <summary>
@@ -60,20 +58,6 @@ internal sealed class PaneOperations
     /// </summary>
     public CancellationToken ResultToken(CancellationTokenSource cts) =>
         ReferenceEquals(_stopped, cts) ? CancellationToken.None : cts.Token;
-
-    public CancellationTokenSource BeginContacts()
-    {
-        CancelContacts();
-        return _contacts = new CancellationTokenSource();
-    }
-
-    public void EndContacts(CancellationTokenSource cts)
-    {
-        if (ReferenceEquals(_contacts, cts)) _contacts = null;
-        cts.Dispose();
-    }
-
-    public void CancelContacts() => Cancel(ref _contacts);
 
     private static void Cancel(ref CancellationTokenSource? field)
     {

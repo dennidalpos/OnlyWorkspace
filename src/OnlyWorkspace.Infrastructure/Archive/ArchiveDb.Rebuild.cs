@@ -32,6 +32,9 @@ public sealed partial class ArchiveDb
             CreateSchema(tx);
             Exec("insert or replace into meta(key,value) values($k,$v)", tx, ("$k", MetaCheckTime), ("$v", UnixText(DateTime.UtcNow)));
         }
+        // The address book flow is gone: its refusals and last scope go in every format, current included.
+        Exec("drop table if exists contact_rejects", tx);
+        Exec("delete from meta where key='contacts_scope'", tx);
         Exec("create table if not exists archive_deletions(id integer primary key,profile text not null,store_id text not null,entry_id text not null,message_id text not null,deleted_ticks integer not null)", tx);
         Exec("create table if not exists archive_source_checks(id integer primary key,store_id text not null,entry_id text not null,message_id text not null,checked_pass integer not null default -1,unique(store_id,entry_id,message_id))", tx);
         EnsureReaderColumns(tx);

@@ -39,7 +39,8 @@ public sealed class ArchiveRebuildTests : IDisposable
             while (db.NextFactWork() is { } work) Assert.True(db.CommitFacts(work, ArchiveDb.ExtractFacts(work, default)));
             while (db.NextSearchWork() is { } work) Assert.True(db.CommitSearch(work, ArchiveSearchText.CodeTerms(work.Body), ArchiveSearchText.CodeTerms(work.Attachments)));
         }
-        Sql("insert into party_choice values('addr:synthetic@example.test','domain:example.test'); insert into contact_rejects values('contacts','refused@example.test',1234);" +
+        Sql("insert into party_choice values('addr:synthetic@example.test','domain:example.test'); create table contact_rejects(store_id text not null, addr text not null, rejected_utc integer not null, primary key(store_id, addr)) without rowid;" +
+            "insert into contact_rejects values('contacts','refused@example.test',1234);insert into meta values('contacts_scope','{}');" +
             "create table archive_case_closures(member text primary key,closed_utc integer not null) without rowid;" +
             "insert into archive_case_closures values('m:<one@example.test>',1234);" +
             "insert into rpc_batches values('case-retired','SetCaseClosed','digest','old-result'),('retained','SaveBody','digest','retained-result');" +
@@ -60,6 +61,20 @@ public sealed class ArchiveRebuildTests : IDisposable
             "pragma user_version=11;");
     }
 
+    [Fact]
+    public void CurrentFormat_DropsTheAddressBookDataOfTheRemovedFlow()
+    {
+        using (ArchiveDb.Open(_directory, "p")) { }
+        Sql("create table contact_rejects(store_id text not null, addr text not null, rejected_utc integer not null, primary key(store_id, addr)) without rowid;" +
+            "insert into contact_rejects values('s','refused@example.test',1); insert into meta values('contacts_scope','{}');");
+
+        using (ArchiveDb.Open(_directory, "p")) { }
+
+        Assert.Equal(0, Value("select count(*) from sqlite_master where name='contact_rejects'"));
+        Assert.Equal(0, Value("select count(*) from meta where key='contacts_scope'"));
+        Assert.Equal(13, Value("pragma user_version"));
+    }
+
     [Theory]
     [InlineData(11)]
     [InlineData(12)]
@@ -75,7 +90,8 @@ public sealed class ArchiveRebuildTests : IDisposable
             Assert.NotEmpty(db.GetFacts(1, true));
             Assert.Equal("[\"store\"]", db.GetMeta("stores"));
             Assert.Equal(1, Value("select count(*) from party_choice where target='domain:example.test'"));
-            Assert.Equal(1, Value("select count(*) from contact_rejects where addr='refused@example.test'"));
+            Assert.Equal(0, Value("select count(*) from sqlite_master where name='contact_rejects'"));
+            Assert.Equal(0, Value("select count(*) from meta where key='contacts_scope'"));
             if (sourceVersion == 11) Assert.Equal(20, Assert.Single(db.PendingDeletions()).Id);
             Assert.Empty(db.Search(new ArchiveQuery { Text = "paidonlyuniqueterm" }));
             Assert.Empty(db.Search(new ArchiveQuery { Text = "54321" }));

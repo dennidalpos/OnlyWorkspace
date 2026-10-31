@@ -55,18 +55,6 @@ public sealed class PaneJobsTests
     }
 
     [Fact]
-    public void Replay_KeepsTheContactsAnalysisApartFromTheTurn()
-    {
-        var replay = new PaneJobReplay();
-        replay.Record(new { type = "contacts_progress", done = 1, total = 3 });
-        Assert.True(replay.ContactsRunning);
-        Assert.False(replay.Running);
-        Assert.Contains("contacts_progress", Json(replay.Restore()));
-        replay.Record(new { type = "contacts_analyze_end", done = 3 });
-        Assert.Null(replay.Restore());
-    }
-
-    [Fact]
     public void Registry_ListsTheOtherWindowsWork_AndStopsIt()
     {
         var mainReplay = new PaneJobReplay();

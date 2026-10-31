@@ -5,7 +5,7 @@ Ciascuna sezione descrive un'area funzionale tramite un diagramma Mermaid orient
 - **Punti di ingresso**: ribbon, menu contestuali, riquadro WebView2, finestra di composizione o icona nella tray.
 - **Azioni e scelte**: opzioni disponibili prima e durante l'esecuzione.
 - **Bivi decisionali**: controlli locali, vincoli di contesto, verifiche e opzioni di salvataggio.
-- **Risultati ed esiti operativi**: bozze, tabelle, contatti e aggiornamenti (sempre su conferma o espliciti: nessun invio automatico di email).
+- **Risultati ed esiti operativi**: bozze e tabelle (sempre su conferma o espliciti: nessun invio automatico di email).
 - **Percorsi di errore o recupero**: superamento contesto locale, assenza di riscontri web, interruzioni parziali e blocchi di sicurezza.
 
 ---
@@ -249,69 +249,7 @@ flowchart TD
 
 ---
 
-## 5. Gestione contatti dalla posta
-
-La schermata Contatti confronta le persone con cui hai scambiato messaggi con la rubrica di Outlook.
-L'estrazione applica una regola di **rigorosa fedeltà al testo** (*grounding*): recapiti e ruoli che non compaiono esplicitamente nell'email vengono scartati per evitare allucinazioni. Ogni modifica alla rubrica avviene sempre con approvazione esplicita e le modifiche esterne concorrenti bloccano la sovrascrittura.
-
-```mermaid
-flowchart TD
-    subgraph INGRESSO_CONTATTI["Punti di ingresso Contatti"]
-        direction TB
-        CT1["Scheda OnlyWorkspace: pulsante «Contatti»"]
-        CT2["Icona Contatti nella barra del riquadro"]
-    end
-
-    INGRESSO_CONTATTI --> CONFIG_RIC["Configurazione perimetro di ricerca:<br/>1. Spunta cassette e cartelle archiviate (aggiornate ogni 30s)<br/>2. Escludi facoltativamente i colleghi del tuo dominio<br/>3. Scegli la rubrica Outlook di destinazione"]
-
-    CONFIG_RIC --> CHECK_RUB{"La cartella rubrica esiste?"}
-    CHECK_RUB -->|"No"| CREA_RUB["Pulsante «Crea cartella Contatti» in Outlook"]
-    CHECK_RUB -->|"Sì"| AVVIA_RIC["Clic su «Cerca contatti»<br/>(le preferenze vengono salvate per il futuro)"]
-    CREA_RUB --> AVVIA_RIC
-
-    AVVIA_RIC --> SCANSIONE["Scansione locale delle persone a cui hai scritto almeno una volta<br/>(indirizzi automatici o senza risposta esclusi e contati)"]
-
-    SCANSIONE --> STATI_CONTATTO{"Classificazione stato persona:"}
-
-    STATI_CONTATTO -->|"Mancante"| ST_MANC["Non presente nella rubrica di destinazione"]
-    STATI_CONTATTO -->|"Da verificare"| ST_VERIF["L'email più recente è posteriore all'ultima modifica del contatto"]
-    STATI_CONTATTO -->|"Conflitto"| ST_CONF["Più contatti presenti con lo stesso indirizzo"]
-    STATI_CONTATTO -->|"Aggiornato"| ST_OK["Dati già allineati (visibile su richiesta)"]
-
-    ST_MANC --> SELEZIONE["Selezione contatti da esaminare"]
-    ST_VERIF --> SELEZIONE
-    ST_CONF --> SELEZIONE
-
-    SELEZIONE --> VERIF_CTX_LOC{"Il testo dell'originale entra nel contesto locale?"}
-    VERIF_CTX_LOC -->|"Sì"| ANALISI_IA["Analizza un originale leggibile recente;<br/>se non utilizzabile prova il successivo"]
-
-    ANALISI_IA --> VERIF_GROUNDING["Verifica fedeltà sul testo (Grounding):<br/>I valori (telefono, ruolo, azienda) che non compaiono<br/>esplicitamente nell'email vengono scartati"]
-    ANALISI_IA -->|"Errore o richiesta completa oltre contesto"| ERR_CONTATTI["Analisi terminata con avviso; nessun invio oltre budget"]
-
-    VERIF_GROUNDING --> PROPOSTE_RUB["Scheda proposta con i dati estratti"]
-    VERIF_CTX_LOC -->|"No (profilo locale Ollama)"| SALTA_LUNGO["Prova un altro originale disponibile;<br/>se nessuno è leggibile, proposta con motivo del problema"]
-    SALTA_LUNGO --> PROPOSTE_RUB
-
-    PROPOSTE_RUB --> AZIONE_UTENTE{"Azione dell'utente:"}
-
-    AZIONE_UTENTE -->|"Aggiungi"| ADD_NEW["Crea nuovo contatto in Outlook"]
-    AZIONE_UTENTE -->|"Aggiungi a contatto..."| ADD_ALIAS["Aggiunge l'indirizzo a un contatto esistente"]
-    AZIONE_UTENTE -->|"Aggiorna"| DIFF_UPD["Mostra confronto diff campo per campo"]
-    AZIONE_UTENTE -->|"Rifiuta"| REFUSE["Esclude l'indirizzo per questa rubrica<br/>(annullabile in ogni momento con «Riproponi»)"]
-
-    DIFF_UPD --> CHECK_MODIF{"Il contatto in Outlook è stato modificato nel frattempo?"}
-    CHECK_MODIF -->|"Sì (modificato esternamente)"| BLK_WRITE["Salvataggio respinto per sicurezza:<br/>nessuna sovrascrittura di modifiche recenti"]
-    CHECK_MODIF -->|"No"| COMMIT_UPD["Aggiornamento confermato in rubrica"]
-
-    ADD_NEW --> FINE_CONTATTI["Rubrica Outlook allineata su approvazione esplicita"]
-    ADD_ALIAS --> FINE_CONTATTI
-    COMMIT_UPD --> FINE_CONTATTI
-    REFUSE --> FINE_CONTATTI
-```
-
----
-
-## 6. Archivio locale, ricostruisci flusso e manutenzione
+## 5. Archivio locale, ricostruisci flusso e manutenzione
 
 L'archivio è uno specchio cifrato locale della posta acquisita da Outlook.
 Consente la ricerca offline e il recupero del testo integrale anche a Outlook chiuso, la ricostruzione della cronologia dei thread con le loro ramificazioni e la gestione autonoma per-utente delle cassette senza privilegi amministrativi.
@@ -358,7 +296,7 @@ flowchart TD
 
 ---
 
-## 7. ConfigTool, primo avvio e governance privacy
+## 6. ConfigTool, primo avvio e governance privacy
 
 La finestra ConfigTool gestisce la configurazione dell'add-in e la tutela dei dati.
 Nessun dato di Outlook esce verso server esterni finché un responsabile non accetta l'informativa in **Privacy e dati** (*Data Egress Gate*). In caso di problemi di avvio con Outlook, il comando **Ripara add-in** ripristina la registrazione dell'utente senza reinstallare.

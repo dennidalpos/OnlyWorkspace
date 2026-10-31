@@ -15,7 +15,7 @@ const mailTool = { hasAttribute: name => name === 'data-needs-email' };
 const state = { busy: false, configOk: true, contextKey: '', contextStoreId: '', composerMode: 'chat', analysis: { ctx: null } };
 let closed = 0;
 const ctx = vm.createContext({
-  state, contacts: null, prompt: {},
+  state, prompt: {},
   $: id => {
     if (!nodes.has(id)) nodes.set(id, { hidden: true, innerHTML: '', classList: { remove() {} } });
     return nodes.get(id);

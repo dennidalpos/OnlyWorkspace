@@ -559,8 +559,6 @@ public class ArchiveDbTests : IDisposable
         db.SetMeta(ArchiveScope.StoresKey, "[]");
         db.SetMeta(StoreOwnAddresses.MetaKey, StoreOwnAddresses.WithGuess(StoreOwnAddresses.WithGuess(null, "pst", new StoreOwnEntry { Guessed = { "me@test.example" } }),
             "other", new StoreOwnEntry { Guessed = { "me@old.example" } }));
-        db.RejectContacts("pst", new[] { "x@test.example" });
-        db.RejectContacts("gmail", new[] { "a@acme.it" });
 
         Assert.Throws<InvalidOperationException>(() => db.RemoveClosedStore("pst", 10));
         db.SetListedFolders(new[] { gmail.Id }, null, new[] { "gmail" }); // the PST was taken out of the profile
@@ -575,8 +573,6 @@ public class ArchiveDbTests : IDisposable
         Assert.Equal("gmail", db.GetStoreCoverage().Single().StoreId);
         Assert.Equal("[]", db.GetMeta(ArchiveScope.StoresKey));
         Assert.Equal(new[] { "other" }, StoreOwnAddresses.Parse(db.GetMeta(StoreOwnAddresses.MetaKey)).Keys);
-        Assert.Empty(db.RejectedContacts("pst"));
-        Assert.Single(db.RejectedContacts("gmail"));
     }
 
     [Fact]

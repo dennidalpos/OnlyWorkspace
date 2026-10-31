@@ -25,7 +25,7 @@ public class PromptCatalogTests
     {
         "summary", "answer", "chat.general", "reply.accept", "reply.decline", "reply.custom", "reply.refine", "reply.followup",
         "compose.write", "compose.improve", "compose.translate", "compose.subject", "action.items", "data.extract",
-        "contact.extract", "briefing", "security", "mail.answer", "mail.table", "calendar.scan", "followup.status", "web.search"
+        "briefing", "security", "mail.answer", "mail.table", "calendar.scan", "followup.status", "web.search"
     };
 
     // Text written for people: style and audience are stated.
@@ -41,7 +41,7 @@ public class PromptCatalogTests
     public void EveryTemplate_RendersWithoutUnfilledPlaceholdersOrFragments()
     {
         var rendered = PromptCatalog.RenderAllForTest(AllValues).ToList();
-        Assert.True(rendered.Count == 24, "prompts\\ not copied next to the test assemblies");
+        Assert.True(rendered.Count == 23, "prompts\\ not copied next to the test assemblies");
         foreach (var (id, messages) in rendered)
             foreach (var message in messages)
             {

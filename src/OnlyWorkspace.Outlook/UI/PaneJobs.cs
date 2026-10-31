@@ -18,10 +18,8 @@ internal sealed class PaneJobReplay
     private object? _security;
     private bool _cloud;
     private readonly StringBuilder _text = new();
-    private object? _contacts;
 
     public bool Running => _start != null;
-    public bool ContactsRunning => _contacts != null;
     /// <summary>Name of the running action (stream_start «action», or «Chat»).</summary>
     public string Action { get; private set; } = string.Empty;
     public int Done { get; private set; }
@@ -53,8 +51,6 @@ internal sealed class PaneJobReplay
             case "stream_cancelled":
                 ClearTurn();
                 break;
-            case "contacts_progress": _contacts = message; break;
-            case "contacts_analyze_end": _contacts = null; break;
         }
     }
 
@@ -81,7 +77,6 @@ internal sealed class PaneJobReplay
             if (_security != null) messages.Add(_security);
             if (_text.Length > 0) messages.Add(new { type = "stream_chunk", chunk = _text.ToString() });
         }
-        if (_contacts != null) messages.Add(_contacts);
         return messages.Count == 0 ? null : new { type = "job_restore", turnId = _start == null ? null : Field(_start, "turnId"), messages };
     }
 
@@ -143,7 +138,6 @@ internal static class PaneJobs
             var replay = e.Value.Replay();
             var jobs = new List<PaneJob>();
             if (replay.Running) jobs.Add(new PaneJob { Id = e.Key, Window = e.Value.Window, Action = replay.Action, Done = replay.Done, Total = replay.Total });
-            if (replay.ContactsRunning) jobs.Add(new PaneJob { Id = e.Key, Window = e.Value.Window, Action = "Analisi contatti" });
             return jobs;
         }).ToList();
 

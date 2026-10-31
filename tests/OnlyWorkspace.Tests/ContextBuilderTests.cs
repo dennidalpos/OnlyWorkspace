@@ -94,15 +94,6 @@ Oggetto: Riunione budget
     }
 
     [Fact]
-    public void CleanEmailBody_SenderTextOnly_CutsTheForward()
-    {
-        var clean = new ContextBuilder().CleanEmailBody(ForwardedOrder, "Fwd: Ordine", senderTextOnly: true);
-
-        Assert.Contains("Inviato da iPhone", clean);
-        Assert.DoesNotContain("Totale", clean);
-    }
-
-    [Fact]
     public void EnsureFits_NeverCuts_ThrowsWhenTheWholeTextDoesNotFit()
     {
         var builder = new ContextBuilder();

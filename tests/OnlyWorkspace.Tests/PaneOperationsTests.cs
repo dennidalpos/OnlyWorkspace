@@ -4,13 +4,12 @@ using OnlyWorkspace.Outlook.UI;
 namespace OnlyWorkspace.Tests;
 
 /// <summary>
-/// Interrompi against the other cancels of the pane (A20): which turn keeps its partial result, and which
-/// cancels reach the Contatti analysis.
+/// Interrompi against the other cancels of the pane (A20): which turn keeps its partial result.
 /// </summary>
 public sealed class PaneOperationsTests
 {
     [Fact]
-    public void ClearChatRemainsBlockedUntilStoppedWorkFinishes_AndDuringContacts()
+    public void ClearChatRemainsBlockedUntilStoppedWorkFinishes()
     {
         var operations = new PaneOperations();
         Assert.False(operations.HasWork);
@@ -19,10 +18,6 @@ public sealed class PaneOperationsTests
         operations.Stop();
         Assert.True(operations.HasWork);
         operations.End(turn);
-        Assert.False(operations.HasWork);
-        var contacts = operations.BeginContacts();
-        Assert.True(operations.HasWork);
-        operations.EndContacts(contacts);
         Assert.False(operations.HasWork);
     }
 
@@ -126,42 +121,15 @@ public sealed class PaneOperationsTests
     }
 
     [Fact]
-    public void Stop_AlsoStopsTheContactsAnalysis()
-    {
-        var operations = new PaneOperations();
-        var contacts = operations.BeginContacts();
-
-        operations.Stop();
-
-        Assert.True(contacts.IsCancellationRequested);
-    }
-
-    [Fact]
-    public void Cancel_LeavesTheContactsAnalysisRunning()
-    {
-        var operations = new PaneOperations();
-        var contacts = operations.BeginContacts();
-        operations.Begin();
-
-        operations.Cancel();
-        operations.Begin();
-
-        Assert.False(contacts.IsCancellationRequested);
-    }
-
-    [Fact]
     public void EndedOperations_AreNoLongerCancelled()
     {
         var operations = new PaneOperations();
         var turn = operations.Begin();
-        var contacts = operations.BeginContacts();
         operations.End(turn);
-        operations.EndContacts(contacts);
 
-        // Their sources are disposed: a late Interrompi must not touch them.
+        // Its source is disposed: a late Interrompi must not touch it.
         operations.Stop();
         operations.Cancel();
-        operations.CancelContacts();
     }
 
     [Fact]
@@ -204,17 +172,5 @@ public sealed class PaneOperationsTests
         web.Begin(4);
         Assert.False(web.InputCut);
         Assert.Empty(web.Sources);
-    }
-
-    [Fact]
-    public void NewContactsAnalysis_CancelsThePreviousOne()
-    {
-        var operations = new PaneOperations();
-        var first = operations.BeginContacts();
-
-        var second = operations.BeginContacts();
-
-        Assert.True(first.IsCancellationRequested);
-        Assert.False(second.IsCancellationRequested);
     }
 }

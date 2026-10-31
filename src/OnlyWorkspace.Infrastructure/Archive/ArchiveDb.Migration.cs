@@ -21,7 +21,7 @@ internal sealed class ArchiveMigrationOptions
 
 public sealed partial class ArchiveDb
 {
-    private const string RetiredMeta = "key glob 'cards_*' or key in ('card_save_sequence','saved_source_sequence')";
+    private const string RetiredMeta = "key glob 'cards_*' or key in ('card_save_sequence','saved_source_sequence','contacts_scope')";
     private static readonly string[] RetiredOperations =
     {
         "SaveCard", "SkipCard", "RegenerateCard", "RetrySkippedCardsForStore", "RetryTooLongCards",
@@ -29,7 +29,7 @@ public sealed partial class ArchiveDb
     };
 
     private static bool RetiredTable(string name) => name == "cards" || name == "archive_saved_cards" ||
-        name == "usage" || name == "archive_case_closures" || name == "cards_fts" ||
+        name == "usage" || name == "archive_case_closures" || name == "contact_rejects" || name == "cards_fts" ||
         name.StartsWith("cards_fts_", StringComparison.Ordinal) || name == "code_cards_fts" ||
         name.StartsWith("code_cards_fts_", StringComparison.Ordinal);
 

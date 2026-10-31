@@ -52,7 +52,7 @@ assert.equal(sent[0].useWebSearch, undefined);
 assert.doesNotMatch(html, /useWebSearch|confirm_external/);
 
 const nodes = new Map();
-for (const id of ['btnChatPage', 'btnSearchPage', 'btnPartiesPage', 'btnContactsPage', 'btnHistory', 'btnInfo']) nodes.set(id, { setAttribute(k, v) { this[k] = v; }, scrollIntoView() {} });
+for (const id of ['btnChatPage', 'btnSearchPage', 'btnPartiesPage', 'btnHistory', 'btnInfo']) nodes.set(id, { setAttribute(k, v) { this[k] = v; }, scrollIntoView() {} });
 ctx.$ = id => nodes.get(id);
 ctx.document.body = { dataset: {} };
 new vm.Script(section('  var drawerToggles =', '  function openDrawerId()')).runInContext(ctx);
@@ -60,14 +60,10 @@ ctx.showPage('partyDrawer');
 assert.equal(ctx.document.body.dataset.page, 'partyDrawer');
 assert.equal(nodes.get('btnPartiesPage')['aria-current'], 'page');
 assert.equal(nodes.get('btnHistory')['aria-current'], 'false');
-ctx.showPage('contactsDrawer');
-assert.equal(nodes.get('btnPartiesPage')['aria-current'], 'page');
-assert.equal(nodes.get('btnHistory')['aria-current'], 'false');
 ctx.showPage('analysisDrawer');
 assert.equal(nodes.get('btnSearchPage')['aria-current'], 'page');
-assert.equal(ctx.lastPeoplePage, 'contactsDrawer');
 ctx.showPage('chat');
-assert.equal(ctx.lastPeoplePage, 'contactsDrawer', 'Local reconstruction belongs to Cerca e analizza, independently of Persons.');
+assert.equal(nodes.get('btnPartiesPage')['aria-current'], 'false');
 
 // The brand's tooltip names the model and where the data goes; «web» shows when some actions search the web.
 const badgeNodes = { brand: { title: '' }, webFlag: { hidden: true, title: '', setAttribute(k, v) { this[k] = v; } } };
@@ -86,10 +82,10 @@ assert.equal(badgeNodes.brand.title, 'OnlyWorkspace');
 
 console.log('PASS no per-action web choice, fixed page navigation, brand and model label');
 
-// Clear is a fresh conversation request, never a history deletion, and is refused while either job works.
+// Clear is a fresh conversation request, never a history deletion, and is refused while the job works.
 const clearNodes = new Map(); let hasContent = false;
 const clearContext = vm.createContext({
-  state: { busy: false }, contacts: { busy: false }, hasTurns: () => hasContent,
+  state: { busy: false }, hasTurns: () => hasContent,
   post: m => sent.push(m), runTool: () => {},
   $: id => { if (!clearNodes.has(id)) clearNodes.set(id, { addEventListener: (_, cb) => clearNodes.get(id).click = cb }); return clearNodes.get(id); }
 });
@@ -98,8 +94,6 @@ const sendCount = sent.length;
 clearNodes.get('btnClearChat').click(); assert.equal(sent.length, sendCount);
 hasContent = true; clearContext.state.busy = true;
 clearNodes.get('btnClearChat').click(); assert.equal(sent.length, sendCount);
-clearContext.state.busy = false; clearContext.contacts.busy = true;
-clearNodes.get('btnClearChat').click(); assert.equal(sent.length, sendCount);
-clearContext.contacts.busy = false; clearNodes.get('btnClearChat').click();
+clearContext.state.busy = false; clearNodes.get('btnClearChat').click();
 assert.equal(sent.at(-1).type, 'new_chat'); assert.equal(sent.length, sendCount + 1);
 console.log('PASS clear chat: no empty reset, no reset during work, fresh conversation preserves separate history deletion');

@@ -302,23 +302,6 @@ public static class PromptCatalog
     public static IEnumerable<ChatMessage> CreateStructuredDataPrompt(string emailBody) =>
         Render("data.extract", ("email_body", AsData(emailBody)));
 
-    public const string ContactJsonSchema =
-        "{\n" +
-        "  \"type\": \"object\",\n" +
-        "  \"properties\": {\n" +
-        "    \"contacts\": { \"type\": \"array\", \"items\": { \"type\": \"object\", \"properties\": {\n" +
-        "      \"fullName\": { \"type\": \"string\" }, \"company\": { \"type\": \"string\" }, \"jobTitle\": { \"type\": \"string\" },\n" +
-        "      \"businessPhone\": { \"type\": \"string\" }, \"mobilePhone\": { \"type\": \"string\" }, \"businessAddress\": { \"type\": \"string\" }, \"webPage\": { \"type\": \"string\" } },\n" +
-        "      \"required\": [\"fullName\", \"company\", \"jobTitle\", \"businessPhone\", \"mobilePhone\", \"businessAddress\", \"webPage\"] } }\n" +
-        "  },\n" +
-        "  \"required\": [\"contacts\"]\n" +
-        "}";
-
-    /// <summary>Contact details of one sender, from the signature of an email they wrote; values copied verbatim.</summary>
-    public static IEnumerable<ChatMessage> CreateContactPrompt(string emailText, string senderName, string senderAddress) =>
-        Render("contact.extract", ("email_body", AsData(emailText)),
-            ("sender", AsData(senderName.Length > 0 ? senderName + " <" + senderAddress + ">" : senderAddress)));
-
     // ---- One answer on a set of emails (E7: one request, cited and checked) ----
 
     private const string PointSchema =

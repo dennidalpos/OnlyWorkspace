@@ -128,7 +128,7 @@ public partial class TaskPaneCoordinator : IDisposable
     {
         var type = message is IDictionary<string, object?> map && map.TryGetValue("type", out var mapped)
             ? mapped as string : message.GetType().GetProperty("type")?.GetValue(message) as string;
-        bool boundary = type is "stream_start" or "stream_end" or "stream_error" or "stream_cancelled" or "contacts_analyze_end";
+        bool boundary = type is "stream_start" or "stream_end" or "stream_error" or "stream_cancelled";
         // Progress reaches the other panes at most once a second.
         if (!boundary && DateTime.UtcNow - _jobsNotifiedUtc < TimeSpan.FromSeconds(1)) return;
         _jobsNotifiedUtc = DateTime.UtcNow;
@@ -149,7 +149,7 @@ public partial class TaskPaneCoordinator : IDisposable
     /// <summary>Interrompi on the ribbon: the work of this window, or else the work running in the other windows.</summary>
     public void StopFromRibbon()
     {
-        if (_replay.Running || _replay.ContactsRunning) StopActiveTask();
+        if (_replay.Running) StopActiveTask();
         else if (PaneJobs.StopOthers(_jobId) > 0) OnlyWorkspaceLog.Logger.Information("Ribbon Interrompi stopped the work of another Outlook window");
     }
 
@@ -462,7 +462,7 @@ public partial class TaskPaneCoordinator : IDisposable
             case "delete_all_history": _ = DeleteAllHistoryAsync(); break;
             case "new_chat": ClearChat(); break;
 
-            // Archive, flow, counterparties and contacts.
+            // Archive, flow and counterparties.
             case "archive_get": _ = SendArchiveStatusAsync(); break;
             case "archive_light_get": _ = SendArchiveLightAsync(); break;
             case "archive_party_search":
@@ -473,19 +473,6 @@ public partial class TaskPaneCoordinator : IDisposable
             case "archive_party_reset":
             case "archive_open_email":
                 _ = HandleCounterpartyCommandAsync(type!, message.Clone());
-                break;
-            case "contacts_open":
-            case "contacts_folders":
-            case "contacts_create_folder":
-            case "contacts_scan":
-            case "contacts_analyze":
-            case "contacts_cancel":
-            case "contacts_apply":
-            case "contacts_reject":
-            case "contacts_rejected":
-            case "contacts_unreject":
-            case "contacts_open_contact":
-                _ = HandleContactsCommandAsync(type!, message.Clone());
                 break;
             case "archive_pause":
             case "archive_delete":
@@ -3032,7 +3019,6 @@ public partial class TaskPaneCoordinator : IDisposable
         System.Threading.Interlocked.Increment(ref _policyEpoch);
         _turn++;
         CancelActiveTask();
-        _operations.CancelContacts();
         _replay.ClearTurn();
     }
 
@@ -3087,10 +3073,9 @@ public partial class TaskPaneCoordinator : IDisposable
         if (_isDisposed) return;
         _isDisposed = true;
 
-        if (_replay.Running || _replay.ContactsRunning)
-            OnlyWorkspaceLog.Logger.Information("Pane work cancelled with its Outlook window: {Action}", _replay.Running ? _replay.Action : "Analisi contatti");
+        if (_replay.Running)
+            OnlyWorkspaceLog.Logger.Information("Pane work cancelled with its Outlook window: {Action}", _replay.Action);
         CancelActiveTask();
-        _operations.CancelContacts();
         _control.ControlReady -= OnControlReady;
         _control.MessageReceived -= OnMessageReceived;
         PaneJobs.Changed -= PostOtherJobs;

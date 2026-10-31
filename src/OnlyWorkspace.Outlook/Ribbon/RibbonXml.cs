@@ -131,7 +131,7 @@ internal static class RibbonXml
                     </menu>
                   </splitButton>
                   <button id="btnCancel" label="Interrompi" size="large" imageMso="CancelAll" onAction="OnCancelClicked" keytip="X"
-                          screentip="Interrompi" supertip="Ferma l'operazione in corso nel riquadro, compresa l'analisi della Rubrica." />
+                          screentip="Interrompi" supertip="Ferma l'operazione in corso nel riquadro." />
                 </group>
         {emailGroup}
                 <group id="grpMailbox" label="Posta e persone" imageMso="GotoCalendar">
@@ -151,8 +151,6 @@ internal static class RibbonXml
                   <menu id="peopleMenu" label="Persone" size="large" imageMso="AddressBook" keytip="P">
                     <button id="btnParties" label="Controparti" imageMso="AddressBook" onAction="OnPartiesClicked"
                             screentip="Controparti" supertip="Persone e aziende dell'archivio: indirizzi, conversazioni e documenti scambiati." />
-                    <button id="btnContacts" label="Rubrica" imageMso="NewContact" onAction="OnContactsClicked" keytip="O"
-                            screentip="Rubrica dalla posta" supertip="Propone contatti mancanti e aggiornamenti da confermare. Richiede l'archivio; l'analisi usa il profilo IA attivo." />
                   </menu>
                 </group>
                 <group id="grpSystem" label="Sistema" imageMso="CurrentViewSettings">

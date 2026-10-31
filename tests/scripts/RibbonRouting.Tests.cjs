@@ -22,8 +22,8 @@ const context = vm.createContext({
     return nodes.get(id);
   },
   // Drawer doubles: one screen open at a time, as in the pane.
-  openDrawer: id => { for (const n of ['historyDrawer', 'infoDrawer', 'analysisDrawer', 'partyDrawer', 'contactsDrawer']) context.$(n).hidden = n !== id; calls.push('open:' + id); },
-  closeDrawers: () => { for (const n of ['historyDrawer', 'infoDrawer', 'analysisDrawer', 'partyDrawer', 'contactsDrawer']) context.$(n).hidden = true; calls.push('close'); },
+  openDrawer: id => { for (const n of ['historyDrawer', 'infoDrawer', 'analysisDrawer', 'partyDrawer']) context.$(n).hidden = n !== id; calls.push('open:' + id); },
+  closeDrawers: () => { for (const n of ['historyDrawer', 'infoDrawer', 'analysisDrawer', 'partyDrawer']) context.$(n).hidden = true; calls.push('close'); },
   focusComposer: (mode, prompt) => calls.push('composer:' + mode + ':' + (prompt || '')),
   clearConversation: () => calls.push('clear'),
   finishTurn: () => {},
@@ -37,7 +37,7 @@ new vm.Script(scriptBetween('  function openAnalysis(preset) {', '  function ana
 context.scopeRadio = () => ({ checked: false });
 new vm.Script(scriptBetween('  function onHostMessage(data) {', '  if (webview) {')).runInContext(context);
 const send = data => context.onHostMessage(data);
-const open = () => ['historyDrawer', 'infoDrawer', 'analysisDrawer', 'partyDrawer', 'contactsDrawer'].filter(n => !context.$(n).hidden);
+const open = () => ['historyDrawer', 'infoDrawer', 'analysisDrawer', 'partyDrawer'].filter(n => !context.$(n).hidden);
 
 // Storico and Stato: the first click opens; a second click on a pane already on screen closes.
 send({ type: 'toggle_history', toggle: false });
@@ -76,12 +76,6 @@ send({ type: 'toggle_party' });
 send({ type: 'toggle_party' });
 assert.deepEqual(open(), ['partyDrawer'], 'The context menu always opens.');
 
-// Contatti: the ribbon button toggles like Controparti (a second click used to leave the page open).
-send({ type: 'toggle_contacts', toggle: true });
-assert.deepEqual(open(), ['contactsDrawer']);
-send({ type: 'toggle_contacts', toggle: true });
-assert.deepEqual(open(), []);
-
 // Chat, Bozza risposta, Nuova chat, Riquadro.
 calls.length = 0;
 send({ type: 'show_input', mode: 'reply', prompt: '' });
@@ -91,10 +85,10 @@ send({ type: 'hide_email_context' });
 assert.deepEqual(calls, ['composer:reply:', 'composer:chat:', 'clear', 'composer:chat:', 'hide-context']);
 
 // Every message the ribbon path posts has a handler.
-const coordinator = ['TaskPaneCoordinator.cs', 'TaskPaneCoordinator.Archive.cs', 'TaskPaneCoordinator.Contacts.cs']
+const coordinator = ['TaskPaneCoordinator.cs', 'TaskPaneCoordinator.Archive.cs']
   .map(f => fs.readFileSync(path.join(__dirname, '../../src/OnlyWorkspace.Outlook/UI', f), 'utf8')).join('\n');
-for (const type of ['toggle_history', 'toggle_info', 'toggle_analysis', 'toggle_party', 'toggle_contacts', 'show_input', 'new_chat_ready', 'hide_email_context']) {
+for (const type of ['toggle_history', 'toggle_info', 'toggle_analysis', 'toggle_party', 'show_input', 'new_chat_ready', 'hide_email_context']) {
   assert.match(coordinator, new RegExp('type = "' + type + '"'), type + ' is sent by the host');
   assert.match(html, new RegExp("case '" + type + "':"), type + ' is handled by the pane');
 }
-console.log('PASS ribbon routing: each button opens its screen, a second click closes it (Contatti too), presets switch');
+console.log('PASS ribbon routing: each button opens its screen, a second click closes it, presets switch');

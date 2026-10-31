@@ -5,8 +5,8 @@ namespace OnlyWorkspace.Core.Interfaces;
 
 public interface IContextBuilder
 {
-    /// <summary>Body without HTML and quoted replies; a forward keeps the forwarded message unless <paramref name="senderTextOnly"/>.</summary>
-    string CleanEmailBody(string rawBody, string? subject = null, bool senderTextOnly = false);
+    /// <summary>Body without HTML and quoted replies; a forward keeps the forwarded message.</summary>
+    string CleanEmailBody(string rawBody, string? subject = null);
     /// <summary>True when the whole text fits the budget (tokens, ~3.5 chars each); 0 = no limit.</summary>
     bool Fits(string text, int budgetTokens);
     /// <summary>The text unchanged, or a <see cref="OnlyWorkspace.Core.Context.ContextTooLongException"/>: never a cut.</summary>

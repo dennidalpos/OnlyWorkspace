@@ -1,6 +1,6 @@
 # Archivio
 
-L'archivio è uno specchio personale e cifrato della posta acquisita da Outlook classico. Conserva corpi integrali e testi degli allegati, condivisi quando il file è identico, e serve ricerca offline, Controparti, Contatti, Follow-up e Ricostruisci la pratica. I testi non ancora acquisiti richiedono Outlook. Dettagli tecnici: [Motore dell'archivio](../tecnico/archivio-motore.md).
+L'archivio è uno specchio personale e cifrato della posta acquisita da Outlook classico. Conserva corpi integrali e testi degli allegati, condivisi quando il file è identico, e serve ricerca offline, Controparti, Follow-up e Ricostruisci la pratica. I testi non ancora acquisiti richiedono Outlook. Dettagli tecnici: [Motore dell'archivio](../tecnico/archivio-motore.md).
 
 I documenti leggibili sono indicizzati per intero entro i limiti di lettura. Compressi, eseguibili e formati senza lettore restano come riferimenti all'email, con nome, tipo e dimensione: il loro contenuto non viene estratto né indicato come letto. MSG, EML e P7M restano leggibili; gli eventuali compressi al loro interno sono soltanto nominati. Dopo l'aggiornamento i vecchi testi allegati richiedono una rilettura dalle cassette aperte in Outlook; il corpo conservato resta disponibile.
 

@@ -425,9 +425,7 @@ public sealed partial class ArchiveDb : IDisposable
             "create trigger attachments_deleted after delete on attachments begin delete from attachment_fts where rowid=old.rowid; end",
             // The user's own grouping: an address, or a whole automatic key (domain), filed under another counterparty key.
             "create table party_choice(source text primary key, target text not null) without rowid",
-            "create table rpc_batches(id text primary key, operation text not null, digest text not null, result text) without rowid",
-            // Contacts refused per destination address book: not proposed again there.
-            "create table contact_rejects(store_id text not null, addr text not null, rejected_utc integer not null, primary key(store_id, addr)) without rowid"
+            "create table rpc_batches(id text primary key, operation text not null, digest text not null, result text) without rowid"
         })
         {
             Exec(sql.Replace("create table ", "create table if not exists ").Replace("create index ", "create index if not exists "), tx);

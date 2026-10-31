@@ -226,34 +226,6 @@
     font-size: var(--text-size-11); color: var(--text-2); background: var(--surface-2);
   }
 
-  /* ---------- Contacts ---------- */
-  .ct-store > summary { list-style: none; cursor: pointer; }
-  .ct-store > summary::-webkit-details-marker { display: none; }
-  .ct-folders { display: flex; flex-direction: column; gap: 2px; padding: 4px 0 4px 22px; }
-  .ct-warn { color: var(--danger); }
-  .ct-bulk { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
-  .ct-group { display: flex; flex-direction: column; gap: 4px; }
-  .ct-group-head { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-weight: 600; font-size: var(--text-size-12-5); padding-top: 6px; border-top: 1px solid var(--border); }
-  .ct-group-head input { accent-color: var(--accent); }
-  .ct-group-name { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
-  .ct-group-head .badge { margin-top: 0; }
-  /* stretch, not the centred history row: a long address centred in the column spilled out of the card at 150%. */
-  .ct-item { padding: 6px 8px; display: flex; flex-direction: column; align-items: stretch; gap: 6px; }
-  .ct-who .history-title { white-space: normal; overflow-wrap: anywhere; }
-  .ct-line { display: flex; align-items: flex-start; gap: 8px; }
-  .ct-line input { margin-top: 3px; flex: none; accent-color: var(--accent); }
-  .ct-who { flex: 1; min-width: 0; overflow-wrap: anywhere; }
-  .ct-line .badge { margin-top: 0; flex: none; }
-  .badge.ct-missing { color: var(--accent); }
-  .badge.ct-conflict { color: var(--danger); background: var(--danger-soft); }
-  .ct-proposal { display: flex; flex-direction: column; gap: 4px; padding-left: 22px; }
-  .ct-proposal .link-btn { text-align: left; overflow-wrap: anywhere; }
-  .ct-label { width: 96px; flex: none; color: var(--text-2); }
-  .ct-actions { display: flex; gap: 6px; flex-wrap: wrap; }
-  .ct-existing { display: flex; flex-direction: column; gap: 3px; }
-  .ct-existing .btn { align-self: flex-start; }
-  .ct-rejected > summary { cursor: pointer; }
-
   /* ---------- Quick actions ---------- */
   .quick-actions {
     display: flex; gap: 4px; align-items: center;
@@ -830,7 +802,7 @@
     <nav class="primary-nav" aria-label="Schermate OnlyWorkspace">
       <button id="btnChatPage" type="button" aria-current="page" aria-label="Chat" title="Chat"><svg class="i" aria-hidden="true"><use href="#i-chat"/></svg><span>Chat</span></button>
       <button id="btnSearchPage" type="button" aria-controls="analysisDrawer" aria-label="Posta" title="Posta: ricerca, analisi e Briefing"><svg class="i" aria-hidden="true"><use href="#i-search"/></svg><span>Posta</span></button>
-      <button id="btnPartiesPage" type="button" aria-controls="partyDrawer contactsDrawer" aria-label="Persone" title="Persone: Controparti e Rubrica"><svg class="i" aria-hidden="true"><use href="#i-people"/></svg><span>Persone</span></button>
+      <button id="btnPartiesPage" type="button" aria-controls="partyDrawer" aria-label="Persone" title="Persone: Controparti"><svg class="i" aria-hidden="true"><use href="#i-people"/></svg><span>Persone</span></button>
       <button id="btnHistory" type="button" aria-controls="historyDrawer" aria-label="Storico" title="Storico: conversazioni salvate, da riprendere"><svg class="i" aria-hidden="true"><use href="#i-history"/></svg><span>Storico</span></button>
     </nav>
     <div class="topbar-spacer"></div>
@@ -1162,7 +1134,6 @@
       <ul class="help-list">
         <li><b>Cerca</b>: riepiloghi, punti aperti, tabelle, scadenze ed email senza risposta su più email insieme, scegliendo dove cercare e i filtri.</li>
         <li><b>Controparti</b>: per ogni persona o azienda, le conversazioni e i documenti scambiati.</li>
-        <li><b>Rubrica</b>: propone le persone da aggiungere alla rubrica e aggiorna quelle presenti, sempre su conferma.</li>
       </ul>
       <div class="drawer-section-title">Storico</div>
       <ul class="help-list">
@@ -1193,48 +1164,11 @@
       <h2 id="partyTitle" tabindex="-1">Controparti</h2>
       <button class="icon-btn" type="button" data-close-drawer title="Chiudi (Esc)" aria-label="Chiudi"><svg class="i"><use href="#i-dismiss"/></svg></button>
     </div>
-    <nav class="section-nav" aria-label="Sezioni di Persone"><span class="btn btn-sm" aria-current="page">Controparti</span><button id="btnContactsPage" class="btn btn-sm" type="button" title="Cerca e aggiorna i contatti della rubrica">Rubrica</button></nav>
     <div class="drawer-body">
       <div id="ptSearchRow" class="field-row"><input id="ptSearch" class="field" type="text" data-autofocus placeholder="nome, azienda, dominio o indirizzo" autocomplete="off" aria-label="Cerca una controparte"></div>
       <div id="ptMerge" class="form-note" hidden><span id="ptMergeText"></span> <button id="ptMergeCancel" class="link-btn" type="button">Annulla</button></div>
       <div id="ptResults" style="display:flex;flex-direction:column;gap:6px"></div>
       <div id="ptDetail" style="display:flex;flex-direction:column;gap:8px" hidden></div>
-    </div>
-  </aside>
-
-  <aside id="contactsDrawer" class="drawer" role="region" aria-labelledby="contactsTitle" hidden>
-    <div class="drawer-header">
-      <h2 id="contactsTitle" tabindex="-1">Rubrica</h2>
-      <button class="icon-btn" type="button" data-close-drawer title="Chiudi (Esc)" aria-label="Chiudi"><svg class="i"><use href="#i-dismiss"/></svg></button>
-    </div>
-    <nav class="section-nav" aria-label="Sezioni di Persone"><button id="btnCounterparties" class="btn btn-sm" type="button" title="Persone e aziende dell’archivio">Controparti</button><span class="btn btn-sm" aria-current="page">Rubrica</span></nav>
-    <div class="drawer-body">
-      <div class="drawer-section-title">Dove cercare</div>
-      <div class="form-note">Cassette archiviate e loro cartelle: si propongono le persone a cui hai scritto almeno una volta.</div>
-      <div id="ctStores" style="display:flex;flex-direction:column;gap:4px"></div>
-      <label class="opt"><input id="ctOwnDomains" type="checkbox"><span>Escludi i colleghi dei miei domini</span></label>
-      <div class="drawer-section-title">Rubrica di destinazione</div>
-      <div class="field-row"><label for="ctDestStore">Cassetta</label><select id="ctDestStore" class="field"></select></div>
-      <div class="field-row"><label for="ctDestFolder">Cartella</label><select id="ctDestFolder" class="field"></select></div>
-      <div id="ctDestNote" class="form-note"></div>
-      <button id="ctCreateFolder" class="btn btn-sm" type="button" hidden>Crea cartella «Contatti»</button>
-      <button id="ctScan" class="btn btn-primary" type="button" disabled data-autofocus aria-describedby="ctScanNote">Cerca contatti</button>
-      <div id="ctScanNote" class="form-note" hidden></div>
-      <div id="ctPhase" class="form-note status-text" role="status" hidden></div>
-      <div id="ctSummary" hidden>
-        <div id="ctCounts" class="form-note" role="status"></div>
-        <label class="opt"><input id="ctShowAll" type="checkbox"><span>Mostra anche i contatti aggiornati o modificati dopo l'ultima email</span></label>
-        <div class="ct-bulk">
-          <button id="ctAnalyze" class="btn btn-sm btn-primary" type="button" disabled title="L'email più recente di ogni indirizzo va al modello del profilo attivo">Analizza selezionati (0)</button>
-          <button id="ctStop" class="btn btn-sm btn-danger" type="button" hidden>Interrompi</button>
-        </div>
-        <div id="ctProgress" class="form-note status-text" role="status" hidden></div>
-      </div>
-      <div id="ctResults" style="display:flex;flex-direction:column;gap:8px"></div>
-      <details class="ct-rejected">
-        <summary id="ctRejectedTitle" class="drawer-section-title">Esclusi per questa rubrica</summary>
-        <div id="ctRejected"></div>
-      </details>
     </div>
   </aside>
 
@@ -1481,7 +1415,7 @@
     document.querySelectorAll('.menu-item[data-tool]').forEach(function (b) {
       b.disabled = state.busy || !state.configOk || (b.hasAttribute('data-needs-email') && !hasActionEmail);
     });
-    $('btnClearChat').disabled = state.busy || !!(contacts && contacts.busy) || !hasTurns();
+    $('btnClearChat').disabled = state.busy || !hasTurns();
     $('btnBriefing').disabled = state.busy || !state.configOk;
     prompt.disabled = !state.configOk;
     document.querySelectorAll('.suggestion').forEach(function (b) {
@@ -1541,13 +1475,13 @@
     if (!$('jobBar').hidden) updateJobBar();
   }
   setInterval(refreshCounters, 1000);
-  // Which job the bar shows: the pane operation over any other page, the Contatti analysis over any page but its own,
-  // else work running in the pane of another Outlook window (an email opened in its own window).
+  // Which job the bar shows: the pane operation over any other page, else work running in the pane of another
+  // Outlook window (an email opened in its own window).
   var jobShown = null;
   var otherJobs = [];
   function updateJobBar() {
     var page = openDrawerId();
-    jobShown = state.busy && !!page ? 'pane' : contacts && contacts.busy && page !== 'contactsDrawer' ? 'contacts' : otherJobs.length ? 'other' : null;
+    jobShown = state.busy && !!page ? 'pane' : otherJobs.length ? 'other' : null;
     var show = !!jobShown;
     $('jobBar').hidden = !show;
     document.body.classList.toggle('has-job', show);
@@ -1558,11 +1492,6 @@
       $('jobText').textContent = (c && c.action ? c.action + ' · ' : '') + progressText(c);
       $('jobBar').title = state.job.message || '';
       done = state.job.done; total = state.job.total;
-    } else if (jobShown === 'contacts') {
-      var p = contacts.progress || { done: 0, total: 0 };
-      $('jobText').textContent = 'Analisi contatti · ' + formatCount(p.done) + '/' + formatCount(p.total);
-      $('jobBar').title = 'Analisi dei contatti selezionati in corso';
-      done = p.done; total = p.total;
     } else {
       var o = otherJobs[0];
       $('jobText').textContent = 'Nella ' + o.window + ': ' + o.action + (o.total > 0 ? ' · ' + formatCount(o.done) + '/' + formatCount(o.total) : '') +
@@ -1571,7 +1500,7 @@
       done = o.done; total = o.total;
     }
     $('jobShow').hidden = jobShown === 'other';
-    $('jobShow').title = jobShown === 'pane' ? 'Torna all\'operazione in corso' : 'Torna alla Rubrica';
+    $('jobShow').title = 'Torna all\'operazione in corso';
     $('jobStop').title = jobShown === 'other' ? 'Interrompi l\'operazione dell\'altra finestra' : 'Interrompi l\'operazione in corso (Esc)';
     var bar = $('jobProgress');
     bar.hidden = !(total > 0);
@@ -1587,7 +1516,7 @@
     showToast('Operazione in corso: attendi la fine o interrompila.', 'info', { label: 'Mostra', run: showConversation });
     return true;
   }
-  $('jobShow').addEventListener('click', function () { if (jobShown === 'contacts') openDrawer('contactsDrawer'); else showConversation(); });
+  $('jobShow').addEventListener('click', showConversation);
   $('jobStop').addEventListener('click', function () {
     if (jobShown === 'other') post({ type: 'stop_other', id: otherJobs[0].id });
     else post({ type: 'cancel' });
@@ -2618,7 +2547,7 @@
   document.addEventListener('click', function (e) {
     if (openMenuId() && !e.target.closest('.menu')) closeMenus();
   });
-  $('btnClearChat').addEventListener('click', function () { if (!state.busy && !(contacts && contacts.busy) && hasTurns()) post({ type: 'new_chat' }); });
+  $('btnClearChat').addEventListener('click', function () { if (!state.busy && hasTurns()) post({ type: 'new_chat' }); });
   $('btnBriefing').addEventListener('click', function () { runTool('briefing'); });
 
   conv.addEventListener('click', function (e) {
@@ -2656,12 +2585,10 @@
 
   // ---------- Drawers ----------
   // Drawer → button that gets the focus back (and aria-expanded when it is a toggle).
-  var drawerToggles = { historyDrawer: 'btnHistory', infoDrawer: 'btnAiState', analysisDrawer: 'btnSearchPage', partyDrawer: 'btnPartiesPage', contactsDrawer: 'btnPartiesPage', helpDrawer: 'btnHelp' };
-  var navButtons = { chat: 'btnChatPage', analysisDrawer: 'btnSearchPage', partyDrawer: 'btnPartiesPage', contactsDrawer: 'btnPartiesPage', historyDrawer: 'btnHistory' };
-  var lastPeoplePage = 'partyDrawer';
+  var drawerToggles = { historyDrawer: 'btnHistory', infoDrawer: 'btnAiState', analysisDrawer: 'btnSearchPage', partyDrawer: 'btnPartiesPage', helpDrawer: 'btnHelp' };
+  var navButtons = { chat: 'btnChatPage', analysisDrawer: 'btnSearchPage', partyDrawer: 'btnPartiesPage', historyDrawer: 'btnHistory' };
   function showPage(id) {
     document.body.dataset.page = id;
-    if (id === 'partyDrawer' || id === 'contactsDrawer') lastPeoplePage = id;
     var selected = navButtons[id];
     ['btnChatPage', 'btnSearchPage', 'btnPartiesPage', 'btnHistory'].forEach(function (button) { $(button).setAttribute('aria-current', button === selected ? 'page' : 'false'); });
   }
@@ -2692,8 +2619,6 @@
     } else if (id === 'partyDrawer') {
       if (!$('ptDetail').hidden) return updateJobBar();
       partySearch();
-    } else if (id === 'contactsDrawer') {
-      contactsOpen();
     } else if (id === 'helpDrawer') {
       // Static text.
     } else {
@@ -3224,12 +3149,8 @@
   $('btnChatPage').addEventListener('click', closeDrawers);
   $('btnSearchPage').addEventListener('click', function () { if ($('analysisDrawer').hidden) openDrawer('analysisDrawer'); });
   $('btnPartiesPage').addEventListener('click', function () {
-    if ($(lastPeoplePage).hidden) {
-      openDrawer(lastPeoplePage);
-    }
+    if ($('partyDrawer').hidden) openDrawer('partyDrawer');
   });
-  $('btnCounterparties').addEventListener('click', function () { openDrawer('partyDrawer'); });
-  $('btnContactsPage').addEventListener('click', function () { if ($('contactsDrawer').hidden) openDrawer('contactsDrawer'); });
   document.querySelectorAll('[data-close-drawer]').forEach(function (b) { b.addEventListener('click', closeDrawers); });
 
   // Two-step inline confirmation instead of the native confirm() dialog.
@@ -3379,533 +3300,6 @@
   $('btnDiag').addEventListener('click', function () { post({ type: 'export_diagnostics' }); });
   $('btnOpenConfig').addEventListener('click', function () { post({ type: 'open_config' }); });
 
-  // ---------- Contacts (archive people compared with one address book) ----------
-  // scope: stores/folders of the archive; list: last scan; proposals: address -> analysis result
-  var contacts = { scope: null, saved: null, list: null, proposals: {}, selected: {}, busy: false, showAll: false, groupsShown: 60 };
-  var contactStatus = { missing: 'Mancante', check: 'Da verificare', conflict: 'Conflitto', uptodate: 'Aggiornato' };
-  function contactsOpen() {
-    // Coming back keeps choices, results and a running scan or analysis; the mailbox list is asked again
-    // only when nothing runs (as the 30 s refresh does).
-    if (contacts.scope) {
-      if (!contacts.busy && $('ctPhase').hidden) post({ type: 'contacts_open', refresh: true });
-      return;
-    }
-    $('ctResults').innerHTML = '';
-    $('ctSummary').hidden = true;
-    post({ type: 'contacts_open' });
-  }
-  // Mailboxes added, archived or indexed while the page is open: asked again every 30 s, redrawn only when changed.
-  function contactsScopeKey(d) {
-    return JSON.stringify([d.available, (d.stores || []).map(function (s) {
-      return [s.id, s.name, s.open, s.archived, s.note, s.issue, (s.folders || []).map(function (f) { return f.id + f.path; })];
-    })]);
-  }
-  setInterval(function () {
-    if ($('contactsDrawer').hidden || !contacts.scope || contacts.busy || !$('ctPhase').hidden) return;
-    post({ type: 'contacts_open', refresh: true });
-  }, 30000);
-  // What the user has chosen on screen, kept when the scope is redrawn.
-  function contactsLiveChoice() {
-    return {
-      stores: contactsChosenStores(),
-      excluded: Array.prototype.filter.call($('ctStores').querySelectorAll('input[data-folder]'), function (f) { return !f.checked; })
-        .map(function (f) { return Number(f.dataset.folder); }),
-      destStore: $('ctDestStore').value, destFolder: $('ctDestFolder').value, excludeOwnDomains: $('ctOwnDomains').checked
-    };
-  }
-  function renderContactsScope(d) {
-    if (contacts.scope && contactsScopeKey(contacts.scope) === contactsScopeKey(d)) return;
-    var refresh = !!(contacts.scope && contacts.scope.available);
-    var expanded = {}, focused = document.activeElement, focusKey = null;
-    if (refresh) {
-      contacts.saved = contactsLiveChoice();
-      $('ctStores').querySelectorAll('details[open] input[data-store]').forEach(function (c) { expanded[c.dataset.store] = true; });
-      if (focused && $('ctStores').contains(focused) && focused.dataset) focusKey = focused.dataset.store ? 'store:' + focused.dataset.store : focused.dataset.folder ? 'folder:' + focused.dataset.folder : null;
-    } else {
-      contacts.saved = d.saved || null;
-    }
-    var prevDest = $('ctDestStore').value;
-    contacts.scope = d;
-    var box = $('ctStores');
-    box.innerHTML = '';
-    if (!d.available) {
-      box.appendChild(el('div', 'muted', 'L\'archivio delle email non è attivo.'));
-      $('ctScan').disabled = true;
-      $('ctScanNote').hidden = true;
-      return;
-    }
-    var saved = contacts.saved;
-    var excluded = {};
-    ((saved && saved.excluded) || []).forEach(function (id) { excluded[id] = true; });
-    (d.stores || []).forEach(function (s) {
-      var wrap = el('details', 'ct-store');
-      wrap.open = !!expanded[s.id];
-      var head = el('summary');
-      var opt = el('label', 'opt' + (s.archived ? '' : ' disabled'));
-      var cb = el('input');
-      cb.type = 'checkbox';
-      cb.disabled = !s.archived;
-      cb.checked = s.archived && !!saved && (saved.stores || []).indexOf(s.id) >= 0;
-      cb.dataset.store = s.id;
-      opt.appendChild(cb);
-      opt.appendChild(el('span', null, s.name + (s.open ? '' : ' (chiusa)')));
-      head.appendChild(opt);
-      wrap.appendChild(head);
-      if (s.note) wrap.appendChild(el('div', 'form-note', s.note));
-      if (s.issue) wrap.appendChild(el('div', 'form-note ct-warn', s.issue));
-      var list = el('div', 'ct-folders');
-      (s.folders || []).forEach(function (f) {
-        var fo = el('label', 'opt');
-        var fc = el('input');
-        fc.type = 'checkbox';
-        fc.dataset.folder = String(f.id);
-        fc.dataset.of = s.id;
-        fc.checked = !excluded[f.id];
-        fo.appendChild(fc);
-        fo.appendChild(el('span', null, f.path + ' · ' + formatCount(f.emails)));
-        list.appendChild(fo);
-      });
-      if (s.folders && s.folders.length) {
-        list.appendChild(el('div', 'form-note', 'Cartelle archiviate, comprese quelle create da te o dalle regole; Posta eliminata, Indesiderata, Bozze e Posta in uscita non sono archiviate.'));
-      }
-      wrap.appendChild(list);
-      cb.addEventListener('change', contactsDestDefault);
-      box.appendChild(wrap);
-    });
-    var dest = $('ctDestStore');
-    dest.innerHTML = '';
-    dest.appendChild(el('option', null, 'Scegli la cassetta…')).value = '';
-    (d.stores || []).filter(function (s) { return s.open; }).forEach(function (s) {
-      var o = el('option', null, s.name);
-      o.value = s.id;
-      dest.appendChild(o);
-    });
-    dest.value = (saved && saved.destStore) || '';
-    $('ctOwnDomains').checked = !!(saved && saved.excludeOwnDomains);
-    if (focusKey) {
-      var again = box.querySelector(focusKey.indexOf('store:') === 0 ? 'input[data-store="' + CSS.escape(focusKey.slice(6)) + '"]' : 'input[data-folder="' + CSS.escape(focusKey.slice(7)) + '"]');
-      if (again) again.focus();
-    }
-    // Same destination on a redraw: its address books are already listed.
-    if (refresh && dest.value && dest.value === prevDest) contactsUpdateScan();
-    else contactsLoadFolders();
-  }
-  function contactsChosenStores() {
-    return Array.prototype.filter.call($('ctStores').querySelectorAll('input[data-store]'), function (c) { return c.checked; }).map(function (c) { return c.dataset.store; });
-  }
-  // One mailbox searched: its own address book by default. More than one: the user picks.
-  function contactsDestDefault() {
-    var chosen = contactsChosenStores();
-    if (chosen.length === 1 && $('ctDestStore').value !== chosen[0]) {
-      $('ctDestStore').value = chosen[0];
-      contactsLoadFolders();
-    }
-    contactsUpdateScan();
-  }
-  function contactsLoadFolders() {
-    var store = $('ctDestStore').value;
-    $('ctDestFolder').innerHTML = '';
-    $('ctCreateFolder').hidden = true;
-    $('ctDestNote').textContent = '';
-    if (store) post({ type: 'contacts_folders', storeId: store });
-    contactsUpdateScan();
-  }
-  function renderContactsFolders(d) {
-    if (d.storeId !== $('ctDestStore').value) return;
-    var sel = $('ctDestFolder');
-    sel.innerHTML = '';
-    var folders = d.folders || [];
-    if (d.error) $('ctDestNote').textContent = 'Rubrica non disponibile: ' + d.error;
-    $('ctCreateFolder').hidden = !!d.error || folders.length > 0;
-    if (!folders.length && !d.error) $('ctDestNote').textContent = 'Questa cassetta non ha una cartella Contatti.';
-    folders.forEach(function (f) {
-      var parts = (f.path || '').split(/[\\/]+/).filter(Boolean);
-      var label = parts.length > 1 ? parts[parts.length - 1] + ' · ' + parts.slice(0, -1).join(' › ') : (parts[0] || 'Contatti');
-      var o = el('option', null, label + (f.isDefault ? ' (predefinita)' : ''));
-      o.title = f.path || '';
-      o.value = f.entryId;
-      o.dataset.localOnly = f.localOnly ? '1' : '';
-      sel.appendChild(o);
-    });
-    var saved = contacts.saved;
-    if (saved && saved.destStore === d.storeId && folders.some(function (f) { return f.entryId === saved.destFolder; })) sel.value = saved.destFolder;
-    contactsFolderNote();
-    contactsUpdateScan();
-    post({ type: 'contacts_rejected', storeId: d.storeId });
-  }
-  function contactsFolderNote() {
-    var o = $('ctDestFolder').selectedOptions && $('ctDestFolder').selectedOptions[0];
-    if (o && o.dataset.localOnly) $('ctDestNote').textContent = 'Cartella locale di un account IMAP: i contatti restano su questo PC e non vengono sincronizzati.';
-    else if ($('ctDestFolder').options.length) $('ctDestNote').textContent = '';
-  }
-  function contactsUpdateScan() {
-    var folders = $('ctStores').querySelectorAll('input[data-folder]');
-    var any = Array.prototype.some.call(folders, function (f) { return f.checked && contactsChosenStores().indexOf(f.dataset.of) >= 0; });
-    var scanning = !$('ctPhase').hidden;
-    // A disabled button says why, in the page and not only to a mouse hovering on it.
-    var why = scanning ? '' : contacts.busy ? 'Analisi dei contatti in corso: attendi la fine o interrompila.'
-      : !any ? 'Scegli almeno una cartella in cui cercare.'
-      : !$('ctDestStore').value || !$('ctDestFolder').value ? 'Scegli la rubrica di destinazione.' : '';
-    $('ctScan').disabled = scanning || !!why;
-    $('ctScanNote').textContent = why;
-    $('ctScanNote').hidden = !why;
-  }
-  $('ctDestStore').addEventListener('change', contactsLoadFolders);
-  $('ctDestFolder').addEventListener('change', function () { contactsFolderNote(); contactsUpdateScan(); });
-  $('ctStores').addEventListener('change', contactsUpdateScan);
-  $('ctCreateFolder').addEventListener('click', function () {
-    var b = this;
-    armConfirm(b, 'Conferma: crea «Contatti»', function () { b.hidden = true; post({ type: 'contacts_create_folder', storeId: $('ctDestStore').value }); });
-  });
-  $('ctScan').addEventListener('click', function () {
-    var chosen = contactsChosenStores();
-    var folders = Array.prototype.filter.call($('ctStores').querySelectorAll('input[data-folder]'), function (f) { return f.checked && chosen.indexOf(f.dataset.of) >= 0; })
-      .map(function (f) { return Number(f.dataset.folder); });
-    contacts.proposals = {};
-    contacts.selected = {};
-    contacts.groupsShown = 60;
-    $('ctResults').innerHTML = '';
-    $('ctSummary').hidden = true;
-    $('ctPhase').dataset.light = 'Working';
-    $('ctPhase').textContent = 'Ricerca in corso…';
-    $('ctPhase').hidden = false;
-    // One search at a time: the button comes back with the list (or its error).
-    contactsUpdateScan();
-    post({ type: 'contacts_scan', folders: folders, destStore: $('ctDestStore').value, destFolder: $('ctDestFolder').value, excludeOwnDomains: $('ctOwnDomains').checked });
-  });
-  $('ctShowAll').addEventListener('change', function () { contacts.showAll = this.checked; renderContactsList(); });
-  function contactsVisible(item) { return contacts.showAll || item.status !== 'uptodate'; }
-  function renderContactsList(d) {
-    if (d) {
-      contacts.list = d;
-      $('ctPhase').hidden = true;
-      contactsUpdateScan();
-      if (d.error) {
-        $('ctResults').innerHTML = '';
-        $('ctResults').appendChild(el('div', 'muted', d.error));
-        return;
-      }
-    }
-    var list = contacts.list;
-    if (!list || list.error) return;
-    // Counted from the items: written and refused contacts change them after the scan.
-    var c = { missing: 0, check: 0, conflict: 0, uptodate: 0, filtered: (list.counts || {}).filtered || 0 };
-    (list.groups || []).forEach(function (g) { g.items.forEach(function (i) { if (c[i.status] != null) c[i.status]++; }); });
-    $('ctSummary').hidden = false;
-    $('ctCounts').textContent = plural(c.missing, 'mancante', 'mancanti') + ' · ' + formatCount(c.check) + ' da verificare · ' + formatCount(c.conflict) + ' in conflitto · ' +
-      plural(c.uptodate, 'aggiornato', 'aggiornati') + (c.filtered ? ' · ' + plural(c.filtered, 'escluso', 'esclusi') + ' (automatici, senza risposta da te o colleghi)' : '');
-    var box = $('ctResults');
-    // The list is drawn again after each choice: keep the keyboard on the same group or contact instead of losing it.
-    var focused = box.contains(document.activeElement) ? document.activeElement : null;
-    var focusGroup = focused && focused.dataset.group;
-    var focusRow = focused && focused.closest('[data-contact]');
-    var focusContact = focusRow && focusRow.dataset.contact;
-    box.innerHTML = '';
-    var groups = (list.groups || []).filter(function (g) { return g.items.some(contactsVisible); });
-    if (!groups.length) {
-      box.appendChild(el('div', 'muted', 'Nessun contatto da proporre o aggiornare.'));
-      contactsUpdateBulk();
-      return;
-    }
-    groups.slice(0, contacts.groupsShown).forEach(function (g) { box.appendChild(renderContactGroup(g)); });
-    if (groups.length > contacts.groupsShown) {
-      var more = el('button', 'btn btn-sm', 'Mostra altri ' + plural(groups.length - contacts.groupsShown, 'gruppo', 'gruppi'));
-      more.type = 'button';
-      more.addEventListener('click', function () { contacts.groupsShown += 60; renderContactsList(); });
-      box.appendChild(more);
-    }
-    contactsUpdateBulk();
-    var back = focusGroup ? box.querySelector('input[data-group="' + CSS.escape(focusGroup) + '"]')
-      : focusContact ? box.querySelector('[data-contact="' + CSS.escape(focusContact) + '"] input, [data-contact="' + CSS.escape(focusContact) + '"] button') : null;
-    if (back) back.focus();
-  }
-  function renderContactGroup(g) {
-    var items = g.items.filter(contactsVisible);
-    var wrap = el('section', 'ct-group');
-    var head = el('div', 'ct-group-head');
-    var all = el('input');
-    all.type = 'checkbox';
-    all.title = 'Seleziona il gruppo';
-    all.setAttribute('aria-label', 'Seleziona ' + g.name);
-    all.dataset.group = g.key;
-    all.checked = items.every(function (i) { return contacts.selected[i.address]; });
-    all.addEventListener('change', function () {
-      items.forEach(function (i) { if (contacts.showAll || i.status !== 'uptodate') contacts.selected[i.address] = all.checked; });
-      renderContactsList();
-    });
-    var groupLabel = el('label', 'opt');
-    groupLabel.appendChild(all);
-    groupLabel.appendChild(el('span', 'ct-group-name', g.name + (g.key !== g.name ? ' · ' + g.key : '')));
-    head.appendChild(groupLabel);
-    head.appendChild(el('span', 'badge', formatCount(items.length)));
-    var ready = items.filter(function (i) { return contactReady(i); });
-    if (ready.length > 1) {
-      var apply = el('button', 'btn btn-sm', 'Applica gruppo (' + ready.length + ')');
-      apply.type = 'button';
-      apply.title = 'Crea i mancanti e aggiorna i presenti analizzati del gruppo, con i campi come li vedi; i conflitti restano da scegliere';
-      apply.addEventListener('click', function () { post({ type: 'contacts_apply', items: ready.map(contactApplyItem).filter(Boolean) }); });
-      head.appendChild(apply);
-    }
-    var missing = items.filter(function (i) { return i.status === 'missing'; });
-    if (missing.length > 1) {
-      var refuse = el('button', 'btn btn-sm btn-danger', 'Rifiuta mancanti');
-      refuse.type = 'button';
-      refuse.title = 'Non proporre più questi indirizzi per questa rubrica (si possono riproporre da «Esclusi»)';
-      refuse.addEventListener('click', function () {
-        armConfirm(refuse, 'Conferma rifiuto (' + missing.length + ')', function () { post({ type: 'contacts_reject', addresses: missing.map(function (i) { return i.address; }) }); });
-      });
-      head.appendChild(refuse);
-    }
-    wrap.appendChild(head);
-    items.forEach(function (i) { wrap.appendChild(renderContactItem(i)); });
-    return wrap;
-  }
-  // Analyzed and with something to write: a new contact with at least one field, or a single contact with changes.
-  function contactReady(i) {
-    var p = contacts.proposals[i.address];
-    if (!p || p.problem && !p.fields.length) return false;
-    if (i.status === 'missing') return p.fields.length > 0;
-    return p.existing.length === 1 && p.existing[0].changes.length > 0;
-  }
-  function contactApplyItem(i) {
-    var p = contacts.proposals[i.address];
-    var row = document.querySelector('[data-contact="' + CSS.escape(i.address) + '"]');
-    if (i.status === 'missing') return { address: i.address, action: 'create', fields: contactFieldsOf(row, p) };
-    var e = p.existing[0];
-    return { address: i.address, action: 'update', entryId: e.entryId, fields: contactChangesOf(row, e) };
-  }
-  // Values as edited in the card; the proposal when the card is not on screen.
-  function contactFieldsOf(row, p) {
-    var fields = {};
-    p.fields.forEach(function (f) {
-      var input = row && row.querySelector('input[data-field="' + f.field + '"]');
-      var v = input ? input.value.trim() : f.value;
-      if (v) fields[f.field] = v;
-    });
-    return fields;
-  }
-  function contactChangesOf(row, e) {
-    var fields = {};
-    e.changes.forEach(function (c) {
-      var tick = row && row.querySelector('input[data-change="' + e.entryId + '|' + c.field + '"]');
-      if (!tick || tick.checked) fields[c.field] = c['new'];
-    });
-    return fields;
-  }
-  var contactCheckboxSequence = 0;
-  function renderContactItem(i) {
-    var row = el('div', 'history-item ct-item');
-    row.dataset.contact = i.address;
-    var line = el('div', 'ct-line');
-    var cb = el('input');
-    cb.type = 'checkbox';
-    cb.disabled = i.status === 'uptodate' && !contacts.showAll;
-    cb.checked = !!contacts.selected[i.address];
-    cb.setAttribute('aria-label', 'Seleziona ' + (i.name || i.address));
-    cb.addEventListener('change', function () { contacts.selected[i.address] = cb.checked; contactsUpdateBulk(); });
-    line.appendChild(cb);
-    cb.id = 'ct-select-' + (++contactCheckboxSequence);
-    var who = el('label', 'ct-who');
-    who.htmlFor = cb.id;
-    who.appendChild(el('div', 'history-title', i.name || i.address));
-    var meta = (i.name ? i.address + ' · ' : '') + formatCount(i.emails) + ' email' + (i.last ? ' · ultima scritta il ' + i.last : '');
-    who.appendChild(el('div', 'history-meta', meta));
-    var notes = [];
-    if (i.role) notes.push('casella condivisa: contatto aziendale');
-    if (i.presentIn) notes.push('presente in ' + i.presentIn);
-    if (i.sameName) notes.push('stesso nome di un contatto esistente');
-    if (i.status === 'conflict') notes.push((i.contacts || []).length + ' contatti con questo indirizzo: scegli quale aggiornare');
-    if (!i.sources) notes.push('nessuna email scritta da questo indirizzo nelle cartelle scelte');
-    if (notes.length) who.appendChild(el('div', 'form-note', notes.join(' · ')));
-    var p = contacts.proposals[i.address];
-    // Refused without analysis: no email goes to the model for someone the user does not want.
-    if (i.status === 'missing' && !p) {
-      var no = el('button', 'link-btn', 'Rifiuta');
-      no.type = 'button';
-      no.title = 'Non proporre più questo indirizzo per questa rubrica';
-      no.addEventListener('click', function () { post({ type: 'contacts_reject', addresses: [i.address] }); });
-      who.appendChild(no);
-    }
-    line.appendChild(who);
-    line.appendChild(el('span', 'badge ct-' + i.status, contactStatus[i.status] || i.status));
-    row.appendChild(line);
-    if (p) row.appendChild(renderContactProposal(i, p));
-    return row;
-  }
-  function renderContactProposal(i, p) {
-    var box = el('div', 'ct-proposal');
-    if (p.source) {
-      var src = el('button', 'link-btn', 'Da «' + (p.source.subject || '(senza oggetto)') + '» del ' + p.source.date);
-      src.type = 'button';
-      src.title = 'Apri l\'email in Outlook';
-      src.addEventListener('click', function () { post({ type: 'archive_open_email', entryId: p.source.entryId, storeId: p.source.storeId }); });
-      box.appendChild(src);
-    }
-    if (p.problem) box.appendChild(el('div', 'form-note ct-warn', p.problem));
-    var actions = el('div', 'ct-actions');
-    if (i.status === 'missing') {
-      p.fields.forEach(function (f) {
-        var r = el('label', 'field-row');
-        r.appendChild(el('span', 'ct-label', f.label));
-        var input = el('input', 'field');
-        input.type = 'text';
-        input.value = f.value;
-        input.dataset.field = f.field;
-        r.appendChild(input);
-        box.appendChild(r);
-      });
-      var add = el('button', 'btn btn-sm btn-primary', 'Aggiungi');
-      add.type = 'button';
-      add.disabled = !p.fields.length;
-      add.addEventListener('click', function () { post({ type: 'contacts_apply', items: [contactApplyItem(i)] }); });
-      actions.appendChild(add);
-      if (i.sameName && p.existing.length === 1) {
-        var merge = el('button', 'btn btn-sm', 'Aggiungi come indirizzo a «' + i.sameName.name + '»');
-        merge.type = 'button';
-        merge.addEventListener('click', function () { post({ type: 'contacts_apply', items: [{ address: i.address, action: 'add_email', entryId: i.sameName.entryId, fields: {} }] }); });
-        actions.appendChild(merge);
-      }
-      var refuse = el('button', 'btn btn-sm btn-danger', 'Rifiuta');
-      refuse.type = 'button';
-      refuse.title = 'Non proporre più questo indirizzo per questa rubrica';
-      refuse.addEventListener('click', function () { post({ type: 'contacts_reject', addresses: [i.address] }); });
-      actions.appendChild(refuse);
-    } else {
-      p.existing.forEach(function (e) {
-        var c = el('div', 'ct-existing');
-        var open = el('button', 'link-btn', e.name || 'Contatto');
-        open.type = 'button';
-        open.title = 'Apri il contatto in Outlook';
-        open.addEventListener('click', function () { post({ type: 'contacts_open_contact', entryId: e.entryId, storeId: contacts.list.destStore }); });
-        c.appendChild(open);
-        if (!e.changes.length) c.appendChild(el('div', 'form-note', 'Nessun dato nuovo nell\'email più recente.'));
-        e.changes.forEach(function (ch) {
-          var o = el('label', 'opt');
-          var t = el('input');
-          t.type = 'checkbox';
-          t.checked = true;
-          t.dataset.change = e.entryId + '|' + ch.field;
-          o.appendChild(t);
-          o.appendChild(el('span', null, ch.label + ': ' + (ch.old || '(vuoto)') + ' → ' + ch['new']));
-          c.appendChild(o);
-        });
-        if (e.changes.length) {
-          var upd = el('button', 'btn btn-sm btn-primary', 'Aggiorna');
-          upd.type = 'button';
-          upd.addEventListener('click', function () {
-            var row = document.querySelector('[data-contact="' + CSS.escape(i.address) + '"]');
-            post({ type: 'contacts_apply', items: [{ address: i.address, action: 'update', entryId: e.entryId, fields: contactChangesOf(row, e) }] });
-          });
-          c.appendChild(upd);
-        }
-        box.appendChild(c);
-      });
-      var ignore = el('button', 'btn btn-sm btn-subtle', 'Ignora');
-      ignore.type = 'button';
-      ignore.title = 'Nessuna modifica: torna alla prossima email più recente';
-      ignore.addEventListener('click', function () { delete contacts.proposals[i.address]; renderContactsList(); });
-      actions.appendChild(ignore);
-    }
-    box.appendChild(actions);
-    return box;
-  }
-  function contactsSelectedAddresses() {
-    return Object.keys(contacts.selected).filter(function (a) { return contacts.selected[a]; });
-  }
-  function contactsUpdateBulk() {
-    $('btnClearChat').disabled = state.busy || !!(contacts && contacts.busy) || !hasTurns();
-    var n = contactsSelectedAddresses().length;
-    $('ctAnalyze').textContent = 'Analizza selezionati (' + n + ')';
-    $('ctAnalyze').disabled = contacts.busy || n === 0;
-    $('ctStop').hidden = !contacts.busy;
-    contactsUpdateScan();
-  }
-  $('ctAnalyze').addEventListener('click', function () {
-    var addresses = contactsSelectedAddresses();
-    if (!addresses.length) return;
-    contacts.busy = true;
-    contacts.progress = { done: 0, total: addresses.length };
-    $('ctProgress').dataset.light = 'Working';
-    $('ctProgress').textContent = 'Analisi di ' + plural(addresses.length, 'indirizzo', 'indirizzi') + '…';
-    $('ctProgress').hidden = false;
-    contactsUpdateBulk();
-    updateJobBar();
-    post({ type: 'contacts_analyze', addresses: addresses });
-  });
-  $('ctStop').addEventListener('click', function () { post({ type: 'contacts_cancel' }); });
-  function contactsProgress(d) {
-    contacts.busy = true;
-    contacts.progress = { done: d.done, total: d.total };
-    $('ctSummary').hidden = false;
-    $('ctProgress').hidden = false;
-    $('ctProgress').dataset.light = 'Working';
-    $('ctProgress').textContent = 'Analizzati ' + d.done + ' di ' + d.total + (d.model ? ' · ' + d.model + (d.external ? ' (cloud)' : '') : '');
-    contactsUpdateBulk();
-    updateJobBar();
-  }
-  function contactsAnalyzeEnd(d) {
-    contacts.busy = false;
-    $('ctProgress').dataset.light = d.error ? 'Error' : d.cancelled ? 'Off' : 'Ok';
-    $('ctProgress').textContent = d.error ? 'Analisi interrotta: ' + d.error : d.cancelled ? 'Analisi interrotta dopo ' + plural(d.done, 'indirizzo', 'indirizzi') + '.' : 'Analisi completata: ' + plural(d.done, 'indirizzo', 'indirizzi') + '.';
-    // Group headers offer «Applica gruppo» only once their items are analyzed.
-    renderContactsList();
-    contactsUpdateBulk();
-    updateJobBar();
-  }
-  function contactsProposal(p) {
-    contacts.proposals[p.address] = p;
-    contacts.selected[p.address] = false;
-    var row = document.querySelector('[data-contact="' + CSS.escape(p.address) + '"]');
-    var item = contactsItem(p.address);
-    // A row not drawn yet (page left and reopened, or past the shown groups) is drawn by the next list render.
-    if (row && item) row.parentNode.replaceChild(renderContactItem(item), row);
-  }
-  function contactsItem(address) {
-    var found = null;
-    ((contacts.list && contacts.list.groups) || []).some(function (g) {
-      return g.items.some(function (i) { if (i.address === address) { found = i; return true; } return false; });
-    });
-    return found;
-  }
-  // Written contacts leave the list: the next search shows them as up to date.
-  function contactsApplied(d) {
-    (d.results || []).forEach(function (r) {
-      var item = contactsItem(r.address);
-      if (r.ok && item) {
-        item.status = 'uptodate';
-        delete contacts.proposals[r.address];
-      }
-      if (!r.ok) showToast(r.address + ': ' + r.message, 'error');
-    });
-    renderContactsList();
-  }
-  function contactsRemoved(d) {
-    var gone = {};
-    (d.addresses || []).forEach(function (a) { gone[a] = true; delete contacts.proposals[a]; delete contacts.selected[a]; });
-    ((contacts.list && contacts.list.groups) || []).forEach(function (g) { g.items = g.items.filter(function (i) { return !gone[i.address]; }); });
-    renderContactsList();
-  }
-  function renderContactsRejected(d) {
-    if (d.storeId !== $('ctDestStore').value) return;
-    var box = $('ctRejected');
-    box.innerHTML = '';
-    var items = d.items || [];
-    $('ctRejectedTitle').textContent = 'Esclusi per questa rubrica (' + items.length + ')';
-    if (!items.length) box.appendChild(el('div', 'form-note', 'Nessun indirizzo escluso.'));
-    items.forEach(function (r) {
-      var row = el('div', 'info-row');
-      row.appendChild(el('span', 'info-label wide', r.address));
-      var again = el('button', 'link-btn', 'Riproponi');
-      again.type = 'button';
-      again.title = 'Togli dagli esclusi: l\'indirizzo torna alla prossima ricerca (rifiutato il ' + r.date + ')';
-      again.addEventListener('click', function () { post({ type: 'contacts_unreject', storeId: d.storeId, address: r.address }); });
-      var val = el('span', 'info-val');
-      val.appendChild(again);
-      row.appendChild(val);
-      box.appendChild(row);
-    });
-  }
-
   // ---------- Keyboard ----------
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') {
@@ -3913,8 +3307,7 @@
       if (openId) { closeMenus(); $(menuButtons[openId]).focus(); return; }
       if (openDrawerId()) { closeDrawers(); return; }
 
-      // Like Interrompi on the ribbon: also stops the Contatti analysis.
-      if (state.busy || contacts.busy) { post({ type: 'cancel' }); return; }
+      if (state.busy) { post({ type: 'cancel' }); return; }
       if (state.composerMode !== 'chat') { setComposerMode('chat'); }
       return;
     }
@@ -4050,7 +3443,7 @@
         // On first load the pending queue may already contain the same complete running turn.
         var turnAlreadyDelivered = data.turnId && state.current && state.current.turnId === data.turnId;
         (data.messages || []).forEach(function (m) {
-          if (turnAlreadyDelivered && !/^contacts_/.test(m.type || '')) return;
+          if (turnAlreadyDelivered) return;
           onHostMessage(m);
         });
         break;
@@ -4248,25 +3641,6 @@
         showPartyList();
         openDrawer('partyDrawer');
         break;
-
-      case 'toggle_contacts':
-        if (data.toggle && !$('contactsDrawer').hidden) { closeDrawers(); break; }
-        openDrawer('contactsDrawer');
-        break;
-      case 'contacts_scope': renderContactsScope(data); break;
-      case 'contacts_dest_folders': renderContactsFolders(data); break;
-      case 'contacts_phase':
-        $('ctPhase').hidden = false;
-        $('ctPhase').dataset.light = 'Working';
-        $('ctPhase').textContent = data.text;
-        break;
-      case 'contacts_list': renderContactsList(data); break;
-      case 'contacts_progress': contactsProgress(data); break;
-      case 'contacts_proposal': contactsProposal(data); break;
-      case 'contacts_analyze_end': contactsAnalyzeEnd(data); break;
-      case 'contacts_applied': contactsApplied(data); break;
-      case 'contacts_removed': contactsRemoved(data); break;
-      case 'contacts_rejected': renderContactsRejected(data); break;
 
       case 'connection_health_result': {
         var res = $('healthResult');
