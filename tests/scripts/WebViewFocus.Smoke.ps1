@@ -55,7 +55,7 @@ try {
     Wait-Until {Field $pane '_pageReady'} 'first page ready'
     Wait-Until {$pane.ContainsFocus -and (Script $pane 'document.hasFocus() && document.activeElement.id === "userPrompt"') -eq 'true'} 'queued explicit focus'
 
-    foreach ($screen in @(@('toggle_info','infoTitle'),@('toggle_party','partyTitle'),@('toggle_history','historyTitle'))) {
+    foreach ($screen in @(@('toggle_info','infoTitle'),@('toggle_party','ptSearch'),@('toggle_history','historyTitle'))) {
         [void]$button.Focus()
         if (!$button.Focused) { throw 'Synthetic ribbon did not own focus' }
         [void]$focus.Invoke($pane,@())
