@@ -608,7 +608,6 @@ public partial class TaskPaneCoordinator
             Subject = r.Subject.Length > 0 ? r.Subject : null,
             FromUtc = r.Days > 0 ? DateTime.Today.AddDays(-r.Days).ToUniversalTime() : (DateTime?)null,
             Role = r.PersonRole switch { "sender" => ArchivePartyRole.Sender, "recipient" => ArchivePartyRole.Recipient, _ => ArchivePartyRole.Any },
-            CounterpartyId = r.CounterpartyId,
             IncludeAttachmentText = r.Attachments && _config?.Archive?.IndexAttachmentText == true &&
                 GetActiveProfile() is { } attachmentProfile && AttachmentContentAllowed(attachmentProfile),
             FactFilters = r.FactFilters,

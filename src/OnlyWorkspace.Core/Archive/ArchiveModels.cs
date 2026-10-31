@@ -321,59 +321,6 @@ public sealed class ArchiveRelatedResult
     public int Copies { get; set; }
 }
 
-public sealed class Counterparty
-{
-    public long Id { get; set; }
-    public string Name { get; set; } = string.Empty;
-    /// <summary>Domain, or the single address for free-mail and PEC providers.</summary>
-    public string Key { get; set; } = string.Empty;
-    public bool Important { get; set; }
-    public int Emails { get; set; }
-    public DateTime? FirstUtc { get; set; }
-    public DateTime? LastUtc { get; set; }
-    public List<string> Addresses { get; } = new();
-}
-
-public sealed class CounterpartyAddress
-{
-    public string Address { get; set; } = string.Empty;
-    public string Name { get; set; } = string.Empty;
-    public int Emails { get; set; }
-}
-
-/// <summary>A conversation or a document in a counterparty's profile, with the email that opens it.</summary>
-public sealed class CounterpartyItem
-{
-    /// <summary>Subject (conversation) or file name (document).</summary>
-    public string Title { get; set; } = string.Empty;
-    public DateTime DateUtc { get; set; }
-    public string EntryId { get; set; } = string.Empty;
-    public string StoreId { get; set; } = string.Empty;
-    /// <summary>Emails of the conversation exchanged with the counterparty.</summary>
-    public int Emails { get; set; }
-}
-
-/// <summary>Everything the archive knows about one counterparty, for its page in the pane.</summary>
-public sealed class CounterpartyProfile
-{
-    public long Id { get; set; }
-    public string Name { get; set; } = string.Empty;
-    public string Key { get; set; } = string.Empty;
-    public bool Important { get; set; }
-    /// <summary>Shaped by the user's merges or splits, which can be undone.</summary>
-    public bool Custom { get; set; }
-    public int Emails { get; set; }
-    /// <summary>Emails sent by the counterparty; the rest were sent to it.</summary>
-    public int FromThem { get; set; }
-    public DateTime? FirstUtc { get; set; }
-    public DateTime? LastUtc { get; set; }
-    public List<CounterpartyAddress> Addresses { get; } = new();
-    /// <summary>Emails per year (local time), newest first.</summary>
-    public List<KeyValuePair<string, int>> Years { get; } = new();
-    public List<CounterpartyItem> Threads { get; } = new();
-    public List<CounterpartyItem> Documents { get; } = new();
-}
-
 public sealed class ArchiveStats
 {
     public int PendingDeletions { get; set; }
@@ -396,7 +343,6 @@ public sealed class ArchiveStats
     public int Folders { get; set; }
     /// <summary>Listed folders whose backfill finished and which have no current reading error.</summary>
     public int FoldersDone { get; set; }
-    public int Counterparties { get; set; }
     public long DbBytes { get; set; }
     public long AvailableFreeBytes { get; set; }
     public ArchiveCapacityState DiskState { get; set; }

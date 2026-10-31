@@ -423,8 +423,6 @@ public sealed partial class ArchiveDb : IDisposable
             "create virtual table body_fts using fts5(subject, body, content='', contentless_delete=1, tokenize='unicode61 remove_diacritics 2')",
             "create virtual table attachment_fts using fts5(name,body,content='',contentless_delete=1,tokenize='unicode61 remove_diacritics 2')",
             "create trigger attachments_deleted after delete on attachments begin delete from attachment_fts where rowid=old.rowid; end",
-            // The user's own grouping: an address, or a whole automatic key (domain), filed under another counterparty key.
-            "create table party_choice(source text primary key, target text not null) without rowid",
             "create table rpc_batches(id text primary key, operation text not null, digest text not null, result text) without rowid"
         })
         {
@@ -470,7 +468,6 @@ public sealed partial class ArchiveDb : IDisposable
                 FoldersFailed = (int)Scalar<long>("select count(*) from folders where listed=1 and error is not null"),
                 Folders = (int)Scalar<long>("select count(*) from folders where listed=1"),
                 FoldersDone = (int)Scalar<long>("select count(*) from folders where listed=1 and done=1 and error is null"),
-                Counterparties = (int)Scalar<long>("select count(*) from counterparties where id in (select cp_id from addresses)"),
                 DbBytes = FileSizeBytes,
                 AvailableFreeBytes = AvailableFreeBytes,
                 DiskState = Capacity

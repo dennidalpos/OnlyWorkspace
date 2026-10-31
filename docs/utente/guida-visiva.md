@@ -197,7 +197,6 @@ flowchart TD
         S1["Icona Cerca nella barra del riquadro"]
         S2["Scheda OnlyWorkspace: pulsante «Cerca e analizza»"]
         S3["Scheda OnlyWorkspace: pulsante «Email senza risposta»"]
-        S4["Dalla scheda Controparte: «Cerca e analizza la corrispondenza»"]
     end
 
     INGRESSO_SEARCH --> RAMO_TIPO{"Quale modalità avvii?"}

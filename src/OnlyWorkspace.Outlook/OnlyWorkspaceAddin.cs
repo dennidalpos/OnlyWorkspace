@@ -367,8 +367,6 @@ public class OnlyWorkspaceAddin : IDTExtensibility2, IRibbonExtensibility, ICust
 
     public void OnAnalysisClicked(IRibbonControl control) => Run(control, (e, toggle) => e.Coordinator.ShowAnalysisDrawer("summary", toggle));
 
-    public void OnPartiesClicked(IRibbonControl control) => Run(control, (e, toggle) => e.Coordinator.ShowCounterparties(toggle));
-
     public void OnWriteClicked(IRibbonControl control) => Run(control, e => e.Coordinator.ShowWriteInput());
 
     public void OnImproveClicked(IRibbonControl control) => Run(control, e => _ = e.Coordinator.ExecuteImproveAsync(control.Tag ?? "correct"));

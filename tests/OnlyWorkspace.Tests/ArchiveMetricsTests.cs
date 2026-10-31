@@ -39,7 +39,7 @@ public sealed class ArchiveMetricsTests
         {
             Emails = 100, BodiesIndexed = 60, BodiesPending = 25, BodiesRetryable = 5, BodiesUnavailable = 10,
             AttachmentTexts = 20, AttachmentTextsPending = 2, AttachmentTextsRetryable = 3, AttachmentTextsExcluded = 5,
-            Folders = 8, FoldersDone = 6, FoldersFailed = 1, Counterparties = 4, DbBytes = 2048, AvailableFreeBytes = 4096
+            Folders = 8, FoldersDone = 6, FoldersFailed = 1, DbBytes = 2048, AvailableFreeBytes = 4096
         };
 
         var metrics = ArchiveMetrics.Build(stats).ToDictionary(m => m.Key);
@@ -51,7 +51,6 @@ public sealed class ArchiveMetricsTests
         Assert.Equal((10, 20L, 5, 5), (attachments.Done, attachments.Total!.Value, attachments.Remaining, attachments.Excluded));
         Assert.Equal(66, attachments.Percent);
         Assert.Equal((6, 1, 1), (metrics["folders"].Done, metrics["folders"].Remaining, metrics["folders"].Excluded));
-        Assert.Null(metrics["parties"].Total);
         Assert.Equal("bytes", metrics["db"].Unit);
     }
 

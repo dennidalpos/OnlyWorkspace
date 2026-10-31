@@ -166,7 +166,7 @@ public sealed class ConfigToolUxTests
         });
     }
 
-    /// <summary>A174: Capacità e verifiche shows outcome, provenance and date; a changed key drops the probes, a reload keeps them.</summary>
+    /// <summary>A174: Avanzate shows outcome, provenance and date; a changed key drops the probes, a reload keeps them.</summary>
     [Fact]
     public void CapabilitySection_ShowsOutcomeOriginAndDate_AndAChangedKeyDropsTheProbes()
     {

@@ -1,4 +1,8 @@
 using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+using OnlyWorkspace.Core.Security;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using OnlyWorkspace.Core.Models;
@@ -22,6 +26,27 @@ public sealed partial class OutlookDataService
             Cc = mail.CC ?? string.Empty,
             Body = mail.Body ?? string.Empty,
             Selection = SelectedText(editor)
+        });
+    }
+
+    /// <summary>
+    /// Copies the attachments of the email being written that <paramref name="shouldSave"/> accepts to a temp folder, a couple
+    /// per Outlook call (<see cref="AttachmentCopies.CollectAsync"/>). Null when nothing is being written.
+    /// </summary>
+    public Task<AttachmentCopies?> CopyDraftAttachmentsAsync(object? contextWindow, Func<AttachmentFacts, bool> shouldSave, CancellationToken ct = default) =>
+        AttachmentCopies.CollectAsync(
+            () => CopyDraftAttachmentsInto(NewScanDirectory(), contextWindow, shouldSave, 1, CopiesPerSlice),
+            (directory, next) => CopyDraftAttachmentsInto(directory, contextWindow, shouldSave, next, CopiesPerSlice), ct);
+
+    private AttachmentCopies? CopyDraftAttachmentsInto(string directory, object? contextWindow, Func<AttachmentFacts, bool> shouldSave, int fromIndex, int maxCopies)
+    {
+        EnsureUiThread();
+        return WithComposeItem(ResolveWindow(contextWindow), (mail, _) =>
+        {
+            var saved = new List<KeyValuePair<AttachmentFacts, string>>();
+            int next = 0;
+            var all = ReadAttachments(mail, directory, saved, shouldSave, null, fromIndex, maxCopies, i => next = i);
+            return new AttachmentCopies(directory, all, saved) { NextIndex = next };
         });
     }
 

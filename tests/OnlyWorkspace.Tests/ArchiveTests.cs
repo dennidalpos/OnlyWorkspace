@@ -204,10 +204,7 @@ public class ArchiveDbTests : IDisposable
         Assert.Equal("e1", db.Search(new ArchiveQuery { Text = "modalita operativa" }).Single().EntryId);
         Assert.Empty(db.Search(new ArchiveQuery { Text = "capitolato", ToUtc = day.AddDays(-10) }));
 
-        var found = db.FindCounterparties("acme", 5).Single();
-        Assert.Equal(3, found.Emails);
-        Assert.Equal(new[] { "amministrazione@pec.acme.it", "mario@acme.it" }, found.Addresses);
-        Assert.Equal(day.AddDays(-3), found.FirstUtc);
+        Assert.Equal(2, db.FindAddresses("acme").Count);
         Assert.Equal(3, db.GetStats().BodiesPending);
     }
 
@@ -531,7 +528,6 @@ public class ArchiveDbTests : IDisposable
         var stats = db.GetStats();
         Assert.Equal(2, stats.Emails);
         Assert.Equal(1, stats.Folders);
-        Assert.Equal(2, stats.Counterparties);
         Assert.Empty(db.Search(new ArchiveQuery { Text = "ricevuta" }));
         Assert.Equal(new[] { "g1", "g2" }, db.Search(new ArchiveQuery()).Select(h => h.EntryId).OrderBy(x => x));
 
@@ -599,64 +595,7 @@ public class ArchiveDbTests : IDisposable
 
 
     [Fact]
-    public void Counterparties_AreMergedSplitAndReset_AndTheChoicesHoldForAddressesMetLater()
-    {
-        var day = new DateTime(2025, 3, 4, 9, 0, 0, DateTimeKind.Utc);
-        using var db = ArchiveDb.Open(_dir, "p");
-        var headers = new[]
-        {
-            Header("e1", "Offerta", "mario@acme.it", day, "<m1>"),
-            Header("e2", "Fattura", "fatture@acme.it", day.AddDays(-1), "<m2>"),
-            Header("e3", "Offer", "john@acme.com", day.AddDays(-2), "<m3>"),
-            Header("e4", "Saluti", "mario.rossi@gmail.com", day.AddDays(-3), "<m4>")
-        };
-        var inbox = db.GetOrAddFolder("s", "inbox", "Inbox");
-        db.AddHeaders(inbox, headers, folderDone: false);
-        long acme = db.CounterpartyOf("mario@acme.it")!.Value, com = db.CounterpartyOf("john@acme.com")!.Value;
-        Assert.False(db.GetCounterparty(acme)!.Custom);
-
-        // Two domains and a private address: one company for the user.
-        Assert.True(db.MergeCounterparties(acme, com));
-        Assert.True(db.MergeCounterparties(acme, db.CounterpartyOf("mario.rossi@gmail.com")!.Value));
-        Assert.False(db.MergeCounterparties(acme, acme));
-        Assert.Null(db.GetCounterparty(com));
-        Assert.True(db.GetCounterparty(acme)!.Custom);
-        Assert.Equal(4, db.GetCounterparty(acme)!.Emails);
-        Assert.Equal(new[] { "e1", "e2", "e3", "e4" }, db.Search(new ArchiveQuery { CounterpartyId = acme }).Select(h => h.EntryId).OrderBy(id => id));
-        // A colleague met later on the merged domain joins the same counterparty.
-        db.AddHeaders(inbox, new[] { Header("e5", "Order", "jane@acme.com", day.AddDays(-4), "<m5>") }, folderDone: false);
-        Assert.Equal(acme, db.CounterpartyOf("jane@acme.com"));
-
-        // The invoicing address belongs to an outside service: on its own.
-        long invoices = db.SplitAddress(acme, "fatture@acme.it")!.Value;
-        Assert.Equal("fatture@acme.it", db.GetCounterparty(invoices)!.Key);
-        Assert.Equal(4, db.GetCounterparty(acme)!.Emails);
-        Assert.Equal(new[] { "e1", "e3", "e4", "e5" }, db.Search(new ArchiveQuery { CounterpartyId = acme }).Select(h => h.EntryId).OrderBy(id => id));
-        Assert.Null(db.SplitAddress(acme, "sconosciuto@acme.it"));
-        Assert.Null(db.SplitAddress(invoices, "fatture@acme.it")); // the address it is named after
-
-        // The choices outlive the addresses: mailbox taken out of the archive, then indexed again.
-        while (db.RemoveOtherStores(new[] { "altra" }, 100) > 0) { }
-        Assert.Null(db.CounterpartyOf("john@acme.com"));
-        db.AddHeaders(db.GetOrAddFolder("s", "inbox", "Inbox"), headers, folderDone: false);
-        acme = db.CounterpartyOf("mario@acme.it")!.Value;
-        Assert.Equal(acme, db.CounterpartyOf("john@acme.com"));
-        Assert.Equal(acme, db.CounterpartyOf("mario.rossi@gmail.com"));
-        Assert.NotEqual(acme, db.CounterpartyOf("fatture@acme.it"));
-
-        // Reset: back to the automatic grouping, one counterparty at a time.
-        Assert.Equal(acme, db.ResetCounterparty(acme));
-        Assert.False(db.GetCounterparty(acme)!.Custom);
-        Assert.NotEqual(acme, db.CounterpartyOf("john@acme.com"));
-        Assert.NotEqual(acme, db.CounterpartyOf("mario.rossi@gmail.com"));
-        invoices = db.CounterpartyOf("fatture@acme.it")!.Value;
-        Assert.Equal(acme, db.ResetCounterparty(invoices));
-        Assert.Equal(acme, db.CounterpartyOf("fatture@acme.it"));
-        Assert.Null(db.GetCounterparty(invoices));
-    }
-
-    [Fact]
-    public void CounterpartyProfile_GathersAddressesYearsConversationsDocumentsAndCards()
+    public void CounterpartyOfEmail_IsTheSenderOrTheRecipientOfAnEmailTheUserSent()
     {
         var day = new DateTime(2025, 3, 4, 9, 0, 0, DateTimeKind.Utc);
         using var db = ArchiveDb.Open(_dir, "p");
@@ -664,49 +603,20 @@ public class ArchiveDbTests : IDisposable
         db.AddHeaders(db.GetOrAddFolder("s", "inbox", "Inbox"), new[]
         {
             Header("e3", "RE: Offerta 12", "mario@acme.it", day.AddDays(2), "<m3>", inReplyTo: "<m2>"),
-            Header("e1", "Offerta 12", "mario@acme.it", day, "<m1>"),
-            Header("e0", "Fattura 2023/77", "fatture@pec.acme.it", day.AddYears(-2), "<m0>"),
-            Header("x1", "Auguri", "info@altri.it", day, "<x1>"),
-            Header("lost", "Vecchio ordine", "mario@acme.it", day.AddYears(-3), "<m9>")
+            Header("e0", "Fattura 2023/77", "fatture@pec.acme.it", day.AddYears(-2), "<m0>")
         }, folderDone: true);
         db.AddHeaders(db.GetOrAddFolder("s", "sent", "Sent"), new[] { Header("e2", "RE: Offerta 12", "danny@miaditta.it", day.AddDays(1), "<m2>", inReplyTo: "<m1>") }, folderDone: true);
         foreach (var p in db.NextPendingBodies(10))
         {
             var body = new ArchiveBody { Text = "testo" };
             if (p.EntryId == "e2") body.Recipients.Add(new ArchiveRecipient { Address = "mario@acme.it", Name = "Mario Rossi" });
-            if (p.EntryId == "e1") body.AttachmentNames.Add("offerta-12.pdf");
-            if (p.EntryId == "e0") body.AttachmentNames.Add("fattura-77.xml");
             db.SaveBody(p.Id, body);
-            if (p.EntryId == "lost") db.SetBodyState(p.Id, ArchiveBodyState.Gone);
         }
 
         long acme = db.CounterpartyOf("mario@acme.it")!.Value;
+        Assert.Equal(acme, db.CounterpartyOf("fatture@pec.acme.it")); // one counterparty per company domain
         Assert.Equal(acme, db.CounterpartyOfEmail("e3"));
         Assert.Equal(acme, db.CounterpartyOfEmail("e2")); // sent by the user: the recipient's
         Assert.Null(db.CounterpartyOfEmail("sconosciuta"));
-        Assert.Null(db.GetCounterparty(9999));
-
-        var profile = db.GetCounterparty(acme)!;
-        Assert.Equal("acme.it", profile.Key);
-        Assert.False(profile.Important);
-        Assert.Equal(4, profile.Emails);
-        Assert.Equal(3, profile.FromThem);
-        Assert.Equal(day.AddYears(-2), profile.FirstUtc);
-        Assert.Equal(day.AddDays(2), profile.LastUtc);
-        Assert.Equal(new[] { "mario@acme.it", "fatture@pec.acme.it" }, profile.Addresses.Select(a => a.Address));
-        Assert.Equal(3, profile.Addresses[0].Emails);
-        Assert.Equal(new[] { "2025:3", "2023:1" }, profile.Years.Select(y => y.Key + ":" + y.Value));
-
-        // The whole exchange is one conversation, opened by its latest email.
-        Assert.Equal(2, profile.Threads.Count);
-        Assert.Equal("e3", profile.Threads[0].EntryId);
-        Assert.Equal(3, profile.Threads[0].Emails);
-        Assert.Equal("Fattura 2023/77", profile.Threads[1].Title);
-        Assert.Equal(new[] { "offerta-12.pdf", "fattura-77.xml" }, profile.Documents.Select(d => d.Title));
-        Assert.Equal("e1", profile.Documents[0].EntryId);
-
-        db.SetImportant(acme, true);
-        Assert.True(db.GetCounterparty(acme)!.Important);
-        Assert.Equal(acme, db.FindCounterparties("", 5)[0].Id); // important first, whatever the volume
     }
 }

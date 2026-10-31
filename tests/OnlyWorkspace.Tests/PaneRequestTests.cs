@@ -101,18 +101,15 @@ public class PaneRequestTests
     }
 
     [Fact]
-    public void AnalysisRequest_CounterpartyScopeSurvivesRetryWithoutOneAddressFilter()
+    public void AnalysisRequest_ArchiveScopeKeepsItsPersonFilterOnRetry()
     {
         var request = AnalysisRequest.Parse(Json("""
-            {"scope":{"kind":"archive","counterpartyId":42,"counterpartyName":"Acme","person":"","role":"any","days":0},"goal":{"preset":"summary"}}
+            {"scope":{"kind":"archive","person":"Acme","role":"any","days":0},"goal":{"preset":"summary"}}
             """), out var raw)!;
 
-        Assert.Equal(42, request.CounterpartyId);
-        Assert.Equal(string.Empty, request.Person);
-        Assert.Null(request.ToQuery().Sender);
-        Assert.Equal("tutto l'archivio, controparte «Acme», senza limite di data", request.ScopeLabel());
-        Assert.Equal(request.CounterpartyId, AnalysisRequest.Parse(Json(JsonSerializer.Serialize(new { request = raw })), out _)!.CounterpartyId);
-        Assert.Null(AnalysisRequest.Parse(Json("""{"scope":{"kind":"archive","counterpartyId":-1}}"""), out _)!.CounterpartyId);
+        Assert.Equal("Acme", request.Person);
+        Assert.Equal("tutto l'archivio, da o a «Acme», senza limite di data", request.ScopeLabel());
+        Assert.Equal(request.Person, AnalysisRequest.Parse(Json(JsonSerializer.Serialize(new { request = raw })), out _)!.Person);
     }
 
     [Fact]

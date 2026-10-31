@@ -4,8 +4,8 @@ const vm = require('node:vm');
 const assert = require('node:assert/strict');
 
 const html = fs.readFileSync(path.join(__dirname, '../../src/OnlyWorkspace.Outlook/UI/TaskPane.html'), 'utf8');
-// Four labelled sections; Persons owns Counterparties and Address book.
-for (const [id, title] of [['btnChatPage', 'Chat'], ['btnSearchPage', 'Posta'], ['btnPartiesPage', 'Persone'], ['btnHistory', 'Storico']]) {
+// Three labelled sections.
+for (const [id, title] of [['btnChatPage', 'Chat'], ['btnSearchPage', 'Posta'], ['btnHistory', 'Storico']]) {
   assert.match(html, new RegExp('id="' + id + '"[^>]*aria-label="' + title + '"[^>]*title="[^"]+"'));
 }
 assert.match(html, /<header class="topbar">[\s\S]*<nav class="primary-nav"[\s\S]*<\/nav>[\s\S]*<\/header>/);
@@ -13,7 +13,7 @@ assert.match(html, /<header class="topbar">[\s\S]*<nav class="primary-nav"[\s\S]
 assert.match(html, /\.conversation \{[^}]*background: var\(--bg\);/);
 // Contrast themes drop the current section's tint: a Highlight frame keeps it visible.
 assert.match(html, /@media \(forced-colors: active\) \{[\s\S]*?\.primary-nav button\[aria-current='page'\] \{ border: 2px solid Highlight;/);
-// Narrow pane or zoom 125%: the four pages go two by two and the drawers start under the taller bar.
+// Narrow pane or zoom 125%: the pages go two by two and the drawers start under the taller bar.
 assert.match(html, /@media \(max-width: 339px\) \{\s*:root \{ --topbar-h: 108px; \}\s*\.primary-nav \{ display: grid; grid-template-columns: 1fr 1fr;/);
 // Brand as a label beside its name, before the page icons; the profile is chosen only in the ConfigTool (Danny, 26/10/2026).
 assert.match(html, /<header class="topbar">\s*<div id="brand" class="brand"[^>]*><svg class="brand-logo"[^>]*aria-hidden="true">[\s\S]*?<\/svg><span>OnlyWorkspace<\/span><\/div>\s*<nav class="primary-nav"/);
@@ -52,18 +52,17 @@ assert.equal(sent[0].useWebSearch, undefined);
 assert.doesNotMatch(html, /useWebSearch|confirm_external/);
 
 const nodes = new Map();
-for (const id of ['btnChatPage', 'btnSearchPage', 'btnPartiesPage', 'btnHistory', 'btnInfo']) nodes.set(id, { setAttribute(k, v) { this[k] = v; }, scrollIntoView() {} });
+for (const id of ['btnChatPage', 'btnSearchPage', 'btnHistory', 'btnInfo']) nodes.set(id, { setAttribute(k, v) { this[k] = v; }, scrollIntoView() {} });
 ctx.$ = id => nodes.get(id);
 ctx.document.body = { dataset: {} };
 new vm.Script(section('  var drawerToggles =', '  function openDrawerId()')).runInContext(ctx);
-ctx.showPage('partyDrawer');
-assert.equal(ctx.document.body.dataset.page, 'partyDrawer');
-assert.equal(nodes.get('btnPartiesPage')['aria-current'], 'page');
-assert.equal(nodes.get('btnHistory')['aria-current'], 'false');
+ctx.showPage('historyDrawer');
+assert.equal(ctx.document.body.dataset.page, 'historyDrawer');
+assert.equal(nodes.get('btnHistory')['aria-current'], 'page');
 ctx.showPage('analysisDrawer');
 assert.equal(nodes.get('btnSearchPage')['aria-current'], 'page');
 ctx.showPage('chat');
-assert.equal(nodes.get('btnPartiesPage')['aria-current'], 'false');
+assert.equal(nodes.get('btnHistory')['aria-current'], 'false');
 
 // The brand's tooltip names the model and where the data goes; «web» shows when some actions search the web.
 const badgeNodes = { brand: { title: '' }, webFlag: { hidden: true, title: '', setAttribute(k, v) { this[k] = v; } } };

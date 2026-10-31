@@ -17,11 +17,15 @@ public sealed class TaskPaneEntry : IDisposable
 
     private readonly WinFormsTimer _selectionDebounce;
     private readonly WinFormsTimer _configCheck;
-    private const int WidthCheckMs = 250;
+    private const int WidthCheckMs = 300;
+    private const int MaxWidthAttempts = 4;
+    private const int VkLButton = 0x01;
+    private const int VkRButton = 0x02;
 
     private readonly int _minimumWidth;
     private readonly WinFormsTimer _widthCheck;
     private bool _applyingWidth;
+    private int _widthAttempts;
     private bool _isDisposed;
     private bool _stopping;
 
@@ -65,32 +69,38 @@ public sealed class TaskPaneEntry : IDisposable
     }
 
     /// <summary>
-    /// Office can ignore a width set while dragging. Try immediately and keep retrying while needed;
-    /// the page's own minimum viewport keeps its contents reachable even before Office accepts the width.
+    /// Office owns the splitter drag: writing the width from inside it makes Office resize again at once (a loop of
+    /// 540 ↔ 392 units several times a second, a flickering and frozen Outlook). The width is restored only after the
+    /// pane has been still for a moment and no mouse button is down, with a few attempts per resize.
     /// </summary>
     private void KeepMinimumWidth(object? sender, EventArgs e)
     {
         if (_isDisposed || _stopping || _applyingWidth || _minimumWidth <= 0) return;
+        _widthAttempts = 0;
         _widthCheck.Stop();
         _widthCheck.Start();
-        OnWidthCheckTick(sender, e);
     }
+
+    private static bool MouseButtonDown() => (GetAsyncKeyState(VkLButton) & 0x8000) != 0 || (GetAsyncKeyState(VkRButton) & 0x8000) != 0;
+
+    [DllImport("user32.dll")]
+    private static extern short GetAsyncKeyState(int vKey);
 
     private void OnWidthCheckTick(object? sender, EventArgs e)
     {
         if (_isDisposed || _stopping) { _widthCheck.Stop(); return; }
-        if (_applyingWidth) return;
+        if (_applyingWidth || MouseButtonDown()) return;
         try
         {
             _applyingWidth = true;
             if (!TaskPane.Visible) { _widthCheck.Stop(); return; }
             int width = TaskPane.Width;
-            OnlyWorkspaceLog.Logger.Information("TaskPane resized to {Width}px (minimum {Minimum}px)", width, _minimumWidth);
             if (width >= _minimumWidth) { _widthCheck.Stop(); return; }
+            if (++_widthAttempts > MaxWidthAttempts) { _widthCheck.Stop(); return; }
             TaskPane.Width = _minimumWidth;
             bool applied = TaskPane.Width >= _minimumWidth;
-            OnlyWorkspaceLog.Logger.Information("TaskPane minimum width attempt: from {Width} to {Minimum} Office units; accepted {Accepted}; viewport {Viewport}px; display {Display}",
-                width, _minimumWidth, applied, Control.ClientSize.Width, System.Windows.Forms.Screen.FromControl(Control).DeviceName);
+            OnlyWorkspaceLog.Logger.Information("TaskPane minimum width attempt {Attempt}: from {Width} to {Minimum} Office units; accepted {Accepted}; viewport {Viewport}px; display {Display}",
+                _widthAttempts, width, _minimumWidth, applied, Control.ClientSize.Width, System.Windows.Forms.Screen.FromControl(Control).DeviceName);
             if (applied) _widthCheck.Stop();
         }
         catch (Exception ex)

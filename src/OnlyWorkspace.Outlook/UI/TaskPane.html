@@ -649,14 +649,6 @@
   .picked span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .picked .icon-btn { width: 22px; height: 22px; }
   .chips { display: flex; flex-wrap: wrap; gap: 6px; }
-  .party-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-  .party-name { flex: 1 1 8em; min-width: 0; font-size: var(--text-size-14); font-weight: 600; overflow-wrap: anywhere; }
-  .party-addr { display: flex; align-items: baseline; gap: 8px; font-size: var(--text-size-12-5); }
-  .party-addr > span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
-  .party-year { display: flex; align-items: center; gap: 8px; font-size: var(--text-size-12); }
-  .party-year > span:first-child { width: 34px; flex: none; color: var(--text-2); }
-  .party-year .phase-bar { flex: 1 1 auto; }
-  .party-year b { width: 48px; flex: none; text-align: right; }
   .chip { min-height: 28px; padding: 2px 10px; font-size: var(--text-size-12-5); border: 1px solid var(--border-strong); border-radius: var(--corner-4); background: var(--surface); }
   .chip:hover { background: var(--surface-2); }
   .chip[aria-checked="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 600; }
@@ -787,7 +779,6 @@
       <symbol id="i-more" viewBox="0 0 20 20"><path d="M5 8.5a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Zm5 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Zm5 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Z"/></symbol>
       <symbol id="i-settings" viewBox="0 0 20 20"><path d="M10 7a3 3 0 1 1 0 6 3 3 0 0 1 0-6Zm0 1.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3ZM8.7 2.2a1.3 1.3 0 0 1 2.6 0l.1.9a5.6 5.6 0 0 1 1.3.75l.85-.35a1.3 1.3 0 0 1 1.6.55l.65 1.1c.35.6.2 1.4-.35 1.8l-.7.55a5.6 5.6 0 0 1 0 1.5l.7.55c.55.4.7 1.2.35 1.8l-.65 1.1a1.3 1.3 0 0 1-1.6.55l-.85-.35a5.6 5.6 0 0 1-1.3.75l-.1.9a1.3 1.3 0 0 1-2.6 0l-.1-.9a5.6 5.6 0 0 1-1.3-.75l-.85.35a1.3 1.3 0 0 1-1.6-.55l-.65-1.1a1.3 1.3 0 0 1 .35-1.8l.7-.55a5.6 5.6 0 0 1 0-1.5l-.7-.55a1.3 1.3 0 0 1-.35-1.8l.65-1.1a1.3 1.3 0 0 1 1.6-.55l.85.35c.4-.3.85-.55 1.3-.75l.1-.9Z"/></symbol>
       <symbol id="i-chat" viewBox="0 0 20 20"><path d="M10 3c4.4 0 8 2.9 8 6.5S14.4 16 10 16c-.9 0-1.8-.1-2.6-.3l-3.6 1.7a.6.6 0 0 1-.8-.7l.8-2.9A6 6 0 0 1 2 9.5C2 5.9 5.6 3 10 3Zm0 1.5c-3.7 0-6.5 2.3-6.5 5 0 1.4.7 2.6 1.9 3.5l.3.3-.5 1.7 2.2-.9.3.1c.7.2 1.5.3 2.3.3 3.7 0 6.5-2.3 6.5-5s-2.8-5-6.5-5Z"/></symbol>
-      <symbol id="i-people" viewBox="0 0 20 20"><path d="M7 4a3 3 0 1 1 0 6 3 3 0 0 1 0-6Zm0 1.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3ZM14 6a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5Zm0 1.5a1 1 0 1 0 0 2 1 1 0 0 0 0-2ZM3.5 11.5h7A1.5 1.5 0 0 1 12 13c0 2.3-2.2 3.5-5 3.5S2 15.3 2 13a1.5 1.5 0 0 1 1.5-1.5Zm0 1.5c0 1.3 1.4 2 3.5 2s3.5-.7 3.5-2h-7Zm9.6-1.5h3.4A1.5 1.5 0 0 1 18 13c0 1.9-1.6 3-3.8 3-.5 0-.9 0-1.3-.1.3-.4.6-.9.7-1.5h.6c1.4 0 2.3-.6 2.3-1.4h-2.9c-.1-.6-.3-1.1-.5-1.5Z"/></symbol>
       <symbol id="i-contact" viewBox="0 0 20 20"><path d="M5 2.5h9A2.5 2.5 0 0 1 16.5 5v10a2.5 2.5 0 0 1-2.5 2.5H5A1.5 1.5 0 0 1 3.5 16V4A1.5 1.5 0 0 1 5 2.5ZM5 4v12h9a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1H5Zm4.5 2.5a2 2 0 1 1 0 4 2 2 0 0 1 0-4Zm-3 6.5c0-1 .8-1.5 1.5-1.5h3c.7 0 1.5.5 1.5 1.5v.5h-6V13Z"/></symbol>
       <symbol id="i-pulse" viewBox="0 0 20 20"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="M2 10.5h3.5L7.5 5l3.5 10 2-4.5H18"/></symbol>
       <symbol id="i-translate" viewBox="0 0 20 20"><path fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M2.5 5h8M6.5 3v2M4.5 5c0 3 2 5.5 5 6.5M8.5 5c-.5 3-2.5 5.5-5.5 7M10.5 17l3.5-8 3.5 8M11.7 14.5h4.6"/></symbol>
@@ -802,7 +793,6 @@
     <nav class="primary-nav" aria-label="Schermate OnlyWorkspace">
       <button id="btnChatPage" type="button" aria-current="page" aria-label="Chat" title="Chat"><svg class="i" aria-hidden="true"><use href="#i-chat"/></svg><span>Chat</span></button>
       <button id="btnSearchPage" type="button" aria-controls="analysisDrawer" aria-label="Posta" title="Posta: ricerca, analisi e Briefing"><svg class="i" aria-hidden="true"><use href="#i-search"/></svg><span>Posta</span></button>
-      <button id="btnPartiesPage" type="button" aria-controls="partyDrawer" aria-label="Persone" title="Persone: Controparti"><svg class="i" aria-hidden="true"><use href="#i-people"/></svg><span>Persone</span></button>
       <button id="btnHistory" type="button" aria-controls="historyDrawer" aria-label="Storico" title="Storico: conversazioni salvate, da riprendere"><svg class="i" aria-hidden="true"><use href="#i-history"/></svg><span>Storico</span></button>
     </nav>
     <div class="topbar-spacer"></div>
@@ -985,7 +975,6 @@
         <button id="anAddFolder" class="btn btn-sm" type="button" title="Apre la finestra di Outlook per scegliere una cartella o un'intera cassetta postale"><svg class="i"><use href="#i-add"/></svg>Aggiungi cartella…</button>
       </div>
       <label class="opt" id="anOptArchive" title="Le email più pertinenti di tutte le cassette indicizzate; la persona vale con tutti i suoi indirizzi" hidden><input type="radio" name="anScope" value="archive"><span id="anArchiveLabel">Tutto l'archivio</span></label>
-      <div id="anPartyScope" class="form-note" hidden><span id="anPartyScopeText"></span> <button id="anPartyClear" class="link-btn" type="button">Rimuovi controparte</button></div>
       <label class="opt" id="anOptSub"><input type="checkbox" id="anSubfolders"><span>Incluse le sottocartelle</span></label>
 
       <div class="drawer-section-title">Filtri</div>
@@ -1056,12 +1045,8 @@
       <div class="drawer-section-title">Connessione</div>
       <div class="info-list">
         <div class="info-row"><span class="info-label">Profilo</span><span id="infoProfile" class="info-val">–</span></div>
-        <div class="info-row"><span class="info-label">Servizio IA</span><span id="infoProvider" class="info-val">–</span></div>
         <div class="info-row"><span class="info-label">Modello</span><span id="infoModel" class="info-val">–</span></div>
-        <div class="info-row"><span class="info-label">Indirizzo del servizio</span><span id="infoEndpoint" class="info-val">–</span></div>
         <div class="info-row"><span class="info-label">Destinazione</span><span id="infoTarget" class="info-val">–</span></div>
-        <div class="info-row"><span class="info-label">Outlook</span><span id="infoOutlook" class="info-val">–</span></div>
-        <div class="info-row"><span class="info-label">OnlyWorkspace</span><span id="infoVersion" class="info-val">–</span></div>
       </div>
       <button id="btnCheckHealth" class="btn btn-primary" type="button" title="Verifica indirizzo del servizio, credenziali e modello del profilo attivo">Verifica connessione</button>
       <div id="healthResult" class="health" role="status" hidden></div>
@@ -1075,6 +1060,26 @@
           <div class="info-list">
             <div class="info-row"><span class="info-label">Fase</span><span id="arPhase" class="info-val status-text">–</span></div>
           </div>
+        </div>
+        <div class="row-actions icon-collapse">
+          <button id="arChoose" class="btn btn-sm" type="button" title="Cassette dell'archivio: Configurazione → Archivio email → Le mie cassette"><svg class="i"><use href="#i-settings"/></svg><span class="btn-label">Cassette</span></button>
+          <button id="arPause" class="btn btn-sm" type="button" hidden>Pausa</button>
+          <button id="arDelete" class="btn btn-sm btn-danger" type="button" title="Elimina l'archivio di questo profilo Outlook e lo spegne per il tuo utente (chiede conferma). Le email non vengono toccate" hidden>Elimina archivio</button>
+        </div>
+      </div>
+      <div class="drawer-section-title">Supporto</div>
+      <div class="row-actions icon-collapse">
+        <button id="btnOpenConfig" class="btn btn-sm" type="button" title="Configurazione di OnlyWorkspace: profili IA, autorizzazioni, archivio, backup"><svg class="i"><use href="#i-settings"/></svg><span class="btn-label">Configurazione</span></button>
+      </div>
+      <details id="statusAdvanced" data-ui-key="advanced" class="coverage-details">
+        <summary>Avanzate</summary>
+        <div class="info-list">
+          <div class="info-row"><span class="info-label">Servizio IA</span><span id="infoProvider" class="info-val">–</span></div>
+          <div class="info-row"><span class="info-label">Indirizzo del servizio</span><span id="infoEndpoint" class="info-val">–</span></div>
+          <div class="info-row"><span class="info-label">Outlook</span><span id="infoOutlook" class="info-val">–</span></div>
+          <div class="info-row"><span class="info-label">OnlyWorkspace</span><span id="infoVersion" class="info-val">–</span></div>
+        </div>
+        <div id="arDetail" hidden>
           <div class="metrics-viewport" tabindex="0" role="region" aria-label="Metriche dell’archivio"><table id="arMetrics" class="metrics" aria-label="Metriche dell'archivio">
             <thead><tr><th scope="col">Voce</th><th scope="col" title="Elementi già completati">Completati</th><th scope="col">Totale</th><th scope="col" title="Percentuale sugli elementi leggibili; non include la colonna Non leggibili">%</th><th scope="col">Restano</th><th scope="col" title="Non leggibili, esclusi o falliti">Non leggibili</th></tr></thead>
             <tbody></tbody>
@@ -1085,16 +1090,9 @@
           </table></div>
         </div>
         <div class="row-actions icon-collapse">
-          <button id="arChoose" class="btn btn-sm" type="button" title="Cassette dell'archivio: Configurazione → Archivio email → Le mie cassette"><svg class="i"><use href="#i-settings"/></svg><span class="btn-label">Cassette</span></button>
-          <button id="arPause" class="btn btn-sm" type="button" hidden>Pausa</button>
-          <button id="arDelete" class="btn btn-sm btn-danger" type="button" title="Elimina l'archivio di questo profilo Outlook e lo spegne per il tuo utente (chiede conferma). Le email non vengono toccate" hidden>Elimina archivio</button>
+          <button id="btnDiag" class="btn btn-sm" type="button" title="Esporta metadati di sistema e misure di spazio in uno ZIP sul Desktop; esclude testi, log, database e chiavi"><svg class="i"><use href="#i-insert"/></svg><span class="btn-label">Diagnostica</span></button>
         </div>
-      </div>
-      <div class="drawer-section-title">Supporto</div>
-      <div class="row-actions icon-collapse">
-        <button id="btnDiag" class="btn btn-sm" type="button" title="Esporta metadati di sistema e misure di spazio in uno ZIP sul Desktop; esclude testi, log, database e chiavi"><svg class="i"><use href="#i-insert"/></svg><span class="btn-label">Diagnostica</span></button>
-        <button id="btnOpenConfig" class="btn btn-sm" type="button" title="Configurazione di OnlyWorkspace: profili IA, autorizzazioni, archivio, backup"><svg class="i"><use href="#i-settings"/></svg><span class="btn-label">Configurazione</span></button>
-      </div>
+      </details>
     </div>
   </aside>
 
@@ -1107,7 +1105,7 @@
       <div class="drawer-section-title">Per iniziare</div>
       <ul class="help-list">
         <li>Seleziona un'email in Outlook: qui sopra compaiono i pulsanti per lavorarci. Senza email selezionata puoi comunque scrivere nella casella in basso.</li>
-        <li>Le sezioni in alto sono Chat, Posta, Persone e Storico. Gli indicatori Archivio e IA aprono i rispettivi dettagli.</li>
+        <li>Le sezioni in alto sono Chat, Posta e Storico. Gli indicatori Archivio e IA aprono i rispettivi dettagli.</li>
         <li>L'app non spedisce email: testi e bozze si inseriscono in Outlook da rivedere; attività, appuntamenti e modifiche alla rubrica richiedono un tuo clic.</li>
       </ul>
       <div class="drawer-section-title">Sull'email selezionata</div>
@@ -1130,10 +1128,9 @@
         <li>Chiedi di scrivere qualcosa da zero: «scrivi un'email al fornitore per sollecitare la consegna». Con <b>Nuova email</b> il testo si apre in un nuovo messaggio.</li>
         <li>Per parlare dell'email selezionata scrivi «questa email». L'icona accanto a Invio inizia una nuova chat.</li>
       </ul>
-      <div class="drawer-section-title">Posta e Persone</div>
+      <div class="drawer-section-title">Posta</div>
       <ul class="help-list">
         <li><b>Cerca</b>: riepiloghi, punti aperti, tabelle, scadenze ed email senza risposta su più email insieme, scegliendo dove cercare e i filtri.</li>
-        <li><b>Controparti</b>: per ogni persona o azienda, le conversazioni e i documenti scambiati.</li>
       </ul>
       <div class="drawer-section-title">Storico</div>
       <ul class="help-list">
@@ -1159,18 +1156,6 @@
     </div>
   </aside>
 
-  <aside id="partyDrawer" class="drawer" role="region" aria-labelledby="partyTitle" hidden>
-    <div class="drawer-header">
-      <h2 id="partyTitle" tabindex="-1">Controparti</h2>
-      <button class="icon-btn" type="button" data-close-drawer title="Chiudi (Esc)" aria-label="Chiudi"><svg class="i"><use href="#i-dismiss"/></svg></button>
-    </div>
-    <div class="drawer-body">
-      <div id="ptSearchRow" class="field-row"><input id="ptSearch" class="field" type="text" data-autofocus placeholder="nome, azienda, dominio o indirizzo" autocomplete="off" aria-label="Cerca una controparte"></div>
-      <div id="ptMerge" class="form-note" hidden><span id="ptMergeText"></span> <button id="ptMergeCancel" class="link-btn" type="button">Annulla</button></div>
-      <div id="ptResults" style="display:flex;flex-direction:column;gap:6px"></div>
-      <div id="ptDetail" style="display:flex;flex-direction:column;gap:8px" hidden></div>
-    </div>
-  </aside>
 
   <div id="jobBar" class="job-bar" hidden>
     <span id="jobProgress" class="phase-bar" role="progressbar" aria-label="Avanzamento dell’operazione" aria-valuemin="0" aria-valuemax="100" hidden><span></span></span>
@@ -2229,7 +2214,6 @@
     // A search is running: show the form as launched instead of resetting it for a new one.
     if (state.busy) { openDrawer('analysisDrawer'); return; }
     if (preset) state.analysis.preset = preset;
-    if (!state.analysis.wantScope) state.analysis.counterparty = null;
     scopeRadio('accounts').checked = true;
     openDrawer('analysisDrawer');
   }
@@ -2314,11 +2298,7 @@
     $('anThreadLabel').title = threadSubject;
     $('anFolderLabel').textContent = selectedFolder ? 'Cartella dell\'email selezionata: ' + selectedFolder.path.split('\\').pop() : 'Cartella dell\'email selezionata';
     $('anOptFolder').title = selectedFolder ? selectedFolder.path : '';
-    $('anPartyScope').hidden = !wholeArchive || !a.counterparty;
-    if (wholeArchive && a.counterparty) $('anPartyScopeText').textContent = 'Controparte: ' + a.counterparty.name + ' · ' + plural(a.counterparty.addresses, 'indirizzo', 'indirizzi');
-    $('anPerson').title = (wholeArchive && a.counterparty
-      ? 'Filtro facoltativo: lascia vuoto «Persona» per includere tutti gli indirizzi della controparte.'
-      : wholeArchive ? 'Filtro facoltativo: lascia vuoto «Persona» per includere tutte le email dell\'archivio.'
+    $('anPerson').title = (wholeArchive ? 'Filtro facoltativo: lascia vuoto «Persona» per includere tutte le email dell\'archivio.'
       : 'Filtro facoltativo: lascia vuoto «Persona» per includere tutte le email delle cassette o cartelle scelte sopra.') +
       ' Jolly: * qualsiasi testo, ? un carattere (es. *@acme.it).';
     Array.prototype.forEach.call($('anStores').querySelectorAll('input'), function (box) { box.disabled = !accounts; });
@@ -2326,8 +2306,7 @@
     var whole = accounts && !followups && $('anWhole').value === '1';
     // A conversation is read whole: folder filters do not apply. A whole mailbox already includes its folders.
     setOptDisabled('anOptSub', [$('anSubfolders')], thread || followups || whole || wholeArchive);
-    $('anPerson').placeholder = wholeArchive && a.counterparty ? 'Tutti gli indirizzi della controparte'
-      : wholeArchive ? 'Tutte le persone (oppure nome, azienda o dominio)' : 'Tutte le persone';
+    $('anPerson').placeholder = wholeArchive ? 'Tutte le persone (oppure nome, azienda o dominio)' : 'Tutte le persone';
     $('anPerson').disabled = thread;
     $('anSubject').disabled = thread;
     $('anFactsRow').hidden = !wholeArchive || calendar || followups;
@@ -2405,8 +2384,6 @@
     $('anMaxNote').textContent = 'La ricerca copre tutto l\'ambito; si analizzano al massimo le ' + formatCount(ctx.maxEmails || 300) +
       ' email più recenti trovate e si dichiara quante altre ce ne sono.';
     refreshAnalysisForm();
-    // Scope asked for before the context arrived (from a counterparty page).
-    if (a.wantScope) { setAnalysisScope(a.wantScope); a.wantScope = null; }
     var current = document.querySelector('input[name="anScope"]:checked');
     if (!current || current.disabled || $(current.parentNode.id).hidden) setAnalysisScope('accounts');
   }
@@ -2449,8 +2426,6 @@
         whole: kind === 'accounts' && !$('anWhole').disabled && $('anWhole').value === '1',
         subfolders: $('anSubfolders').checked && !$('anSubfolders').disabled,
         person: $('anPerson').disabled ? '' : $('anPerson').value.trim(),
-        counterpartyId: kind === 'archive' && a.counterparty ? a.counterparty.id : null,
-        counterpartyName: kind === 'archive' && a.counterparty ? a.counterparty.name : null,
         role: $('anRole').value,
         subject: $('anSubject').disabled ? '' : $('anSubject').value.trim(),
         factText: $('anFactsRow').hidden ? '' : $('anFacts').value.trim(),
@@ -2467,11 +2442,9 @@
   }
   Array.prototype.forEach.call(document.querySelectorAll('input[name="anScope"]'), function (radio) {
     radio.addEventListener('change', function () {
-      if (radio.value !== 'archive') state.analysis.counterparty = null;
       requestAnalysisContext();
     });
   });
-  $('anPartyClear').addEventListener('click', function () { state.analysis.counterparty = null; refreshAnalysisForm(); });
   // The archive is for the whole history with a person or company: emails from and to them, no date limit.
   scopeRadio('archive').addEventListener('change', function () {
     state.analysis.role = 'any';
@@ -2585,12 +2558,12 @@
 
   // ---------- Drawers ----------
   // Drawer → button that gets the focus back (and aria-expanded when it is a toggle).
-  var drawerToggles = { historyDrawer: 'btnHistory', infoDrawer: 'btnAiState', analysisDrawer: 'btnSearchPage', partyDrawer: 'btnPartiesPage', helpDrawer: 'btnHelp' };
-  var navButtons = { chat: 'btnChatPage', analysisDrawer: 'btnSearchPage', partyDrawer: 'btnPartiesPage', historyDrawer: 'btnHistory' };
+  var drawerToggles = { historyDrawer: 'btnHistory', infoDrawer: 'btnAiState', analysisDrawer: 'btnSearchPage', helpDrawer: 'btnHelp' };
+  var navButtons = { chat: 'btnChatPage', analysisDrawer: 'btnSearchPage', historyDrawer: 'btnHistory' };
   function showPage(id) {
     document.body.dataset.page = id;
     var selected = navButtons[id];
-    ['btnChatPage', 'btnSearchPage', 'btnPartiesPage', 'btnHistory'].forEach(function (button) { $(button).setAttribute('aria-current', button === selected ? 'page' : 'false'); });
+    ['btnChatPage', 'btnSearchPage', 'btnHistory'].forEach(function (button) { $(button).setAttribute('aria-current', button === selected ? 'page' : 'false'); });
   }
   function openDrawerId() {
     return Object.keys(drawerToggles).filter(function (id) { return !$(id).hidden; })[0] || null;
@@ -2616,9 +2589,6 @@
       requestHistory();
     } else if (id === 'analysisDrawer') {
       if (!state.busy) requestAnalysisContext();
-    } else if (id === 'partyDrawer') {
-      if (!$('ptDetail').hidden) return updateJobBar();
-      partySearch();
     } else if (id === 'helpDrawer') {
       // Static text.
     } else {
@@ -2857,6 +2827,7 @@
 
     // The top bar keeps its indicator as a shortcut to Stato; Stato itself shows figures only.
     $('arInfo').hidden = !archive.active;
+    $('arDetail').hidden = !archive.active;
     $('arPhase').textContent = d.phase || '–';
     // The phase keeps its own light; why the archive is red goes in the Errore row, never on the phase.
     $('arPhase').dataset.light = d.phaseLight || d.light || 'Off';
@@ -2923,202 +2894,6 @@
     if (document.visibilityState === 'hidden') return;
     post({ type: !$('infoDrawer').hidden && archive.active ? 'archive_get' : 'archive_light_get' });
   }, 5000);
-  // ---------- Counterparty page (people and companies of the archive) ----------
-  // merge = { id, name }: the next counterparty picked from the list is merged into this one
-  var party = { timer: 0, merge: null };
-  var maxPartyAddresses = 20;
-  function partySearch() {
-    post({ type: 'archive_party_search', text: $('ptSearch').value.trim() });
-  }
-  function showPartyList() {
-    $('ptDetail').hidden = true;
-    $('ptSearchRow').hidden = false;
-    $('ptResults').hidden = false;
-    $('ptMerge').hidden = !party.merge;
-  }
-  function endPartyMerge() {
-    party.merge = null;
-    $('ptMerge').hidden = true;
-  }
-  $('ptMergeCancel').addEventListener('click', function () {
-    var id = party.merge && party.merge.id;
-    endPartyMerge();
-    if (id) post({ type: 'archive_party_get', id: id });
-  });
-  $('ptSearch').addEventListener('input', function () {
-    showPartyList();
-    clearTimeout(party.timer);
-    party.timer = setTimeout(partySearch, 250);
-  });
-  function renderParties(d) {
-    var list = $('ptResults');
-    list.innerHTML = '';
-    var items = d.items || [];
-    if (d.inactive || !items.length) {
-      list.appendChild(el('div', 'muted', d.inactive ? 'L\'archivio delle email non è attivo.' : 'Nessuna controparte trovata.'));
-      return;
-    }
-    items.forEach(function (p) {
-      var row = el('div', 'history-item');
-      var open = el('button', 'history-open');
-      open.type = 'button';
-      open.appendChild(el('span', 'history-title', (p.important ? '★ ' : '') + p.name));
-      open.appendChild(el('span', 'history-meta', (p.key !== p.name ? p.key + ' · ' : '') + formatCount(p.emails) + ' email' + (p.last ? ' · ultima il ' + p.last : '')));
-      open.addEventListener('click', function () {
-        var into = party.merge;
-        if (!into) { post({ type: 'archive_party_get', id: p.id }); return; }
-        if (into.id === p.id) return;
-        endPartyMerge();
-        post({ type: 'archive_party_merge', id: into.id, other: p.id });
-      });
-      row.appendChild(open);
-      list.appendChild(row);
-    });
-  }
-  function partyRow(list, label, value) {
-    var row = el('div', 'info-row');
-    row.appendChild(el('span', 'info-label', label));
-    row.appendChild(el('span', 'info-val', value));
-    list.appendChild(row);
-  }
-  // A card has independent content and actions; the full subject never shares a button with a flow action.
-  function partyItems(box, title, items, metaOf) {
-    if (!items || !items.length) return;
-    box.appendChild(el('div', 'drawer-section-title', title));
-    items.forEach(function (it) {
-      var key = title + ':' + mailKey(it) + ':' + (it.title || '');
-      var wrapper = el('article', 'history-item message-card');
-      wrapper.appendChild(el('div', 'history-title', it.title || '(senza oggetto)'));
-      wrapper.appendChild(el('div', 'history-meta', metaOf(it)));
-      if (it.attachments) wrapper.appendChild(el('div', 'history-meta', 'Allegati: ' + it.attachments));
-      var actions = el('div', 'row-actions');
-      var original = keyed(el('button', 'link-btn', 'Apri originale'), key + ':open');
-      original.type = 'button';
-      original.addEventListener('click', function () { post({ type: 'archive_open_email', entryId: it.entryId, storeId: it.storeId }); });
-      actions.appendChild(original);
-      var flowButton = keyed(el('button', 'link-btn', 'Ricostruisci la pratica'), key + ':flow');
-      flowButton.type = 'button';
-      flowButton.addEventListener('click', function () { openFlow(0, it.entryId, it.storeId); });
-      actions.appendChild(flowButton); wrapper.appendChild(actions); box.appendChild(wrapper);
-    });
-  }
-  function renderParty(d) {
-    if (d.open && $('partyDrawer').hidden) openDrawer('partyDrawer');
-    var p = d.party;
-    var box = $('ptDetail');
-    endPartyMerge();
-    if (!p) { showPartyList(); return; }
-    var saved = rememberView($('partyDrawer'), 'party:' + p.id);
-    // The row just clicked disappears with the list: the keyboard moves into the card, not back to the page.
-    var active = document.activeElement;
-    var refocus = saved && saved.focus ? null : $('partyDrawer').contains(active) ? (active && active.getAttribute('role') === 'switch' ? 'star' : 'back') : null;
-    // The search belongs to the list: back there, it is found as it was left.
-    $('ptSearchRow').hidden = true;
-    $('ptResults').hidden = true;
-    box.hidden = false;
-    box.innerHTML = '';
-
-    var back = keyed(el('button', 'link-btn', '‹ Tutte le controparti'), 'party:back');
-    back.type = 'button';
-    back.style.alignSelf = 'flex-start';
-    // Searched again: the star or the grouping may have changed on this card.
-    back.addEventListener('click', function () { showPartyList(); partySearch(); focusDrawer('partyDrawer'); });
-    box.appendChild(back);
-    if (refocus === 'back') back.focus();
-
-    var head = el('div', 'party-head');
-    head.appendChild(el('div', 'party-name', p.name));
-    var star = keyed(el('button', 'chip', (p.important ? '★' : '☆') + ' Importante'), 'party:star');
-    star.type = 'button';
-    star.setAttribute('role', 'switch');
-    star.setAttribute('aria-checked', p.important ? 'true' : 'false');
-    star.title = 'Le controparti importanti aprono gli elenchi';
-    star.addEventListener('click', function () { post({ type: 'archive_party_important', id: p.id, important: !p.important }); });
-    head.appendChild(star);
-    box.appendChild(head);
-    if (refocus === 'star') star.focus();
-
-    var info = el('div', 'info-list');
-    if (p.key !== p.name) partyRow(info, 'Dominio', p.key);
-    partyRow(info, 'Email', formatCount(p.emails) + ' · ' + formatCount(p.fromThem) + ' ricevute, ' + formatCount(p.emails - p.fromThem) + ' inviate');
-    if (p.first) partyRow(info, 'Periodo', p.first === p.last ? p.first : 'dal ' + p.first + ' al ' + p.last);
-    box.appendChild(info);
-
-    // Addresses, the busiest first; one that does not belong with the others can be split off.
-    var addresses = p.addresses || [];
-    box.appendChild(el('div', 'drawer-section-title', 'Indirizzi'));
-    addresses.slice(0, maxPartyAddresses).forEach(function (a) {
-      var row = el('div', 'party-addr');
-      row.appendChild(el('span', null, a.address + ' (' + formatCount(a.emails) + ')'));
-      if (addresses.length > 1 && a.address !== p.key) {
-        var split = el('button', 'link-btn', 'Separa');
-        split.type = 'button';
-        split.title = 'Ne fa una controparte a sé, anche per le email che arriveranno';
-        split.addEventListener('click', function () { post({ type: 'archive_party_split', id: p.id, address: a.address }); });
-        row.appendChild(split);
-      }
-      box.appendChild(row);
-    });
-    if (addresses.length > maxPartyAddresses) box.appendChild(el('div', 'muted', 'e altri ' + plural(addresses.length - maxPartyAddresses, 'indirizzo', 'indirizzi')));
-    var grouping = el('div', 'row-actions');
-    var merge = el('button', 'link-btn', 'Unisci un\'altra controparte…');
-    merge.type = 'button';
-    merge.title = 'Stessa azienda o persona con un altro dominio o indirizzo: le sue email passano in questa scheda';
-    merge.addEventListener('click', function () {
-      party.merge = { id: p.id, name: p.name };
-      $('ptMergeText').textContent = 'Cerca e scegli la controparte da unire a «' + p.name + '».';
-      showPartyList();
-      $('ptSearch').focus();
-    });
-    grouping.appendChild(merge);
-    if (p.custom) {
-      var reset = el('button', 'link-btn', 'Ripristina il raggruppamento automatico');
-      reset.type = 'button';
-      reset.title = 'Annulla le unioni e le separazioni fatte a mano su questa controparte';
-      reset.addEventListener('click', function () { post({ type: 'archive_party_reset', id: p.id }); });
-      grouping.appendChild(reset);
-    }
-    box.appendChild(grouping);
-
-    var find = el('button', 'btn btn-sm');
-    find.type = 'button';
-    find.style.alignSelf = 'flex-start';
-    find.innerHTML = icon('search');
-    find.appendChild(document.createTextNode('Cerca e analizza la corrispondenza'));
-    find.title = 'Apre «Cerca e analizza» su tutto l\'archivio con questa controparte come persona';
-    find.addEventListener('click', function () {
-      state.analysis.wantScope = 'archive';
-      openAnalysis();
-      state.analysis.counterparty = { id: p.id, name: p.name, addresses: (p.addresses || []).length };
-      $('anPerson').value = '';
-      state.analysis.role = 'any';
-      $('anDays').value = '0';
-      setAnalysisScope('archive');
-    });
-    box.appendChild(find);
-
-    if ((p.years || []).length) {
-      box.appendChild(el('div', 'drawer-section-title', 'Email per anno'));
-      var top = Math.max.apply(null, p.years.map(function (y) { return y.count; }));
-      p.years.forEach(function (y) {
-        var row = el('div', 'party-year');
-        row.appendChild(el('span', null, y.year));
-        var bar = el('span', 'phase-bar');
-        var fill = el('span');
-        fill.style.width = Math.max(2, Math.round(100 * y.count / top)) + '%';
-        bar.appendChild(fill);
-        row.appendChild(bar);
-        row.appendChild(el('b', null, formatCount(y.count)));
-        box.appendChild(row);
-      });
-    }
-    partyItems(box, 'Conversazioni recenti', p.threads, function (t) {
-      return (t.emails > 1 ? formatCount(t.emails) + ' email · ultima il ' : '') + t.date;
-    });
-    partyItems(box, 'Documenti scambiati', p.documents, function (t) { return t.date; });
-    if (saved) restoreView($('partyDrawer'), saved); else box.scrollIntoView(true);
-  }
-
   function closeDrawers() {
     finishDrawerLoad('history');
     finishDrawerLoad('flow');
@@ -3148,9 +2923,6 @@
   });
   $('btnChatPage').addEventListener('click', closeDrawers);
   $('btnSearchPage').addEventListener('click', function () { if ($('analysisDrawer').hidden) openDrawer('analysisDrawer'); });
-  $('btnPartiesPage').addEventListener('click', function () {
-    if ($('partyDrawer').hidden) openDrawer('partyDrawer');
-  });
   document.querySelectorAll('[data-close-drawer]').forEach(function (b) { b.addEventListener('click', closeDrawers); });
 
   // Two-step inline confirmation instead of the native confirm() dialog.
@@ -3625,21 +3397,6 @@
 
       case 'analysis_reconstruction':
         renderFlow(data);
-        break;
-
-      case 'archive_parties':
-        renderParties(data);
-        break;
-
-      case 'archive_party':
-        renderParty(data);
-        break;
-
-      case 'toggle_party':
-        if (data.toggle && !$('partyDrawer').hidden) { closeDrawers(); break; }
-        endPartyMerge();
-        showPartyList();
-        openDrawer('partyDrawer');
         break;
 
       case 'connection_health_result': {

@@ -460,18 +460,19 @@ public sealed partial class MainConfigForm : Form
         editLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
         var conn = NewGrid();
-        var capsGrid = NewGrid();
         var ctx = NewGrid();
         var net = NewGrid();
-        var grids = new[] { conn, capsGrid, ctx, net };
-        capsGrid.Visible = ctx.Visible = net.Visible = false;
-        var sections = new SegmentedBar("Connessione", "Capacità e verifiche", "Contesto", "Autorizzazioni");
+        var capsGrid = NewGrid();
+        var grids = new[] { conn, ctx, net, capsGrid };
+        ctx.Visible = net.Visible = capsGrid.Visible = false;
+        // Diagnostics last and never the section shown on opening.
+        var sections = new SegmentedBar("Connessione", "Contesto", "Autorizzazioni", "Avanzate");
         var sectionTips = new[]
         {
             "Servizio, indirizzo, modello, chiave e tempi di attesa del profilo selezionato.",
-            "Cosa sa fare il modello, con esito, provenienza e data: capacità dichiarate dal servizio e prove esplicite delle funzioni usate dall'app.",
             "Quanto testo il modello legge e scrive (solo per i modelli locali) e quanto è creativo nelle risposte.",
-            "Cosa può uscire dal PC con questo profilo: email, testo degli allegati e ricerche sul web."
+            "Cosa può uscire dal PC con questo profilo: email, testo degli allegati e ricerche sul web.",
+            "Diagnostica del modello: capacità con esito, provenienza e data; Aggiorna capacità e Prova funzioni."
         };
         for (int i = 0; i < sections.Controls.Count && i < sectionTips.Length; i++) Tip(sections.Controls[i], sectionTips[i]);
         sections.SelectedIndexChanged += (s, e) =>
@@ -597,7 +598,7 @@ public sealed partial class MainConfigForm : Form
         _btnDetectModels.MinimumSize = new Size(0, 23);
         _btnDetectModels.Margin = new Padding(3);
         _btnDetectModels.Click += BtnDetectModels_Click;
-        Tip(_btnDetectModels, "Chiede al servizio, con la chiave inserita, l'elenco dei modelli disponibili e te li fa scegliere. Non invia dati di Outlook e non verifica le capacità del modello: per quelle c'è «Capacità e verifiche».");
+        Tip(_btnDetectModels, "Chiede al servizio, con la chiave inserita, l'elenco dei modelli disponibili e te li fa scegliere. Non invia dati di Outlook e non verifica le capacità del modello: per quelle c'è «Avanzate».");
         AddRow(conn, "Modello:", FillRow(new InputFrame(_txtModel), _btnDetectModels), "Nome del modello invocato.");
 
         _lblModelLimits = AddRow(conn, "", new SelectableLabel { AutoSize = true, Margin = new Padding(3, 0, 3, 6) },
@@ -1704,7 +1705,7 @@ public sealed partial class MainConfigForm : Form
             ? saved.Capabilities : null;
     }
 
-    /// <summary>Limits under the model field; capabilities in «Capacità e verifiche».</summary>
+    /// <summary>Limits under the model field; capabilities in «Avanzate».</summary>
     private void ShowModelLimits()
     {
         var caps = CurrentCaps();
@@ -2250,7 +2251,7 @@ public sealed partial class MainConfigForm : Form
             var (supported, detail) = await WebProbeAsync(profile, modelSecret, webSecret, cts.Token);
             if (cts.IsCancellationRequested || IsDisposed || Disposing || _webSupportCheck != cts || _lstProfiles.SelectedItem != item || CapabilityKey(profile) != identity) return;
             var outcome = supported switch { true => ProbeOutcome.Supported, false => ProbeOutcome.Unsupported, _ => ProbeOutcome.Inconclusive };
-            // The same check as «Prova funzioni»: its outcome is shown in Capacità e verifiche too.
+            // The same check as «Prova funzioni»: its outcome is shown in Avanzate too.
             CacheFor(profile).Record(new CapabilityProbeResult { Kind = ProbeKind.Web, Outcome = outcome, Detail = detail, CheckedUtc = DateTime.UtcNow });
             MarkDirty();
             RefreshCapabilityRows();

@@ -24,6 +24,21 @@ public static class ChatWriting
         @"|\b(mi\s+ha|mi\s+hanno|ha|hanno)\s+(scritto|mandato|inviato|risposto)\b" +
         @"|\b(e-?mail|mail|messaggi|pec)\s+(ricevut|inviat|arrivat|precedent|scambiat)\w*", Options);
 
+    private static readonly Regex AttachmentWord = new(@"\b(allegat\w*|attachment\w*|document[oi]|pdf|file)\b", Options);
+
+    /// <summary>The request is about the files attached to the email being written.</summary>
+    public static bool AsksAboutAttachments(string? question) => AttachmentWord.IsMatch(question ?? string.Empty);
+
+    private static readonly Regex AnalysisVerb = new(@"\b(analizz\w*|legg\w*|riassum\w*|sintetizz\w*|spieg\w*|descriv\w*|verific\w*|controll\w*|estra\w*|elenc\w*|vedi|vedere|visto|cosa\s+(c.è|dice|contiene)|che\s+cosa|quali|quanto|quando)\b", Options);
+    private static readonly Regex ComposeVerb = new(@"\b(scriv\w*|prepar\w*|compon\w*|redig\w*|riscriv\w*|riformul\w*|abbozz\w*|write|draft|rewrite)\b", Options);
+
+    /// <summary>A question about the attached files («analizza gli allegati»), not a text to write with them.</summary>
+    public static bool AsksAttachmentAnalysis(string? question)
+    {
+        var text = question ?? string.Empty;
+        return AttachmentWord.IsMatch(text) && AnalysisVerb.IsMatch(text) && !ComposeVerb.IsMatch(text);
+    }
+
     /// <summary>The request asks for a text to write or rework, not for information from the mail.</summary>
     public static bool IsWriteRequest(string? question)
     {

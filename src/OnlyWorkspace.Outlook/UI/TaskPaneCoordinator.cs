@@ -462,18 +462,10 @@ public partial class TaskPaneCoordinator : IDisposable
             case "delete_all_history": _ = DeleteAllHistoryAsync(); break;
             case "new_chat": ClearChat(); break;
 
-            // Archive, flow and counterparties.
+            // Archive and flow.
             case "archive_get": _ = SendArchiveStatusAsync(); break;
             case "archive_light_get": _ = SendArchiveLightAsync(); break;
-            case "archive_party_search":
-            case "archive_party_get":
-            case "archive_party_important":
-            case "archive_party_merge":
-            case "archive_party_split":
-            case "archive_party_reset":
-            case "archive_open_email":
-                _ = HandleCounterpartyCommandAsync(type!, message.Clone());
-                break;
+            case "archive_open_email": _ = OpenArchivedEmailAsync(message.Clone()); break;
             case "archive_pause":
             case "archive_delete":
                 _ = HandleArchiveCommandAsync(type!, message.Clone());
@@ -589,11 +581,6 @@ public partial class TaskPaneCoordinator : IDisposable
     /// <summary>Ribbon context menu: runs the action on that email (ids empty = the selected one).</summary>
     public void ExecuteOnEmail(string action, string? entryId, string? storeId)
     {
-        if (action == "party")
-        {
-            ShowCounterpartyOf(entryId, storeId);
-            return;
-        }
         var target = string.IsNullOrEmpty(entryId) ? null : new EmailRef(entryId!, storeId);
         _pendingWebAction = WebSearchAction.Of(action is "accept" or "decline" ? "reply" : action);
         _ = action switch
@@ -671,7 +658,10 @@ public partial class TaskPaneCoordinator : IDisposable
         {
             // The email being written: the chat helps with its text and searches the mail only when asked to (Danny, 20/10/2026).
             var draft = _dataService.GetComposeDraft(_contextWindow);
-            bool writing = draft != null ? !ChatWriting.AsksMailSearch(userInstruction) : ChatWriting.IsWriteRequest(userInstruction);
+            // A question about the files attached to the email being written reads them; a request to write with them uses them as a source.
+            bool askDraftAttachments = draft != null && ChatWriting.AsksAboutAttachments(userInstruction) && !ChatWriting.AsksMailSearch(userInstruction);
+            bool answerOnDraft = askDraftAttachments && (ChatWriting.AsksAttachmentAnalysis(userInstruction) || !ChatWriting.IsWriteRequest(userInstruction));
+            bool writing = draft != null ? !ChatWriting.AsksMailSearch(userInstruction) && !answerOnDraft : ChatWriting.IsWriteRequest(userInstruction);
             bool requestsSelectedEmail = draft == null && IntentClassifier.RefersToSelectedEmail(userInstruction);
             EmailRef? boundEmail = null;
             if (requestsSelectedEmail)
@@ -724,6 +714,7 @@ public partial class TaskPaneCoordinator : IDisposable
                 intent = new UserIntentResult { Target = writing ? "write" : "general" };
             }
             else if (writing) intent = new UserIntentResult { Target = "write" };
+            else if (answerOnDraft) intent = new UserIntentResult { Target = "general" };
             else if (kept != null) intent = new UserIntentResult { Target = "email" };
             else if (localFacts.Count > 0)
             {
@@ -758,9 +749,12 @@ public partial class TaskPaneCoordinator : IDisposable
                 }
                 PostPhase(turn, "Scrittura del testo…");
                 if (selectedEmail != null) EnsureWholeEmails(activeProfile);
+                var draftFiles = askDraftAttachments ? await DraftAttachmentsAsync(activeProfile, turn, ct) : EmailAttachments.None;
+                if (draftFiles.Text.Length > 0) EnsureWholeEmails(activeProfile);
+                if (askDraftAttachments) notice = AttachmentNoticeFor(activeProfile, draftFiles);
                 var reference = selectedEmail == null ? null
                     : _contextBuilder.EnsureFits(EmailHeaderOf(selectedEmail, withSender: true) + _contextBuilder.CleanEmailBody(selectedEmail.Body ?? string.Empty, selectedEmail.Subject), budget);
-                messages = PromptCatalog.CreateWritePrompt(userInstruction, draft, reference);
+                messages = PromptCatalog.CreateWritePrompt(userInstruction, draft, reference, draftFiles.Text.Length > 0 ? _contextBuilder.EnsureFits(draftFiles.Text, budget) : null);
             }
             else if (intent.Target == "calendar")
                 messages = ChatCalendarPrompt(activeProfile, userInstruction, intent, dataBudget, maxSearchItems, turn, out notice);
@@ -837,10 +831,17 @@ public partial class TaskPaneCoordinator : IDisposable
             if (messages == null)
             {
                 // Only an explicit reference supplies the selected email and its attachments.
-                var attachments = selectedEmail != null ? await ChatAttachmentsAsync(selectedEmail, activeProfile, turn, ct) : EmailAttachments.None;
+                var attachments = selectedEmail != null ? await ChatAttachmentsAsync(selectedEmail, activeProfile, turn, ct)
+                    : answerOnDraft ? await DraftAttachmentsAsync(activeProfile, turn, ct) : EmailAttachments.None;
                 notice = AttachmentNoticeFor(activeProfile, attachments);
                 if (selectedEmail != null && (!string.IsNullOrWhiteSpace(selectedEmail.Body) || attachments.Text.Length > 0)) EnsureWholeEmails(activeProfile);
-                messages = ChatEmailPrompt(userInstruction, selectedEmail, attachments.Text, budget);
+                if (answerOnDraft)
+                {
+                    if (attachments.Text.Length > 0) EnsureWholeEmails(activeProfile);
+                    PostDraftContext(turn, draft!);
+                    messages = DraftAnswerPrompt(userInstruction, draft!, attachments, budget);
+                }
+                else messages = ChatEmailPrompt(userInstruction, selectedEmail, attachments.Text, budget);
             }
 
             PostPhase(turn, "Generazione risposta…");
@@ -1002,6 +1003,17 @@ public partial class TaskPaneCoordinator : IDisposable
     }
 
     /// <summary>A question on the selected email (with its readable attachments), or a plain question.</summary>
+    /// <summary>A question about the email being written: what is written so far and the text of its attachments, within the budget.</summary>
+    private IEnumerable<ChatMessage> DraftAnswerPrompt(string userInstruction, ComposeDraft draft, EmailAttachments attachments, int budget)
+    {
+        var text = new StringBuilder();
+        text.Append("Email in scrittura\nOggetto: ").Append(string.IsNullOrWhiteSpace(draft.Subject) ? "(vuoto)" : draft.Subject).Append('\n');
+        if (!string.IsNullOrWhiteSpace(draft.To)) text.Append("A: ").Append(draft.To).Append('\n');
+        if (!string.IsNullOrWhiteSpace(draft.OwnText)) text.Append("\n").Append(draft.OwnText).Append('\n');
+        text.Append(attachments.Text);
+        return PromptCatalog.CreateAnswerPrompt(userInstruction, _contextBuilder.EnsureFits(text.ToString(), budget), "email");
+    }
+
     private IEnumerable<ChatMessage> ChatEmailPrompt(string userInstruction, SelectedEmailInfo? selectedEmail, string attachments, int budget)
     {
         if (selectedEmail == null || string.IsNullOrWhiteSpace(selectedEmail.Body) && attachments.Length == 0)
@@ -1250,10 +1262,17 @@ public partial class TaskPaneCoordinator : IDisposable
     /// Attachment text for the summary (helper process). With an external profile just the names are listed,
     /// unless the profile explicitly allows attachment content to leave the network.
     /// </summary>
-    private async Task<EmailAttachments> BuildAttachmentContextAsync(SelectedEmailInfo email, LlmProfileConfig profile, int turn, CancellationToken ct)
+    private Task<EmailAttachments> BuildAttachmentContextAsync(SelectedEmailInfo email, LlmProfileConfig profile, int turn, CancellationToken ct) =>
+        BuildAttachmentContextAsync((accept, token) => _dataService.CopyAttachmentsAsync(email.EntryId, email.StoreId, accept, token), profile, turn, ct);
+
+    /// <summary>The same reading for the files attached to the email being written (no stored copy exists: they are read from the open draft).</summary>
+    private Task<EmailAttachments> DraftAttachmentsAsync(LlmProfileConfig profile, int turn, CancellationToken ct) =>
+        BuildAttachmentContextAsync((accept, token) => _dataService.CopyDraftAttachmentsAsync(_contextWindow, accept, token), profile, turn, ct);
+
+    private async Task<EmailAttachments> BuildAttachmentContextAsync(Func<Func<AttachmentFacts, bool>, CancellationToken, Task<AttachmentCopies?>> copyAttachments, LlmProfileConfig profile, int turn, CancellationToken ct)
     {
         bool local = profile.SendsAttachmentText;
-        var copies = await _dataService.CopyAttachmentsAsync(email.EntryId, email.StoreId, a => local && !a.IsInline && !a.IsPecReceiptData && AttachmentTextExtractor.IsSupported(a.Extension), ct);
+        var copies = await copyAttachments(a => local && !a.IsInline && !a.IsPecReceiptData && AttachmentTextExtractor.IsSupported(a.Extension), ct);
         if (copies == null) return EmailAttachments.None;
 
         try

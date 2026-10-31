@@ -1,6 +1,6 @@
 # Archivio
 
-L'archivio è uno specchio personale e cifrato della posta acquisita da Outlook classico. Conserva corpi integrali e testi degli allegati, condivisi quando il file è identico, e serve ricerca offline, Controparti, Follow-up e Ricostruisci la pratica. I testi non ancora acquisiti richiedono Outlook. Dettagli tecnici: [Motore dell'archivio](../tecnico/archivio-motore.md).
+L'archivio è uno specchio personale e cifrato della posta acquisita da Outlook classico. Conserva corpi integrali e testi degli allegati, condivisi quando il file è identico, e serve ricerca offline, Follow-up e Ricostruisci la pratica. I testi non ancora acquisiti richiedono Outlook. Dettagli tecnici: [Motore dell'archivio](../tecnico/archivio-motore.md).
 
 I documenti leggibili sono indicizzati per intero entro i limiti di lettura. Compressi, eseguibili e formati senza lettore restano come riferimenti all'email, con nome, tipo e dimensione: il loro contenuto non viene estratto né indicato come letto. MSG, EML e P7M restano leggibili; gli eventuali compressi al loro interno sono soltanto nominati. Dopo l'aggiornamento i vecchi testi allegati richiedono una rilettura dalle cassette aperte in Outlook; il corpo conservato resta disponibile.
 
@@ -19,7 +19,7 @@ La raccolta parte 60 secondi dopo l'avvio di Outlook e lavora dopo 10 secondi se
 
 ## Stato
 
-**Archivio** nella barra del riquadro (dettagli in Stato) e la finestra archivio della tray mostrano le stesse tabelle: metriche (testi, allegati, cartelle, controparti, database, disco) e, per cassetta, stato, email, testi %, cartelle.
+**Archivio** nella barra del riquadro apre Stato, che mostra fase ed errore e tiene le tabelle in **Avanzate** (chiusa all'apertura); la finestra archivio della tray mostra le stesse tabelle: metriche (testi, allegati, cartelle, database, disco) e, per cassetta, stato, email, testi %, cartelle.
 
 | Stato cassetta | Significato |
 | --- | --- |
@@ -45,9 +45,9 @@ Il recupero dai testi già acquisiti parte automaticamente nella tray, senza IA,
 
 Alla dimensione minima la pagina scorre verticalmente per mantenere raggiungibili filtri, risultati e anteprima.
 
-## Controparti
+## Raggruppamento delle persone
 
-Raggruppamento locale delle persone: per dominio aziendale, per singolo indirizzo sui provider di posta noti. Si possono unire e separare (**Ripristina…**) senza toccare Outlook e senza IA. Da **Persone → Controparti**, la scheda offre email, documenti e **Cerca e analizza la corrispondenza** sugli indirizzi del gruppo. Oggetti completi a capo e azioni **Apri originale** e **Ricostruisci la pratica** su una riga dedicata.
+I filtri **Persona** di Cerca e analizza e della Chat raggruppano gli indirizzi per dominio aziendale, o per singolo indirizzo sui provider di posta noti. Il raggruppamento è automatico e locale; non ci sono pagina Controparti né scelte manuali di unione e separazione (quelle salvate da versioni precedenti vengono scartate all'apertura dell'archivio e gli indirizzi tornano al raggruppamento automatico).
 
 ## Ricostruisci la pratica e sintesi
 

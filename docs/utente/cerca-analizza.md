@@ -30,7 +30,6 @@ flowchart TD
 | **Email senza risposta** | Elenco locale della Posta inviata e bozza di sollecito |
 
 - **Persona** vuoto comprende tutti. Il ruolo distingue mittente, destinatario o entrambi. Fuori dall'archivio più valori separati da virgola o punto e virgola valgono in alternativa e il destinatario si confronta con i nomi mostrati da Outlook in A/Cc: un indirizzo può non corrispondere. `*` e `?` sono jolly.
-- Aperta da una **controparte**, la ricerca comprende tutti gli indirizzi del gruppo; **Rimuovi controparte** toglie il vincolo.
 - **Intera cassetta** esclude Posta eliminata, Posta indesiderata, Bozze e Posta in uscita.
 - **Conversazione dell'email selezionata** mostra l'oggetto dell'email che userà e legge al massimo i 20 messaggi più recenti della conversazione Outlook; se ne ha di più, il risultato dice quanti ne ha e quanti dei più vecchi sono esclusi. Richiede un'email selezionata o aperta in lettura, come l'ambito **Cartella dell'email**; una bozza in scrittura, anche inline, non fornisce questo contesto. **Account e cassette**, **Cartelle scelte** e **Tutto l'archivio** restano utilizzabili senza selezione.
 - La ricerca arriva sempre alla fine dell'ambito; l'analisi legge al massimo le email più recenti indicate da `limits.maxAnalysisEmails` (default 300) e il risultato dichiara quante altre ne ha trovate.

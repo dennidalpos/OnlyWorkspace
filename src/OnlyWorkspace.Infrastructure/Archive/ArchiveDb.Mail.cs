@@ -37,7 +37,7 @@ public sealed partial class ArchiveDb
             foreach (var (id, addr, name) in former)
             {
                 if (own.Contains(addr)) continue;
-                long target = CounterpartyFor(KeyFor(addr, tx), name, tx);
+                long target = CounterpartyFor(CounterpartyResolver.KeyOf(addr), name, tx);
                 Exec("update addresses set is_me=0, cp_id=$c where id=$a", tx, ("$c", target), ("$a", id));
                 touched.Add(target);
             }
@@ -436,8 +436,7 @@ public sealed partial class ArchiveDb
         if (folders > 0)
         {
             Exec("delete from addresses where is_me=0 and id not in (select addr_id from email_addr)", tx);
-            // A counterparty marked as important keeps its mark for when its emails come back.
-            Exec("delete from counterparties where important=0 and id not in (select cp_id from addresses where cp_id is not null)", tx);
+            Exec("delete from counterparties where id not in (select cp_id from addresses where cp_id is not null)", tx);
             Exec("update folders set done=0, oldest=null", tx);
         }
         lastly?.Invoke(tx);
@@ -473,7 +472,7 @@ public sealed partial class ArchiveDb
         var existing = Scalar<long?>("select id from addresses where addr=$a", tx, ("$a", addr));
         if (existing != null) return existing;
 
-        long? counterparty = _ownAddresses.Contains(addr) ? null : CounterpartyFor(KeyFor(addr, tx), name, tx);
+        long? counterparty = _ownAddresses.Contains(addr) ? null : CounterpartyFor(CounterpartyResolver.KeyOf(addr), name, tx);
         return Scalar<long>("insert into addresses(addr, name, cp_id, is_me) values($a,$n,$c,$me) returning id", tx,
             ("$a", addr), ("$n", string.IsNullOrWhiteSpace(name) ? null : name!.Trim()), ("$c", counterparty), ("$me", counterparty == null ? 1 : 0));
     }
@@ -836,44 +835,5 @@ public sealed partial class ArchiveDb
     public long? CounterpartyOf(string? address)
     {
         lock (_gate) return Scalar<long?>("select cp_id from addresses where addr=$a", null, ("$a", CounterpartyResolver.Normalize(address)));
-    }
-
-    /// <summary>Counterparties whose name, domain or one of the addresses contains the text; the busiest first.</summary>
-    public IReadOnlyList<Counterparty> FindCounterparties(string? text, int max)
-    {
-        lock (_gate)
-        {
-            var pattern = LikePattern(text);
-            var result = new List<Counterparty>();
-            using (var cmd = Command(
-                "select c.id, c.name, c.key, c.important, count(distinct ea.email_id), min(e.received), max(e.received) " +
-                "from counterparties c join addresses a on a.cp_id=c.id join email_addr ea on ea.addr_id=a.id join emails e on e.id=ea.email_id and e.body_state<>3 " +
-                "where c.id in (select c2.id from counterparties c2 join addresses a2 on a2.cp_id=c2.id " +
-                "  where c2.name like $p escape '\\' or c2.key like $p escape '\\' or a2.addr like $p escape '\\' or a2.name like $p escape '\\') " +
-                "group by c.id order by c.important desc, count(distinct ea.email_id) desc limit $n", null, ("$p", pattern), ("$n", Math.Max(1, max))))
-            using (var r = cmd.ExecuteReader())
-            {
-                while (r.Read())
-                {
-                    result.Add(new Counterparty
-                    {
-                        Id = r.GetInt64(0),
-                        Name = r.GetString(1),
-                        Key = r.GetString(2),
-                        Important = r.GetInt64(3) != 0,
-                        Emails = (int)r.GetInt64(4),
-                        FirstUtc = r.IsDBNull(5) ? null : FromUnix(r.GetInt64(5)),
-                        LastUtc = r.IsDBNull(6) ? null : FromUnix(r.GetInt64(6))
-                    });
-                }
-            }
-            foreach (var counterparty in result)
-            {
-                using var cmd = Command("select addr from addresses where cp_id=$c order by addr", null, ("$c", counterparty.Id));
-                using var r = cmd.ExecuteReader();
-                while (r.Read()) counterparty.Addresses.Add(r.GetString(0));
-            }
-            return result;
-        }
     }
 }

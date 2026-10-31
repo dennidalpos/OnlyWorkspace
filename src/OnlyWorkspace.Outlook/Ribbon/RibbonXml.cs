@@ -148,10 +148,6 @@ internal static class RibbonXml
                   </splitButton>
                   <button id="btnBriefing" label="Briefing" size="large" imageMso="GotoCalendar" onAction="OnBriefingClicked" keytip="G"
                           screentip="Briefing di oggi" supertip="Agenda di oggi e fino a 25 email non lette della Posta in arrivo predefinita, nel rispetto del profilo e degli allegati consentiti." />
-                  <menu id="peopleMenu" label="Persone" size="large" imageMso="AddressBook" keytip="P">
-                    <button id="btnParties" label="Controparti" imageMso="AddressBook" onAction="OnPartiesClicked"
-                            screentip="Controparti" supertip="Persone e aziende dell'archivio: indirizzi, conversazioni e documenti scambiati." />
-                  </menu>
                 </group>
                 <group id="grpSystem" label="Sistema" imageMso="CurrentViewSettings">
                   <button id="btnTogglePane" label="Riquadro" image="ow16" onAction="OnTogglePaneClicked" keytip="R"
@@ -180,7 +176,6 @@ internal static class RibbonXml
                 <menuSeparator id="ctxSeparator" />
                 <button id="ctxSecurity" label="Verifica sicurezza" imageMso="MacroSecurity" tag="security" onAction="OnContextActionClicked" />
                 <button id="ctxActionItems" label="Attività e appuntamenti" imageMso="NewTask" tag="action_items" onAction="OnContextActionClicked" />
-                <button id="ctxParty" label="Controparte del mittente" imageMso="AddressBook" tag="party" onAction="OnContextActionClicked" />
               </menu>
             </contextMenu>
           </contextMenus>

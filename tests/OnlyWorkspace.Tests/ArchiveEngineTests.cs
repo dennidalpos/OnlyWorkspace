@@ -267,7 +267,7 @@ public sealed class ArchiveEngineTests : IDisposable
             await client.SaveBodyAsync(id, body);
             await client.SetMetaAsync("paused", "1");
             Assert.Single(await client.FindAddressesAsync("recipient"));
-            Assert.Single((await client.GetCounterpartyAsync((await client.CounterpartyOfAsync("recipient@example.org"))!.Value))!.Documents);
+            Assert.NotNull(await client.CounterpartyOfAsync("recipient@example.org"));
             Assert.Single(await client.SearchAsync(new ArchiveQuery { Text = "original" }));
             Assert.False((await client.EngineStatusAsync()).OutlookConnected);
             Assert.Null((await client.EngineStatusAsync()).LastCheckUtc);

@@ -99,7 +99,7 @@ public sealed class ModelCapabilitiesCache
 /// <summary>Where a capability row's outcome comes from.</summary>
 public enum CapabilityOrigin { NotDeclared, Declared, Verified, NotVerifiable, NotAvailable }
 
-/// <summary>One row of «Capacità e verifiche»: outcome, provenance and date, never a guess.</summary>
+/// <summary>One row of «Avanzate» (capabilities): outcome, provenance and date, never a guess.</summary>
 public sealed class CapabilityRow
 {
     public CapabilityRow(string name, CapabilityState state, CapabilityOrigin origin, string detail, DateTime? checkedUtc)

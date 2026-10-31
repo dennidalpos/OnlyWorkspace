@@ -212,18 +212,6 @@ const copyButton = all.find(n => /^Apri copia/.test(n.textContent));
 copyButton.click();
 assert.equal(messages.at(-1).entryId, 'copy-other'); assert.equal(messages.at(-1).storeId, 'other');
 deliver({ seed: { ...root, entryId: 'different' }, items: [detailedMail], coverage: [] });
-// Counterparty cards have complete subjects outside the buttons; each action keeps exact Store/Entry ids.
-new vm.Script(section('  function partyItems(', '  function renderParty(d)')).runInContext(context);
-const partyBox = element('div');
-context.partyItems(partyBox, 'Documenti', [{ title: detailedMail.subject, date: '28/10/2026', entryId: 'doc', storeId: 'pst2' }], i => i.date);
-const partyNodes = descendants(partyBox);
-assert.equal(partyNodes.find(n => n.className === 'history-title').textContent, detailedMail.subject);
-assert.equal(partyNodes.some(n => n.tag === 'button' && n.children.some(c => c.className === 'history-title')), false);
-partyNodes.find(n => n.textContent === 'Apri originale').click();
-assert.equal(messages.at(-1).entryId, 'doc'); assert.equal(messages.at(-1).storeId, 'pst2');
-partyNodes.find(n => n.textContent === 'Ricostruisci la pratica').click();
-assert.equal(messages.at(-1).type, 'mail_analysis');
-assert.equal(messages.at(-1).goal.preset, 'reconstruct'); assert.equal(messages.at(-1).scope.entryId, 'doc'); assert.equal(messages.at(-1).scope.storeId, 'pst2');
 console.log('PASS A174 structured cards: literal subjects, partial coverage, exact destinations and stable focus/expansion');
 
 // Reconstruction never emits an AI request until the explicit summary action.

@@ -15,11 +15,6 @@ public sealed partial class ArchiveClient
         nameof(ArchiveDb.ConfirmInitialInventory),
         nameof(ArchiveDb.GetBodyVersion),
         nameof(ArchiveDb.CounterpartyOfEmail),
-        nameof(ArchiveDb.SetImportant),
-        nameof(ArchiveDb.MergeCounterparties),
-        nameof(ArchiveDb.SplitAddress),
-        nameof(ArchiveDb.ResetCounterparty),
-        nameof(ArchiveDb.GetCounterparty),
         nameof(ArchiveDb.GetMeta),
         nameof(ArchiveDb.SetMeta),
         nameof(ArchiveDb.GetStats),
@@ -48,7 +43,6 @@ public sealed partial class ArchiveClient
         nameof(ArchiveDb.GetStoreCoverage),
         nameof(ArchiveDb.FindAddresses),
         nameof(ArchiveDb.CounterpartyOf),
-        nameof(ArchiveDb.FindCounterparties),
     };
 
     public Task ConfirmInitialInventoryAsync(CancellationToken ct = default) => CallAsync<object?>(nameof(ArchiveDb.ConfirmInitialInventory), Array.Empty<object?>(), ct);
@@ -62,21 +56,6 @@ public sealed partial class ArchiveClient
 
     public Task<long?> CounterpartyOfEmailAsync(string entryId, string? storeId = null, CancellationToken ct = default) =>
         CallAsync<long?>(nameof(ArchiveDb.CounterpartyOfEmail), new object?[] { entryId, storeId }, ct);
-
-    public Task SetImportantAsync(long counterpartyId, bool important, CancellationToken ct = default) =>
-        CallAsync<object?>(nameof(ArchiveDb.SetImportant), new object?[] { counterpartyId, important }, ct);
-
-    public Task<bool> MergeCounterpartiesAsync(long intoId, long otherId, CancellationToken ct = default) =>
-        CallAsync<bool>(nameof(ArchiveDb.MergeCounterparties), new object?[] { intoId, otherId }, ct);
-
-    public Task<long?> SplitAddressAsync(long counterpartyId, string? address, CancellationToken ct = default) =>
-        CallAsync<long?>(nameof(ArchiveDb.SplitAddress), new object?[] { counterpartyId, address }, ct);
-
-    public Task<long> ResetCounterpartyAsync(long counterpartyId, CancellationToken ct = default) =>
-        CallAsync<long>(nameof(ArchiveDb.ResetCounterparty), new object?[] { counterpartyId }, ct);
-
-    public Task<CounterpartyProfile?> GetCounterpartyAsync(long id, int maxThreads = 15, int maxDocuments = 20, CancellationToken ct = default) =>
-        CallAsync<CounterpartyProfile?>(nameof(ArchiveDb.GetCounterparty), new object?[] { id, maxThreads, maxDocuments }, ct);
 
     public Task<string?> GetMetaAsync(string key, CancellationToken ct = default) =>
         CallAsync<string?>(nameof(ArchiveDb.GetMeta), new object?[] { key }, ct);
@@ -168,7 +147,4 @@ public sealed partial class ArchiveClient
 
     public Task<long?> CounterpartyOfAsync(string? address, CancellationToken ct = default) =>
         CallAsync<long?>(nameof(ArchiveDb.CounterpartyOf), new object?[] { address }, ct);
-
-    public Task<IReadOnlyList<Counterparty>> FindCounterpartiesAsync(string? text, int max, CancellationToken ct = default) =>
-        CallAsync<IReadOnlyList<Counterparty>>(nameof(ArchiveDb.FindCounterparties), new object?[] { text, max }, ct);
 }

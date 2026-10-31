@@ -20,9 +20,6 @@ public sealed class AnalysisRequest
     public bool Subfolders { get; set; }
     /// <summary>Name or address, wildcards allowed; PersonRole says where it must appear.</summary>
     public string Person { get; set; } = string.Empty;
-    /// <summary>Archive scope: the selected counterparty, including all its grouped addresses.</summary>
-    public long? CounterpartyId { get; set; }
-    public string CounterpartyName { get; set; } = string.Empty;
     /// <summary>sender | recipient | any</summary>
     public string PersonRole { get; set; } = "sender";
     public string Subject { get; set; } = string.Empty;
@@ -67,8 +64,6 @@ public sealed class AnalysisRequest
                 WholeMailbox = scope.TryGetProperty("whole", out var whole) && whole.ValueKind == JsonValueKind.True,
                 Subfolders = scope.TryGetProperty("subfolders", out var sub) && sub.ValueKind == JsonValueKind.True,
                 Person = Truncate((Str(scope, "person") ?? string.Empty).Trim(), 200),
-                CounterpartyId = scope.TryGetProperty("counterpartyId", out var cp) && cp.ValueKind == JsonValueKind.Number && cp.TryGetInt64(out var cpId) && cpId > 0 ? cpId : (long?)null,
-                CounterpartyName = Truncate((Str(scope, "counterpartyName") ?? string.Empty).Trim(), 200),
                 PersonRole = Str(scope, "role") is "recipient" or "any" ? Str(scope, "role")! : "sender",
                 Subject = Truncate((Str(scope, "subject") ?? string.Empty).Trim(), 200),
                 FactText = (Str(scope, "factText") ?? string.Empty).Trim(),
@@ -156,7 +151,6 @@ public sealed class AnalysisRequest
         {
             sb.Append(PersonRole switch { "recipient" => ", destinatario «", "any" => ", da o a «", _ => ", mittente «" }).Append(Person).Append('»');
         }
-        if (Kind == "archive" && CounterpartyId.HasValue) sb.Append(", controparte «").Append(CounterpartyName.Length > 0 ? CounterpartyName : "selezionata").Append('»');
         if (Subject.Length > 0) sb.Append(", oggetto «").Append(Subject).Append('»');
         if (FactFilters.Count > 0) sb.Append(", ").Append(FactFilters.Count).Append(" filtri sui fatti");
         if (Text.Length > 0) sb.Append(", testo «").Append(Text).Append('»');

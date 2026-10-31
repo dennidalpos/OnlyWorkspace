@@ -22,14 +22,12 @@ const context = vm.createContext({
     return nodes.get(id);
   },
   // Drawer doubles: one screen open at a time, as in the pane.
-  openDrawer: id => { for (const n of ['historyDrawer', 'infoDrawer', 'analysisDrawer', 'partyDrawer']) context.$(n).hidden = n !== id; calls.push('open:' + id); },
-  closeDrawers: () => { for (const n of ['historyDrawer', 'infoDrawer', 'analysisDrawer', 'partyDrawer']) context.$(n).hidden = true; calls.push('close'); },
+  openDrawer: id => { for (const n of ['historyDrawer', 'infoDrawer', 'analysisDrawer']) context.$(n).hidden = n !== id; calls.push('open:' + id); },
+  closeDrawers: () => { for (const n of ['historyDrawer', 'infoDrawer', 'analysisDrawer']) context.$(n).hidden = true; calls.push('close'); },
   focusComposer: (mode, prompt) => calls.push('composer:' + mode + ':' + (prompt || '')),
   clearConversation: () => calls.push('clear'),
   finishTurn: () => {},
   updateActions: () => {},
-  endPartyMerge: () => {},
-  showPartyList: () => calls.push('parties'),
   hideEmailContext: () => calls.push('hide-context'),
 });
 new vm.Script('function toggleDrawer(id) { if ($(id).hidden) openDrawer(id); else closeDrawers(); }').runInContext(context);
@@ -37,7 +35,7 @@ new vm.Script(scriptBetween('  function openAnalysis(preset) {', '  function ana
 context.scopeRadio = () => ({ checked: false });
 new vm.Script(scriptBetween('  function onHostMessage(data) {', '  if (webview) {')).runInContext(context);
 const send = data => context.onHostMessage(data);
-const open = () => ['historyDrawer', 'infoDrawer', 'analysisDrawer', 'partyDrawer'].filter(n => !context.$(n).hidden);
+const open = () => ['historyDrawer', 'infoDrawer', 'analysisDrawer'].filter(n => !context.$(n).hidden);
 
 // Storico and Stato: the first click opens; a second click on a pane already on screen closes.
 send({ type: 'toggle_history', toggle: false });
@@ -67,15 +65,6 @@ assert.deepEqual(open(), []);
 send({ type: 'toggle_analysis', toggle: false });
 assert.equal(state.analysis.preset, 'summary', 'No preset means the plain search.');
 
-// Controparti.
-send({ type: 'toggle_party', toggle: true });
-assert.deepEqual(open(), ['partyDrawer']);
-send({ type: 'toggle_party', toggle: true });
-assert.deepEqual(open(), []);
-send({ type: 'toggle_party' });
-send({ type: 'toggle_party' });
-assert.deepEqual(open(), ['partyDrawer'], 'The context menu always opens.');
-
 // Chat, Bozza risposta, Nuova chat, Riquadro.
 calls.length = 0;
 send({ type: 'show_input', mode: 'reply', prompt: '' });
@@ -87,7 +76,7 @@ assert.deepEqual(calls, ['composer:reply:', 'composer:chat:', 'clear', 'composer
 // Every message the ribbon path posts has a handler.
 const coordinator = ['TaskPaneCoordinator.cs', 'TaskPaneCoordinator.Archive.cs']
   .map(f => fs.readFileSync(path.join(__dirname, '../../src/OnlyWorkspace.Outlook/UI', f), 'utf8')).join('\n');
-for (const type of ['toggle_history', 'toggle_info', 'toggle_analysis', 'toggle_party', 'show_input', 'new_chat_ready', 'hide_email_context']) {
+for (const type of ['toggle_history', 'toggle_info', 'toggle_analysis', 'show_input', 'new_chat_ready', 'hide_email_context']) {
   assert.match(coordinator, new RegExp('type = "' + type + '"'), type + ' is sent by the host');
   assert.match(html, new RegExp("case '" + type + "':"), type + ' is handled by the pane');
 }

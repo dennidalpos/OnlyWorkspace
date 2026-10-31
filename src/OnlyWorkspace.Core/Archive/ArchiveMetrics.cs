@@ -11,7 +11,7 @@ public sealed class ArchiveMetric
     /// <summary>"count", "bytes" or "tokens".</summary>
     public string Unit { get; set; } = "count";
     public long Done { get; set; }
-    /// <summary>Null for a plain figure (counterparties, space, tokens).</summary>
+    /// <summary>Null for a plain figure (space, tokens).</summary>
     public long? Total { get; set; }
     public long Remaining { get; set; }
     /// <summary>Excluded or failed: not counted in the percentage.</summary>
@@ -72,7 +72,6 @@ public static class ArchiveMetrics
             Progress("folders", "Cartelle", s.FoldersDone, s.Folders, Math.Max(0, s.Folders - s.FoldersDone - s.FoldersFailed), s.FoldersFailed)
         };
         if (s.PendingDeletions > 0) list.Add(new ArchiveMetric { Key = "deletions", Name = "Pulizie in attesa", Done = s.PendingDeletions });
-        list.Add(new ArchiveMetric { Key = "parties", Name = "Controparti", Done = s.Counterparties });
         list.Add(new ArchiveMetric { Key = "db", Name = "Database", Unit = "bytes", Done = s.DbBytes });
         list.Add(new ArchiveMetric { Key = "free", Name = "Disco libero", Unit = "bytes", Done = s.AvailableFreeBytes });
         return list;

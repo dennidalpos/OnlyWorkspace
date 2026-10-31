@@ -14,7 +14,7 @@ using OnlyWorkspace.Infrastructure.Llm;
 namespace OnlyWorkspace.ConfigTool.Forms;
 
 /// <summary>
-/// «Capacità e verifiche» of a profile: each capability with outcome, provenance and date, «Aggiorna capacità»
+/// «Avanzate» of a profile: each capability with outcome, provenance and date, «Aggiorna capacità»
 /// (what the service declares, no generation) and «Prova funzioni» (short requests with synthetic data, may cost
 /// tokens). Results are saved with the normal Salva and dropped when service, model, endpoint or key change.
 /// </summary>
@@ -310,7 +310,7 @@ public sealed partial class MainConfigForm
         };
     }
 
-    /// <summary>A probe of the profile in Capacità e verifiche, a manual change in Connessione: the earlier outcomes no longer apply.</summary>
+    /// <summary>A probe of the profile in Avanzate, a manual change in Connessione: the earlier outcomes no longer apply.</summary>
     private void InvalidateProbes(LlmProfileConfig p, bool webOnly = false)
     {
         _probeRun?.Cancel();

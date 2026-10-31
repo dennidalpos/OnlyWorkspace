@@ -86,7 +86,7 @@ public static class PromptCatalog
     }
 
     private static readonly Regex DataTagClose =
-        new(@"</\s*(email|agenda|contatti|bozza|testo|note|mittente|precedenti|web|richiesta|contesto)\s*>", RegexOptions.IgnoreCase);
+        new(@"</\s*(email|agenda|contatti|bozza|allegati|testo|note|mittente|precedenti|web|richiesta|contesto)\s*>", RegexOptions.IgnoreCase);
 
     /// <summary>
     /// Untrusted text for a data block (&lt;email&gt;, &lt;note&gt;…): a closing tag written in it would end the block
@@ -179,7 +179,7 @@ public static class PromptCatalog
     /// A text written from the user's instruction: the email being composed (what is written so far and the quoted
     /// message it answers) or new content with no context at all.
     /// </summary>
-    public static IEnumerable<ChatMessage> CreateWritePrompt(string instruction, ComposeDraft? draft = null, string? emailBody = null)
+    public static IEnumerable<ChatMessage> CreateWritePrompt(string instruction, ComposeDraft? draft = null, string? emailBody = null, string? attachments = null)
     {
         var context = new System.Text.StringBuilder();
         if (draft != null)
@@ -190,6 +190,7 @@ public static class PromptCatalog
             if (!string.IsNullOrWhiteSpace(draft.Cc)) context.Append("Cc: ").Append(draft.Cc).Append('\n');
             context.Append("<bozza>\n").Append(AsData(draft.OwnText)).Append("\n</bozza>\n");
             if (!string.IsNullOrWhiteSpace(draft.Quoted)) context.Append("<email>\n").Append(AsData(draft.Quoted)).Append("\n</email>\n");
+            if (!string.IsNullOrWhiteSpace(attachments)) context.Append("<allegati>\n").Append(AsData(attachments)).Append("\n</allegati>\n");
             context.Append('\n');
         }
         else if (!string.IsNullOrWhiteSpace(emailBody))

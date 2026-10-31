@@ -55,7 +55,7 @@ try {
     Wait-Until {Field $pane '_pageReady'} 'first page ready'
     Wait-Until {$pane.ContainsFocus -and (Script $pane 'document.hasFocus() && document.activeElement.id === "userPrompt"') -eq 'true'} 'queued explicit focus'
 
-    foreach ($screen in @(@('toggle_info','infoTitle'),@('toggle_party','ptSearch'),@('toggle_history','historyTitle'))) {
+    foreach ($screen in @(@('toggle_info','infoTitle'),@('toggle_history','historyTitle'))) {
         [void]$button.Focus()
         if (!$button.Focused) { throw 'Synthetic ribbon did not own focus' }
         [void]$focus.Invoke($pane,@())
@@ -132,7 +132,19 @@ try {
     }
     $form.ClientSize = $savedSize
     'PASS A201 real WebView layout: minimum 340 CSS pixels and horizontal reachability at 380/190/120 px'
-    'PASS real WebView2 focus: queued and ready ribbon actions, Chat/Status/Persone/History, no background or delayed focus theft'
+    # A210: Stato opens on its essentials, with the diagnostics folded away, and fits the page width at 100% and 200%.
+    $second.PostMessage(@{type='toggle_info';toggle=$false})
+    Wait-Until {(Script $second '!document.getElementById("infoDrawer").hidden') -eq 'true'} 'Stato drawer'
+    foreach ($width in @(380, 190)) {
+        $form.ClientSize = New-Object Drawing.Size($width, 600)
+        [Windows.Forms.Application]::DoEvents()
+        $stato = Script $second 'JSON.stringify({open:document.getElementById("statusAdvanced").open,fits:(function(b){return b.scrollWidth<=b.clientWidth+1;})(document.querySelector("#infoDrawer .drawer-body"))})' | ConvertFrom-Json | ConvertFrom-Json
+        if ($stato.open) { throw "Stato opens with Avanzate unfolded at width $width" }
+        if (!$stato.fits) { throw "Stato essentials need horizontal scrolling at width $width" }
+    }
+    $form.ClientSize = $savedSize
+    'PASS A210 real WebView Stato: Avanzate closed by default, essentials fit at 380 and 190 px'
+    'PASS real WebView2 focus: queued and ready ribbon actions, Chat/Status/History, no background or delayed focus theft'
     "Runtime=$((Field $second '_environment').BrowserVersionString); SDK=$((Get-Item (Join-Path $output 'Microsoft.Web.WebView2.Core.dll')).VersionInfo.FileVersion)"
     Add-Type -ReferencedAssemblies (Join-Path $output 'OnlyWorkspace.Outlook.dll') -TypeDefinition @'
 using OnlyWorkspace.Outlook.Interop;
@@ -159,10 +171,20 @@ public sealed class WidthFixturePane : _CustomTaskPane {
         $entryType=$entry.GetType()
         [void]$entryType.GetMethod('KeepMinimumWidth',$flags).Invoke($entry,@($null,[EventArgs]::Empty))
         $timer=$entryType.GetField('_widthCheck',$flags).GetValue($entry)
-        if ($widthFixture.Attempts -ne 1 -or !$timer.Enabled) {throw 'Ignored minimum width was not retried immediately'}
-        [void]$entryType.GetMethod('OnWidthCheckTick',$flags).Invoke($entry,@($null,[EventArgs]::Empty))
+        # A resize never writes the width from inside Office's splitter drag: only the timer, once the pane is still.
+        if ($widthFixture.Attempts -ne 0 -or !$timer.Enabled) {throw 'The width was written during the resize instead of after it'}
+        $tick=$entryType.GetMethod('OnWidthCheckTick',$flags)
+        [void]$tick.Invoke($entry,@($null,[EventArgs]::Empty))
+        if ($widthFixture.Attempts -ne 1 -or !$timer.Enabled) {throw 'Ignored minimum width was not retried'}
+        [void]$tick.Invoke($entry,@($null,[EventArgs]::Empty))
         if ($widthFixture.Attempts -ne 2 -or $widthFixture.Width -ne 540 -or $timer.Enabled) {throw 'Minimum width retry did not stop after acceptance'}
-        'PASS A201 native width guard: immediate attempt, ignored Office write retried, timer stops after acceptance'
+        # An Office that never accepts the width gets a few attempts per resize, not an endless fight.
+        $widthFixture.IgnoreWrites=0; $widthFixture.Width=120
+        $widthFixture.IgnoreWrites=1000; $widthFixture.Attempts=0
+        [void]$entryType.GetMethod('KeepMinimumWidth',$flags).Invoke($entry,@($null,[EventArgs]::Empty))
+        for ($i=0; $i -lt 10; $i++) {[void]$tick.Invoke($entry,@($null,[EventArgs]::Empty))}
+        if ($widthFixture.Attempts -ne 4 -or $timer.Enabled) {throw "Width retries not bounded: $($widthFixture.Attempts) attempts, timer enabled $($timer.Enabled)"}
+        'PASS A201 native width guard: no write during the drag, ignored Office write retried, bounded attempts, timer stops after acceptance'
     } finally {$entry.Dispose()}
 }
 finally {

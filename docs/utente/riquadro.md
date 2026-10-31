@@ -2,7 +2,7 @@
 
 Il riquadro WebView2 appartiene alla finestra Outlook che lo apre. Ogni azione usa il profilo IA attivo e le sue [autorizzazioni](modelli-web.md); nessun invio chiede conferma nel riquadro.
 
-Se Storico o il flusso restano in caricamento per 15 secondi compare **Riprova**; la richiesta precedente può ancora terminare. In Stato le tabelle strette scorrono orizzontalmente. Le cartelle non leggibili sono separate da quelle ancora da leggere; la percentuale esclude le non leggibili, mentre il totale le comprende. Gli errori indicano la cartella e invitano a verificarne l'accesso in Outlook, anche nel Cestino: ripristinala solo se necessario, senza ricreare una cartella eliminata. Lascia aperta la cassetta e attendi il prossimo controllo completo; l'errore non prova che i dati siano stati eliminati.
+Se Storico o il flusso restano in caricamento per 15 secondi compare **Riprova**; la richiesta precedente può ancora terminare. Stato mostra profilo, modello, destinazione, errore e fase dell'archivio; indirizzo del servizio, versioni, metriche e Diagnostica stanno nella sezione **Avanzate**, chiusa all'apertura, e le tabelle strette scorrono orizzontalmente. Le cartelle non leggibili sono separate da quelle ancora da leggere; la percentuale esclude le non leggibili, mentre il totale le comprende. Gli errori indicano la cartella e invitano a verificarne l'accesso in Outlook, anche nel Cestino: ripristinala solo se necessario, senza ricreare una cartella eliminata. Lascia aperta la cassetta e attendi il prossimo controllo completo; l'errore non prova che i dati siano stati eliminati.
 
 Se il browser del riquadro si interrompe, il pannello tenta una sola ricreazione automatica, mantenendo il lavoro e il risultato da ripristinare. Se il caricamento fallisce compare **Riprova a caricare il pannello**.
 
@@ -11,9 +11,9 @@ Se il browser del riquadro si interrompe, il pannello tenta una sola ricreazione
 | Punto | Comandi |
 | --- | --- |
 | Home → gruppo OnlyWorkspace (elenco o email aperta) | Sintesi, Bozza risposta…, Verifica |
-| Scheda OnlyWorkspace | **Assistente**: Chat (menu Svuota chat e Storico), Interrompi · **Email**: Sintesi, Bozza risposta… (menu accetta/rifiuta), Verifica, Altre azioni (Attività e appuntamenti, Estrai dati) · **Posta e persone**: Cerca e analizza (menu dei preset, inclusa Email senza risposta), Briefing, Persone (Controparti) · **Sistema**: Riquadro, Configurazione, Stato (Archivio e IA) |
+| Scheda OnlyWorkspace | **Assistente**: Chat (menu Svuota chat e Storico), Interrompi · **Email**: Sintesi, Bozza risposta… (menu accetta/rifiuta), Verifica, Altre azioni (Attività e appuntamenti, Estrai dati) · **Posta e persone**: Cerca e analizza (menu dei preset, inclusa Email senza risposta), Briefing · **Sistema**: Riquadro, Configurazione, Stato (Archivio e IA) |
 | Finestra di composizione (scheda Messaggio) | Scrivi con IA, Migliora (Correggi, Più formale, Più cordiale, Più breve, Più chiaro), Traduci (inglese, italiano, francese, tedesco, spagnolo), Oggetto; la scheda OnlyWorkspace resta senza il gruppo «Email» |
-| Clic destro su un'email | Sintesi, Bozza: accetta / rifiuta, Verifica sicurezza, Attività, Controparte del mittente |
+| Clic destro su un'email | Sintesi, Bozza: accetta / rifiuta, Verifica sicurezza, Attività |
 | Solo nel riquadro | Follow-up, Rispondi (Accetta cortesemente, Rifiuta con alternativa, Con istruzione…), ⋯ (Ricostruisci la pratica, Verifica sicurezza, Attività e appuntamenti, Estrai dati) |
 
 Tasti nel riquadro: **Alt+S** Sintesi, **Alt+R** Rispondi, **Alt+T** ⋯ (altre operazioni), **Alt+V** Verifica sicurezza, **Alt+C** Chat, **Esc** chiude un pannello o interrompe.
@@ -30,10 +30,10 @@ La barra concentra marchio, navigazione e stato di archivio e IA.
 
 La nuvola sulla risposta indica l'avvio di una richiesta a un modello cloud o a una ricerca web esterna. Le risposte prodotte interamente sul PC non attivano la nuvola, anche con un profilo cloud selezionato. Il simbolo segnala l'avvio dell'invio, senza certificare che il server lo abbia ricevuto o completato.
 
-Durante il ridimensionamento il riquadro tenta di ripristinare la larghezza minima anche prima del rilascio del mouse. Se Outlook mantiene temporaneamente una larghezza inferiore, la pagina conserva 340 pixel CSS e permette lo scorrimento orizzontale.
+Durante il trascinamento del bordo il riquadro non scrive la larghezza (Outlook la rimetteva subito, in un ciclo che faceva sfarfallare e bloccava la finestra): il minimo viene ripristinato dopo il rilascio del mouse, con al più quattro tentativi per ridimensionamento. Finché Outlook mantiene una larghezza inferiore, la pagina conserva 340 pixel CSS e permette lo scorrimento orizzontale.
 
 - **OnlyWorkspace** (icona e nome, a sinistra, sopra le sezioni): non è un pulsante; il suggerimento indica profilo, modello e server a cui vanno i dati. Il profilo è quello predefinito scelto dall'amministratore nel ConfigTool; il modello resta anche in Stato.
-- **Chat · Posta · Persone · Storico**: quattro sezioni con etichette sempre visibili, su una riga compatta sotto il marchio e gli indicatori. **Posta** raccoglie Cerca e analizza e Briefing; **Persone** apre le Controparti. Sotto i 340 px resta solo l'icona del marchio. Le sezioni conservano filtri, risultati e operazioni; i dettagli dello stato si aprono dagli indicatori Archivio e IA.
+- **Chat · Posta · Storico**: tre sezioni con etichette sempre visibili, su una riga compatta sotto il marchio e gli indicatori. **Posta** raccoglie Cerca e analizza e Briefing. Sotto i 340 px resta solo l'icona del marchio. Le sezioni conservano filtri, risultati e operazioni; i dettagli dello stato si aprono dagli indicatori Archivio e IA.
 - Indicatori **Archivio** e **IA**: pillola con badge di stato, nome e destinazione in testo («PC» per locale, «Cloud» per un servizio su internet; l'archivio è locale). Nel riquadro stretto la pillola va su due righe. Verde con spunta: esito regolare verificato; giallo con spinner: lavoro realmente in corso (passata dell'archivio, richiesta al modello); rosso con «!»: errore, con il motivo nel suggerimento e in Stato; grigio: spento o non ancora verificato (–), in pausa o bloccato dall'informativa (‖), in attesa di inattività o del prossimo ciclo (…). L'archivio si aggiorna ogni 5 secondi mentre il riquadro è visibile; l'indicatore IA cambia solo con richieste reali o con **Verifica connessione** e riparte da «non verificato» quando cambiano profilo o credenziali. Un clic apre Stato sulla sezione corrispondente; l'ingresso o l'uscita da un errore è annunciato agli screen reader. **Globo**: il profilo cerca sul web per alcune azioni, elencate nel suggerimento.
 - **?** apre la guida, scritta per chi usa l'app; versione, licenza e componenti di terze parti sono in ConfigTool → Informazioni.
 - Sotto la barra compare l'oggetto e una sola riga di pulsanti: con un'email selezionata **Sintesi · Rispondi · Follow-up · ⋯**, durante la composizione **Scrivi · Migliora · Traduci · Oggetto**; senza email compare l'indicazione di selezionarla. Briefing è in Posta, tra i suggerimenti della chat vuota e sul ribbon.
@@ -69,7 +69,7 @@ Nella finestra di una nuova email, di una risposta o di un inoltro (anche la ris
 
 | Azione | Cosa va al modello | Risultato |
 | --- | --- | --- |
-| **Scrivi** (o la chat) | La richiesta, oggetto, nomi dei destinatari A e Cc, il testo già scritto e il messaggio citato di una risposta o di un inoltro | Testo con **Inserisci** al cursore, **Sostituisci selezione** se c'era testo selezionato, **Copia**; se l'oggetto è vuoto, il testo propone anche «Oggetto: …» |
+| **Scrivi** (o la chat) | La richiesta, oggetto, nomi dei destinatari A e Cc, il testo già scritto e il messaggio citato di una risposta o di un inoltro; se la richiesta parla degli allegati («analizza gli allegati», «cosa dice il PDF?») anche il testo dei file allegati alla bozza, con le stesse regole dell'email selezionata: con un profilo cloud il contenuto degli allegati non esce e la risposta dice quali file non sono stati letti | Testo con **Inserisci** al cursore, **Sostituisci selezione** se c'era testo selezionato, **Copia**; se l'oggetto è vuoto, il testo propone anche «Oggetto: …» |
 | **Migliora** (Correggi, Più formale, Più cordiale, Più breve, Più chiaro) | Il testo selezionato, altrimenti quanto scritto sopra la citazione | Come sopra |
 | **Traduci** | Come Migliora | Come sopra |
 | **Oggetto** | Quanto scritto sopra la citazione | **Usa come oggetto** |

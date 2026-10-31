@@ -39,7 +39,7 @@ public sealed class ArchiveRebuildTests : IDisposable
             while (db.NextFactWork() is { } work) Assert.True(db.CommitFacts(work, ArchiveDb.ExtractFacts(work, default)));
             while (db.NextSearchWork() is { } work) Assert.True(db.CommitSearch(work, ArchiveSearchText.CodeTerms(work.Body), ArchiveSearchText.CodeTerms(work.Attachments)));
         }
-        Sql("insert into party_choice values('addr:synthetic@example.test','domain:example.test'); create table contact_rejects(store_id text not null, addr text not null, rejected_utc integer not null, primary key(store_id, addr)) without rowid;" +
+        Sql("create table party_choice(source text primary key, target text not null) without rowid; insert into party_choice values('addr:synthetic@example.test','domain:example.test'); create table contact_rejects(store_id text not null, addr text not null, rejected_utc integer not null, primary key(store_id, addr)) without rowid;" +
             "insert into contact_rejects values('contacts','refused@example.test',1234);insert into meta values('contacts_scope','{}');" +
             "create table archive_case_closures(member text primary key,closed_utc integer not null) without rowid;" +
             "insert into archive_case_closures values('m:<one@example.test>',1234);" +
@@ -75,6 +75,32 @@ public sealed class ArchiveRebuildTests : IDisposable
         Assert.Equal(13, Value("pragma user_version"));
     }
 
+    [Fact]
+    public void CurrentFormat_RegroupsTheAddressesOfTheRemovedMergeAndSplitChoices()
+    {
+        var day = new DateTime(2026, 10, 29, 9, 0, 0, DateTimeKind.Utc);
+        ArchiveHeader Header(string id, string sender) => new() { EntryId = id, MessageId = "<" + id + "@example.test>", Subject = id, SenderAddress = sender, ReceivedUtc = day };
+        using (var db = ArchiveDb.Open(_directory, "p"))
+        {
+            db.AddHeaders(db.GetOrAddFolder("store", "inbox", "Inbox"), new[] { Header("a", "mario@acme.it"), Header("b", "john@acme.com"), Header("c", "fatture@acme.it") }, true);
+            Assert.NotEqual(db.CounterpartyOf("mario@acme.it"), db.CounterpartyOf("john@acme.com"));
+        }
+        // What the user had merged (acme.com under acme.it) and split (the invoices address on its own).
+        Sql("create table party_choice(source text primary key, target text not null) without rowid; insert into party_choice values('acme.com','acme.it'),('fatture@acme.it','fatture@acme.it');" +
+            "update addresses set cp_id=(select cp_id from addresses where addr='mario@acme.it') where addr='john@acme.com';" +
+            "update counterparties set important=1;");
+
+        using (var db = ArchiveDb.Open(_directory, "p"))
+        {
+            Assert.NotEqual(db.CounterpartyOf("mario@acme.it"), db.CounterpartyOf("john@acme.com"));
+            Assert.Equal(db.CounterpartyOf("mario@acme.it"), db.CounterpartyOf("fatture@acme.it"));
+        }
+        Assert.Equal(0, Value("select count(*) from sqlite_master where name='party_choice'"));
+        Assert.Equal(0, Value("select count(*) from counterparties where important<>0"));
+        Assert.Equal(2, Value("select count(*) from counterparties"));
+        Assert.Equal(13, Value("pragma user_version"));
+    }
+
     [Theory]
     [InlineData(11)]
     [InlineData(12)]
@@ -89,7 +115,7 @@ public sealed class ArchiveRebuildTests : IDisposable
             Assert.Single(db.Search(new ArchiveQuery { Text = "98765" }));
             Assert.NotEmpty(db.GetFacts(1, true));
             Assert.Equal("[\"store\"]", db.GetMeta("stores"));
-            Assert.Equal(1, Value("select count(*) from party_choice where target='domain:example.test'"));
+            Assert.Equal(0, Value("select count(*) from sqlite_master where name='party_choice'"));
             Assert.Equal(0, Value("select count(*) from sqlite_master where name='contact_rejects'"));
             Assert.Equal(0, Value("select count(*) from meta where key='contacts_scope'"));
             if (sourceVersion == 11) Assert.Equal(20, Assert.Single(db.PendingDeletions()).Id);

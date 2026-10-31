@@ -79,7 +79,7 @@ public sealed class NavigationAccessibilityTests
                 var bar = Assert.Single(Descendants(form).OfType<FlowLayoutPanel>(),
                     control => control.AccessibilityObject.Role == AccessibleRole.PageTabList);
                 var tabs = bar.Controls.OfType<Button>().ToList();
-                // Archive window: Ricerca / Stato / Manutenzione; profile: Connessione / Capacità e verifiche / Contesto / Autorizzazioni.
+                // Archive window: Ricerca / Stato / Manutenzione; profile: Connessione / Contesto / Autorizzazioni / Avanzate.
                 int count = archiveWindow ? 3 : 4, last = count - 1;
                 Assert.Equal(count, tabs.Count);
                 Assert.Equal(count, bar.AccessibilityObject.GetChildCount());
@@ -98,7 +98,7 @@ public sealed class NavigationAccessibilityTests
                 if (archiveWindow)
                     Assert.Equal(2, Assert.Single(Descendants(form).OfType<TabControl>()).SelectedIndex);
                 else
-                    Assert.Contains(Descendants(form).OfType<CheckBox>(), checkbox => checkbox.Visible && checkbox.Text == "Ricerca web attiva");
+                    Assert.Contains(Descendants(form).OfType<Button>(), button => button.Visible && button.Text == "Prova funzioni");
 
                 PressArrow(tabs[last], Keys.Right);
                 Assert.True(tabs[0].Focused);

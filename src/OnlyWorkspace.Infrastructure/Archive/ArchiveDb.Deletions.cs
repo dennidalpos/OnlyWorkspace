@@ -13,7 +13,7 @@ public sealed partial class ArchiveDb
     private void PruneUnusedAddresses(SqliteTransaction tx)
     {
         Exec("delete from addresses where is_me=0 and id not in (select addr_id from email_addr)", tx);
-        Exec("delete from counterparties where important=0 and id not in (select cp_id from addresses where cp_id is not null)", tx);
+        Exec("delete from counterparties where id not in (select cp_id from addresses where cp_id is not null)", tx);
     }
     private void QueueDeletedSources(string ids, SqliteTransaction tx)
     {

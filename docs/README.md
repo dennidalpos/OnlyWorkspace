@@ -8,7 +8,7 @@ Guide del comportamento disponibile, organizzate per destinatario. [Verifica e q
 | --- | --- |
 | Usare il riquadro: sintesi, bozze, verifica, attività, dati, briefing, chat | [Riquadro e azioni](utente/riquadro.md) |
 | Cercare e analizzare la corrispondenza, trovare scadenze o email senza risposta | [Cerca e analizza](utente/cerca-analizza.md) |
-| Attivare l'archivio, cercare offline, vedere controparti e flussi | [Archivio](utente/archivio.md) |
+| Attivare l'archivio, cercare offline, vedere i flussi | [Archivio](utente/archivio.md) |
 | Sapere chi riceve i dati e quando si cerca sul web | [Modelli IA e Web Search](utente/modelli-web.md) |
 | Avere una mappa visiva di tutti i percorsi, scelte e recuperi | [Guida visiva ai percorsi](utente/guida-visiva.md) |
 

@@ -40,7 +40,6 @@ new vm.Script(html.slice(start, end)).runInContext(context);
 
 const metrics = [
   { Key: 'bodies', Name: 'Testi email', Unit: 'count', Done: 1200, Total: 2000, Remaining: 700, Excluded: 100, Percent: 63 },
-  { Key: 'parties', Name: 'Controparti', Unit: 'count', Done: 12, Total: null, Remaining: 0, Excluded: 0, Percent: null },
   { Key: 'db', Name: 'Database', Unit: 'bytes', Done: 3 * 1073741824, Total: null, Remaining: 0, Excluded: 0, Percent: null },
 ];
 const stores = [{ Name: 'Posta', State: 'inventario', Emails: 2000, BodiesPercent: 63, BodiesRemaining: 700, FoldersDone: 3, Folders: 5, CardsPercent: null, Error: '' }];
@@ -48,11 +47,10 @@ context.renderArchive({ available: true, active: true, light: 'Working', phase: 
 
 // Figures in fixed columns: name, done, total, %, remaining, excluded.
 const rows = nodes.get('arMetrics').children;
-assert.equal(rows.length, 3);
+assert.equal(rows.length, 2);
 assert.deepEqual(rows[0].children.map(c => c.textContent), ['Testi email', '1200', '2000', '63%', '700', '100']);
 assert.equal(rows[0].children[3].children[0].children[0].style.width, '63%');
-assert.deepEqual(rows[1].children.map(c => c.textContent), ['Controparti', '12', '', '', '', '']);
-assert.equal(rows[2].children[1].textContent, '3 GB');
+assert.equal(rows[1].children[1].textContent, '3 GB');
 context.renderArchive({ available: true, active: true, light: 'Error', phase: 'attesa inattività',
   metrics: [{ Key: 'folders', Name: 'Cartelle', Unit: 'count', Done: 27, Total: 28, Remaining: 0, Excluded: 1, Percent: 100 }], stores: [] });
 assert.deepEqual(nodes.get('arMetrics').children[0].children.map(c => c.textContent), ['Cartelle', '27', '28', '100%', '0', '1']);
@@ -125,3 +123,24 @@ assert.doesNotMatch(html, /archive_activate|archive_consent|welcomeCard/);
 
 assert.doesNotMatch(html, /renderArchiveCards|arCardsRow|arStoreCards/);
 console.log('PASS archive pane: syntax, local metrics, mailboxes and top-bar status without IA cards');
+
+// A210: Stato shows the essentials; technical rows, metric tables and the export live in «Avanzate», closed by default.
+const drawer = html.slice(html.indexOf('<aside id="infoDrawer"'), html.indexOf('<aside id="helpDrawer"'));
+const advancedTag = drawer.match(/<details id="statusAdvanced"[^>]*>/);
+assert.ok(advancedTag, 'Stato has an Avanzate section.');
+assert.doesNotMatch(advancedTag[0], /\sopen[\s>=]/, 'Avanzate is closed by default.');
+const advanced = drawer.slice(drawer.indexOf('<details id="statusAdvanced"'), drawer.indexOf('</details>'));
+const essential = drawer.replace(advanced, '');
+for (const id of ['arMetrics', 'arStores', 'btnDiag', 'infoEndpoint', 'infoProvider', 'infoOutlook', 'infoVersion']) {
+  assert.ok(advanced.includes('id="' + id + '"'), id + ' is in Avanzate.');
+  assert.ok(!essential.includes('id="' + id + '"'), id + ' is not among the essentials.');
+}
+for (const id of ['infoProfile', 'infoModel', 'infoTarget', 'btnCheckHealth', 'arError', 'arPhase', 'arChoose', 'arPause', 'btnOpenConfig']) {
+  assert.ok(essential.includes('id="' + id + '"'), id + ' stays among the essentials.');
+}
+// The detail follows the archive: hidden while it is not active.
+context.renderArchive({ available: true, active: false, light: 'Off', phase: 'spento', metrics: [], stores: [] });
+assert.equal(nodes.get('arDetail').hidden, true);
+context.renderArchive({ available: true, active: true, light: 'Working', phase: 'testi', metrics, stores });
+assert.equal(nodes.get('arDetail').hidden, false);
+console.log('PASS Stato: essentials in view, diagnostics in a closed Avanzate section');

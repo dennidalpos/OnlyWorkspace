@@ -29,7 +29,7 @@ public sealed partial class ArchiveDb
     };
 
     private static bool RetiredTable(string name) => name == "cards" || name == "archive_saved_cards" ||
-        name == "usage" || name == "archive_case_closures" || name == "contact_rejects" || name == "cards_fts" ||
+        name == "usage" || name == "archive_case_closures" || name == "contact_rejects" || name == "party_choice" || name == "cards_fts" ||
         name.StartsWith("cards_fts_", StringComparison.Ordinal) || name == "code_cards_fts" ||
         name.StartsWith("code_cards_fts_", StringComparison.Ordinal);
 
