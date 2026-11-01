@@ -18,6 +18,31 @@ Il budget di contesto viene ricontrollato anche dopo le sostituzioni. Lo schema 
 
 ## Registro locale
 
+```mermaid
+sequenceDiagram
+    participant R as Riquadro
+    participant D as Dispatcher locale
+    participant S as Strategie e identità locali
+    participant A as Registro DPAPI
+    participant P as Provider esterno
+    R->>D: Richiesta con policy e contesto
+    D->>S: Raccoglie identità e sostituisce valori riconosciuti
+    S-->>D: Messaggi con segnaposto e mappa solo in memoria
+    D->>D: Verifica schema e contesto dopo le sostituzioni
+    D->>A: Registra metadati prima del trasporto
+    alt Preparazione e registrazione riuscite
+        D->>P: Richiesta con segnaposto
+        P-->>D: Risposta JSON o streaming
+        D->>D: Ripristina i valori sul PC
+        D->>A: Registra esito e conteggi
+        D-->>R: Risultato
+    else Errore prima del trasporto
+        D-->>R: Errore e richiesta bloccata
+    end
+```
+
+Il flusso rappresenta i profili esterni; una registrazione riuscita non attesta la ricezione del provider. Codice: [LlmRequestDispatcher](../../src/OnlyWorkspace.Infrastructure/Llm/LlmRequestDispatcher.cs), [Pseudonymizer](../../src/OnlyWorkspace.Core/Privacy/Pseudonymizer.cs).
+
 `%LOCALAPPDATA%/OnlyWorkspace/privacy-audit` contiene un file cifrato con DPAPI per ogni richiesta: identificativo casuale, data UTC, esito, revisioni e numero di sostituzioni per categoria. Non contiene testi originali, valori riconosciuti, mappa, chiavi, soggetti o indirizzi del servizio. Un mutex fra processi protegge gli aggiornamenti atomici.
 
 I metadati scadono dopo 30 giorni, alla lettura o alla scrittura del registro. Questa scadenza riguarda esclusivamente i file del nuovo registro: non elimina storico, backup, log tecnici o altri file. Un file non valido blocca l'operazione senza azzerare il registro. Un errore di registrazione prima del trasporto impedisce l'invio; se avviene dopo l'avvio del trasporto, non può ritirare dati già ricevuti dal server.

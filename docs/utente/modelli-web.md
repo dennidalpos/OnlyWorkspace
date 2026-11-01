@@ -41,6 +41,8 @@ Se cambi destinazione o permessi dei dati, il prossimo messaggio apre automatica
 
 L'amministratore la abilita per profilo e sceglie le azioni: Chat, Sintesi, Risposte, Follow-up, Verifica sicurezza, Attività e scadenze, Estrai dati, Briefing, Analisi della posta (predefinite: Chat, Follow-up, Verifica sicurezza, Briefing).
 
+L'elenco delle azioni non supera i limiti del livello di esposizione: per un profilo esterno Solo locale e Minimo non permettono il web, Standard consente soltanto Verifica sicurezza con i soli domini. Le modalità generiche sotto si applicano quando profilo, livello e informativa autorizzano effettivamente la ricerca.
+
 - **Cloud**: per le azioni su un'email al provider vanno fino a 6.000 caratteri della richiesta, testo email incluso. Per una domanda sulla posta in chat e per Cerca e analizza vanno solo la domanda o l'obiettivo, senza il testo delle email: la ricerca parte subito, in parallelo alla ricerca e alla lettura della posta.
 - **Ollama**: il modello locale ricava una query di massimo 240 caratteri, inviata a ollama.com con una chiave dedicata.
 - **Verifica sicurezza** cerca solo il dominio del mittente (non quelli dei provider di posta e PEC) e i domini dei link, mai indirizzi o testo, e niente per le email inviate dall'utente. **Appuntamenti e scadenze** cerca solo i domini aziendali dei mittenti.

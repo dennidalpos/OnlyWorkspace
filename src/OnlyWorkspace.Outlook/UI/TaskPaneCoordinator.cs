@@ -116,14 +116,6 @@ public partial class TaskPaneCoordinator : IDisposable
         PostOtherJobs();
     }
 
-    /// <summary>Posts a message about running work: kept for a page loaded again and for the other windows' panes.</summary>
-    private void PostJob(object message)
-    {
-        _replay.Record(message);
-        _control.PostMessage(message);
-        NotifyJobs(message);
-    }
-
     private void NotifyJobs(object message)
     {
         var type = message is IDictionary<string, object?> map && map.TryGetValue("type", out var mapped)

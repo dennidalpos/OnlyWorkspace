@@ -24,7 +24,7 @@ Le tre catture originali in `screenshots/installed/` mostrano Outlook classico s
 
 - L'archivio resta sul PC in un database cifrato; la chiave è protetta da DPAPI Windows. I file allegati originali non sono conservati nell'archivio, mentre il testo acquisito può esserlo.
 - L'inferenza con Ollama su loopback può lavorare offline **senza ricerca web**. La ricerca web usa servizi esterni anche con un modello locale; un endpoint su un'altra macchina non equivale a elaborazione sul proprio PC.
-- Con un profilo cloud i testi necessari all'azione sono inviati al provider scelto. L'uscita dei dati Outlook richiede l'informativa accettata dal responsabile per le destinazioni; gli allegati dipendono dalle autorizzazioni del profilo. Le schede cloud richiedono anche il consenso per cassetta.
+- Con un profilo cloud escono fatti locali a Minimo oppure anche originali ripuliti a Standard, con segnaposto e senza testo degli allegati. L'uscita dei dati Outlook richiede l'informativa accettata dal responsabile per le destinazioni. La generazione automatica delle schede IA è stata ritirata; le catture storiche possono mostrare comportamenti precedenti.
 - Uso per addestramento, conservazione e condizioni del servizio dipendono dal provider e dal contratto/piano effettivo. Il prodotto non certifica i provider e non promette privacy assoluta. Vedere [Sicurezza e dati](../docs/admin/sicurezza.md), [Provider IA](../docs/admin/provider-ia.md) e, come esempio di condizioni differenti tra piani, [Gemini API](https://ai.google.dev/gemini-api/docs/pricing).
 - Nessuna email viene inviata automaticamente: l'utente rivede le bozze e sceglie le azioni su Outlook.
 
@@ -46,4 +46,4 @@ Catture storiche su dati sintetici e illustrazioni sono indicate in ogni immagin
 
 ## Prima della diffusione
 
-Usare i sette PNG con le indicazioni di provenienza visibili. Non presentarli come collaudo corrente, non promettere certificazioni o garanzie sui provider e non aggiungere un PDF social all'inventario. Il repository è privato: nessun link pubblico al codice. Generazione e revisione locale non autorizzano la pubblicazione.
+Usare i sette PNG con le indicazioni di provenienza visibili. Non presentarli come collaudo corrente, non promettere certificazioni o garanzie sui provider e non aggiungere un PDF social all'inventario. Il [repository del codice](https://github.com/dennidalpos/OnlyWorkspace) è pubblico; la diffusione dei materiali promozionali richiede una richiesta specifica. Generazione e revisione locale non autorizzano la pubblicazione dei materiali.

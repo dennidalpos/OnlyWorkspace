@@ -1,6 +1,6 @@
 # Documentazione di OnlyWorkspace
 
-Guide del comportamento disponibile, organizzate per destinatario. [Verifica e qualifica](tecnico/verifica.md) distingue prove e limiti; il tracker del dossier SecondBrain (`02-areas/products/OnlyWorkspace/tracker.json`) conserva il lavoro aperto, incluse le evoluzioni approvate non ancora implementate.
+Guide del comportamento disponibile, organizzate per destinatario. Per i primi passi vedi [Iniziare su un PC Windows](../README.md#iniziare-su-un-pc-windows); [Verifica e qualifica](tecnico/verifica.md) distingue codice, prove isolate e comportamento osservato sulla build installata.
 
 ## Utente
 
@@ -8,7 +8,7 @@ Guide del comportamento disponibile, organizzate per destinatario. [Verifica e q
 | --- | --- |
 | Usare il riquadro: sintesi, bozze, verifica, attività, dati, briefing, chat | [Riquadro e azioni](utente/riquadro.md) |
 | Cercare e analizzare la corrispondenza, trovare scadenze o email senza risposta | [Cerca e analizza](utente/cerca-analizza.md) |
-| Attivare l'archivio, cercare offline, vedere i flussi | [Archivio](utente/archivio.md) |
+| Attivare l'archivio, cercare offline, ricostruire una pratica | [Archivio](utente/archivio.md) |
 | Sapere chi riceve i dati e quando si cerca sul web | [Modelli IA e Web Search](utente/modelli-web.md) |
 | Avere una mappa visiva di tutti i percorsi, scelte e recuperi | [Guida visiva ai percorsi](utente/guida-visiva.md) |
 
@@ -37,7 +37,6 @@ Guide del comportamento disponibile, organizzate per destinatario. [Verifica e q
 
 ## Fonti e manutenzione
 
-- Ogni guida mantiene un ambito; qui si trova l'indice completo. I comandi obbligatori degli agenti restano in [AGENTS.md](../AGENTS.md), le attività aperte nel tracker e le prove datate in Verifica e qualifica.
-- Il dossier SecondBrain indicato in AGENTS.md conserva decisioni tecniche e stato corrente. I suoi file `.snapshot.txt` sono copie generate di consultazione: si aggiornano con SecondBrain Sync, mai a mano.
+- Ogni guida mantiene un ambito; qui si trova l'indice completo. I comandi di build e verifica sono in [Verifica e qualifica](tecnico/verifica.md), le istruzioni per gli agenti in [AGENTS.md](../AGENTS.md).
 - [Kit illustrativo e copy](../assets/social_copy.md): sorgenti editoriali e istruzioni di rigenerazione. Il set social contiene sette PNG (01–04 da catture installate del 21/10/2026 su dati sintetici con QwenCloud; 05–07 illustrazioni). I PDF sono del deck e della scheda prodotto, non del set social.
 - [Avvisi e licenze](../THIRD-PARTY-NOTICES.txt): conservare gli avvisi originali; verificare versioni e testi nei pacchetti effettivamente ripristinati. I file di licenza delle dipendenze e la Public Suffix List incorporata non si sintetizzano come una guida.

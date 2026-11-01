@@ -2873,11 +2873,6 @@
     return n >= 1000000 ? (n / 1000000).toLocaleString('it-IT', { maximumFractionDigits: 1 }) + ' M'
       : n >= 1000 ? Math.round(n / 1000).toLocaleString('it-IT') + ' mila' : String(n || 0);
   }
-  function formatDuration(seconds) {
-    if (seconds < 3600) return Math.max(1, Math.round(seconds / 60)) + ' min';
-    if (seconds < 172800) return Math.round(seconds / 3600) + ' ore';
-    return Math.round(seconds / 86400) + ' giorni';
-  }
   $('arChoose').addEventListener('click', function () { post({ type: 'open_config', page: 'mailboxes' }); });
   $('arPause').addEventListener('click', function () { post({ type: 'archive_pause', paused: !archive.paused }); });
   $('arDelete').addEventListener('click', function () {

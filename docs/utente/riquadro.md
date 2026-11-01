@@ -105,7 +105,7 @@ flowchart TD
     E -->|"Posta"| F["PC · cerca nell'archivio<br/>(o in Outlook senza archivio)"]
     E -->|"Agenda o contatti"| G["Outlook · elementi trovati"]
     E -->|"Nessuno"| H["Solo domanda e conversazione"]
-    F --> L["Elenco subito: ora, mittente,<br/>oggetto, sintesi della scheda"]
+    F --> L["Elenco subito: ora, mittente,<br/>oggetto e anteprima disponibile"]
     L --> I["IA · una risposta su fatti locali<br/>o originali acquisiti"]
     C --> J(["Risposta; storico cifrato se attivo"])
     G --> J
@@ -116,7 +116,7 @@ flowchart TD
 
 I filtri espliciti come «trova le email ordine ORD-2026/118», «importo >=1000,01 EUR» o «scadenza entro 2026-11-30» sono interpretati localmente e richiedono l'archivio. La ricerca espande le catene correlate e segnala i messaggi fuori dai filtri iniziali, conservando una copia per Message-ID; la risposta può ancora richiedere il modello. Le espressioni ambigue non diventano filtri numerici o date inventate.
 
-Le domande sulla posta per periodo («della mattina», «di ieri pomeriggio», «ultimi 3 giorni», «settimana scorsa»), per mittente («da Rossi», «di bioferspa.com») o sulle «ultime 5 mail» sono interpretate sul PC; anche le altre passano dalla classificazione locale. La posta si cerca nell'archivio: le email arrivate negli ultimi minuti e le cassette escluse dall'archivio si leggono da Posta in arrivo e Posta inviata di Outlook. L'elenco compare prima di qualunque chiamata al modello; se occorre, il modello scrive il resoconto in una sola richiesta, leggendo la scheda di sintesi di ogni email oppure l'originale intero di quelle senza scheda, di quelle che corrispondono alla ricerca o quando la domanda chiede di leggerle «per intero». Con un profilo che non può leggere gli allegati, la scheda di un'email con allegati non viene inviata. La ricerca web parte solo per le domande generali o quando la domanda la chiede («sul web», «online», «notizie»). I turni precedenti possono essere ridotti per lasciare spazio ai dati correnti.
+Le domande sulla posta per periodo («della mattina», «di ieri pomeriggio», «ultimi 3 giorni», «settimana scorsa»), per mittente («da Rossi», «di bioferspa.com») o sulle «ultime 5 mail» sono interpretate sul PC; anche le altre passano dalla classificazione locale. La posta si cerca nell'archivio: le email arrivate negli ultimi minuti e le cassette escluse dall'archivio si leggono da Posta in arrivo e Posta inviata di Outlook. L'elenco compare prima di qualunque chiamata al modello; se occorre, il modello scrive il resoconto in una sola richiesta, usando fatti locali a Minimo oppure originali ripuliti a Standard e con profili locali. Gli allegati entrano solo se richiesti e consentiti; i profili esterni ne escludono il testo. Le schede IA pregresse non sono usate. La ricerca web parte solo per le domande generali o quando la domanda la chiede («sul web», «online», «notizie»), entro le autorizzazioni del profilo. I turni precedenti possono essere ridotti per lasciare spazio ai dati correnti.
 
 L’intento è classificato sul PC, senza inviare la domanda al modello: posta, agenda, contatti, scrittura e domande generali. Le regole conservano periodi, nomi, mittenti, codici e termini citati; le espressioni non riconosciute restano indizi di ricerca. Non rappresentano una comprensione completa dei filtri. Le domande che nominano la PEC passano all'interpretazione generale: quando il filtro di cassetta non è disponibile, la chat lo dichiara e rimanda a [Cerca e analizza](cerca-analizza.md), dove puoi selezionare la cassetta.
 

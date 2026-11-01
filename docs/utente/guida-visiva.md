@@ -1,6 +1,6 @@
 # Guida visiva ai percorsi utente
 
-Guida dei principali percorsi, confrontata staticamente con il codice il 23/10/2026. Questa revisione non è una nuova prova installata; evidenze e limiti sono in [Verifica e qualifica](../tecnico/verifica.md). Il [kit social](../../assets/social_copy.md) distingue catture datate e illustrazioni.
+Guida dei principali percorsi, riallineata staticamente al codice il 01/11/2026. Questa revisione non è una nuova prova installata; evidenze e limiti sono in [Verifica e qualifica](../tecnico/verifica.md). Il [kit social](../../assets/social_copy.md) distingue catture datate e illustrazioni.
 Ciascuna sezione descrive un'area funzionale tramite un diagramma Mermaid orientato all'esperienza dell'utente finale, indicando:
 - **Punti di ingresso**: ribbon, menu contestuali, riquadro WebView2, finestra di composizione o icona nella tray.
 - **Azioni e scelte**: opzioni disponibili prima e durante l'esecuzione.
@@ -14,6 +14,8 @@ Ciascuna sezione descrive un'area funzionale tramite un diagramma Mermaid orient
 
 Quando selezioni un'email nell'elenco di Outlook o la apri in una finestra di lettura, puoi avviare le azioni rapide dedicate dal Ribbon, dal menu contestuale o dal riquadro.
 Il modello riceve i testi interi puliti necessari all’azione e gli allegati consentiti e leggibili per intero; quelli esclusi o incompleti sono dichiarati. La richiesta locale completa, inclusi prompt e schema, deve rientrare nel contesto. La ricerca web ha un invio distinto e limitato, descritto in [Sicurezza e dati](../admin/sicurezza.md).
+
+Tutti i percorsi IA restano soggetti al profilo: i livelli esterni correnti escludono il testo degli allegati; Minimo consente i soli fatti locali nelle azioni previste, Standard anche gli originali ripuliti. Il web esterno è limitato alla Verifica sicurezza a Standard. [Autorizzazioni e limiti](modelli-web.md).
 
 ```mermaid
 flowchart TD
@@ -134,7 +136,7 @@ flowchart TD
 ## 3. Chat nel riquadro e ricerca assistita
 
 La chat assistente risponde a domande sulla posta, sull'agenda o generali.
-L'intento viene classificato sul PC; la risposta può comunque richiedere il modello. Chat e Cerca e analizza mostrano subito l'elenco delle email trovate; un elenco o un conteggio finisce lì. Altrimenti un'unica richiesta legge le schede d'archivio e, per intero, le email decisive o senza scheda, in ordine cronologico, e ogni punto della risposta cita le sue email [Mn]: importi, date e riferimenti non trovati nell'email citata sono marcati «non verificato» (E7). Fatti, ricerca dei codici e correlazioni locali (E4/E5) e schede complete (E6) alimentano questa richiesta.
+L'intento viene classificato sul PC; la risposta può comunque richiedere il modello. Chat e Cerca e analizza mostrano subito l'elenco delle email trovate; un elenco o un conteggio finisce lì. Altrimenti un'unica richiesta legge fatti locali a Minimo oppure originali ripuliti a Standard e con profili locali, in ordine cronologico. Ogni punto cita le sue email [Mn]: importi, date e riferimenti non trovati nell'email citata sono marcati «non verificato». Le schede IA pregresse non alimentano la richiesta e non vengono generate automaticamente.
 
 ```mermaid
 flowchart TD
@@ -174,7 +176,7 @@ flowchart TD
     SOLO_MODELLO --> RISP_FINALE
 
     CERCA_POSTA --> ELENCO_IMMED["Mostra subito l'elenco dei risultati:<br/>data/ora, mittente, oggetto, sintesi"]
-    ELENCO_IMMED --> CHIAMATA_UNICA["Schede d'archivio e originali interi delle email decisive,<br/>in ordine cronologico, in un'unica richiesta;<br/>elenco e conteggio finiscono senza IA"]
+    ELENCO_IMMED --> CHIAMATA_UNICA["Fatti locali o originali ripuliti secondo il profilo,<br/>in ordine cronologico, in un'unica richiesta;<br/>elenco e conteggio finiscono senza IA"]
     CHIAMATA_UNICA --> RISP_FINALE
 
     AVVISO_PEC --> SALVA_STORICO
@@ -238,7 +240,7 @@ flowchart TD
 
     RUN_SEARCH --> CHECK_CAND{"Trovate email candidate?"}
     CHECK_CAND -->|"No"| RES_ZERO["Messaggio «Nessuna candidata trovata»<br/>con dettaglio della copertura esaminata"]
-    CHECK_CAND -->|"Sì"| READ_BATCH["Elenco immediato in ordine cronologico;<br/>schede e originali interi delle email decisive"]
+    CHECK_CAND -->|"Sì"| READ_BATCH["Elenco immediato in ordine cronologico;<br/>fatti locali o originali secondo il profilo"]
     READ_BATCH --> PROCESS_IA["Un'unica richiesta al modello IA,<br/>citazioni [Mn] verificate dal PC"]
 
     PROCESS_IA --> CHECK_USER_STOP{"L'utente preme «Interrompi»?"}
@@ -269,7 +271,7 @@ flowchart TD
     BK_RACCOLTA --> CHECK_DISCO{"Spazio su disco disponibile?"}
     CHECK_DISCO -->|"< 5 GiB"| WARN_DISCO["Avviso di spazio in esaurimento nella tray"]
     CHECK_DISCO -->|"< 1 GiB"| SUSP_DISCO["Sospensione automatica protettiva delle acquisizioni<br/>(riprende da sola quando si libera spazio)"]
-    CHECK_DISCO -->|"Normale"| SALVA_DB["Salvataggio locale cifrato formato 11"]
+    CHECK_DISCO -->|"Normale"| SALVA_DB["Salvataggio locale cifrato formato 13"]
 
     SCELTA_ARCH -->|"Ricerca offline da tray"| TRAY_SEARCH["Ricerca paginata su testi e allegati<br/>(funzionante anche con Outlook chiuso!)"]
     TRAY_SEARCH --> RECUPERO_ORIG{"Clic su «Recupera testo originale»"}
@@ -283,12 +285,7 @@ flowchart TD
 
     SCELTA_ARCH -->|"Gestione «Le mie cassette»"| MIE_CASSETTE["Pannello di controllo personale (senza UAC):<br/>• Spunta per includere/escludere ogni cassetta<br/>• Opzione «Tutte le cassette, anche future»<br/>• Configurazione «Indirizzi miei» per archivi PST"]
     MIE_CASSETTE --> GEST_CHIUSE{"Cassetta chiusa o rimossa da Outlook?"}
-    GEST_CHIUSE -->|"Sì"| BTN_DEL_BOX["Etichettata «(chiusa)»: pulsante «Togli dall'archivio»<br/>(rimuove testi, schede e conversazioni dipendenti dopo conferma)"]
-
-    SCELTA_ARCH -->|"Schede IA automatiche"| SCHEDE_AUTO["Generazione automatica schede di sintesi:<br/>• Per il cloud richiede consenso per cassetta<br/>• Email automatiche escluse"]
-    SCHEDE_AUTO --> CHECK_QUOTA{"Quota giornaliera token superata?"}
-    CHECK_QUOTA -->|"Sì o tentativo incerto"| SUSP_SCHEDE["Nuovo giorno o reset amministratore<br/>del consumo di oggi"]
-    CHECK_QUOTA -->|"No"| COMMIT_SCHEDA["Salvataggio scheda di sintesi nel database"]
+    GEST_CHIUSE -->|"Sì"| BTN_DEL_BOX["Etichettata «(chiusa)»: pulsante «Togli dall'archivio»<br/>(rimuove email e dati derivati dopo conferma)"]
 
     SCELTA_ARCH -->|"Manutenzione archivio"| MANUTENZIONE["Comandi disponibili in Stato o Tray:<br/>• Pausa / Riprendi raccolta<br/>• «Aggiorna da Outlook» (nuova passata)<br/>• «Ottimizza indice» e «Compatta database»<br/>• «Elimina archivio» (conferma in due clic)"]
 ```
@@ -315,7 +312,7 @@ flowchart TD
     CHECK_STATO -->|"Primo avvio guidato"| WIZARD["Procedura guidata in 5 passaggi:<br/>1. Spiegazione dell'app e dei dati salvati sul PC<br/>2. Scelta servizio IA: provider, endpoint, chiave, modello<br/>3. Abilitazione archivio email e indice allegati<br/>4. Avvio con Windows e integrità add-in<br/>5. Riepilogo e salvataggio"]
     WIZARD --> SAVE_WIZ["Salvataggio configurazione (richiede UAC per ProgramData)"]
 
-    CHECK_STATO -->|"Profili IA e Modelli"| PROFILI["Pannello Profili IA:<br/>• Aggiunta/modifica provider (Ollama, OpenAI, Anthropic, Gemini, Qwen...)<br/>• Inserimento credenziali nel vault cifrato DPAPI<br/>• Definizione contesto fisso o quote"]
+    CHECK_STATO -->|"Profili IA e Modelli"| PROFILI["Pannello Profili IA:<br/>• Aggiunta/modifica provider (Ollama, OpenAI, Anthropic, Gemini, Qwen...)<br/>• Inserimento credenziali nel vault cifrato DPAPI<br/>• Contesto Ollama e autorizzazioni sui dati"]
     PROFILI --> TEST_CONN{"Verifiche del profilo:"}
     TEST_CONN -->|"Verifica connessione"| RUN_TEST["Verifica raggiungibilità dell'endpoint"]
     TEST_CONN -->|"Scegli modello…"| RUN_MODELS["Elenco modelli disponibili direttamente dal servizio"]
@@ -329,7 +326,7 @@ flowchart TD
     BLK_CLOUD --> COMPILA_INF["Clic su «Compila informativa...»:<br/>Registrazione dati responsabile (nome, ruolo, azienda, email, data)"]
     COMPILA_INF --> ACCETTA_INF["«Accetta e salva» (sblocca i server coperti)"]
     ACCETTA_INF --> OK_CLOUD
-    OK_CLOUD --> REVOCA_INF["«Revoca»: prima scegliere profili locali<br/>per predefinito e schede; non richiama dati già inviati"]
+    OK_CLOUD --> REVOCA_INF["«Revoca»: prima scegliere un profilo predefinito locale;<br/>non richiama dati già inviati"]
     REVOCA_INF --> BLK_CLOUD
 
     CHECK_STATO -->|"Riparazione add-in Outlook"| REPAIR["Pannello Generale → Primo avvio:<br/>Diagnosi stato di caricamento e disattivazioni Office"]
@@ -346,7 +343,7 @@ flowchart TD
 | Principio | Comportamento |
 |---|---|
 | **Nessun invio automatico** | Bozze, solleciti e risposte vengono sempre mostrati all'utente o aperti in Outlook per la revisione prima dell'invio. |
-| **Modifiche esplicite** | Calendario e rubrica richiedono un’azione dell’utente; l’aggiornamento di un contatto mostra il confronto. |
+| **Modifiche esplicite** | Le proposte per calendario e attività vengono salvate con un’azione dell’utente. La Chat può cercare contatti Outlook; non esiste un flusso di scrittura della rubrica. |
 | **Protezione contesto locale** | Se il testo supera il limite con Ollama, l'azione si ferma con un messaggio chiaro anziché inviare estratti mozzati. |
 | **Governance uscita dati** | Gli invii di dati Outlook a servizi esterni richiedono l’informativa accettata per le destinazioni, anche per il web con Ollama locale. Le prove di connessione usano dati sintetici. |
 | **Ricerca web non disponibile** | L'azione può proseguire senza riscontri web e ne segnala l'assenza; il modello configurato può comunque richiedere una connessione. |
