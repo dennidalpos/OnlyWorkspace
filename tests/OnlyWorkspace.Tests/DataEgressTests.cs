@@ -25,7 +25,7 @@ public sealed class DataEgressTests
     }
 
     private static DataEgressConsent Accept(WorkspaceConfig config, DateTime? nowUtc = null) =>
-        DataEgress.Accept(config, Signer(), TestEgress.Providers(config), @"PC\admin", "PC", nowUtc ?? DateTime.UtcNow);
+        DataEgress.Accept(config, Signer(), TestEgress.Providers(config), @"PC\admin", "PC", nowUtc ?? DateTime.UtcNow, TestEgress.ResolveSecret);
 
     private static WorkspaceConfig Config(params LlmProfileConfig[] profiles) => new() { DefaultProfile = profiles[0].Id, Profiles = profiles.ToList() };
 
@@ -34,13 +34,13 @@ public sealed class DataEgressTests
     {
         var config = Config(Ollama(web: false));
         Assert.Empty(DataEgress.Hosts(config));
-        Assert.True(DataEgress.AllowsModel(config, config.Profiles[0]));
-        Assert.True(DataEgress.AllowsWeb(config, config.Profiles[0]));
+        Assert.True(DataEgress.AllowsModel(config, config.Profiles[0], TestEgress.ResolveSecret));
+        Assert.True(DataEgress.AllowsWeb(config, config.Profiles[0], TestEgress.ResolveSecret));
 
         config.Profiles[0].WebSearchEnabled = true;
         Assert.Equal(new[] { "ollama.com" }, DataEgress.Hosts(config));
-        Assert.True(DataEgress.AllowsModel(config, config.Profiles[0]));
-        Assert.False(DataEgress.AllowsWeb(config, config.Profiles[0]));
+        Assert.True(DataEgress.AllowsModel(config, config.Profiles[0], TestEgress.ResolveSecret));
+        Assert.False(DataEgress.AllowsWeb(config, config.Profiles[0], TestEgress.ResolveSecret));
     }
 
     [Fact]
@@ -48,19 +48,19 @@ public sealed class DataEgressTests
     {
         var qwen = Cloud("qwen", "https://dashscope-intl.aliyuncs.com/compatible-mode/v1");
         var config = Config(qwen);
-        Assert.False(DataEgress.AllowsModel(config, qwen));
-        Assert.Equal(new[] { "dashscope-intl.aliyuncs.com" }, DataEgress.Missing(config));
+        Assert.False(DataEgress.AllowsModel(config, qwen, TestEgress.ResolveSecret));
+        Assert.Equal(new[] { "dashscope-intl.aliyuncs.com" }, DataEgress.Missing(config, TestEgress.ResolveSecret));
 
         var consent = Accept(config, new DateTime(2026, 10, 20, 9, 0, 0, DateTimeKind.Utc));
         Assert.Equal(DataEgressNotice.Version, consent.NoticeVersion);
-        Assert.True(DataEgress.AllowsModel(config, qwen));
-        Assert.Empty(DataEgress.Missing(config));
+        Assert.True(DataEgress.AllowsModel(config, qwen, TestEgress.ResolveSecret));
+        Assert.Empty(DataEgress.Missing(config, TestEgress.ResolveSecret));
 
         var other = Cloud("other", "https://api.other.example/v1");
         config.Profiles.Add(other);
-        Assert.False(DataEgress.AllowsModel(config, other));
-        Assert.True(DataEgress.AllowsModel(config, qwen));
-        Assert.Equal(new[] { "api.other.example" }, DataEgress.Missing(config));
+        Assert.False(DataEgress.AllowsModel(config, other, TestEgress.ResolveSecret));
+        Assert.True(DataEgress.AllowsModel(config, qwen, TestEgress.ResolveSecret));
+        Assert.Equal(new[] { "api.other.example" }, DataEgress.Missing(config, TestEgress.ResolveSecret));
     }
 
     [Fact]
@@ -70,12 +70,12 @@ public sealed class DataEgressTests
         var config = Config(qwen);
         Accept(config);
         config.DataEgress.Consent!.NoticeHash = "older text";
-        Assert.False(DataEgress.AllowsModel(config, qwen));
+        Assert.False(DataEgress.AllowsModel(config, qwen, TestEgress.ResolveSecret));
 
         Accept(config);
         DataEgress.Revoke(config, "u", "pc", DateTime.UtcNow);
         Assert.Null(config.DataEgress.Consent);
-        Assert.False(DataEgress.AllowsModel(config, qwen));
+        Assert.False(DataEgress.AllowsModel(config, qwen, TestEgress.ResolveSecret));
         Assert.Equal(new[] { DataEgressEvent.Accepted, DataEgressEvent.Accepted, DataEgressEvent.Revoked }, config.DataEgress.History.Select(e => e.Action));
         Assert.Equal("Anna Bianchi, DPO, Esempio Srl <anna@esempio.example>", config.DataEgress.History[2].Responsible);
     }
@@ -100,7 +100,7 @@ public sealed class DataEgressTests
         var config = Config(Cloud("qwen", "https://cloud.example/v1"));
         Accept(config);
         var read = JsonSerializer.Deserialize<WorkspaceConfig>(JsonSerializer.Serialize(config, ConfigJson.Write), new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
-        Assert.True(DataEgress.AllowsModel(read, read.Profiles[0]));
+        Assert.True(DataEgress.AllowsModel(read, read.Profiles[0], TestEgress.ResolveSecret));
         Assert.Single(read.DataEgress.History);
         Assert.True(ConfigurationValidator.Validate(read).IsValid);
 
@@ -163,20 +163,20 @@ public sealed class DataEgressTests
         var config = Config(qwen);
         Assert.Equal(ExposureLevel.Minimal, qwen.Exposure);
         Accept(config);
-        Assert.True(DataEgress.AllowsModel(config, qwen));
+        Assert.True(DataEgress.AllowsModel(config, qwen, TestEgress.ResolveSecret));
 
         qwen.Exposure = ExposureLevel.Standard;
-        Assert.False(DataEgress.AllowsModel(config, qwen));
-        Assert.Equal(new[] { "cloud.example" }, DataEgress.Missing(config));
+        Assert.False(DataEgress.AllowsModel(config, qwen, TestEgress.ResolveSecret));
+        Assert.Equal(new[] { "cloud.example" }, DataEgress.Missing(config, TestEgress.ResolveSecret));
         var providers = TestEgress.Providers(config);
         Assert.Equal(ExposureLevel.Standard, providers[0].Level);
         providers[0].Level = ExposureLevel.Minimal;
         Assert.Throws<ArgumentException>(() => DataEgress.Accept(config, Signer(), providers, "u", "pc", DateTime.UtcNow));
         Accept(config);
-        Assert.True(DataEgress.AllowsModel(config, qwen));
+        Assert.True(DataEgress.AllowsModel(config, qwen, TestEgress.ResolveSecret));
 
         qwen.Exposure = ExposureLevel.LocalOnly;
-        Assert.False(DataEgress.AllowsModel(config, qwen));
+        Assert.False(DataEgress.AllowsModel(config, qwen, TestEgress.ResolveSecret));
         Assert.Empty(DataEgress.Hosts(config));
         Assert.Equal(DataEgress.LocalOnlyMessage, DataEgress.BlockedMessageFor(qwen));
     }
@@ -213,7 +213,7 @@ public sealed class DataEgressTests
     }
 
     [Fact]
-    public void ACloudDefault_NeedsTheNotice_ToBeSaved()
+    public void ACloudDefault_CanBeSavedWithAnAdvisoryAndBlockedDispatch()
     {
         var qwen = Cloud("qwen", "https://cloud.example/v1");
         var config = Config(qwen, Ollama(false));
@@ -237,6 +237,6 @@ public sealed class DataEgressTests
         var config = Config(Cloud("qwen", "https://cloud.example/v1"));
         config.DataEgress.Consent = new DataEgressConsent { NoticeVersion = 1, NoticeHash = "v1", Company = "Vecchia Srl", Hosts = new() { "cloud.example" } };
         Assert.True(ConfigurationValidator.Validate(config).IsValid);
-        Assert.False(DataEgress.AllowsModel(config, config.Profiles[0]));
+        Assert.False(DataEgress.AllowsModel(config, config.Profiles[0], TestEgress.ResolveSecret));
     }
 }

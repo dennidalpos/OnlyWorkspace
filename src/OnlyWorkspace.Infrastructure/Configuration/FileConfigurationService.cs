@@ -48,15 +48,17 @@ public sealed class FileConfigurationService : IConfigurationService
     {
         try
         {
-            var config = new FileConfigurationService().LoadConfiguration();
+            var service = new FileConfigurationService();
+            var config = service.LoadConfiguration();
             foreach (var profile in config.Profiles)
             {
-                DataEgress.AllowsModel(config, profile);
+                DataEgress.AllowsModel(config, profile, service.ResolveSecret);
                 ConversationPolicy.Key(profile);
             }
         }
         catch (Exception) { }
     }
+
 
     // Missing files report a constant time, so no existence check is needed.
     private (DateTime, DateTime) DiskStamp() => (File.GetLastWriteTimeUtc(_configPath), File.GetLastWriteTimeUtc(_secretsPath));
@@ -107,6 +109,7 @@ public sealed class FileConfigurationService : IConfigurationService
 
         // Absence revokes the loaded keys; an unreadable file still throws without replacing them.
         _vault.Load(_secretsPath);
+        DataEgress.BindProfiles(config, ResolveSecret);
 
         _cachedConfig = config;
         return config;

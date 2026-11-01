@@ -10,7 +10,7 @@ I nomi riconosciuti accanto a un indirizzo email vengono cercati in tutti i mess
 
 In caso di sovrapposizioni prevalgono gli identificativi specifici, quindi le corrispondenze più lunghe a parità di priorità. Token già presenti, come `[M1]` e `[PERSONA_1]`, sono preservati; i nuovi segnaposto non ne riutilizzano il nome. Le stesse occorrenze letterali condividono un segnaposto nella richiesta.
 
-Nel ConfigTool, **Profili IA → Autorizzazioni**, le opzioni per importi e date sono indipendenti e inizialmente disattivate, anche quando mancano nelle configurazioni precedenti. Le date riconosciute sono numeriche con anno; gli importi richiedono un simbolo o codice di valuta. Un cambiamento delle opzioni o del catalogo cambia la policy conversazionale (revisione 5): lo storico resta consultabile e il messaggio successivo apre una nuova conversazione.
+Nel ConfigTool, **Profili IA → Autorizzazioni**, le opzioni per importi e date sono indipendenti e inizialmente disattivate, anche quando mancano nelle configurazioni precedenti. Le date riconosciute sono numeriche con anno; gli importi richiedono un simbolo o codice di valuta. Un cambiamento delle opzioni o del catalogo cambia la policy conversazionale (revisione 6): lo storico resta consultabile e il messaggio successivo apre una nuova conversazione.
 
 Ogni espressione regolare ha un timeout di due secondi; la pipeline ha un budget complessivo di dieci secondi e rispetta l'annullamento. I controlli di timeout sono cooperativi e possono terminare dopo il controllo successivo della regex in corso. Errori di lettura delle fonti, catalogo non valido, timeout e fallimenti delle strategie impediscono il trasporto: non esiste un invio di ripiego senza sostituzioni.
 
@@ -54,3 +54,5 @@ Il PDF esportato da **Privacy e dati** include il registro disponibile. `dispatc
 È pseudonimizzazione reversibile, non anonimizzazione completa. Un nome sconosciuto scritto da solo, un identificativo fuori dai pattern, una lingua o un formato non coperto possono restare nel testo. Intestazioni e firme conservano la struttura e sostituiscono solo i valori riconosciuti. Le identità dell'archivio sono nomi visualizzati e non distinguono sempre persona e azienda. Le opzioni importi/date possono ridurre la capacità del modello di calcolare o confrontare i valori.
 
 Le prove sintetiche e i test del trasporto sono distinti dalla raccolta reale dei contatti dentro Outlook e dalla qualità delle risposte di un provider. Qualifica e limiti correnti sono in [Verifica](verifica.md).
+
+Le autorizzazioni esterne sono distinte per profilo e legate a destinazione, livello, permessi e chiavi effettive. Le impronte con salt casuale servono al controllo del consenso, non al registro di pseudonimizzazione; nessuna credenziale o impronta viene inclusa nei report. La policy conversazionale include il legame verificato con l’autorizzazione dopo il caricamento del vault.

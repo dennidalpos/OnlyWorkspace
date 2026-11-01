@@ -15,6 +15,9 @@ public sealed class LlmProfileConfig
     public string BaseUrl { get; set; } = ProviderCatalog.Get(ProviderCatalog.Ollama).DefaultBaseUrl;
     public string AuthType { get; set; } = "none"; // see ProviderCapabilities.AuthTypes
     public string SecretRef { get; set; } = string.Empty;
+    /// <summary>Recomputed from the vault and verified consent on load; never accepted from config.json.</summary>
+    [JsonIgnore]
+    public string EgressAuthorizationKey { get; set; } = string.Empty;
     public string Model { get; set; } = ProviderCatalog.Get(ProviderCatalog.Ollama).DefaultModel;
     // Ollama only (fixed num_ctx): cloud providers decide context and output, see ProviderCatalog.PromptBudget.
     public int ContextBudgetTokens { get; set; } = 12698; // ProviderCatalog.ComputeBudget(16384, 2048)

@@ -132,19 +132,123 @@ public sealed class ConfigToolUxTests
     private static WorkspaceConfig Saved(string directory) => new FileConfigurationService(directory, directory).LoadConfiguration();
 
     [Fact]
-    public void Revocation_WithCloudDefault_IsRefusedBeforeAnythingChanges()
+    public void CloudDefaultWithoutConsentSavesAndStaysBlockedWithoutOpeningADialog()
+    {
+        OnSta(directory =>
+        {
+            using var form = Open(directory, new WorkspaceConfig { DefaultProfile = "cloud", Profiles = new() { Cloud("cloud") } });
+            form.Show();
+            using var guard = new System.Windows.Forms.Timer { Interval = 30 };
+            bool dialogOpened = false;
+            guard.Tick += (_, _) =>
+            {
+                foreach (var dialog in Application.OpenForms.OfType<DataEgressConsentForm>().ToList())
+                { dialogOpened = true; dialog.DialogResult = DialogResult.Cancel; }
+            };
+            guard.Start();
+            Assert.True((bool)Call(form, "SaveActiveConfiguration")!);
+            Assert.False(dialogOpened);
+            var saved = Saved(directory);
+            Assert.Equal("cloud", saved.DefaultProfile);
+            Assert.Null(saved.DataEgress.Consent);
+            Assert.False(DataEgress.AllowsModel(saved, saved.Profiles[0]));
+        });
+    }
+
+    [Fact]
+    public void SavingAnAuthorizedCloudWithANamedKeyDoesNotReportBlockedDispatch()
+    {
+        OnSta(directory =>
+        {
+            var cloud = Cloud("cloud"); cloud.SecretRef = "profile_cloud_token";
+            var service = new FileConfigurationService(directory, directory);
+            service.StoreSecret(cloud.SecretRef, TestEgress.ResolveSecret(cloud.SecretRef)!);
+            using var form = Open(directory, TestEgress.Accepted(new WorkspaceConfig { DefaultProfile = cloud.Id, Profiles = new() { cloud } }));
+            Assert.True((bool)Call(form, "SaveActiveConfiguration")!);
+            string status = Field<Label>(form, "_lblStatus").Text;
+            Assert.DoesNotContain("invii esterni restano bloccati", status);
+            Assert.DoesNotContain("da verificare con il vault", status);
+            var saved = service.LoadConfiguration();
+            Assert.True(DataEgress.AllowsModel(saved, saved.Profiles[0], service.ResolveSecret));
+        });
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void CancelledAcceptanceOrDeniedElevatedSavePreservesThePreviousAuthorization(bool accept)
+    {
+        OnSta(directory =>
+        {
+            var config = TestEgress.Accepted(new WorkspaceConfig { DefaultProfile = "cloud", Profiles = new() { Cloud("cloud") } });
+            using var form = Open(directory, config);
+            var before = Saved(directory).DataEgress.Consent!;
+            Func<string, string?, Task<OnlyWorkspace.ConfigTool.Services.ElevatedConfigWriter.ElevationResult>> writer = (_, _) =>
+                Task.FromResult(new OnlyWorkspace.ConfigTool.Services.ElevatedConfigWriter.ElevationResult { Cancelled = true });
+            typeof(MainConfigForm).GetField("_elevatedWriter", Flags)!.SetValue(form, writer);
+            typeof(MainConfigForm).GetField("_requiresElevation", Flags)!.SetValue(form, true);
+            Exception? error = null;
+            using var timer = new System.Windows.Forms.Timer { Interval = 30 };
+            timer.Tick += (_, _) =>
+            {
+                var dialog = Application.OpenForms.OfType<DataEgressConsentForm>().FirstOrDefault();
+                if (dialog == null) return;
+                timer.Stop();
+                try
+                {
+                    var read = (CheckBox)typeof(DataEgressConsentForm).GetField("_read", Flags)!.GetValue(dialog)!;
+                    Assert.False(read.Checked);
+                    if (!accept) { dialog.DialogResult = DialogResult.Cancel; return; }
+                    read.Checked = true;
+                    var button = (Button)typeof(DataEgressConsentForm).GetField("_accept", Flags)!.GetValue(dialog)!;
+                    Assert.True(button.Enabled);
+                    button.PerformClick();
+                }
+                catch (Exception ex) { error = ex; dialog.DialogResult = DialogResult.Cancel; }
+            };
+            timer.Start();
+            Assert.False((bool)Call(form, "AcceptAndSaveDataEgressAsync")!);
+            if (error != null) ExceptionDispatchInfo.Capture(error).Throw();
+            Assert.Equal(before.AcceptedUtc, Field<WorkspaceConfig>(form, "_config").DataEgress.Consent!.AcceptedUtc);
+            Assert.Equal(before.AcceptedUtc, Saved(directory).DataEgress.Consent!.AcceptedUtc);
+            Assert.Single(Field<WorkspaceConfig>(form, "_config").DataEgress.History);
+            Assert.False(Field<bool>(form, "_isDirty"));
+        });
+    }
+
+    [Fact]
+    public void DeniedElevatedRevocationRestoresAuthorizationAndHistory()
+    {
+        OnSta(directory =>
+        {
+            using var form = Open(directory, TestEgress.Accepted(new WorkspaceConfig { DefaultProfile = "cloud", Profiles = new() { Cloud("cloud") } }));
+            Func<string, string?, Task<OnlyWorkspace.ConfigTool.Services.ElevatedConfigWriter.ElevationResult>> writer = (_, _) =>
+                Task.FromResult(new OnlyWorkspace.ConfigTool.Services.ElevatedConfigWriter.ElevationResult { Cancelled = true });
+            typeof(MainConfigForm).GetField("_elevatedWriter", Flags)!.SetValue(form, writer);
+            typeof(MainConfigForm).GetField("_requiresElevation", Flags)!.SetValue(form, true);
+            Assert.False((bool)Call(form, "ApplyRevocation")!);
+            var config = Field<WorkspaceConfig>(form, "_config");
+            Assert.NotNull(config.DataEgress.Consent);
+            Assert.True(DataEgress.AllowsModel(config, config.Profiles[0]));
+            Assert.Single(config.DataEgress.History);
+            Assert.NotNull(Saved(directory).DataEgress.Consent);
+            Assert.False(Field<bool>(form, "_isDirty"));
+        });
+    }
+
+    [Fact]
+    public void Revocation_WithCloudDefault_IsSavedAndBlocksDispatch()
     {
         OnSta(directory =>
         {
             var config = TestEgress.Accepted(new WorkspaceConfig { DefaultProfile = "cloud", Profiles = new() { Cloud("cloud"), Local("local") } });
             using var form = Open(directory, config);
-
-            var problem = (string?)Call(form, "RevocationProblem");
-
-            Assert.NotNull(problem);
-            Assert.Contains("profilo locale", problem);
-            Assert.NotNull(Field<WorkspaceConfig>(form, "_config").DataEgress!.Consent);
-            Assert.NotNull(Saved(directory).DataEgress!.Consent);
+            Assert.True((bool)Call(form, "ApplyRevocation")!);
+            var saved = Saved(directory);
+            Assert.Equal("cloud", saved.DefaultProfile);
+            Assert.Null(saved.DataEgress.Consent);
+            Assert.False(DataEgress.AllowsModel(saved, saved.Profiles[0]));
+            Assert.Equal(DataEgressEvent.Revoked, saved.DataEgress.History.Last().Action);
         });
     }
 
@@ -156,7 +260,6 @@ public sealed class ConfigToolUxTests
             var config = TestEgress.Accepted(new WorkspaceConfig { DefaultProfile = "local", Profiles = new() { Local("local"), Cloud("cloud") } });
             using var form = Open(directory, config);
 
-            Assert.Null(Call(form, "RevocationProblem"));
             Assert.True((bool)Call(form, "ApplyRevocation")!);
 
             var saved = Saved(directory);

@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using OnlyWorkspace.Core.Models;
 
@@ -69,6 +70,7 @@ public sealed class DataEgressConsent : DataEgressSigner
     public List<string> Hosts { get; set; } = new();
     /// <summary>One entry per host: what the company declared and the highest level authorized.</summary>
     public List<DataEgressProvider> Providers { get; set; } = new();
+    public List<DataEgressProfileGrant> Profiles { get; set; } = new();
 }
 
 /// <summary>One acceptance or revocation, kept in config.json so it travels with every backup.</summary>
@@ -88,6 +90,9 @@ public sealed class DataEgressEvent
     public List<string> Hosts { get; set; } = new();
     /// <summary>"host: level" for each covered server.</summary>
     public List<string> Levels { get; set; } = new();
+    public List<string> Profiles { get; set; } = new();
+    /// <summary>Preserves the accepted declarations/text, including host-only authorizations superseded by renewal.</summary>
+    public DataEgressConsent? Authorization { get; set; }
 }
 
 public sealed class WorkspaceDataEgressConfig
@@ -150,7 +155,7 @@ public static class DataEgressNotice
 /// Which servers receive data from Outlook and whether the accepted notice covers them. The single rule used by the
 /// pane, the archive cards and the ConfigTool; the ConfigTool's own probes send no Outlook data and are not gated.
 /// </summary>
-public static class DataEgress
+public static partial class DataEgress
 {
     private static readonly Regex EmailPattern = new(@"^[^@\s]+@[^@\s]+\.[^@\s]+$", RegexOptions.CultureInvariant);
 
@@ -175,7 +180,7 @@ public static class DataEgress
     public static IReadOnlyList<string> WebHosts(LlmProfileConfig profile)
     {
         var hosts = new List<string>();
-        if (!profile.WebSearchEnabled || !ExposurePolicy.Of(profile).AnyWeb) return hosts;
+        if (!WebSearchAction.All.Any(a => WebSearchAction.Uses(profile, a.Key))) return hosts;
         var mode = ProviderCatalog.Get(profile.Type).WebSearch;
         if (mode == WebSearchMode.OllamaCom) hosts.Add("ollama.com");
         else if (mode != WebSearchMode.None && ModelHost(profile) is { } host) hosts.Add(host);
@@ -229,20 +234,21 @@ public static class DataEgress
     }
 
     /// <summary>Servers of this configuration the acceptance does not cover at their level (all of them without one).</summary>
-    public static IReadOnlyList<string> Missing(WorkspaceConfig config) =>
-        Hosts(config).Where(h => !Covers(config, h, RequiredLevel(config, h))).ToList();
+    public static IReadOnlyList<string> Missing(WorkspaceConfig config, Func<string, string?>? resolveSecret = null) =>
+        EgressProfiles(config).Where(p => !HasProfileGrant(config, p, resolveSecret))
+            .SelectMany(p => ProfileHosts(p)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
 
     /// <summary>A local profile always; a cloud profile only above Solo locale and when its server is covered at its level.</summary>
-    public static bool AllowsModel(WorkspaceConfig? config, LlmProfileConfig profile) =>
-        ModelHost(profile) is not { } host || (ExposurePolicy.Of(profile).ModelAllowed && Covers(config, host, profile.Exposure));
+    public static bool AllowsModel(WorkspaceConfig? config, LlmProfileConfig profile, Func<string, string?>? resolveSecret = null) =>
+        !profile.IsExternal || (ModelHost(profile) != null && ExposurePolicy.Of(profile).ModelAllowed && HasProfileGrant(config, profile, resolveSecret));
 
-    public static bool AllowsWeb(WorkspaceConfig? config, LlmProfileConfig profile) =>
-        WebHosts(profile).All(h => Covers(config, h, LevelOf(profile)));
+    public static bool AllowsWeb(WorkspaceConfig? config, LlmProfileConfig profile, Func<string, string?>? resolveSecret = null) =>
+        WebHosts(profile).Count == 0 || HasProfileGrant(config, profile, resolveSecret);
 
     /// <summary>What the pane says when a cloud profile is blocked.</summary>
     public const string BlockedMessage =
         "Invio a servizi esterni non autorizzato: l'amministratore deve compilare e accettare l'informativa sull'uscita dei dati nel ConfigTool " +
-        "(Privacy e dati) per il server e il livello di esposizione del profilo. Nel frattempo si possono usare i profili locali.";
+        "(Privacy e dati) per questo profilo, destinazione, livello e chiavi. Si può salvare la configurazione senza autorizzare l'invio.";
 
     public const string LocalOnlyMessage =
         "Il profilo cloud è impostato su «Solo locale» e non invia dati: usare un profilo locale o alzare il livello nel ConfigTool.";
@@ -251,16 +257,18 @@ public static class DataEgress
         profile.IsExternal && !ExposurePolicy.Of(profile).ModelAllowed ? LocalOnlyMessage : BlockedMessage;
 
     /// <summary>
-    /// Why the configuration cannot be saved as it is: the default profile would send data the notice
-    /// does not cover. Other cloud profiles can be saved; they stay unusable until covered.
+    /// An advisory only: saving a blocked default profile is allowed. Dispatch remains gated.
     /// </summary>
-    public static string? SelectionProblem(WorkspaceConfig config)
+    public static string? SelectionProblem(WorkspaceConfig config, Func<string, string?>? resolveSecret = null)
     {
         var profiles = config.Profiles ?? new List<LlmProfileConfig>();
         var selected = profiles.FirstOrDefault(p => string.Equals(p.Id, config.DefaultProfile, StringComparison.OrdinalIgnoreCase));
-        if (selected != null && selected.IsExternal && !AllowsModel(config, selected))
-            return $"Il profilo predefinito «{selected.DisplayName}» è cloud e l'informativa non copre il suo server al livello scelto: " +
-                "compilare l'informativa (Privacy e dati) o scegliere un profilo locale.";
+        if (selected != null && resolveSecret == null &&
+            (!string.IsNullOrEmpty(selected.SecretRef) || !string.IsNullOrEmpty(selected.WebSearchSecretRef)) && ProfileHosts(selected).Count > 0)
+            return $"Il profilo predefinito «{selected.DisplayName}»: autorizzazione e chiavi da verificare con il vault prima dell'invio.";
+        if (selected != null && (!AllowsModel(config, selected, resolveSecret) || !AllowsWeb(config, selected, resolveSecret)))
+            return $"Il profilo predefinito «{selected.DisplayName}» è salvabile, ma gli invii esterni restano bloccati: " +
+                "autorizzare il profilo in Privacy e dati.";
         return null;
     }
 
@@ -307,6 +315,10 @@ public static class DataEgress
     /// </summary>
     public static DataEgressConsent Accept(WorkspaceConfig config, DataEgressSigner signer, IReadOnlyList<DataEgressProvider> providers,
         string windowsUser, string machine, DateTime nowUtc)
+        => Accept(config, signer, providers, windowsUser, machine, nowUtc, null);
+
+    public static DataEgressConsent Accept(WorkspaceConfig config, DataEgressSigner signer, IReadOnlyList<DataEgressProvider> providers,
+        string windowsUser, string machine, DateTime nowUtc, Func<string, string?>? resolveSecret)
     {
         if (Problem(signer, nowUtc.ToLocalTime()) is { } problem) throw new ArgumentException(problem, nameof(signer));
         var hosts = Hosts(config).ToList();
@@ -332,11 +344,16 @@ public static class DataEgress
             Dpia = signer.Dpia.Trim(), WorkersInformed = true, AiLiteracy = true,
             AcceptedUtc = nowUtc, WindowsUser = windowsUser, Machine = machine,
             NoticeVersion = DataEgressNotice.Version, NoticeHash = DataEgressNotice.Hash, NoticeText = DataEgressNotice.Text,
-            Hosts = hosts, Providers = declared
+            Hosts = hosts, Providers = declared,
+            Profiles = EgressProfiles(config).Select(p => CreateGrant(p, resolveSecret)).ToList()
         };
         config.DataEgress ??= new WorkspaceDataEgressConfig();
+        var previous = config.DataEgress.Consent;
+        if (previous != null && !config.DataEgress.History.Any(e => e.Authorization?.AcceptedUtc == previous.AcceptedUtc))
+            config.DataEgress.History.Add(Event(DataEgressEvent.Accepted, previous, previous.WindowsUser, previous.Machine, previous.AcceptedUtc));
         config.DataEgress.Consent = consent;
         config.DataEgress.History.Add(Event(DataEgressEvent.Accepted, consent, windowsUser, machine, nowUtc));
+        BindProfiles(config, resolveSecret);
         return consent;
     }
 
@@ -346,13 +363,16 @@ public static class DataEgress
         if (consent == null) return;
         config.DataEgress!.Consent = null;
         config.DataEgress.History.Add(Event(DataEgressEvent.Revoked, consent, windowsUser, machine, nowUtc));
+        BindProfiles(config, null);
     }
 
     private static DataEgressEvent Event(string action, DataEgressConsent consent, string windowsUser, string machine, DateTime nowUtc) => new()
     {
         Action = action, AtUtc = nowUtc, WindowsUser = windowsUser, Machine = machine, Responsible = consent.Describe(),
         Date = consent.Date, NoticeVersion = consent.NoticeVersion, NoticeHash = consent.NoticeHash, Hosts = consent.Hosts.ToList(),
-        Levels = consent.Providers.Select(p => $"{p.Host}: {ExposurePolicy.Label(p.Level)}").ToList()
+        Levels = consent.Providers.Select(p => $"{p.Host}: {ExposurePolicy.Label(p.Level)}").ToList(),
+        Profiles = consent.Profiles.Select(p => p.ProfileId).ToList(),
+        Authorization = JsonSerializer.Deserialize<DataEgressConsent>(JsonSerializer.Serialize(consent))
     };
 }
 

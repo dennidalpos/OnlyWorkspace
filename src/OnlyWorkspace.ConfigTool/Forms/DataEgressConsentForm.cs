@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Globalization;
 using System.Linq;
 using System.Windows.Forms;
+using OnlyWorkspace.Core.Models;
 using OnlyWorkspace.Core.Privacy;
 
 namespace OnlyWorkspace.ConfigTool.Forms;
@@ -61,7 +62,8 @@ internal sealed class DataEgressConsentForm : Form
         public override string ToString() => ExposurePolicy.Label(Level);
     }
 
-    public DataEgressConsentForm(IReadOnlyList<DataEgressProvider> servers, DataEgressSigner? previous)
+    public DataEgressConsentForm(IReadOnlyList<DataEgressProvider> servers, DataEgressSigner? previous,
+        IReadOnlyList<LlmProfileConfig>? profiles = null)
     {
         Text = "Uscita dei dati da Outlook";
         FormBorderStyle = FormBorderStyle.Sizable;
@@ -105,6 +107,14 @@ internal sealed class DataEgressConsentForm : Form
             Wide(label);
         }
 
+        Heading("Autorizzazioni per profilo", "Un'unica accettazione registra separatamente ogni profilo elencato, con destinazione, permessi e chiavi attuali.");
+        foreach (var profile in profiles ?? Array.Empty<LlmProfileConfig>())
+            Wide(new SelectableLabel { Text = DataEgress.ProfileSummary(profile), AutoSize = true, MaximumSize = new Size(TextWidth, 0), Margin = new Padding(0, 4, 0, 8) });
+        Wide(new SelectableLabel
+        {
+            Text = "Vale fino a un cambio di destinazione, livello, permessi o chiavi. Nessuna conferma per le singole azioni. Puoi annullare e salvare il profilo con gli invii bloccati.",
+            AutoSize = true, MaximumSize = new Size(TextWidth, 0), Margin = new Padding(0, 0, 0, 8)
+        });
         Wide(Ui.SetFont(new SelectableLabel { Text = DataEgressNotice.Title, AutoSize = true, MaximumSize = new Size(TextWidth, 0), Margin = new Padding(0, 0, 0, 8) }, 10.5F, family: "Segoe UI Semibold"));
         var notice = new ThemedTextBox
         {
@@ -197,6 +207,8 @@ internal sealed class DataEgressConsentForm : Form
             _privacyContact.Text = previous.PrivacyContact;
             _legalBasis.SelectedItem = DataEgress.LegalBases.Contains(previous.LegalBasis) ? previous.LegalBasis : null;
             _dpia.Text = previous.Dpia;
+            _workers.Checked = previous.WorkersInformed;
+            _literacy.Checked = previous.AiLiteracy;
         }
         foreach (var box in new[] { _company, _firstName, _lastName, _role, _email, _dpia }) box.TextChanged += (s, e) => UpdateAccept();
         foreach (var fields in _providers)

@@ -34,18 +34,18 @@ public static class DataEgressReport
     public const string Title = "Informativa sull'uscita dei dati — OnlyWorkspace";
 
     /// <summary>One line of the state: authorized, to renew, or not authorized.</summary>
-    public static string State(WorkspaceConfig config)
+    public static string State(WorkspaceConfig config, Func<string, string?>? resolveSecret = null)
     {
         var consent = config.DataEgress?.Consent;
         if (consent == null) return "Non autorizzata: nessun dato di Outlook esce verso servizi esterni.";
         if (!DataEgress.Current(consent)) return $"Da rinnovare: accettata su un testo precedente (versione {consent.NoticeVersion}); l'uscita dei dati è bloccata.";
-        var missing = DataEgress.Missing(config);
-        return missing.Count == 0 ? "Autorizzata per tutti i server configurati."
-            : "Autorizzata, ma bloccata per server o livelli non coperti: " + string.Join(", ", missing) + ".";
+        var missing = DataEgress.EgressProfiles(config).Where(p => !DataEgress.HasProfileGrant(config, p, resolveSecret)).Select(p => p.DisplayName.Length == 0 ? p.Id : p.DisplayName).ToList();
+        return missing.Count == 0 ? "Autorizzata per tutti i profili configurati."
+            : "Da autorizzare o rinnovare; invii bloccati per i profili: " + string.Join(", ", missing) + ".";
     }
 
     public static string RenderHtml(WorkspaceConfig config, DataEgressWorkstation workstation,
-        IReadOnlyList<PseudonymizationAudit>? pseudonymization = null)
+        IReadOnlyList<PseudonymizationAudit>? pseudonymization = null, Func<string, string?>? resolveSecret = null)
     {
         var consent = config.DataEgress?.Consent;
         var html = new StringBuilder();
@@ -53,8 +53,8 @@ public static class DataEgressReport
             .Append(Css).Append("</style></head><body>");
 
         html.Append("<header><div class=\"brand\">OnlyWorkspace</div><h1>").Append(E(DataEgressNotice.Title)).Append("</h1>")
-            .Append("<p class=\"state ").Append(consent != null && DataEgress.Current(consent) && DataEgress.Missing(config).Count == 0 ? "ok" : "warn").Append("\">")
-            .Append(E(State(config))).Append("</p><p class=\"muted\">Generato il ").Append(E(When(workstation.GeneratedUtc)))
+            .Append("<p class=\"state ").Append(consent != null && DataEgress.Current(consent) && DataEgress.Missing(config, resolveSecret).Count == 0 ? "ok" : "warn").Append("\">")
+            .Append(E(State(config, resolveSecret))).Append("</p><p class=\"muted\">Generato il ").Append(E(When(workstation.GeneratedUtc)))
             .Append(" da ").Append(E(workstation.ExportedBy)).Append("</p></header>");
 
         Section(html, "Postazione", Table(new[]
@@ -102,7 +102,7 @@ public static class DataEgressReport
             var uses = new List<string>();
             if (string.Equals(p.Id, config.DefaultProfile, StringComparison.OrdinalIgnoreCase)) uses.Add("predefinito");
             var web = WebSearchAction.All.Where(a => WebSearchAction.Uses(p, a.Key)).Select(a => a.Value).ToList();
-            bool allowed = DataEgress.AllowsModel(config, p) && DataEgress.AllowsWeb(config, p);
+            bool allowed = DataEgress.AllowsModel(config, p, resolveSecret) && DataEgress.AllowsWeb(config, p, resolveSecret);
             string server = Uri.TryCreate(p.BaseUrl, UriKind.Absolute, out var url) ? url.Host : p.BaseUrl;
             html.Append("<tr><td>").Append(E(p.DisplayName.Length == 0 ? p.Id : p.DisplayName)).Append("</td><td>")
                 .Append(E(ProviderCatalog.Get(p.Type).DisplayName)).Append("<br>").Append(E(p.Model)).Append("</td><td>").Append(E(server))
@@ -110,7 +110,7 @@ public static class DataEgressReport
                 .Append("</td><td>").Append(p.IsExternal ? YesNo(p.SendsAttachmentText) : "in locale").Append("</td><td>")
                 .Append(E(web.Count == 0 ? "no" : string.Join(", ", web) + (DataEgress.WebHosts(p).Count > 0 ? " (" + string.Join(", ", DataEgress.WebHosts(p)) + ")" : "")))
                 .Append("</td><td>").Append(E(uses.Count == 0 ? "—" : string.Join(", ", uses))).Append("</td><td>")
-                .Append(allowed ? "utilizzabile" : "<strong>bloccato</strong>").Append("</td></tr>");
+                .Append(allowed ? "utilizzabile" : "<strong>bloccato</strong> — da autorizzare o rinnovare").Append("</td></tr>");
         }
         html.Append("</tbody></table></section>");
 
@@ -126,11 +126,12 @@ public static class DataEgressReport
         if (history.Count > 0)
         {
             html.Append("<section><h2>Storico delle autorizzazioni</h2><table class=\"grid\"><thead><tr><th>Quando</th><th>Azione</th><th>Responsabile</th>")
-                .Append("<th>Utente e computer</th><th>Versione</th><th>Server e livelli</th></tr></thead><tbody>");
+                .Append("<th>Utente e computer</th><th>Versione</th><th>Profili, server e livelli</th></tr></thead><tbody>");
             foreach (var e in history.AsEnumerable().Reverse())
                 html.Append("<tr><td>").Append(E(When(e.AtUtc))).Append("</td><td>").Append(E(e.Action)).Append("</td><td>").Append(E(e.Responsible))
                     .Append("</td><td>").Append(E($"{e.WindowsUser} su {e.Machine}")).Append("</td><td>").Append(e.NoticeVersion)
-                    .Append("</td><td>").Append(E(string.Join(", ", e.Levels.Count > 0 ? e.Levels : e.Hosts))).Append("</td></tr>");
+                    .Append("</td><td>").Append(E(string.Join(", ", e.Profiles))).Append("<br>")
+                    .Append(E(string.Join(", ", e.Levels.Count > 0 ? e.Levels : e.Hosts))).Append("</td></tr>");
             html.Append("</tbody></table></section>");
         }
 

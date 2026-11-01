@@ -17,7 +17,7 @@ public sealed class ValidationResult
 
 public static class ConfigurationValidator
 {
-    public static ValidationResult Validate(WorkspaceConfig config)
+    public static ValidationResult Validate(WorkspaceConfig config, Func<string, string?>? resolveSecret = null)
     {
         var result = new ValidationResult();
 
@@ -140,8 +140,8 @@ public static class ConfigurationValidator
             result.AddError("Informativa sull'uscita dei dati incompleta: " + problem);
         }
 
-        // The ConfigTool refuses to save it; a file written elsewhere still loads and the pane stays blocked.
-        if (Privacy.DataEgress.SelectionProblem(config) is { } selection) result.AddWarning(selection);
+        // Authorization is advisory during validation; dispatch alone requires a verified grant.
+        if (Privacy.DataEgress.SelectionProblem(config, resolveSecret) is { } selection) result.AddWarning(selection);
 
         return result;
     }

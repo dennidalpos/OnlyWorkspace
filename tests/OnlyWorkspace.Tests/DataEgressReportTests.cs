@@ -43,7 +43,7 @@ public sealed class DataEgressReportTests
         DataEgress.Accept(config, signer, TestEgress.Providers(config), @"DOM\anna", "WS-PROVA", new DateTime(2026, 10, 20, 8, 0, 0, DateTimeKind.Utc));
         string html = DataEgressReport.RenderHtml(config, Pc);
 
-        Assert.Contains("Autorizzata per tutti i server configurati.", html);
+        Assert.Contains("Autorizzata per tutti i profili configurati.", html);
         Assert.Contains("Rossi &amp; Figli &lt;Srl&gt;", html);
         Assert.DoesNotContain("<Srl>", html);
         Assert.Contains("Qwen &lt;cloud&gt;", html);

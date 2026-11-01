@@ -18,7 +18,8 @@ public static class ConversationPolicy
             ? uri.AbsoluteUri : profile.BaseUrl;
         return Convert.ToBase64String(hash.ComputeHash(JsonSerializer.SerializeToUtf8Bytes(new
         {
-            Version = 5, profile.Id, Type = profile.Type.Trim().ToLowerInvariant(), profile.Model,
+            Version = 6, profile.Id, Type = profile.Type.Trim().ToLowerInvariant(), profile.Model,
+            profile.EgressAuthorizationKey,
             Endpoint = endpoint, Auth = profile.AuthType.ToLowerInvariant(), profile.SecretRef,
             profile.UseSystemProxy, External = profile.IsExternal, profile.Exposure, profile.AllowAttachmentUpload,
             profile.PseudonymizeAmounts, profile.PseudonymizeDates, PseudonymizationRevision = PseudonymizationCatalog.CurrentRevision,

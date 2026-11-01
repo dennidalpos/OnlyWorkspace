@@ -75,6 +75,10 @@ public sealed class BriefingCaptureServer : IDisposable {
 }
 // The coordinator's private header/coverage types stay private; only Outlook collection is substituted.
 public static class CalendarFixtureResolver {
+    public static Delegate Constant(Type delegateType, object value) {
+        return System.Linq.Expressions.Expression.Lambda(delegateType,
+            System.Linq.Expressions.Expression.Constant(value, delegateType.GetMethod("Invoke").ReturnType)).Compile();
+    }
     public static Delegate Create(Type delegateType, object headers, Action onResolve = null) {
         var invoke = delegateType.GetMethod("Invoke");
         var resultType = invoke.ReturnType.GetGenericArguments()[0];
@@ -729,13 +733,51 @@ try {
         Assert-Pass (!$attachmentPayload.Contains('anna@example.invalid') -and $attachmentPayload.Contains('ATTACHMENT-WHOLE-SYNTHETIC')) 'A220 attachment was not pseudonymized before HTTP'
         Assert-Pass ($attachmentAnswer.Contains('anna@example.invalid')) 'A220 attachment response was not restored locally'
         if ($EvidenceDirectory) { [IO.File]::WriteAllText((Join-Path $EvidenceDirectory 'attachment-Extended.json'), $attachmentPayload) }
+        # A224: an already-created real client must recheck a revoked grant before any loopback connection.
+        $attachmentClient.Dispose()
+        $attachmentClient = Call 'CreateLlmClient' @($attachmentProfile, $true)
+        [OnlyWorkspace.Core.Privacy.DataEgress]::Revoke($attachmentConfig,'test','test',[DateTime]::UtcNow)
+        $refused = $false
+        try { [void](Wait-PaneTask ($attachmentClient.CompleteStructuredAsync($attachmentMessages, '{}', [Threading.CancellationToken]::None))) }
+        catch { $refused = $_.Exception.ToString().Contains('DataEgressBlockedException') }
+        Assert-Pass ($refused -and !$attachmentCapture.Pending) 'A224 revoked consent reached HTTP through a captured client'
+        [void][OnlyWorkspace.Core.Privacy.DataEgress]::Accept($attachmentConfig,$signer,$attachmentProviders,'test','test',[DateTime]::UtcNow)
+        $attachmentConfig.DataEgress.Consent.Profiles.Clear()
+        $refused = $false
+        try { $null = Call 'CreateLlmClient' @($attachmentProfile, $true) }
+        catch { $refused = $_.Exception.ToString().Contains('DataEgressBlockedException') }
+        Assert-Pass ($refused -and !$attachmentCapture.Pending) 'A224 legacy host-only v4 consent inherited a profile grant'
+
+        # Both actual keys change under the same reference, through the real isolated DPAPI vault.
+        $egressServiceBefore = $service
+        $egressService = New-Object OnlyWorkspace.Infrastructure.Configuration.FileConfigurationService((Join-Path $scratch 'a224-keys'), (Join-Path $scratch 'a224-keys'))
+        $attachmentProfile.SecretRef='a224-model'; $attachmentProfile.WebSearchSecretRef='a224-web'
+        $egressService.StoreSecret('a224-model','SYNTHETIC-A224-MODEL')
+        $egressService.StoreSecret('a224-web','SYNTHETIC-A224-WEB')
+        $egressResolver = [Delegate]::CreateDelegate([Func[string,string]], $egressService, 'ResolveSecret')
+        Set-Field '_configService' $egressService
+        try {
+            foreach ($credential in @('a224-model','a224-web')) {
+                [void][OnlyWorkspace.Core.Privacy.DataEgress]::Accept($attachmentConfig,$signer,$attachmentProviders,'test','test',[DateTime]::UtcNow,$egressResolver)
+                $egressService.SaveConfiguration($attachmentConfig); [void]$egressService.LoadConfiguration()
+                $attachmentClient.Dispose()
+                $attachmentClient = Call 'CreateLlmClient' @($attachmentProfile, $true)
+                $egressService.StoreSecret($credential,('SYNTHETIC-ROTATED-' + $credential))
+                $refused = $false
+                try { [void](Wait-PaneTask ($attachmentClient.CompleteStructuredAsync($attachmentMessages, '{}', [Threading.CancellationToken]::None))) }
+                catch { $refused = $_.Exception.ToString().Contains('policy del profilo') }
+                Assert-Pass ($refused -and !$attachmentCapture.Pending) ('A224 rotated credential reached HTTP: ' + $credential)
+                [void]$egressService.LoadConfiguration()
+            }
+        } finally { Set-Field '_configService' $egressServiceBefore }
+        if ($EvidenceDirectory) { [IO.File]::WriteAllText((Join-Path $EvidenceDirectory 'a224-guards.txt'), 'PASS: revoked pending client, legacy v4, actual model and web key rotations; zero pending HTTP connections') }
     }
     finally {
         if ($attachmentClient -is [IDisposable]) { $attachmentClient.Dispose() }
         $attachmentCapture.Dispose()
         Set-Field '_config' $attachmentConfigBefore
     }
-    'PASS A220 real pane factory and loopback HTTP: consent guard, extracted text masked before dispatch, response restored'
+    'PASS A220/A224 real pane factory and loopback HTTP: consent, extraction, masking/restoration; revocation, legacy v4 and both rotated keys blocked before HTTP'
 
 
     # Calendar scan (A109): one request on the whole pack, every valid item kept, dates checked in the cited email.
@@ -1027,6 +1069,46 @@ try {
             } finally { $capture.Dispose(); Set-Field '_config' $scopeConfig }
         }
         'PASS A214 complete calendar scan Minimal/Standard/local: scoped facts, no Minimal original reads, real HTTP, sources, verification, DPAPI history and six dispatch guards'
+
+        # A224: the complete Chat action can answer from archive facts/listing without any consent or client.
+        $localCapture = New-Object BriefingCaptureServer
+        $localConfig = New-Object OnlyWorkspace.Core.Models.WorkspaceConfig
+        $localProfile = New-Object OnlyWorkspace.Core.Models.LlmProfileConfig -Property @{Id='a224-local-answer';Type='openai';Model='synthetic';External=$true;BaseUrl=$localCapture.Address;Exposure=[OnlyWorkspace.Core.Privacy.ExposureLevel]::Standard}
+        $localConfig.Profiles.Add($localProfile); $localConfig.DefaultProfile=$localProfile.Id; $localConfig.History.Enabled=$false
+        $localConfig.Archive.Enabled=$true
+        [void]$scopeDb.SetMetaAsync('stores', '["a"]', [Threading.CancellationToken]::None).GetAwaiter().GetResult()
+        $localBody = New-Object OnlyWorkspace.Core.Archive.ArchiveBody -Property @{Text='Ordine 4471. Importo: 125,00 EUR.'}
+        [void]$scopeDb.SaveBodyAsync($source.Id, $localBody, [Threading.CancellationToken]::None).GetAwaiter().GetResult()
+        $localDeadline=[DateTime]::UtcNow.AddSeconds(15)
+        while ($scopeDb.GetFactProgressAsync([Threading.CancellationToken]::None).GetAwaiter().GetResult().Pending -gt 0) {
+            if ([DateTime]::UtcNow -gt $localDeadline) { throw 'A224 local facts did not complete' }
+            Start-Sleep -Milliseconds 25
+        }
+        $folderSource=$type.GetField('_chatSearchFoldersSource',$flags)
+        $emptyFolders=New-Object 'Collections.Generic.List[OnlyWorkspace.Core.Models.MailFolderRef]'
+        $folderSource.SetValue($script:coordinator,[CalendarFixtureResolver]::Constant($folderSource.FieldType,$emptyFolders))
+        Set-Field '_contextWindow' (New-Object object)
+        Set-Field '_dataService' $calendarData
+        Set-Field '_configService' $scopeService
+        Set-Field '_config' $localConfig
+        try {
+            foreach ($question in @("Qual è l'importo dell'ordine 4471?", "Elenca le email sull'ordine 4471", "Elenca le email sull'ordine 9999")) {
+                Set-Field '_currentConversation' ([OnlyWorkspace.Core.Privacy.ConversationPolicy]::Create($localProfile))
+                $pending.Clear()
+                [void](Wait-PaneTask (Call 'ExecuteChatAsync' @($question,$null,$false)))
+                $localMessages=@($pending | ForEach-Object { $_ | ConvertFrom-Json })
+                Assert-Pass (@($localMessages | Where-Object type -eq 'stream_end').Count -eq 1) ('A224 local Chat did not finish: ' + ($localMessages | ConvertTo-Json -Depth 8 -Compress))
+                Assert-Pass (!($localMessages | Where-Object { $_.type -eq 'stream_error' -or $_.type -eq 'cloud_used' }) -and !$localCapture.Pending) 'A224 local Chat required consent or reached HTTP'
+                if ($question.StartsWith('Qual')) { Assert-Pass (($localMessages | Where-Object type -eq 'stream_chunk' | ForEach-Object chunk) -join '' -match '125') 'A224 local Chat lost the amount' }
+                if ($EvidenceDirectory) { [IO.File]::WriteAllText((Join-Path $EvidenceDirectory ('a224-local-' + $(if($question.StartsWith('Qual')){'facts'}elseif($question.Contains('9999')){'empty-list'}else{'list'}) + '.json')),($localMessages | ConvertTo-Json -Depth 12)) }
+            }
+        } finally {
+            $folderSource.SetValue($script:coordinator,$null)
+            Set-Field '_contextWindow' $null
+            Set-Field '_config' $scopeConfig
+            $localCapture.Dispose()
+        }
+        'PASS A224 complete Chat local amount and list without consent: no cloud signal or HTTP'
 
         # A105: an excluded mailbox and an archive turned off are refused with distinct reasons.
         [void]$scopeDb.SetMetaAsync('stores', '["b"]', [Threading.CancellationToken]::None).GetAwaiter().GetResult()

@@ -302,7 +302,7 @@ public partial class TaskPaneCoordinator : IDisposable
         }
 
         var activeProfile = GetActiveProfile() ?? _config.Profiles[0];
-        bool blocked = !DataEgress.AllowsModel(_config, activeProfile);
+        bool blocked = !DataEgress.AllowsModel(_config, activeProfile, _configService.ResolveSecret);
         _modelStatus.Configure(activeProfile, ModelStatusKey(activeProfile), blocked ? DataEgress.BlockedMessageFor(activeProfile) : null);
         return activeProfile;
     }
@@ -321,7 +321,7 @@ public partial class TaskPaneCoordinator : IDisposable
             });
             return;
         }
-        bool blocked = !DataEgress.AllowsModel(_config, activeProfile);
+        bool blocked = !DataEgress.AllowsModel(_config, activeProfile, _configService.ResolveSecret);
 
         _control.PostMessage(new
         {
@@ -679,7 +679,6 @@ public partial class TaskPaneCoordinator : IDisposable
             }
 
             pendingUserMessage = BeginConversationTurn(activeProfile, userInstruction, draft == null ? null : DraftRefOf(draft));
-            client = CreateLlmClient(activeProfile, wholeEmails: false);
             int budget = ProviderCatalog.PromptBudget(activeProfile);
             // Prior turns take budget/3 below: data gets the rest so the whole prompt stays within budget (0 = no limit).
             int dataBudget = _currentConversation.Messages.Count > 1 ? budget - budget / 3 : budget;
@@ -788,7 +787,7 @@ public partial class TaskPaneCoordinator : IDisposable
                     bool listOnly = MailRequest.IsListOrCount(userInstruction);
                     var evidence = await BuildChatMailEvidenceAsync(activeProfile, userInstruction,
                         mailQuery, local?.Latest == true ? local.Count : 0, dataBudget, listOnly, turn, timings, ct);
-                    if (listOnly && evidence.Listing.Length > 0)
+                    if (listOnly)
                     {
                         PostStream(turn, new { type = "stream_chunk", chunk = evidence.Notice });
                         _currentConversation.Messages.Add(new HistoryChatMessage { Role = "assistant", Content = evidence.Listing, Timestamp = DateTimeOffset.UtcNow });
@@ -838,6 +837,7 @@ public partial class TaskPaneCoordinator : IDisposable
                 else messages = ChatEmailPrompt(userInstruction, selectedEmail, attachments.Text, budget);
             }
 
+            client = CreateLlmClient(activeProfile, wholeEmails: false);
             PostPhase(turn, "Generazione risposta…");
             var responseBuilder = new StringBuilder();
             IEnumerable<ChatMessage> answerMessages = WithPriorTurns(messages, userInstruction, budget);
@@ -2510,14 +2510,23 @@ public partial class TaskPaneCoordinator : IDisposable
         EnsurePromptFits(messages, profile);
         if (!WebForTurn(profile) || turn != _turn) return null;
         // The action goes on from Outlook data, as after any failed search, and says why.
-        if (!DataEgress.AllowsWeb(_config, profile))
+        if (!DataEgress.AllowsWeb(_config, profile, _configService.ResolveSecret))
             throw new DataEgressBlockedException("ricerca web verso " + string.Join(", ", DataEgress.WebHosts(profile)) + " non autorizzata dall'informativa sull'uscita dei dati (ConfigTool, Privacy e dati).");
         var secret = string.IsNullOrEmpty(profile.SecretRef) ? null : _configService.ResolveSecret(profile.SecretRef);
         var webSecret = string.IsNullOrEmpty(profile.WebSearchSecretRef) ? null : _configService.ResolveSecret(profile.WebSearchSecretRef);
         UiSync.Ensure();
         var ui = SynchronizationContext.Current!;
         using var service = new WebSearchService(profile, secret, webSecret,
-            externalRequestStarting: () => ui.Send(_ => PostStream(turn, new { type = "cloud_used" }), null));
+            externalRequestStarting: () =>
+            {
+                if (_configService.HasConfigurationChanged())
+                    throw new OperationCanceledException("La policy del profilo è cambiata.");
+                EnsureProfileCurrent(profile);
+                if (secret != _configService.ResolveSecret(profile.SecretRef) || webSecret != _configService.ResolveSecret(profile.WebSearchSecretRef) ||
+                    !DataEgress.AllowsWeb(_config, profile, _configService.ResolveSecret))
+                    throw new DataEgressBlockedException(DataEgress.BlockedMessageFor(profile));
+                ui.Send(_ => PostStream(turn, new { type = "cloud_used" }), null);
+            });
         PostPhase(turn, "Ricerca web in corso…");
         var result = await service.SearchAsync(messages, ct, _webActionForTurn);
         // A search started in parallel can outlive its turn: the next turn keeps its own sources and notice.
@@ -3023,7 +3032,6 @@ public partial class TaskPaneCoordinator : IDisposable
         var current = GetActiveProfile();
         if (current == null || ConversationPolicy.Key(current) != ConversationPolicy.Key(profile))
             throw new OperationCanceledException("La policy del profilo è cambiata.");
-        if (!DataEgress.AllowsModel(_config, profile)) throw new DataEgressBlockedException(DataEgress.BlockedMessageFor(profile));
     }
 
     public const string FactsOnlyMessage =
@@ -3041,9 +3049,11 @@ public partial class TaskPaneCoordinator : IDisposable
     {
         UiSync.Ensure();
         var dispatchUi = System.Threading.SynchronizationContext.Current!;
+        if (profile.IsExternal && _configService.HasConfigurationChanged())
+            throw new OperationCanceledException("La policy del profilo è cambiata.");
         // Nothing leaves the PC towards a server the administrator's notice does not cover. Checked first: with no notice
         // the level is not the reason, and naming it sent users to raise a level that would still be blocked.
-        if (!DataEgress.AllowsModel(_config, profile)) throw new DataEgressBlockedException(DataEgress.BlockedMessageFor(profile));
+        if (!DataEgress.AllowsModel(_config, profile, _configService.ResolveSecret)) throw new DataEgressBlockedException(DataEgress.BlockedMessageFor(profile));
         if (wholeEmails) EnsureWholeEmails(profile);
         string? secret = null;
         if (!string.IsNullOrEmpty(profile.SecretRef))
@@ -3059,10 +3069,12 @@ public partial class TaskPaneCoordinator : IDisposable
         var status = active != null && ConversationPolicy.Key(active) == ConversationPolicy.Key(profile) ? _modelStatus : null;
         return new LlmRequestDispatcher(LlmClientFactory.CreateClient(profile, secret), profile, () =>
         {
+            if (profile.IsExternal && _configService.HasConfigurationChanged())
+                throw new OperationCanceledException("La policy del profilo è cambiata.");
             if (epoch != System.Threading.Volatile.Read(ref _policyEpoch) || secret != _configService.ResolveSecret(profile.SecretRef) ||
                 webSecret != _configService.ResolveSecret(profile.WebSearchSecretRef))
                 throw new OperationCanceledException("La policy del profilo è cambiata.");
-            if (!DataEgress.AllowsModel(_config, profile)) throw new DataEgressBlockedException(DataEgress.BlockedMessageFor(profile));
+            if (!DataEgress.AllowsModel(_config, profile, _configService.ResolveSecret)) throw new DataEgressBlockedException(DataEgress.BlockedMessageFor(profile));
         }, status, () => { if (profile.IsExternal) dispatchUi.Send(_ => PostStream(turn, new { type = "cloud_used" }), null); },
             entities: ct => ReadPrivacyEntitiesOnUiAsync(dispatchUi, ct), audit: _privacyAudit);
     }

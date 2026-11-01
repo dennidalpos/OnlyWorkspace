@@ -214,7 +214,7 @@ public partial class TaskPaneCoordinator
         timings.Archive = items != null;
         if (items == null && query.FactFilters.Count > 0)
             return new ChatMailEvidence { Notice = "I filtri sui fatti richiedono l'archivio locale disponibile; ricerca non eseguita." };
-        items ??= await FindChatMailInOutlookAsync(_dataService.GetChatSearchFolders(), query, latest, attachments, coverage, turn, ct);
+        items ??= await FindChatMailInOutlookAsync(ChatSearchFolders(), query, latest, attachments, coverage, turn, ct);
         timings.Search = timings.Lap();
 
         int more = Math.Max(0, items.Count - MaxAnalysisEmails);
@@ -367,6 +367,9 @@ public partial class TaskPaneCoordinator
     /// The chat question's emails from the archive; null when it cannot answer (no archive, or a sender it does not
     /// know), so Outlook is scanned as before. Emails newer than the indexer's last pass come from the Inbox headers.
     /// </summary>
+    private Func<IReadOnlyList<MailFolderRef>>? _chatSearchFoldersSource = null;
+    private IReadOnlyList<MailFolderRef> ChatSearchFolders() => _chatSearchFoldersSource?.Invoke() ?? _dataService.GetChatSearchFolders();
+
     private async Task<List<ChatMailItem>?> FindChatMailInArchiveAsync(EmailSearchQuery query, int latest, bool attachments,
         MailSearchCoverage coverage, int turn, CancellationToken ct)
     {
@@ -412,7 +415,7 @@ public partial class TaskPaneCoordinator
         // Mailboxes left out of the archive (Le mie cassette) are read from Outlook as before.
         var archived = new HashSet<string>((await db.GetStoreCoverageAsync(ct)).Where(s => !s.Closed && s.Folders > 0).Select(s => s.StoreId),
             StringComparer.OrdinalIgnoreCase);
-        var folders = _dataService.GetChatSearchFolders();
+        var folders = ChatSearchFolders();
         var outside = folders.Where(f => !archived.Contains(f.StoreId)).ToList();
         var known = new HashSet<string>(items.Select(i => i.EntryId), StringComparer.OrdinalIgnoreCase);
         if (outside.Count > 0 && query.FactFilters.Count == 0)
@@ -785,7 +788,6 @@ public partial class TaskPaneCoordinator
             }
 
             bool contentAllowed = AttachmentContentAllowed(activeProfile);
-            client = CreateLlmClient(activeProfile, wholeEmails: false);
             int budget = ProviderCatalog.PromptBudget(activeProfile);
             string goalText = goal.Describe();
             if (request.Kind == "flow") goalText += " Ricostruisci in ordine cronologico tappe, decisioni, punti aperti e sintesi finale. Segnala espressamente le email non disponibili e le lacune di copertura.";
@@ -853,6 +855,7 @@ public partial class TaskPaneCoordinator
                 }
                 else
                 {
+                    client = CreateLlmClient(activeProfile, wholeEmails: false);
                     stats.Stopped = await AnalysisFinalization.RunAsync(_operations, cts, result, async token =>
                     {
                         PostPhase(turn, "Scrittura del risultato…");

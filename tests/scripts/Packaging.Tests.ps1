@@ -313,6 +313,6 @@ finally {
     $global:LASTEXITCODE = $savedExitCode
     $resolvedScratch = [IO.Path]::GetFullPath($scratchRoot)
     if ($resolvedScratch.StartsWith([IO.Path]::GetFullPath([IO.Path]::GetTempPath()), [StringComparison]::OrdinalIgnoreCase) -and [IO.Path]::GetFileName($resolvedScratch).StartsWith('OnlyWorkspace-packaging-')) {
-        Remove-Item -LiteralPath $resolvedScratch -Recurse -Force
+        if (!(Test-Path Env:ONLYWORKSPACE_TEST_ARTIFACTS)) { Remove-Item -LiteralPath $resolvedScratch -Recurse -Force }
     }
 }

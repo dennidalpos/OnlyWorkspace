@@ -214,7 +214,7 @@ public sealed class SetupWizardForm : Form
         bool needsKey = caps.RequiresSecret;
         _lblKey.Text = needsKey ? "Chiave API:" : "Token (facoltativo):";
         _lblModelNote.Text = caps.IsExternal
-            ? "Cloud: le azioni IA inviano dati al servizio configurato, entro il livello di esposizione del profilo (parte da «1 · Minimo»: fatti locali con segnaposto). Il profilo cloud si salva come predefinito solo dopo che il responsabile ha compilato e accettato l'informativa in Privacy e dati. La chiave è salvata cifrata in secrets.bin."
+            ? "Cloud: le azioni IA inviano dati al servizio configurato, entro il livello di esposizione del profilo (parte da «1 · Minimo»: fatti locali con segnaposto). Puoi salvare il profilo cloud come predefinito; gli invii restano bloccati fino all'autorizzazione in Privacy e dati. La chiave è salvata cifrata in secrets.bin."
             : "Il modello usa il server indicato. Su loopback (questo PC), senza Web Search, il testo resta sul PC. Un indirizzo esterno o Web Search possono inviare dati fuori dal PC e richiedono l'informativa accettata in Privacy e dati. Il servizio locale e il modello vanno installati a parte.";
     }
 

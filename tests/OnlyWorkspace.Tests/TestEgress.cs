@@ -6,6 +6,8 @@ namespace OnlyWorkspace.Tests;
 /// <summary>Tests that send to a cloud profile need the administrator's notice accepted, as a real installation does.</summary>
 internal static class TestEgress
 {
+    public static string? ResolveSecret(string reference) => "fixture-secret";
+
     public static DataEgressSigner Signer(string? date = null) => new()
     {
         Company = "Prova Srl", FirstName = "Test", LastName = "Prova", Role = "Amministratore", Email = "test@prova.example",
@@ -22,14 +24,14 @@ internal static class TestEgress
     }).ToList();
 
     /// <summary>
-    /// Accepts the notice for every server. Cloud profiles still at the default level are raised to «Completo» first,
-    /// so tests written for whole emails, attachments, web and cloud cards keep that behaviour.
+    /// Accepts the notice for every profile. Cloud profiles still at the default level are raised to Standard first,
+    /// so tests written for whole emails keep that behaviour.
     /// </summary>
     public static WorkspaceConfig Accepted(WorkspaceConfig config, bool fullExposure = true)
     {
         if (fullExposure)
             foreach (var profile in config.Profiles.Where(p => p.IsExternal && p.Exposure == ExposureLevel.Minimal)) profile.Exposure = ExposureLevel.Standard;
-        DataEgress.Accept(config, Signer(), Providers(config), "test", "pc", DateTime.UtcNow);
+        DataEgress.Accept(config, Signer(), Providers(config), "test", "pc", DateTime.UtcNow, ResolveSecret);
         return config;
     }
 }
