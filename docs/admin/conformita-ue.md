@@ -14,6 +14,7 @@ Il livello 3 Completo è rimosso per decisione del manutentore. I profili esiste
 | 0 · Solo locale | nessun dato dal profilo esterno | — | no | no |
 | 1 · Minimo | soli fatti estratti in locale, senza corpo originale | sì | no | no |
 | 2 · Standard | fatti locali e testo originale ripulito dalle citazioni | sì | no | solo verifica di sicurezza, soli domini |
+| 3 · Esteso | come Standard, più il testo estratto localmente dagli allegati di email e bozze | sì | con permesso distinto | come Standard |
 
   I segnaposto sostituiscono nomi accanto agli indirizzi o noti localmente, aziende dei contatti locali, indirizzi email, telefoni, IBAN, partite IVA, codici fiscali e riferimenti etichettati alle pratiche con `[PERSONA_1]`, `[EMAIL_1]`… e li ripristinano solo sul PC. Riducono i dati inviati ma **non anonimizzano**: un nome sconosciuto scritto da solo nel testo può restare; inoltre il PC conserva la corrispondenza per ripristinare i valori. La pseudonimizzazione non sottrae i dati personali al GDPR (art. 4(1) e 4(5), considerando 26).
 - **Più risposte dall'archivio locale.** Le domande sull'importo, la scadenza, l'IBAN, la partita IVA o il codice fiscale di un ordine, una fattura o un protocollo citati possono essere risolte senza modello quando il riferimento è riconosciuto e tutti i tipi di dato richiesti sono disponibili. Altrimenti segue il normale percorso del modello. Al livello 1 entrano soltanto fatti locali; al livello 2 gli originali ripuliti. Restano i limiti cumulativi di circa 16.000 e 48.000 token; le tabelle già mostrate non tornano al fornitore nei turni successivi.
@@ -54,7 +55,7 @@ L'obbligo di pubblicazione del deployer ai sensi dell'art. 50(4), comprese le co
 
 ## Cosa resta all'azienda
 
-1. Scegliere fra Solo locale, Minimo e Standard, dopo aver verificato contratto e server del fornitore.
+1. Scegliere fra Solo locale, Minimo, Standard ed Esteso, dopo aver verificato contratto e server del fornitore.
 2. Firmare la nomina a responsabile (art. 28) e verificare conservazione, addestramento e paese dei server sul contratto effettivo del piano usato.
 3. Valutare l'impatto (art. 35) e aggiornare il registro dei trattamenti (art. 30) con il PDF esportato.
 4. Aggiornare l'informativa a clienti e fornitori (art. 13-14) e informare i lavoratori (L. 132/2025).

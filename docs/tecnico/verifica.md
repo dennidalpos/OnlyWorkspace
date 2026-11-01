@@ -4,6 +4,14 @@ Test di codice, prova sulla build installata e qualifica su cassette e provider 
 
 Contenuto datato trasferito nel dossier SecondBrain: `02-areas/products/OnlyWorkspace/history/imported/docs/tecnico/verifica.md`. Originale e SHA-256 nel rapporto di migrazione; questa voce conserva i riferimenti esistenti e non autorizza nuovi interventi.
 
+## Esteso e riscontri del ConfigTool — 1 novembre 2026
+
+Il candidato locale comprende Esteso (`Extended=4`, etichetta **3 · Esteso**) e informativa v4; i precedenti `Full`/3 restano Standard. Le catture sintetiche HTTP su loopback del coordinatore net48 verificano il blocco senza consenso, il testo estratto localmente dagli allegati, la pseudonimizzazione prima dell’invio e il ripristino della risposta. La matrice copre il lettore condiviso da email e bozze, livelli e permesso allegati, copie non autorizzate e minacce note. Briefing e calendario includono Esteso nelle regressioni; formati, OCR e completezza restano coperti dalle suite dell’estrattore.
+
+Le voci agenda/attività attendono l’esito individuale di Outlook prima di apparire aggiunte; i test verificano riprova, duplicazioni e risposte tardive. Le verifiche di connessione hanno annullamento e limite complessivo di 10 secondi; le capacità non avviano richieste concorrenti. Le cassette rileggeranno lo stato dopo un salvataggio non confermato e mostrano stato indeterminato se non verificabile, compreso JSON corrotto.
+
+Build Release senza errori o avvisi e **1.714 test superati per ciascun runtime net48/net10**, zero saltati. Le prove complete di script e smoke sono registrate nella ricevuta del dossier `history/2026-11-01-A220-A193-A196-A197/report.md`. Il componente reale delle cassette è stato osservato in sola lettura in un host isolato con dati sintetici: questa prova non qualifica il ConfigTool installato completo o i DPI. Nessuna installazione, pubblicazione o richiesta a provider remoti; raccolta COM e QwenCloud restano da qualificare in A226. Prodotto 1.0.0, archivio 13, pipe 15 e policy conversazione 5 invariati.
+
 ## Pseudonimizzazione e ridimensionamento — 1 novembre 2026
 
 Il candidato supera 1.693 test su ciascun runtime net48/net10, build Release senza errori o avvisi, 16 script, smoke net48 e WebViewFocus x64/x86; PanePolicy passa anche in x86. Le prove sintetiche coprono strategie e categorie versionate, dizionari oltre 200 contatti/identità, scope dell'archivio sulla pipe v15, opzioni importi/date, registro DPAPI a 30 giorni, ripristino JSON/streaming e HTTP reale su loopback. La factory del riquadro verifica il contesto UI della raccolta e la singola notifica cloud. [Funzionamento e limiti](pseudonimizzazione.md).

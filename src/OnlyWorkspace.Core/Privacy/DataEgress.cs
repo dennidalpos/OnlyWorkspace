@@ -99,7 +99,7 @@ public sealed class WorkspaceDataEgressConfig
 /// <summary>Text the responsible person accepts. A new version voids every earlier acceptance.</summary>
 public static class DataEgressNotice
 {
-    public const int Version = 3;
+    public const int Version = 4;
 
     public const string Title = "Informativa sull'uscita dei dati verso servizi di intelligenza artificiale esterni";
 
@@ -113,7 +113,8 @@ public static class DataEgressNotice
         "• 0 Solo locale: il profilo cloud non invia nulla.",
         "• 1 Minimo: escono solo fatti estratti in locale; nomi, indirizzi email, telefoni, IBAN, partite IVA e codici fiscali sono sostituiti da segnaposto e ripristinati solo sul PC. Niente testo integrale, allegati o ricerca web.",
         "• 2 Standard: come il livello 1, piu il testo originale dell'email ripulito dalle citazioni; ricerca web solo per la verifica di sicurezza, con i soli nomi di dominio. Nessun testo degli allegati viene inviato.",
-        "Le schede IA in background e il livello 3 Completo sono rimossi. I profili esterni configurati al precedente livello 3 passano a Standard; la nuova informativa richiede una nuova accettazione.",
+        "• 3 Esteso: come Standard; con l'invio degli allegati abilitato esce anche il testo estratto in locale dagli allegati delle email e delle bozze, dopo pseudonimizzazione. Non vengono caricati file binari. OCR solo locale; documenti protetti, incompleti, bloccati o con minacce note sono esclusi con motivo.",
+        "Le schede IA in background e il precedente livello Completo sono rimossi. I vecchi valori Full e 3 continuano a essere letti come Standard; Esteso richiede una scelta esplicita. Questa informativa richiede una nuova accettazione.",
         "I segnaposto riducono i dati personali inviati ma non li rendono anonimi: restano dati personali ai sensi del GDPR.",
         "",
         "Cosa non esce",

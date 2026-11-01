@@ -36,7 +36,7 @@ public sealed class TrayApplicationContext : ApplicationContext
     private readonly Dictionary<(StatusLight, int), Icon> _archiveIcons = new();
     private StatusLight _archiveLight, _aiLight;
     private int _statusFrame, _profileVersion;
-    private bool _checkingConnectivity, _statusImagesDisposed;
+    private bool _statusImagesDisposed;
     private readonly NotifyIcon _notifyIcon;
     private readonly ContextMenuStrip _contextMenu;
     private readonly ToolStripMenuItem _itemStatus;
@@ -86,7 +86,7 @@ public sealed class TrayApplicationContext : ApplicationContext
         var aiMenu = new ToolStripMenuItem("IA");
         _itemStatus = new ToolStripMenuItem("IA: non verificata") { Enabled = false };
         aiMenu.DropDownItems.Add(_itemStatus);
-        aiMenu.DropDownItems.Add(new ToolStripMenuItem("Verifica connessione del profilo predefinito", null, async (_, _) => await CheckConnectivityAsync()));
+        aiMenu.DropDownItems.Add(new ToolStripMenuItem("Verifica / annulla connessione del profilo predefinito", null, async (_, _) => await CheckConnectivityAsync()));
         _contextMenu.Items.Add(aiMenu);
 
         var configurationMenu = new ToolStripMenuItem("Configurazione");
@@ -304,6 +304,7 @@ public sealed class TrayApplicationContext : ApplicationContext
     public void UpdateProfileStatus()
     {
         _profileVersion++;
+        _connectionCheck?.Cancel();
         try
         {
             var config = _configService.LoadConfiguration();
@@ -356,10 +357,14 @@ public sealed class TrayApplicationContext : ApplicationContext
     [DllImport("user32.dll")]
     private static extern bool DestroyIcon(IntPtr handle);
 
+    private InteractiveRequest? _connectionCheck;
+
     private async Task CheckConnectivityAsync()
     {
-        if (_checkingConnectivity) return;
-        _checkingConnectivity = true;
+        if (_isExiting) return;
+        if (_connectionCheck != null) { _connectionCheck.Cancel(); return; }
+        using var run = new InteractiveRequest();
+        _connectionCheck = run;
         int version = _profileVersion;
         SetAiStatus(StatusLight.Working, "IA: verifica della connessione in corso…");
         try
@@ -370,7 +375,7 @@ public sealed class TrayApplicationContext : ApplicationContext
             string? secret = _configService.ResolveSecret(profile.SecretRef);
             var client = LlmClientFactory.CreateClient(profile, secret: secret);
             OnlyWorkspace.Core.Models.LlmHealthResult health;
-            try { health = await client.CheckHealthAsync().ConfigureAwait(true); }
+            try { health = await client.CheckHealthAsync(run.Token).ConfigureAwait(true); run.Token.ThrowIfCancellationRequested(); }
             finally { (client as IDisposable)?.Dispose(); }
             if (_isExiting || version != _profileVersion) return;
             SetAiStatus(health.IsHealthy ? StatusLight.Ok : StatusLight.Error, health.IsHealthy
@@ -378,11 +383,15 @@ public sealed class TrayApplicationContext : ApplicationContext
                 : "IA: connessione non riuscita · " + health.ErrorMessage);
             _notifyIcon.ShowBalloonTip(3500, "OnlyWorkspace - Connessione IA", _itemStatus.Text ?? "IA", health.IsHealthy ? ToolTipIcon.Info : ToolTipIcon.Warning);
         }
+        catch (OperationCanceledException)
+        {
+            if (!_isExiting && version == _profileVersion) SetAiStatus(StatusLight.Waiting, run.TimedOut ? "IA: tempo massimo di 10 secondi superato." : "IA: verifica annullata.");
+        }
         catch (Exception ex)
         {
             if (!_isExiting && version == _profileVersion) SetAiStatus(StatusLight.Error, "IA: " + ErrorText.For(ex));
         }
-        finally { _checkingConnectivity = false; }
+        finally { _connectionCheck = null; }
     }
 
     private void OpenDataDirectory()
@@ -447,6 +456,7 @@ public sealed class TrayApplicationContext : ApplicationContext
         if (_mainForm != null && !_mainForm.IsDisposed && !_mainForm.TryCloseForExit()) return;
 
         _isExiting = true;
+        _connectionCheck?.Cancel();
         CloseArchiveEngine();
         _mainForm?.Dispose();
         _mainForm = null;
@@ -466,6 +476,7 @@ public sealed class TrayApplicationContext : ApplicationContext
         if (disposing)
         {
             _isExiting = true;
+            _connectionCheck?.Cancel();
             CloseArchiveEngine();
             _notifyIcon.Visible = false;
             _notifyIcon.Dispose();

@@ -22,11 +22,11 @@ public sealed class ExposureRetirementTests
         Assert.True(policy.Pseudonymize);
         Assert.False(policy.AllowsWeb(WebSearchAction.Chat));
         Assert.True(policy.AllowsWeb(WebSearchAction.Security));
-        Assert.Equal(new[] { ExposureLevel.LocalOnly, ExposureLevel.Minimal, ExposureLevel.Standard }, ExposurePolicy.All);
+        Assert.Equal(new[] { ExposureLevel.LocalOnly, ExposureLevel.Minimal, ExposureLevel.Standard, ExposureLevel.Extended }, ExposurePolicy.All);
     }
 
     [Theory]
-    [InlineData("4")]
+    [InlineData("5")]
     [InlineData("-1")]
     [InlineData("\"unknown\"")]
     [InlineData("true")]
@@ -80,7 +80,7 @@ public sealed class ExposureRetirementTests
         Assert.Contains(priorText, DataEgressReport.RenderHtml(config, new DataEgressWorkstation()));
         DataEgress.Accept(config, TestEgress.Signer(), TestEgress.Providers(config), "fixture", "fixture", DateTime.UtcNow);
         Assert.True(DataEgress.AllowsModel(config, profile));
-        Assert.Equal(3, config.DataEgress.Consent!.NoticeVersion);
+        Assert.Equal(4, config.DataEgress.Consent!.NoticeVersion);
         Assert.Equal(priorText, old.NoticeText);
         Assert.Equal(2, config.DataEgress.History.Count);
         Assert.Equal(2, config.DataEgress.History[0].NoticeVersion);

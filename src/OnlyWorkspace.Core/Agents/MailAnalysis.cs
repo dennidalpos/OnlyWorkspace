@@ -68,7 +68,8 @@ public enum DocumentStatus
     Error,
     Incomplete,
     /// <summary>Archived metadata only: the attachment content was intentionally not extracted.</summary>
-    Reference
+    Reference,
+    Blocked
 }
 
 /// <summary>One attachment met during an analysis and what happened to it.</summary>
@@ -83,9 +84,13 @@ public sealed class DocumentOutcome
 
     public bool WasRead => Status == DocumentStatus.Read;
 
+    public static bool CanRead(AttachmentFacts attachment) =>
+        attachment.ScanStatus is not AttachmentScanStatus.Threat and not AttachmentScanStatus.Removed;
+
     /// <summary>Why an attachment was not copied for reading (OutlookDataService.CopyAttachments).</summary>
     public static DocumentStatus NotCopied(AttachmentFacts attachment, bool hasReader, bool contentAllowed) =>
-        !hasReader ? DocumentStatus.Unsupported
+        !CanRead(attachment) ? DocumentStatus.Blocked
+        : !hasReader ? DocumentStatus.Unsupported
         : !contentAllowed ? DocumentStatus.NotSent
         : attachment.Size > AttachmentFacts.MaxCopyBytes ? DocumentStatus.TooLarge
         : DocumentStatus.NotCopiable;
@@ -123,6 +128,7 @@ public sealed class DocumentOutcome
         DocumentStatus.Reference => "solo riferimento: contenuto non estratto",
         DocumentStatus.TooLarge => "troppo grande per essere letto intero",
         DocumentStatus.NotCopiable => "collegamento o oggetto incorporato che Outlook non salva come file",
+        DocumentStatus.Blocked => "bloccato o con minaccia nota: contenuto escluso",
         DocumentStatus.NotSent => "contenuto non inviato al provider esterno",
         DocumentStatus.Empty => "nessun testo all'interno",
         DocumentStatus.Error => "errore di lettura",

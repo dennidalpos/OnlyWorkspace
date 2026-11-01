@@ -20,7 +20,7 @@ const context = vm.createContext({
   actionButton: (icon, label, click) => { const n = new Node('button', null, label); n.listeners.click = click; return n; },
   mailChip: ref => { const n = new Node('button', 'mail-chip', ref.subject + ' · ' + ref.meta); n.listeners.click = () => sent.push({ type: 'archive_open_email', entryId: ref.entryId, storeId: ref.storeId }); return n; }
 });
-const start = html.indexOf('  function addActionItems('), end = html.indexOf('  // Streaming text is not live', start);
+const start = html.indexOf('  var actionItemEntries ='), end = html.indexOf('  // Streaming text is not live', start);
 assert.ok(start > 0 && end > start);
 vm.runInContext(html.slice(start, end), context);
 const nodes = root => [root, ...root.children.flatMap(nodes)];

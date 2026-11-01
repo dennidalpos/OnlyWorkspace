@@ -16,7 +16,9 @@ public enum ExposureLevel
     /// <summary>Only local facts, pseudonymized; no bodies, attachments or web.</summary>
     Minimal = 1,
     /// <summary>Cleaned original bodies, pseudonymized; web only for the security check.</summary>
-    Standard = 2
+    Standard = 2,
+    /// <summary>Standard plus explicitly authorized, locally extracted attachment text. Value 3 stays retired.</summary>
+    Extended = 4
 }
 
 /// <summary>Reads the retired level only to migrate existing configurations to the stricter Standard policy.</summary>
@@ -33,7 +35,7 @@ public sealed class ExposureLevelJsonConverter : JsonConverter<ExposureLevel>
         else if (reader.TokenType == JsonTokenType.Number && reader.TryGetInt32(out int value))
         {
             if (value == 3) return ExposureLevel.Standard;
-            if (value >= 0 && value <= 2) return (ExposureLevel)value;
+            if (Enum.IsDefined(typeof(ExposureLevel), value)) return (ExposureLevel)value;
         }
         throw new JsonException("Livello di esposizione non valido.");
     }
@@ -87,11 +89,16 @@ public sealed class ExposurePolicy
         {
             Level = ExposureLevel.Standard, ModelAllowed = true, Evidence = EvidenceMode.Original, Pseudonymize = true, WholeEmails = true,
             PackTokens = 48_000, WebActions = new[] { WebSearchAction.Security }
+        },
+        new()
+        {
+            Level = ExposureLevel.Extended, ModelAllowed = true, Evidence = EvidenceMode.Original, Pseudonymize = true,
+            WholeEmails = true, Attachments = true, PackTokens = 48_000, WebActions = new[] { WebSearchAction.Security }
         }
     };
 
     public static ExposurePolicy For(ExposureLevel level) =>
-        Levels[(int)level >= 0 && (int)level < Levels.Length ? (int)level : 0];
+        Levels.FirstOrDefault(policy => policy.Level == level) ?? Levels[0];
 
     public static ExposurePolicy Of(LlmProfileConfig profile) => profile.IsExternal ? For(profile.Exposure) : Local;
 
@@ -101,13 +108,14 @@ public sealed class ExposurePolicy
     public bool AnyWeb => WebActions == null || WebActions.Count > 0;
 
     public static IReadOnlyList<ExposureLevel> All { get; } =
-        new[] { ExposureLevel.LocalOnly, ExposureLevel.Minimal, ExposureLevel.Standard };
+        new[] { ExposureLevel.LocalOnly, ExposureLevel.Minimal, ExposureLevel.Standard, ExposureLevel.Extended };
 
     public static string Label(ExposureLevel level) => level switch
     {
         ExposureLevel.LocalOnly => "0 · Solo locale",
         ExposureLevel.Minimal => "1 · Minimo",
         ExposureLevel.Standard => "2 · Standard",
+        ExposureLevel.Extended => "3 · Esteso",
         _ => "Livello non valido"
     };
 
@@ -116,6 +124,7 @@ public sealed class ExposurePolicy
         ExposureLevel.LocalOnly => "Il profilo non invia nulla: restano attivi solo i profili locali.",
         ExposureLevel.Minimal => "Escono solo dati estratti in locale, con nomi, indirizzi, telefoni, IBAN e codici sostituiti da segnaposto. Niente testo integrale, allegati o ricerca web.",
         ExposureLevel.Standard => "Escono i fatti locali e il testo dell'email ripulito, sempre con segnaposto. Niente allegati; ricerca web solo per la verifica di sicurezza (soli domini).",
+        ExposureLevel.Extended => "Come Standard; se abiliti l'invio degli allegati, esce anche il testo estratto in locale dalle email e dalle bozze, sempre con segnaposto. Nessun file binario viene inviato.",
         _ => "Livello non valido: nessun dato viene inviato."
     };
 }

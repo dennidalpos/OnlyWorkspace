@@ -261,13 +261,15 @@ public sealed class PseudonymizationPipelineTests
         Assert.Empty(await client.GetPrivacyEntitiesAsync(0, new()));
     }
 
-    [Fact]
-    public async Task RealLoopbackHttpReceivesOnlyMaskedTextAndLedgerRefusalSendsNoBytes()
+    [Theory]
+    [InlineData(ExposureLevel.Standard)]
+    [InlineData(ExposureLevel.Extended)]
+    public async Task RealLoopbackHttpReceivesOnlyMaskedTextAndLedgerRefusalSendsNoBytes(ExposureLevel exposure)
     {
         var listener = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, 0); listener.Start();
         try
         {
-            var profile = new LlmProfileConfig { Type = "openai", Model = "synthetic", External = true, Exposure = ExposureLevel.Standard,
+            var profile = new LlmProfileConfig { Type = "openai", Model = "synthetic", External = true, Exposure = exposure, AllowAttachmentUpload = true,
                 BaseUrl = "http://127.0.0.1:" + ((System.Net.IPEndPoint)listener.LocalEndpoint).Port + "/v1", PseudonymizeAmounts = true, PseudonymizeDates = true };
             using var transport = new OpenAIClient(profile);
             string blocked = Scratch(); File.WriteAllText(blocked, "not a directory");

@@ -42,6 +42,7 @@ public partial class TaskPaneCoordinator : IDisposable
     private readonly PaneOperations _operations = new();
     // What the page shows of the running work: replayed to a page loaded again, listed by the other windows' panes.
     private readonly PaneJobReplay _replay = new();
+    private readonly ActionItemSaves _actionItemSaves = new();
     private readonly int _jobId;
     private DateTime _jobsNotifiedUtc;
     // Bumped by every new operation: stream_* messages of a superseded one are dropped.
@@ -430,6 +431,7 @@ public partial class TaskPaneCoordinator : IDisposable
                 if (!string.IsNullOrWhiteSpace(analysisQuestion)) _ = ExecuteAnalysisQuestionAsync(analysisQuestion!, GetString(message, "analysisId"));
                 break;
             case "save_action_items": SaveActionItems(message); break;
+            case "get_action_item_states": SaveActionItems(message); break;
             case "chat": StartChat(message); break;
             case "cancel": StopActiveTask(); break;
             case "stop_other":
@@ -1264,7 +1266,7 @@ public partial class TaskPaneCoordinator : IDisposable
     private async Task<EmailAttachments> BuildAttachmentContextAsync(Func<Func<AttachmentFacts, bool>, CancellationToken, Task<AttachmentCopies?>> copyAttachments, LlmProfileConfig profile, int turn, CancellationToken ct)
     {
         bool local = profile.SendsAttachmentText;
-        var copies = await copyAttachments(a => local && !a.IsInline && !a.IsPecReceiptData && AttachmentTextExtractor.IsSupported(a.Extension), ct);
+        var copies = await copyAttachments(a => local && DocumentOutcome.CanRead(a) && !a.IsInline && !a.IsPecReceiptData && AttachmentTextExtractor.IsSupported(a.Extension), ct);
         if (copies == null) return EmailAttachments.None;
 
         try
@@ -1277,7 +1279,7 @@ public partial class TaskPaneCoordinator : IDisposable
                 var outcome = new DocumentOutcome { Name = attachment.Name };
                 documents.Add(outcome);
                 var path = copies.Saved.Where(s => s.Key == attachment).Select(s => s.Value).FirstOrDefault();
-                if (path == null)
+                if (!local || path == null || !DocumentOutcome.CanRead(attachment))
                 {
                     outcome.Status = DocumentOutcome.NotCopied(attachment, AttachmentTextExtractor.IsSupported(attachment.Extension), local);
                     continue;
@@ -1318,7 +1320,7 @@ public partial class TaskPaneCoordinator : IDisposable
     private async Task<EmailAttachments> ChatAttachmentsAsync(SelectedEmailInfo email, LlmProfileConfig profile, int turn, CancellationToken ct)
     {
         if (string.IsNullOrEmpty(email.EntryId)) return EmailAttachments.None;
-        var key = email.EntryId + "|" + profile.Id + "|" + AttachmentContentAllowed(profile) + "|" + OcrEnabled;
+        var key = email.StoreId + "|" + email.EntryId + "|" + ConversationPolicy.Key(profile) + "|" + OcrEnabled;
         if (_chatAttachments.Key == key) return _chatAttachments.Attachments;
         var attachments = await BuildAttachmentContextAsync(email, profile, turn, ct);
         _chatAttachments = (key, attachments);
@@ -1556,27 +1558,8 @@ public partial class TaskPaneCoordinator : IDisposable
     /// <summary>Items ticked in the scan result: saved directly, with the same re-validation as the drafts.</summary>
     private void SaveActionItems(JsonElement message)
     {
-        if (!message.TryGetProperty("items", out var array) || array.ValueKind != JsonValueKind.Array) return;
-        int saved = 0, failed = 0;
-        foreach (var e in array.EnumerateArray())
-        {
-            var item = ActionItemParser.FromPane(e);
-            if (item == null) continue;
-            try
-            {
-                _dataService.SaveActionItem(item);
-                saved++;
-            }
-            catch (Exception ex)
-            {
-                failed++;
-                OnlyWorkspaceLog.Logger.Error(ex, "Failed to save action item");
-            }
-        }
-
-        if (failed > 0) Toast($"{failed} voci non salvate in Outlook ({saved} aggiunte). Riprova o apri la bozza.", "error");
-        else if (saved > 0) Toast(saved == 1 ? "Voce aggiunta a Outlook." : $"{saved} voci aggiunte a Outlook.", "success");
-        OnlyWorkspaceLog.Logger.Information("Action items saved to Outlook: {Saved} ok, {Failed} failed", saved, failed);
+        _control.PostMessage(_actionItemSaves.Save(message, _dataService.SaveActionItem,
+            ex => OnlyWorkspaceLog.Logger.Error(ex, "Failed to save action item")));
     }
 
     // Relative dates ("venerdì") refer to the day the email arrived; unsent or odd items fall back to today.
@@ -2498,6 +2481,8 @@ public partial class TaskPaneCoordinator : IDisposable
             ? new Dictionary<string, object?>(dictionary)
             : message.GetType().GetProperties().ToDictionary(p => p.Name, p => (object?)p.GetValue(message));
         fields["turnId"] = $"{_jobId}:{turn}";
+        if (fields.TryGetValue("items", out var actionItems) && actionItems != null)
+            fields["items"] = _actionItemSaves.Register(actionItems);
         if (fields.TryGetValue("type", out var messageType) && messageType as string == "stream_chunk" && fields.TryGetValue("chunk", out var chunk))
             _turnText.Append(chunk as string);
         _replay.Record(fields);

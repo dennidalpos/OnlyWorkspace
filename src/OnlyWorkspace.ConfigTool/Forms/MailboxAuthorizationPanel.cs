@@ -41,6 +41,44 @@ internal sealed class MailboxAuthorizationPanel : TableLayoutPanel
     // While mailboxes are missing and the page is shown: read again, so they appear once Outlook has created the archive.
     private readonly System.Windows.Forms.Timer _poll = new() { Interval = 5000 };
     private bool _building;
+    private bool _scopeUnknown;
+    private IReadOnlyList<string> _persistedStores = Array.Empty<string>();
+    internal Func<ArchiveClient, string, CancellationToken, Task>? WriteStores;
+    internal Func<ArchiveClient, CancellationToken, Task<string?>>? ReadStores;
+
+    private static IReadOnlyList<string> ParseSavedStores(string? json)
+    {
+        if (string.IsNullOrEmpty(json)) return Array.Empty<string>();
+        using var doc = JsonDocument.Parse(json!);
+        if (doc.RootElement.ValueKind != JsonValueKind.Array || doc.RootElement.EnumerateArray().Any(v => v.ValueKind != JsonValueKind.String || string.IsNullOrWhiteSpace(v.GetString())))
+            throw new JsonException("Selezione delle cassette non valida.");
+        return doc.RootElement.EnumerateArray().Select(v => v.GetString()!).ToList();
+    }
+    private void ApplySavedStores(IReadOnlyList<string> chosen)
+    {
+        _building = true;
+        try
+        {
+            _persistedStores = chosen.ToArray();
+            _scopeUnknown = false;
+            bool all = chosen.Count == 0;
+            foreach (var row in _rows) { row.Value.ThreeState = false; row.Value.Checked = row.Key == AllRowId ? all : all || chosen.Contains(row.Key, StringComparer.Ordinal); }
+            SyncAllRow();
+        }
+        finally { _building = false; }
+    }
+
+    private void MarkStoresUnknown()
+    {
+        _scopeUnknown = true;
+        _building = true;
+        try
+        {
+            foreach (var box in _rows.Values) { box.ThreeState = true; box.CheckState = CheckState.Indeterminate; }
+            _grid.Enabled = false;
+        }
+        finally { _building = false; }
+    }
 
     public MailboxAuthorizationPanel(IConfigurationService config, ToolTip tips, CancellationToken lifetime)
         : this(config, tips, lifetime, null, null) { }
@@ -89,7 +127,7 @@ internal sealed class MailboxAuthorizationPanel : TableLayoutPanel
                 RefreshUserPreference();
                 SetStatus("Scelta non salvata: " + ex.Message, Tone.Danger);
             }
-            _grid.Enabled = _mine.CheckState == CheckState.Checked;
+            _grid.Enabled = _mine.CheckState == CheckState.Checked && !_scopeUnknown && _busy == 0;
         };
         _refresh.Click += async (_, _) => await LoadAsync();
         _profiles.SelectedIndexChanged += async (_, _) =>
@@ -123,7 +161,7 @@ internal sealed class MailboxAuthorizationPanel : TableLayoutPanel
             _preferenceError = "Scelta archivio non leggibile; raccolta sospesa: " + ex.Message;
         }
         finally { _building = building; }
-        _grid.Enabled = _mine.CheckState == CheckState.Checked;
+        _grid.Enabled = _mine.CheckState == CheckState.Checked && !_scopeUnknown && _busy == 0;
     }
 
     private ArchiveClient? Client => _profiles.SelectedItem is string profile && _archived.Contains(profile) ? new ArchiveClient(profile, lifetime: _lifetime) : null;
@@ -267,7 +305,7 @@ internal sealed class MailboxAuthorizationPanel : TableLayoutPanel
                 .Where(c => c.Closed && !stores.Any(s => s.Open && string.Equals(s.Id, c.StoreId, StringComparison.OrdinalIgnoreCase))).ToList();
             stores.AddRange(closed.Where(c => !stores.Any(s => string.Equals(s.Id, c.StoreId, StringComparison.OrdinalIgnoreCase)))
                 .Select(c => new ArchiveOpenStore { Id = c.StoreId, Name = c.DisplayName.Length > 0 ? c.DisplayName : c.StoreId, Open = false }));
-            var chosen = ArchiveScope.ParseStores(await client.GetMetaAsync(ArchiveScope.StoresKey, _lifetime));
+            var chosen = ParseSavedStores(await client.GetMetaAsync(ArchiveScope.StoresKey, _lifetime));
             var own = StoreOwnAddresses.Parse(await client.GetMetaAsync(StoreOwnAddresses.MetaKey, _lifetime));
             BuildGrid(stores, chosen, own, closed.Select(c => c.StoreId).ToList());
             _complete = stores.Count > 0;
@@ -275,7 +313,11 @@ internal sealed class MailboxAuthorizationPanel : TableLayoutPanel
         }
         catch (Exception ex)
         {
-            if (!Closing) SetStatus("Archivio non leggibile: " + ErrorText.For(ex), Tone.Warning);
+            if (!Closing)
+            {
+                MarkStoresUnknown();
+                SetStatus("Archivio non leggibile: " + ErrorText.For(ex) + " Premi Aggiorna prima di modificare le scelte.", Tone.Warning);
+            }
         }
     }
 
@@ -290,6 +332,8 @@ internal sealed class MailboxAuthorizationPanel : TableLayoutPanel
             AddRow(Ui.SetFont(new SelectableLabel { Text = "Cassetta", AutoSize = true }, 9F, FontStyle.Bold),
                 Header("Archivio", "Le email della cassetta entrano nell'archivio locale cifrato di questo PC."));
 
+            _scopeUnknown = false;
+            _persistedStores = chosen.ToArray();
             bool allArchive = chosen.Count == 0;
             AddStore(AllRowId, "Tutte le cassette, anche future", true, allArchive, null);
             foreach (var store in stores)
@@ -300,7 +344,7 @@ internal sealed class MailboxAuthorizationPanel : TableLayoutPanel
                 if (store.IsDataFileStore && !store.HasAccount) AddOwnAddresses(store, own.TryGetValue(store.Id, out var entry) ? entry : null);
             }
             SyncAllRow();
-            _grid.Enabled = _mine.CheckState == CheckState.Checked;
+            _grid.Enabled = _mine.CheckState == CheckState.Checked && !_scopeUnknown && _busy == 0;
         }
         finally
         {
@@ -341,6 +385,7 @@ internal sealed class MailboxAuthorizationPanel : TableLayoutPanel
             label = line;
         }
         AddRow(label, archive);
+        _tips.SetToolTip(archive, "Sceglie se conservare le email nell’archivio locale. Con Tutte le cassette attivo le singole scelte sono bloccate; le cassette chiuse si modificano dopo averle riaperte in Outlook.");
         _rows[id] = archive;
         if (open) _open.Add(id);
         archive.CheckedChanged += async (_, _) => { if (!_building) await ApplyAsync(archive); };
@@ -432,7 +477,7 @@ internal sealed class MailboxAuthorizationPanel : TableLayoutPanel
             _busy--;
             if (!Closing)
             {
-                _grid.Enabled = _mine.CheckState == CheckState.Checked;
+                _grid.Enabled = _mine.CheckState == CheckState.Checked && !_scopeUnknown && _busy == 0;
                 _refresh.Enabled = true;
             }
         }
@@ -446,13 +491,14 @@ internal sealed class MailboxAuthorizationPanel : TableLayoutPanel
         {
             if (all.Checked) row.Value.Checked = true;
             row.Value.Enabled = !all.Checked && _open.Contains(row.Key);
+            _tips.SetToolTip(row.Value, all.Checked ? "Tutte le cassette è attivo: cambia prima questa riga per scegliere le singole cassette." : !_open.Contains(row.Key) ? "Cassetta chiusa in Outlook: riaprila per cambiarne la scelta." : "Sceglie se conservare le email di questa cassetta nell’archivio locale.");
         }
     }
 
     /// <param name="changed">The box the user just changed: put back when the choice is refused, so the grid shows what is saved.</param>
     private async Task ApplyAsync(CheckBox? changed = null)
     {
-        if (Client is not { } client) return;
+        if (_busy > 0 || _scopeUnknown || Client is not { } client) return;
         _building = true;
         try { SyncAllRow(); }
         finally { _building = false; }
@@ -462,26 +508,47 @@ internal sealed class MailboxAuthorizationPanel : TableLayoutPanel
         var archived = stores.Where(r => r.Value.Checked).Select(r => r.Key).ToList();
         if (!all.Checked && archived.Count == 0)
         {
-            if (changed != null && !changed.Checked)
-            {
-                _building = true;
-                try { changed.Checked = true; SyncAllRow(); }
-                finally { _building = false; }
-            }
+            ApplySavedStores(_persistedStores);
             SetStatus("Scegli almeno una cassetta oppure spegni l'archivio per il tuo utente.", Tone.Warning);
             return;
         }
         _busy++;
+        _grid.Enabled = _profiles.Enabled = _refresh.Enabled = false;
         try
         {
-            await client.SetMetaAsync(ArchiveScope.StoresKey, JsonSerializer.Serialize(all.Checked ? new List<string>() : archived), _lifetime);
+            string json = JsonSerializer.Serialize(all.Checked ? new List<string>() : archived);
+            if (WriteStores != null) await WriteStores(client, json, _lifetime);
+            else await client.SetMetaAsync(ArchiveScope.StoresKey, json, _lifetime);
+            if (Closing) return;
+            ApplySavedStores(ParseSavedStores(json));
             SetStatus("Salvato: Outlook applica la scelta al prossimo passaggio.", Tone.Success);
         }
         catch (Exception ex)
         {
-            if (!Closing) SetStatus("Scelta non salvata: " + ErrorText.For(ex), Tone.Danger);
+            if (Closing) return;
+            try
+            {
+                string? saved = ReadStores != null ? await ReadStores(client, _lifetime) : await client.GetMetaAsync(ArchiveScope.StoresKey, _lifetime);
+                if (Closing) return;
+                ApplySavedStores(ParseSavedStores(saved));
+                SetStatus("Salvataggio non confermato: " + ErrorText.For(ex) + " Sono mostrate le scelte rilette dall'archivio.", Tone.Danger);
+            }
+            catch (Exception readError)
+            {
+                if (Closing) return;
+                MarkStoresUnknown();
+                SetStatus("Stato delle cassette non verificabile: " + ErrorText.For(readError) + " Premi Aggiorna prima di modificare le scelte.", Tone.Danger);
+            }
         }
-        finally { _busy--; }
+        finally
+        {
+            _busy--;
+            if (!Closing)
+            {
+                _profiles.Enabled = _refresh.Enabled = true;
+                _grid.Enabled = !_scopeUnknown && _mine.CheckState == CheckState.Checked;
+            }
+        }
     }
 
     private void SetStatus(string text, Tone tone)

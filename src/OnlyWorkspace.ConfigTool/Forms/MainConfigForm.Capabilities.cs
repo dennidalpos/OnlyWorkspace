@@ -1,5 +1,6 @@
 using OnlyWorkspace.Core.Archive;
 using System;
+using OnlyWorkspace.ConfigTool.Services;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
@@ -62,7 +63,7 @@ public sealed partial class MainConfigForm
         Tip(_btnProbe, ProbeCost);
         _btnProbeCancel = SecondaryButton("Annulla");
         _btnProbeCancel.Enabled = false;
-        _btnProbeCancel.Click += (s, e) => _probeRun?.Cancel();
+        _btnProbeCancel.Click += (s, e) => { _probeRun?.Cancel(); _capabilityRefresh?.Cancel(); };
         Tip(_btnProbeCancel, "Ferma le prove: gli esiti già ottenuti restano.");
         foreach (var b in new[] { _btnRefreshCapabilities, _btnProbe, _btnProbeCancel }) b.Margin = new Padding(0, 0, 6, 6);
         var commands = Inline(_btnRefreshCapabilities, _btnProbe, _btnProbeCancel);
@@ -152,9 +153,11 @@ public sealed partial class MainConfigForm
     }
 
     /// <summary>«Aggiorna capacità»: the service's declaration, read again and reported in words.</summary>
+    private InteractiveRequest? _capabilityRefresh;
+
     private async Task RefreshDeclaredCapabilitiesAsync()
     {
-        if (_lstProfiles.SelectedItem is not ProfileItem item || _isLoading) return;
+        if (_lstProfiles.SelectedItem is not ProfileItem item || _isLoading || _probeRun != null || _capabilityRefresh != null) return;
         UpdateSelectedProfileFromUi();
         var p = item.Profile;
         if (ProviderCatalog.Get(p.Type).Capabilities == CapabilitySource.None)
@@ -162,10 +165,24 @@ public sealed partial class MainConfigForm
             SetProbeStatus("Questo servizio non pubblica le capacità dei modelli: usa «Prova funzioni» per verificarle.", Tone.Warning);
             return;
         }
-        SetProbeStatus("Lettura delle capacità dichiarate…", Tone.Warning, StatusLight.Working);
-        string? problem = await LoadModelLimitsAsync(p);
-        if (IsDisposed || !ReferenceEquals(_lstProfiles.SelectedItem, item)) return;
-        SetProbeStatus(problem ?? "Capacità dichiarate rilette; si salvano con Salva.", problem == null ? Tone.Success : Tone.Danger);
+        using var run = new InteractiveRequest();
+        _capabilityRefresh = run;
+        string identity = CapabilityKey(p);
+        SetProbeRunning(true);
+        SetProbeStatus("Lettura delle capacità dichiarate (massimo 10 secondi)…", Tone.Warning, StatusLight.Working);
+        try
+        {
+            string? problem = await LoadModelLimitsCoreAsync(p, run.Token);
+            run.Token.ThrowIfCancellationRequested();
+            if (!IsDisposed && ReferenceEquals(_lstProfiles.SelectedItem, item) && CapabilityKey(p) == identity)
+                SetProbeStatus(problem ?? "Capacità dichiarate rilette; si salvano con Salva.", problem == null ? Tone.Success : Tone.Danger);
+        }
+        catch (OperationCanceledException)
+        {
+            if (!IsDisposed && ReferenceEquals(_lstProfiles.SelectedItem, item) && CapabilityKey(p) == identity)
+                SetProbeStatus(run.TimedOut ? "Tempo massimo di 10 secondi superato." : "Aggiornamento annullato.", Tone.Warning);
+        }
+        finally { _capabilityRefresh = null; if (!IsDisposed) SetProbeRunning(false); }
     }
 
     private void SetProbeStatus(string text, Tone tone, StatusLight? light = null)
@@ -195,7 +212,7 @@ public sealed partial class MainConfigForm
     /// </summary>
     private async Task RunProbesAsync()
     {
-        if (_lstProfiles.SelectedItem is not ProfileItem item || _isLoading || _probeRun != null) return;
+        if (_lstProfiles.SelectedItem is not ProfileItem item || _isLoading || _probeRun != null || _capabilityRefresh != null) return;
         UpdateSelectedProfileFromUi();
         var p = item.Profile;
         if (string.IsNullOrWhiteSpace(p.Model) || string.IsNullOrWhiteSpace(p.BaseUrl))

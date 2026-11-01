@@ -15,6 +15,7 @@ using OnlyWorkspace.ConfigTool.Tray;
 using OnlyWorkspace.Core;
 using OnlyWorkspace.Core.Archive;
 using OnlyWorkspace.Core.Models;
+using OnlyWorkspace.Core.Interfaces;
 using OnlyWorkspace.Core.Privacy;
 using OnlyWorkspace.Core.Validation;
 using OnlyWorkspace.Infrastructure.Configuration;
@@ -436,6 +437,8 @@ public sealed partial class MainConfigForm : Form
         {
             _webSupportCheck?.Cancel();
             _probeRun?.Cancel();
+            _connectionCheck?.Cancel();
+            _capabilityRefresh?.Cancel();
             // Dispose can run twice (tray exit, then the form's own close): cancel only once.
             if (!_archiveLifetime.IsCancellationRequested) _archiveLifetime.Cancel();
             Theme.Changed -= OnThemeChanged;
@@ -616,6 +619,8 @@ public sealed partial class MainConfigForm : Form
         {
             if (!_isLoading && _lstProfiles.SelectedItem is ProfileItem item)
             {
+                _connectionCheck?.Cancel();
+                _capabilityRefresh?.Cancel();
                 _inMemorySecrets[item.Profile.Id] = _txtToken.Text;
                 MarkDirty();
                 InvalidateWebSupport();
@@ -707,7 +712,7 @@ public sealed partial class MainConfigForm : Form
         };
 
         _chkAllowAttachments = AddWide(net, new ThemedCheckBox { Text = "Invio del testo degli allegati", AutoSize = true },
-            "Spunta per inviare al servizio anche il testo degli allegati (PDF, Office, testo), letto su questo PC, per Sintesi, Estrai dati, Attività e Cerca e analizza. Spento: arrivano solo i nomi dei file. Solo al livello di esposizione 3.");
+            "Spunta per inviare al servizio anche il testo degli allegati (PDF, Office, testo), letto su questo PC, per Sintesi, Estrai dati, Attività e Cerca e analizza. Spento: arrivano solo i nomi dei file. Solo con Esteso e informativa valida; testo e nomi passano dalla pseudonimizzazione. Vale anche per gli allegati delle bozze quando richiesti.");
         _chkAllowAttachments.CheckedChanged += (s, e) => OnProfileFieldChanged();
         _chkPseudonymizeAmounts = AddWide(net, new ThemedCheckBox { Text = "Sostituisci gli importi con segnaposto", AutoSize = true },
             "Negli invii esterni sostituisce gli importi riconosciuti; li ripristina nella risposta su questo PC. Si applica con Salva.");
@@ -1379,7 +1384,7 @@ public sealed partial class MainConfigForm : Form
         {
             var host = Uri.TryCreate(p.BaseUrl, UriKind.Absolute, out var u) ? u.Host : p.BaseUrl;
             var web = p.WebSearchEnabled ? "; ricerca web: " + string.Join(", ", WebSearchService.Destinations(p)) : string.Empty;
-            var kind = p.IsExternal ? "cloud" + (p.AllowAttachmentUpload ? ", testo allegati inviato" : ", testo allegati escluso") : "locale";
+            var kind = p.IsExternal ? "cloud" + (p.SendsAttachmentText ? ", testo allegati consentito" : ", testo allegati escluso") : "locale";
             return $"• {(string.IsNullOrWhiteSpace(p.DisplayName) ? p.Id : p.DisplayName)}: {host} ({kind}){web}.";
         }).ToList();
         lines.Add("• Le email vanno a un modello solo per un'azione avviata dall'utente; la posta viene letta solo dalle cassette aperte in Outlook.");
@@ -1757,7 +1762,9 @@ public sealed partial class MainConfigForm : Form
     /// No-op without a model or for connectors that publish nothing.
     /// </summary>
     /// <returns>Why nothing was read, for «Aggiorna capacità»; null when read (or nothing to read).</returns>
-    private async System.Threading.Tasks.Task<string?> LoadModelLimitsAsync(LlmProfileConfig p)
+    private Task<string?> LoadModelLimitsAsync(LlmProfileConfig p) => LoadModelLimitsCoreAsync(p, default);
+
+    private async Task<string?> LoadModelLimitsCoreAsync(LlmProfileConfig p, System.Threading.CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(p.Model)) return "Inserisci il modello.";
         var caps = ProviderCatalog.Get(p.Type);
@@ -1769,19 +1776,23 @@ public sealed partial class MainConfigForm : Form
         ModelInfo? info = null;
         try
         {
-            var client = LlmClientFactory.CreateClient(p, secret);
+            var client = (ConnectionClientFactory ?? ((profile, key) => LlmClientFactory.CreateClient(profile, key)))(p, secret);
             try
             {
-                using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(10));
+                using var cts = System.Threading.CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _archiveLifetime.Token);
+                cts.CancelAfter(TimeSpan.FromSeconds(10));
                 info = await client.GetModelInfoAsync(p.Model, cts.Token);
+                cts.Token.ThrowIfCancellationRequested();
             }
             finally
             {
                 (client as IDisposable)?.Dispose();
             }
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
         catch (Exception ex)
         {
+            if (IsDisposed || _archiveLifetime.IsCancellationRequested) return null;
             if (!IsDisposed) LogActivity($"Capacità del modello '{p.Model}' non lette: {ex.Message}");
             return "Capacità non lette: " + ErrorText.For(ex);
         }
@@ -1808,6 +1819,8 @@ public sealed partial class MainConfigForm : Form
     {
         if (_refreshingList || _lstProfiles.SelectedItem is not ProfileItem item) return;
         _probeRun?.Cancel();
+        _connectionCheck?.Cancel();
+        _capabilityRefresh?.Cancel();
         SetProbeStatus(ProbeCost, Tone.Muted);
 
         bool wasLoading = _isLoading;
@@ -1865,6 +1878,8 @@ public sealed partial class MainConfigForm : Form
     private void OnProfileFieldChanged()
     {
         if (_isLoading) return;
+        _connectionCheck?.Cancel();
+        _capabilityRefresh?.Cancel();
         UpdateSelectedProfileFromUi();
         MarkDirty();
     }
@@ -2073,6 +2088,7 @@ public sealed partial class MainConfigForm : Form
         {
             var caps = CurrentCaps();
             var p = item.Profile;
+            string? previousPolicy = _connectionCheck != null || _capabilityRefresh != null ? ConversationPolicy.Key(p) : null;
             p.DisplayName = _txtDisplayName.Text.Trim();
             p.Type = caps.Type;
             p.BaseUrl = _txtEndpoint.Text.Trim();
@@ -2093,6 +2109,11 @@ public sealed partial class MainConfigForm : Form
             p.PseudonymizeDates = _chkPseudonymizeDates.Checked;
             if (_chkWebSearch.Enabled) p.WebSearchEnabled = _chkWebSearch.Checked;
             p.WebSearchActions = _webActions.Controls.Cast<CheckBox>().Where(b => b.Checked).Select(b => (string)b.Tag!).ToList();
+            if (previousPolicy != null && previousPolicy != ConversationPolicy.Key(p))
+            {
+                _connectionCheck?.Cancel();
+                _capabilityRefresh?.Cancel();
+            }
         }
     }
 
@@ -2314,52 +2335,55 @@ public sealed partial class MainConfigForm : Form
         UpdateWebActionsEnabled();
     }
 
+    private InteractiveRequest? _connectionCheck;
+    internal Func<LlmProfileConfig, string?, ILlmClient>? ConnectionClientFactory;
+
     private async void BtnTestProfile_Click(object? sender, EventArgs e)
     {
+        if (_connectionCheck != null) { _connectionCheck.Cancel(); return; }
         if (_lstProfiles.SelectedItem is not ProfileItem item) return;
-
         UpdateSelectedProfileFromUi();
         var p = item.Profile;
+        string identity = ConversationPolicy.Key(p);
         string? secret = _inMemorySecrets.TryGetValue(p.Id, out var s) ? s : null;
-
-        _btnTestProfile.Enabled = false;
-        SetTestResult("Verifica in corso...", Tone.Warning, StatusLight.Working);
-
+        using var run = new InteractiveRequest();
+        _connectionCheck = run;
+        string label = _btnTestProfile.Text;
+        _btnTestProfile.Text = "Annulla verifica";
+        SetTestResult("Verifica in corso (massimo 10 secondi)…", Tone.Warning, StatusLight.Working);
+        bool Current() => !IsDisposed && ReferenceEquals(_lstProfiles.SelectedItem, item) && identity == ConversationPolicy.Key(p);
         try
         {
-            var client = LlmClientFactory.CreateClient(p, secret: secret);
-            var sw = Stopwatch.StartNew();
-            var health = await client.CheckHealthAsync();
-            sw.Stop();
-
-            if (client is IDisposable d) d.Dispose();
-
-            // Another profile selected meanwhile: its own result row must not show this one's outcome.
-            if (!ReferenceEquals(_lstProfiles.SelectedItem, item))
+            var client = (ConnectionClientFactory ?? ((profile, key) => LlmClientFactory.CreateClient(profile, secret: key)))(p, secret);
+            try
             {
-                LogActivity($"[TEST] Profilo '{p.Id}': {(health.IsHealthy ? "connessione riuscita" : "non riuscito: " + health.ErrorMessage)} (esito non mostrato: è selezionato un altro profilo).");
+                var sw = Stopwatch.StartNew();
+                var health = await client.CheckHealthAsync(run.Token);
+                run.Token.ThrowIfCancellationRequested();
+                if (!Current()) return;
+                if (health.IsHealthy)
+                {
+                    SetTestResult($"OK ({sw.ElapsedMilliseconds} ms, {health.AvailableModels.Count} modelli)", Tone.Success);
+                    await LoadModelLimitsCoreAsync(p, run.Token);
+                    run.Token.ThrowIfCancellationRequested();
+                }
+                else SetTestResult("Fallito: " + health.ErrorMessage, Tone.Danger);
             }
-            else if (health.IsHealthy)
-            {
-                SetTestResult($"OK ({sw.ElapsedMilliseconds} ms, {health.AvailableModels.Count} modelli)", Tone.Success);
-                LogActivity($"[TEST OK] Profilo '{p.Id}': connessione riuscita in {sw.ElapsedMilliseconds} ms.");
-                await LoadModelLimitsAsync(p);
-            }
-            else
-            {
-                SetTestResult("Fallito: " + health.ErrorMessage, Tone.Danger);
-                LogActivity($"[TEST FAILED] Profilo '{p.Id}': {health.ErrorMessage}");
-            }
+            finally { (client as IDisposable)?.Dispose(); }
+        }
+        catch (OperationCanceledException)
+        {
+            if (Current()) SetTestResult(run.TimedOut ? "Tempo massimo di 10 secondi superato." : "Verifica annullata.", Tone.Warning);
         }
         catch (Exception ex)
         {
-            if (ReferenceEquals(_lstProfiles.SelectedItem, item)) SetTestResult("Errore: " + ErrorText.For(ex), Tone.Danger);
-            LogActivity($"[TEST ERROR] Profilo '{p.Id}': {ex.Message}");
+            if (Current()) SetTestResult("Errore: " + ErrorText.For(ex), Tone.Danger);
+            if (!IsDisposed) LogActivity("[TEST ERROR] " + ex.Message);
         }
         finally
         {
-            if (_isLocked) _lockedControls[_btnTestProfile] = true;
-            _btnTestProfile.Enabled = !_isLocked;
+            _connectionCheck = null;
+            if (!IsDisposed) { _btnTestProfile.Text = label; _btnTestProfile.Enabled = !_isLocked; }
         }
     }
 

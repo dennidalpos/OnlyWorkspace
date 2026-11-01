@@ -42,6 +42,8 @@ public sealed class SetupWizardForm : Form
     private readonly SelectableLabel _lblSummary = new() { AutoSize = true, MaximumSize = new Size(560, 0) };
     private readonly ToolTip _tips = new() { AutoPopDelay = 20000, InitialDelay = 400, ReshowDelay = 100 };
 
+    private InteractiveRequest? _connectionCheck;
+
     private const string DetectText = "Scegli modello…";
 
     /// <summary>Source of the «Profilo Outlook» line; tests replace the registry.</summary>
@@ -74,7 +76,10 @@ public sealed class SetupWizardForm : Form
 
         _cmbProvider.Items.AddRange(ProviderCatalog.All.Cast<object>().ToArray());
         _cmbProvider.SelectedItem = ProviderCatalog.Get(Profile.Type);
-        _cmbProvider.SelectedIndexChanged += (_, _) => OnProviderChanged();
+        _cmbProvider.SelectedIndexChanged += (_, _) => { _connectionCheck?.Cancel(); OnProviderChanged(); };
+        foreach (var field in new Control[] { _txtEndpoint, _txtModel, _txtKey })
+            field.TextChanged += (_, _) => _connectionCheck?.Cancel();
+        FormClosed += (_, _) => _connectionCheck?.Cancel();
         _txtEndpoint.Text = Profile.BaseUrl;
         _txtModel.Text = Profile.Model;
         _txtKey.Text = secret ?? string.Empty;
@@ -237,42 +242,52 @@ public sealed class SetupWizardForm : Form
 
     private async System.Threading.Tasks.Task TestAsync(Button button)
     {
+        if (_connectionCheck != null) { _connectionCheck.Cancel(); return; }
         var p = Edited();
-        button.Enabled = false;
-        _lblTest.Text = "Verifica in corso…";
+        using var run = new InteractiveRequest();
+        _connectionCheck = run;
+        string label = button.Text;
+        button.Text = "Annulla verifica";
+        _lblTest.Text = "Verifica in corso (massimo 10 secondi)…";
         Theme.SetTone(_lblTest, Tone.Warning);
         try
         {
-            if (p.Model.Length == 0)
-            {
-                // No model to try yet: listing the models proves address and key, and the list is what the user needs next.
-                var list = await ModelPicker.ListAsync(p, TypedSecret, ClientFactory);
-                if (IsDisposed) return;
-                _lblTest.Text = list.Error != null ? "Non raggiungibile: " + list.Error
-                    : list.Models.Count == 0 ? "Connessione riuscita, ma il servizio non elenca modelli: scrivi il nome del modello."
-                    : $"Connessione riuscita ({list.Models.Count} modelli disponibili): scegli il modello dall'elenco.";
-                Theme.SetTone(_lblTest, list.Error == null ? Tone.Success : Tone.Danger);
-                if (list.Models.Count > 0) ModelPicker.Show(_btnDetect, list.Models, PickModel);
-                return;
-            }
-            var client = LlmClientFactory.CreateClient(p, TypedSecret);
+            var client = (ClientFactory ?? ((profile, key) => LlmClientFactory.CreateClient(profile, key)))(p, TypedSecret);
             try
             {
-                var health = await client.CheckHealthAsync();
-                bool modelFound = health.AvailableModels.Count == 0 || health.AvailableModels.Any(m => string.Equals(m, p.Model, StringComparison.OrdinalIgnoreCase));
-                _lblTest.Text = !health.IsHealthy ? "Non raggiungibile: " + health.ErrorMessage
-                    : modelFound ? $"Connessione riuscita ({health.AvailableModels.Count} modelli disponibili)."
-                    : $"Connessione riuscita, ma il modello «{p.Model}» non è tra i {health.AvailableModels.Count} disponibili.";
-                Theme.SetTone(_lblTest, health.IsHealthy && modelFound ? Tone.Success : Tone.Danger);
+                if (p.Model.Length == 0)
+                {
+                    var models = await client.ListModelsAsync(run.Token);
+                    run.Token.ThrowIfCancellationRequested();
+                    if (IsDisposed) return;
+                    _lblTest.Text = models.Count == 0 ? "Connessione riuscita, ma il servizio non elenca modelli: scrivi il nome del modello."
+                        : $"Connessione riuscita ({models.Count} modelli disponibili): scegli il modello dall'elenco.";
+                    Theme.SetTone(_lblTest, Tone.Success);
+                    if (models.Count > 0) ModelPicker.Show(_btnDetect, models, PickModel);
+                }
+                else
+                {
+                    var health = await client.CheckHealthAsync(run.Token);
+                    run.Token.ThrowIfCancellationRequested();
+                    if (IsDisposed) return;
+                    bool modelFound = health.AvailableModels.Count == 0 || health.AvailableModels.Any(m => string.Equals(m, p.Model, StringComparison.OrdinalIgnoreCase));
+                    _lblTest.Text = !health.IsHealthy ? "Connessione non riuscita: " + health.ErrorMessage
+                        : modelFound ? $"Connessione riuscita ({health.AvailableModels.Count} modelli disponibili)."
+                        : $"Connessione riuscita, ma il modello «{p.Model}» non è tra i {health.AvailableModels.Count} disponibili.";
+                    Theme.SetTone(_lblTest, health.IsHealthy && modelFound ? Tone.Success : Tone.Danger);
+                }
             }
             finally { (client as IDisposable)?.Dispose(); }
         }
+        catch (OperationCanceledException)
+        {
+            if (!IsDisposed) { _lblTest.Text = run.TimedOut ? "Tempo massimo di 10 secondi superato." : "Verifica annullata."; Theme.SetTone(_lblTest, Tone.Warning); }
+        }
         catch (Exception ex)
         {
-            _lblTest.Text = "Errore: " + ErrorText.For(ex);
-            Theme.SetTone(_lblTest, Tone.Danger);
+            if (!IsDisposed) { _lblTest.Text = "Errore: " + ErrorText.For(ex); Theme.SetTone(_lblTest, Tone.Danger); }
         }
-        finally { if (!IsDisposed) button.Enabled = true; }
+        finally { _connectionCheck = null; if (!IsDisposed) button.Text = label; }
     }
 
     private void PickModel(string model)
@@ -393,7 +408,7 @@ public sealed class SetupWizardForm : Form
 
     protected override void Dispose(bool disposing)
     {
-        if (disposing) _tips.Dispose();
+        if (disposing) { _connectionCheck?.Cancel(); _tips.Dispose(); }
         base.Dispose(disposing);
     }
 }

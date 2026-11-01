@@ -65,6 +65,7 @@
     <Compile Include="..\..\src\OnlyWorkspace.Outlook\UI\AnalysisFinalization.cs" Link="Outlook\AnalysisFinalization.cs" />
     <!-- Running work replayed to a page loaded again and listed by the other windows' panes: PaneJobsTests. -->
     <Compile Include="..\..\src\OnlyWorkspace.Outlook\UI\PaneJobs.cs" Link="Outlook\PaneJobs.cs" />
+    <Compile Include="..\..\src\OnlyWorkspace.Outlook\UI\ActionItemSaves.cs" Link="Outlook\ActionItemSaves.cs" />
     <!-- The extractor runs as its own process; its STA helper is tested here directly: StaThreadTests. -->
     <Compile Include="..\..\src\OnlyWorkspace.AttachmentExtractor\StaThread.cs" Link="Extractor\StaThread.cs" />
   </ItemGroup>

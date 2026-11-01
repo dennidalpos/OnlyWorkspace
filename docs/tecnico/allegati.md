@@ -2,6 +2,12 @@
 
 Un documento entra solo come allegato di un'email Outlook. Outlook ne salva una copia temporanea (`%TEMP%\OnlyWorkspace`), [AttachmentExtractor](../../src/OnlyWorkspace.AttachmentExtractor) la legge in un processo separato e la copia viene eliminata. L'isolamento non è una certificazione di sicurezza del documento; Defender si usa solo in Verifica sicurezza.
 
+## Invio con un profilo esterno
+
+Il testo degli allegati può uscire solo con **Esteso**, permesso di invio attivo e informativa v4 valida. L’estrazione e l’eventuale OCR avvengono sul PC; nome e testo entrano nella pipeline di pseudonimizzazione prima del trasporto. Le azioni che leggono allegati rispettano lo stesso permesso; nella chat della bozza la richiesta deve citarli. Nessun file binario viene caricato.
+
+Restano i limiti esistenti: copia massima 30 MiB e 4.000.000 di caratteri per documento intero, con i limiti di espansione e profondità dei contenitori. Un documento incompleto, protetto, bloccato o con minaccia nota non contribuisce testo; il riquadro ne dichiara il motivo. Non si inviano estratti troncati per adattarli al contesto. Queste esclusioni non attestano l’assenza di minacce nei documenti non sottoposti a controllo antivirus.
+
 ## Formati
 
 | Tipo | Testo estratto | Limiti |

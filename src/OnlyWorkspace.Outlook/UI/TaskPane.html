@@ -1514,6 +1514,7 @@
   }
 
   function clearConversation() {
+    if (typeof actionItemEntries !== 'undefined') actionItemEntries.clear();
     Array.prototype.slice.call(conv.children).forEach(function (child) {
       if (child.id !== 'emptyState') child.remove();
     });
@@ -1699,6 +1700,22 @@
     return !!op && (op.type === 'followup_draft' || op.followUp === '1');
   }
 
+  var actionItemEntries = new Map();
+  var actionSaveSequence = 0;
+  function requestActionSave(entries, query) {
+    if (!entries.length) return;
+    var requestId = String(Date.now()) + ':' + (++actionSaveSequence);
+    entries.forEach(function (entry) { entry.requestId = requestId; entry.pending(); });
+    post({ type: query ? 'get_action_item_states' : 'save_action_items', requestId: requestId,
+      resultId: entries[0].item.saveResultId, itemIds: entries.map(function (e) { return e.item.saveItemId; }) });
+  }
+  function actionItemsSaved(data) {
+    (data.outcomes || []).forEach(function (outcome) {
+      var entry = actionItemEntries.get(data.resultId + ':' + outcome.itemId);
+      if (!entry || entry.requestId !== data.requestId) return;
+      entry.apply(outcome);
+    });
+  }
   function addActionItems(container, items, exportData) {
     var list = el('div', 'action-items');
     var selectable = []; // { item, box, done() }: mailbox scan items saved straight to Outlook
@@ -1740,13 +1757,29 @@
         if (it.warning) card.appendChild(el('div', 'action-item-meta action-item-warning', '⚠ ' + it.warning));
         var add = actionButton('add', 'Aggiungi a Outlook', function () {
           if (state.busy) return;
-          post({ type: 'save_action_items', items: [it] });
-          entry.done();
+          if (!box.disabled) requestActionSave([entry], false);
         }, 'Salva subito in Outlook ' + (it.kind === 'appointment' ? 'nel calendario' : 'tra le attività') + ', con la categoria «OnlyWorkspace»');
         var entry = {
           item: it, box: box,
-          done: function () { box.checked = false; box.disabled = true; add.disabled = true; add.lastChild.textContent = 'Aggiunta'; refreshBulk(); }
+          pending: function () { box.disabled = true; add.disabled = true; add.lastChild.textContent = 'Salvataggio…'; refreshBulk(); },
+          apply: function (outcome) {
+            box.disabled = add.disabled = !!outcome.saved;
+            if (outcome.saved) box.checked = false;
+            add.lastChild.textContent = outcome.saved ? 'Aggiunta' : 'Aggiungi a Outlook';
+            failure.textContent = outcome.error || '';
+            failure.hidden = !outcome.error;
+            if (outcome.error) announce(outcome.error);
+            else if (outcome.saved) announce('Voce aggiunta a Outlook.');
+            refreshBulk();
+          }
         };
+        var failure = el('div', 'action-item-warning');
+        failure.hidden = true;
+        failure.setAttribute('role', 'status');
+        card.appendChild(failure);
+        if (it.saveResultId && typeof it.saveItemId === 'string')
+          actionItemEntries.set(it.saveResultId + ':' + it.saveItemId, entry);
+        else { box.disabled = true; add.disabled = true; add.title = 'Ripeti la ricerca per salvare questa voce.'; }
         selectable.push(entry);
         btn.lastChild.textContent = 'Apri bozza';
         var actions = el('div', 'action-item-actions');
@@ -1770,8 +1803,7 @@
         if (state.busy) return;
         var picked = selectable.filter(function (s) { return s.box.checked && !s.box.disabled; });
         if (!picked.length) return;
-        post({ type: 'save_action_items', items: picked.map(function (s) { return s.item; }) });
-        picked.forEach(function (s) { s.done(); });
+        requestActionSave(picked, false);
       });
       bar.appendChild(bulk);
       refreshBulk();
@@ -1782,6 +1814,7 @@
       bar.appendChild(actionButton('insert', 'Salva CSV in Download', function () { post({ type: 'save_csv', csv: exportData.csv }); }, 'Crea un nuovo file OnlyWorkspace_dati_<data>.csv nella cartella Download'));
     }
     if (bar) container.appendChild(bar);
+    requestActionSave(selectable.filter(function (s) { return !!s.item.saveResultId; }), true);
   }
 
   function dataTable(caption, headers, rows, cls) {
@@ -3203,6 +3236,9 @@
 
       case 'config_error':
         showConfigError(data.message);
+        break;
+      case 'action_items_saved':
+        actionItemsSaved(data);
         break;
 
       case 'job_restore':

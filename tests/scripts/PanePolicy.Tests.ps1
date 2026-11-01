@@ -1,6 +1,20 @@
 param([string]$Dir = '', [string]$EvidenceDirectory = '')
 $ErrorActionPreference = 'Stop'
 if (!$Dir) { $Dir = Join-Path (Resolve-Path "$PSScriptRoot\..\..").Path 'src\OnlyWorkspace.Outlook\bin\Release\net48' }
+$scratch = Join-Path ([IO.Path]::GetTempPath()) ('OnlyWorkspace-PanePolicy-' + [Guid]::NewGuid().ToString('N'))
+# The real reader needs the installed extractor layout. Stage build outputs, preserving the supplied candidate directory.
+if (!(Test-Path -LiteralPath (Join-Path $Dir 'extractor/OnlyWorkspace.AttachmentExtractor.exe'))) {
+    $candidateDir = $Dir
+    $configuration = Split-Path (Split-Path $candidateDir -Parent) -Leaf
+    $helperDir = Join-Path (Resolve-Path "$PSScriptRoot/../..").Path "src/OnlyWorkspace.AttachmentExtractor/bin/$configuration/net48"
+    if (!(Test-Path -LiteralPath (Join-Path $helperDir 'OnlyWorkspace.AttachmentExtractor.exe'))) { throw 'Build the complete solution before PanePolicy: extractor output is missing.' }
+    $Dir = Join-Path $scratch 'runtime'
+    [void][IO.Directory]::CreateDirectory($Dir)
+    Get-ChildItem -LiteralPath $candidateDir | Copy-Item -Destination $Dir -Recurse
+    $stagedHelper = Join-Path $Dir 'extractor'
+    [void][IO.Directory]::CreateDirectory($stagedHelper)
+    Get-ChildItem -LiteralPath $helperDir | Copy-Item -Destination $stagedHelper -Recurse
+}
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Net.Http
 Add-Type -ReferencedAssemblies System.Net.Http, System.Core -TypeDefinition @'
@@ -103,7 +117,6 @@ $logInitialized = [OnlyWorkspace.Infrastructure.Logging.OnlyWorkspaceLog].GetFie
 $logInitialized.SetValue($null, $true)
 $flags = [Reflection.BindingFlags]'NonPublic,Instance'
 $type = [OnlyWorkspace.Outlook.UI.TaskPaneCoordinator]
-$scratch = Join-Path ([IO.Path]::GetTempPath()) ('OnlyWorkspace-PanePolicy-' + [Guid]::NewGuid().ToString('N'))
 $control = New-Object OnlyWorkspace.Outlook.UI.TaskPaneControl
 function Assert-Pass([bool]$condition, [string]$label) { if (!$condition) { throw $label } }
 function PaneMessage([hashtable]$fields) {
@@ -177,6 +190,7 @@ try {
     Set-Field '_configService' $service
     Set-Field '_contextBuilder' (New-Object OnlyWorkspace.Core.Context.ContextBuilder)
     Set-Field '_operations' ([Activator]::CreateInstance($type.Assembly.GetType('OnlyWorkspace.Outlook.UI.PaneOperations'), $true))
+    Set-Field '_actionItemSaves' ([Activator]::CreateInstance($type.Assembly.GetType('OnlyWorkspace.Outlook.UI.ActionItemSaves'), $true))
     Set-Field '_replay' ([Activator]::CreateInstance($type.Assembly.GetType('OnlyWorkspace.Outlook.UI.PaneJobReplay'), $true))
     Set-Field '_mailSourcesForTurn' (New-Object 'Collections.Generic.List[OnlyWorkspace.Core.Models.HistoryContextReference]')
     Set-Field '_inputSourcesForTurn' (New-Object 'Collections.Generic.List[OnlyWorkspace.Core.Models.HistoryContextReference]')
@@ -389,7 +403,7 @@ try {
     $fixtureCategories = New-Object 'Collections.Generic.List[string]'
     $fixtureEmails = [OnlyWorkspace.Core.Context.BriefingContext]::Email(1, $fixtureUnread[0], 'Scadenza pagamento: 15/11/2026', '', $true)
     $fixtureJson = '{"message":{"content":"{\"summary\":\"TRIAGESUMMARY\",\"emails\":[{\"id\":1,\"priority\":\"media\",\"category\":\"\",\"reason\":\"Scadenza locale\"}]}"},"done":true,"done_reason":"stop"}'
-    foreach ($mode in @('Minimal','Standard','Local')) {
+    foreach ($mode in @('Minimal','Standard','Extended','Local')) {
         $capture = New-Object BriefingCaptureServer
         $followClient = $null
         try {
@@ -398,6 +412,7 @@ try {
                 Exposure=[OnlyWorkspace.Core.Privacy.ExposureLevel]::Minimal
             }
             if ($mode -eq 'Standard') { $briefingProfile.Exposure=[OnlyWorkspace.Core.Privacy.ExposureLevel]::Standard }
+            if ($mode -eq 'Extended') { $briefingProfile.Exposure=[OnlyWorkspace.Core.Privacy.ExposureLevel]::Extended; $briefingProfile.AllowAttachmentUpload=$true }
             $briefingConfig = New-Object OnlyWorkspace.Core.Models.WorkspaceConfig
             $briefingConfig.DefaultProfile=$briefingProfile.Id; $briefingConfig.Profiles.Add($briefingProfile)
             $providers = [OnlyWorkspace.Core.Privacy.DataEgress]::ProvidersFor($briefingConfig)
@@ -658,6 +673,71 @@ try {
     $notice = Call-Static 'AttachmentNoticeFor' @($profile, $emailAttachments)
     Assert-Pass ($notice.Contains('`scansione.pdf`') -and $notice.Contains('scansione o immagine: OCR disattivato nelle impostazioni') -and !$notice.Contains('`offerta.docx`')) 'Pane did not declare the unread attachment with its reason'
     Assert-Pass ($notice.Contains('verificali sul documento') -eq !$profile.IsExternal) 'Pane caution on read attachments changed'
+    # A220: real common reader of selected-email and draft attachments, including a saved copy supplied despite a refusal.
+    $attachmentRoot = Join-Path $scratch 'extended-attachments'
+    [void][IO.Directory]::CreateDirectory($attachmentRoot)
+    $attachmentFile = Join-Path $attachmentRoot 'documento.txt'
+    [IO.File]::WriteAllText($attachmentFile, 'ATTACHMENT-WHOLE-SYNTHETIC anna@example.invalid')
+    $blockedFile = Join-Path $attachmentRoot 'blocked.txt'
+    [IO.File]::WriteAllText($blockedFile, 'BLOCKED-CONTENT-MUST-STAY-LOCAL')
+    $attachmentFacts = New-Object 'Collections.Generic.List[OnlyWorkspace.Core.Security.AttachmentFacts]'
+    $attachmentFacts.Add((New-Object OnlyWorkspace.Core.Security.AttachmentFacts('documento.txt', 100)))
+    $attachmentFacts.Add((New-Object OnlyWorkspace.Core.Security.AttachmentFacts('blocked.txt', 100)))
+    $attachmentFacts[1].ScanStatus = [OnlyWorkspace.Core.Security.AttachmentScanStatus]::Threat
+    $attachmentFiles = New-Object 'Collections.Generic.List[Collections.Generic.KeyValuePair[OnlyWorkspace.Core.Security.AttachmentFacts,string]]'
+    $attachmentFiles.Add((New-Object 'Collections.Generic.KeyValuePair[OnlyWorkspace.Core.Security.AttachmentFacts,string]'($attachmentFacts[0], $attachmentFile)))
+    $attachmentFiles.Add((New-Object 'Collections.Generic.KeyValuePair[OnlyWorkspace.Core.Security.AttachmentFacts,string]'($attachmentFacts[1], $blockedFile)))
+    # The fixture owns these retained files; the production reader owns no temp directory here.
+    $attachmentCopies = New-Object OnlyWorkspace.Outlook.Services.AttachmentCopies('', $attachmentFacts, $attachmentFiles)
+    $attachmentMethod = $type.GetMethods($flags) | Where-Object { $_.Name -eq 'BuildAttachmentContextAsync' -and $_.GetParameters().Count -eq 4 -and $_.GetParameters()[0].ParameterType.Name.StartsWith('Func') }
+    $copyFixture = [CalendarFixtureResolver]::Create($attachmentMethod.GetParameters()[0].ParameterType, $attachmentCopies)
+    foreach ($mode in @('LocalOnly','Minimal','Standard','ExtendedDisabled','Extended','Local')) {
+        $attachmentProfile = New-Object OnlyWorkspace.Core.Models.LlmProfileConfig -Property @{Id='attachment-fixture'; Model='synthetic'; External=($mode -ne 'Local'); AllowAttachmentUpload=($mode -ne 'ExtendedDisabled')}
+        $attachmentProfile.Exposure = if ($mode -eq 'ExtendedDisabled') { [OnlyWorkspace.Core.Privacy.ExposureLevel]::Extended } elseif ($mode -eq 'Local') { [OnlyWorkspace.Core.Privacy.ExposureLevel]::Standard } else { [Enum]::Parse([OnlyWorkspace.Core.Privacy.ExposureLevel], $mode) }
+        $attachmentRead = Wait-PaneTask (Call 'BuildAttachmentContextAsync' @($copyFixture, $attachmentProfile, $type.GetField('_turn', $flags).GetValue($script:coordinator), [Threading.CancellationToken]::None))
+        $allowed = $mode -in @('Extended','Local')
+        Assert-Pass ($attachmentRead.Text.Contains('ATTACHMENT-WHOLE-SYNTHETIC') -eq $allowed) "A220 attachment exposure mismatch: $mode"
+        Assert-Pass (!$attachmentRead.Text.Contains('BLOCKED-CONTENT-MUST-STAY-LOCAL')) "A220 known threat included: $mode"
+        Assert-Pass ($attachmentRead.Documents[1].Reason.Contains('minaccia')) "A220 known threat lacked reason: $mode"
+    }
+    'PASS A220 selected/draft shared reader: explicit level and upload permission, local extraction, known-threat exclusion, no text from refused saved copies'
+    $attachmentConfigBefore = $type.GetField('_config', $flags).GetValue($script:coordinator)
+    $attachmentCapture = New-Object BriefingCaptureServer
+    $attachmentClient = $null
+    try {
+        $attachmentProfile.External = $true
+        $attachmentProfile.Exposure = [OnlyWorkspace.Core.Privacy.ExposureLevel]::Extended
+        $attachmentProfile.BaseUrl = $attachmentCapture.Address
+        $attachmentConfig = New-Object OnlyWorkspace.Core.Models.WorkspaceConfig
+        $attachmentConfig.DefaultProfile = $attachmentProfile.Id; $attachmentConfig.Profiles.Add($attachmentProfile)
+        Set-Field '_config' $attachmentConfig
+        $refused = $false
+        try { $attachmentClient = Call 'CreateLlmClient' @($attachmentProfile, $true) }
+        catch { $refused = $_.Exception.ToString().Contains('DataEgressBlockedException') }
+        Assert-Pass ($refused -and !$attachmentCapture.Pending) 'A220 invalid consent allowed dispatch'
+        $attachmentProviders = [OnlyWorkspace.Core.Privacy.DataEgress]::ProvidersFor($attachmentConfig)
+        foreach ($provider in $attachmentProviders) {
+            $provider.Provider='Synthetic'; $provider.ProcessingAgreement=$true; $provider.Region='UE'; $provider.TransferBasis=[OnlyWorkspace.Core.Privacy.DataEgress]::TransferBases[0]; $provider.NoTraining=$true; $provider.Retention='none'
+        }
+        [void][OnlyWorkspace.Core.Privacy.DataEgress]::Accept($attachmentConfig,$signer,$attachmentProviders,'test','test',[DateTime]::UtcNow)
+        $attachmentClient = Call 'CreateLlmClient' @($attachmentProfile, $true)
+        $attachmentMessages = New-Object 'Collections.Generic.List[OnlyWorkspace.Core.Models.ChatMessage]'
+        $attachmentMessages.Add([OnlyWorkspace.Core.Models.ChatMessage]::User($attachmentRead.Text))
+        $attachmentWire = $attachmentCapture.ServeAsync('{"message":{"content":"{\"email\":\"[EMAIL_1]\"}"},"done":true,"done_reason":"stop"}')
+        $attachmentAnswer = Wait-PaneTask ($attachmentClient.CompleteStructuredAsync($attachmentMessages, '{}', [Threading.CancellationToken]::None))
+        $attachmentPayload = Wait-PaneTask $attachmentWire
+        Assert-Pass (!$attachmentPayload.Contains('anna@example.invalid') -and $attachmentPayload.Contains('ATTACHMENT-WHOLE-SYNTHETIC')) 'A220 attachment was not pseudonymized before HTTP'
+        Assert-Pass ($attachmentAnswer.Contains('anna@example.invalid')) 'A220 attachment response was not restored locally'
+        if ($EvidenceDirectory) { [IO.File]::WriteAllText((Join-Path $EvidenceDirectory 'attachment-Extended.json'), $attachmentPayload) }
+    }
+    finally {
+        if ($attachmentClient -is [IDisposable]) { $attachmentClient.Dispose() }
+        $attachmentCapture.Dispose()
+        Set-Field '_config' $attachmentConfigBefore
+    }
+    'PASS A220 real pane factory and loopback HTTP: consent guard, extracted text masked before dispatch, response restored'
+
+
     # Calendar scan (A109): one request on the whole pack, every valid item kept, dates checked in the cited email.
     $due = [DateTime]::Today.AddDays(1).ToString('yyyy-MM-dd')
     $scanJson = @{items=@(1..11 | ForEach-Object {@{source="M$((($_ - 1) % 2) + 1)";type='task';title="task$_";date_text='entro domani';due=$due}}) + @(@{source='M2';type='task';title='invented';date_text='entro il 31/12/2099';due='2099-12-31'}, 42)} | ConvertTo-Json -Depth 8 -Compress
@@ -838,7 +918,7 @@ try {
         $calendarMethod = $type.GetMethod('ExecuteCalendarScanAsync', $flags)
         $calendarOp = New-Object 'Collections.Generic.Dictionary[string,string]'
         $calendarOp.Add('type', 'calendar-fixture')
-        foreach ($mode in @('Minimal','Standard','Local')) {
+        foreach ($mode in @('Minimal','Standard','Extended','Local')) {
             $capture = New-Object BriefingCaptureServer
             try {
                 $calendarProfile = New-Object OnlyWorkspace.Core.Models.LlmProfileConfig -Property @{
@@ -846,6 +926,7 @@ try {
                     Exposure=[OnlyWorkspace.Core.Privacy.ExposureLevel]::Minimal
                 }
                 if ($mode -eq 'Standard') { $calendarProfile.Exposure=[OnlyWorkspace.Core.Privacy.ExposureLevel]::Standard }
+                if ($mode -eq 'Extended') { $calendarProfile.Exposure=[OnlyWorkspace.Core.Privacy.ExposureLevel]::Extended; $calendarProfile.AllowAttachmentUpload=$true }
                 $calendarConfig = New-Object OnlyWorkspace.Core.Models.WorkspaceConfig
                 $calendarConfig.DefaultProfile=$calendarProfile.Id; $calendarConfig.Profiles.Add($calendarProfile)
                 $providers = [OnlyWorkspace.Core.Privacy.DataEgress]::ProvidersFor($calendarConfig)
@@ -1026,5 +1107,5 @@ finally {
     $resolved = [IO.Path]::GetFullPath($scratch)
     if (!$resolved.StartsWith($tempRoot, [StringComparison]::OrdinalIgnoreCase) -or
         ![IO.Path]::GetFileName($resolved).StartsWith('OnlyWorkspace-PanePolicy-', [StringComparison]::Ordinal)) { throw 'Unsafe fixture cleanup path' }
-    if (Test-Path -LiteralPath $resolved) { Remove-Item -LiteralPath $resolved -Recurse -Force }
+    if (!(Test-Path Env:ONLYWORKSPACE_TEST_ARTIFACTS) -and (Test-Path -LiteralPath $resolved)) { Remove-Item -LiteralPath $resolved -Recurse -Force }
 }

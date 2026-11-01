@@ -997,7 +997,7 @@ public partial class TaskPaneCoordinator
             return text.ToString();
         }
         var copies = await _dataService.CopyAttachmentsAsync(email.EntryId, email.StoreId,
-            a => contentAllowed && !a.IsInline && !a.IsPecReceiptData && AttachmentTextFormats.HasTextReader(a.Extension), ct);
+            a => contentAllowed && DocumentOutcome.CanRead(a) && !a.IsInline && !a.IsPecReceiptData && AttachmentTextFormats.HasTextReader(a.Extension), ct);
         if (copies == null)
         {
             stats.Documents.Add(new DocumentOutcome { Name = "Allegati non accessibili", EmailSubject = Truncate(email.Subject, 60),
@@ -1017,7 +1017,7 @@ public partial class TaskPaneCoordinator
                 stats.Documents.Add(outcome);
 
                 var path = copies.Saved.Where(s => s.Key == attachment).Select(s => s.Value).FirstOrDefault();
-                if (path == null)
+                if (!contentAllowed || path == null || !DocumentOutcome.CanRead(attachment))
                 {
                     outcome.Status = DocumentOutcome.NotCopied(attachment, AttachmentTextFormats.HasTextReader(attachment.Extension), contentAllowed);
                     continue;
