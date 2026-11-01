@@ -5,135 +5,133 @@ using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Threading;
 using OnlyWorkspace.Core.Models;
 
 namespace OnlyWorkspace.Core.Privacy;
 
-/// <summary>
-/// Replaces personal data in a request with stable placeholders ([PERSONA_1], [EMAIL_1], [TEL_1], [IBAN_1],
-/// [PIVA_1], [CF_1]) and puts the values back in the answer, on this PC only. One instance per request; the map
-/// lives in memory. It lowers what reaches the provider but does not anonymize: the data stays personal (GDPR,
-/// EDPB draft guidelines 02/2026). Detection is pattern based: names are recognized next to an email address
-/// («Mario Rossi &lt;m.rossi@…&gt;») and then everywhere in the request; a name written alone elsewhere is not.
-/// </summary>
+/// <summary>One reversible map per request. The map never enters the audit record.</summary>
 public sealed class Pseudonymizer
 {
-    private const RegexOptions Options = RegexOptions.CultureInvariant;
-    private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(2);
-
-    private static readonly Regex Email = new(@"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}", Options, Timeout);
-    private static readonly Regex NamedAddress = new(
-        @"(?<name>\p{Lu}[\p{L}'’\-]+(?:[ \t]+(?:d[aeiu]|de|del|della|van|von|di|la|le|\p{Lu}[\p{L}'’\-]+)){1,3})[ \t]*[<(\[]\s*(?<email>[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,})",
-        Options, Timeout);
-    private static readonly Regex Iban = new(@"\b[A-Z]{2}\d{2}(?:[ ]?[A-Z0-9]){11,30}\b", Options, Timeout);
-    private static readonly Regex TaxCode = new(@"\b[A-Za-z]{6}\d{2}[A-Za-z]\d{2}[A-Za-z]\d{3}[A-Za-z]\b", Options, Timeout);
-    private static readonly Regex Vat = new(@"\b(?:IT)?\d{11}\b", Options, Timeout);
-    // Italian mobile (3xx) and landline (0x) numbers, with an optional country code; not dates or amounts (no / and no digit after . or ,).
-    private static readonly Regex Phone = new(
-        @"(?<![\w/]|\d[.,])(?:(?:\+|00)\d{1,3}[ .\-]?)?(?:3\d{2}|0\d{1,3})[ .\-]?\d{3,4}[ .\-]?\d{3,4}(?![\w/]|[.,]\d)", Options, Timeout);
-    /// <summary>Capitalized words that open a sentence or a header before a name, never part of it.</summary>
-    private static readonly HashSet<string> Openers = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "Da", "A", "Cc", "Ccn", "Per", "From", "To", "Gentile", "Gentili", "Caro", "Cara", "Cari", "Egregio", "Egregia", "Spett", "Spettabile",
-        "Dear", "Hi", "Hello", "Ciao", "Salve", "Buongiorno", "Buonasera", "Dott", "Dott.ssa", "Ing", "Avv", "Sig", "Sig.ra", "Mittente", "Destinatario"
-    };
-
-    private static readonly Regex Placeholder = new(@"\[(?:PERSONA|EMAIL|TEL|IBAN|PIVA|CF)_\d+\]", Options, Timeout);
-
+    private static readonly Regex Placeholder = new(@"\[[A-Z][A-Z0-9]{1,15}_\d+\]", RegexOptions.CultureInvariant, TimeSpan.FromSeconds(2));
+    private static readonly Regex ProtectedToken = new(@"\[[A-Z][A-Z0-9_]*\]", RegexOptions.CultureInvariant, TimeSpan.FromSeconds(2));
     private static readonly JsonSerializerOptions JsonText = new() { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
-
-    private readonly Dictionary<string, string> _byValue = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, string> _byValue = new(StringComparer.Ordinal);
     private readonly Dictionary<string, string> _byPlaceholder = new(StringComparer.Ordinal);
     private readonly Dictionary<string, int> _counters = new(StringComparer.Ordinal);
-
-    /// <summary>Values replaced so far.</summary>
+    private readonly HashSet<string> _reserved = new(StringComparer.Ordinal);
+    private readonly PseudonymizationCatalog _catalog;
+    private readonly IReadOnlyList<IPseudonymizationStrategy> _strategies;
+    private readonly PrivacyEntity[] _entities;
+    private readonly bool _amounts, _dates;
+    private readonly TimeSpan? _budget;
+    private bool _used;
     public int Count => _byPlaceholder.Count;
+    public PseudonymizationAudit Audit { get; } = new();
 
-    /// <summary>
-    /// Masks every message of one request with the same map. A pattern that times out stops the request:
-    /// nothing is sent unmasked.
-    /// </summary>
-    public IReadOnlyList<ChatMessage> Mask(IEnumerable<ChatMessage> messages)
+    public Pseudonymizer(IEnumerable<PrivacyEntity>? entities = null, bool maskAmounts = false, bool maskDates = false,
+        PseudonymizationCatalog? catalog = null, IEnumerable<IPseudonymizationStrategy>? strategies = null, TimeSpan? budget = null)
     {
-        var list = messages.ToList();
+        _catalog = catalog ?? PseudonymizationCatalog.Load(); _catalog.Validate();
+        _strategies = (strategies ?? _catalog.Strategies()).OrderByDescending(s => s.Priority).ThenBy(s => s.Id, StringComparer.Ordinal).ToArray();
+        if (_strategies.Count == 0 || _strategies.Any(s => string.IsNullOrWhiteSpace(s.Id) || string.IsNullOrWhiteSpace(s.Revision)) ||
+            _strategies.Select(s => s.Id).Distinct(StringComparer.Ordinal).Count() != _strategies.Count)
+            throw new DataEgressBlockedException("Strategie di pseudonimizzazione non valide: nessun dato inviato.");
+        _entities = (entities ?? Array.Empty<PrivacyEntity>()).Select(e => new PrivacyEntity { Id = e.Id, Category = e.Category, Value = e.Value }).ToArray();
+        _amounts = maskAmounts; _dates = maskDates; _budget = budget;
+        Audit.Revisions["catalog"] = _catalog.Revision;
+        foreach (var strategy in _strategies) Audit.Revisions[strategy.Id] = strategy.Revision;
+    }
+
+    public IReadOnlyList<ChatMessage> Mask(IEnumerable<ChatMessage> messages) => Mask(messages, default);
+    public IReadOnlyList<ChatMessage> Mask(IEnumerable<ChatMessage> messages, CancellationToken token)
+    {
+        if (_used) throw new InvalidOperationException("Use a new map for every request.");
+        _used = true;
         try
         {
-            // Names first, from every message: the same person is masked everywhere in the request.
+            var context = new PseudonymizationContext(_entities, _amounts, _dates, token, _budget); context.Check();
+            var list = messages.ToArray(); var entities = new List<PrivacyEntity>(_entities);
+            var names = PseudonymizationCatalog.Regex(_catalog.NamePattern);
             foreach (var message in list)
-                foreach (Match m in NamedAddress.Matches(message.Content))
+            {
+                context.Check();
+                foreach (Match p in ProtectedToken.Matches(message.Content)) _reserved.Add(p.Value);
+                foreach (Match match in names.Matches(message.Content))
                 {
-                    var words = m.Groups["name"].Value.Trim().Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries).ToList();
-                    while (words.Count > 2 && Openers.Contains(words[0].TrimEnd('.', ':'))) words.RemoveAt(0);
-                    if (words.Count >= 2) PlaceholderFor("PERSONA", string.Join(" ", words));
-                    PlaceholderFor("EMAIL", m.Groups["email"].Value);
+                    context.Check();
+                    var words = match.Groups["name"].Value.Trim().Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries).ToList();
+                    while (words.Count > 2 && _catalog.NameOpeners.Contains(words[0].TrimEnd('.', ':'), StringComparer.OrdinalIgnoreCase)) words.RemoveAt(0);
+                    if (words.Count >= 2) entities.Add(new PrivacyEntity { Value = string.Join(" ", words) });
                 }
-            return list.Select(m => new ChatMessage(m.Role, Mask(m.Content))).ToList();
+            }
+            // Keep the same deadline for discovery and detection.
+            var detected = new PseudonymizationContext(entities.GroupBy(e => e.Category + "\0" + e.Value, StringComparer.OrdinalIgnoreCase).Select(g => g.First()), _amounts, _dates, token, _budget);
+            var output = new List<ChatMessage>();
+            foreach (var message in list) { context.Check(); output.Add(new ChatMessage(message.Role, MaskText(message.Content, detected, context))); }
+            context.Check(); return output;
         }
-        catch (RegexMatchTimeoutException)
+        catch (OperationCanceledException) { Audit.Outcome = "cancelled"; throw; }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        { Audit.Outcome = "blocked"; throw new DataEgressBlockedException("Pseudonimizzazione non completata: la richiesta non è stata inviata."); }
+    }
+
+    private string MaskText(string text, PseudonymizationContext detected, PseudonymizationContext deadline)
+    {
+        var protectedSpans = ProtectedToken.Matches(text).Cast<Match>().Select(m => (Start: m.Index, End: m.Index + m.Length)).ToArray();
+        var candidates = new List<(PseudonymMatch Match, int Priority, string Strategy)>();
+        foreach (var strategy in _strategies)
         {
-            throw new DataEgressBlockedException("Dati personali non sostituiti in tempo con i segnaposto: la richiesta non è stata inviata.");
+            deadline.Check();
+            foreach (var match in strategy.Detect(text, detected))
+            {
+                deadline.Check();
+                if (match.Start < 0 || match.Length <= 0 || match.Start > text.Length - match.Length || !PseudonymizationCatalog.ValidCategory(match.Category)) throw new InvalidOperationException("Invalid privacy match.");
+                if (!protectedSpans.Any(p => match.Start < p.End && match.Start + match.Length > p.Start)) candidates.Add((match, strategy.Priority, strategy.Id));
+            }
         }
+        var chosen = new List<PseudonymMatch>();
+        foreach (var candidate in candidates.OrderByDescending(c => c.Priority).ThenByDescending(c => c.Match.Length).ThenBy(c => c.Match.Start).ThenBy(c => c.Strategy, StringComparer.Ordinal))
+        {
+            deadline.Check(); var m = candidate.Match;
+            if (!chosen.Any(p => m.Start < p.Start + p.Length && m.Start + m.Length > p.Start)) chosen.Add(m);
+        }
+        var output = new StringBuilder(); int position = 0;
+        foreach (var match in chosen.OrderBy(m => m.Start))
+        {
+            deadline.Check(); output.Append(text, position, match.Start - position);
+            string value = text.Substring(match.Start, match.Length), key = match.Category + "\0" + value;
+            if (!_byValue.TryGetValue(key, out var placeholder))
+            {
+                _counters.TryGetValue(match.Category, out int n);
+                do { placeholder = $"[{match.Category}_{++n}]"; } while (_reserved.Contains(placeholder));
+                _counters[match.Category] = n; _byValue[key] = placeholder; _byPlaceholder[placeholder] = value;
+            }
+            Audit.Counts.TryGetValue(match.Category, out int count); Audit.Counts[match.Category] = checked(count + 1);
+            output.Append(placeholder); position = match.Start + match.Length;
+        }
+        output.Append(text, position, text.Length - position); return output.ToString();
     }
 
-    private string Mask(string text)
+    public string Restore(string text) => Placeholder.Replace(text, m => _byPlaceholder.TryGetValue(m.Value, out var v) ? v : m.Value);
+    public string RestoreJson(string json) => Placeholder.Replace(json, m =>
     {
-        // Known names, longest first, as whole words.
-        foreach (var name in _byValue.Where(p => p.Value.StartsWith("[PERSONA_", StringComparison.Ordinal)).Select(p => p.Key).OrderByDescending(n => n.Length))
-            text = Regex.Replace(text, @"(?<![\p{L}\p{Nd}])" + Regex.Escape(name) + @"(?![\p{L}\p{Nd}])", _byValue[name], RegexOptions.IgnoreCase | Options, Timeout);
-        text = Email.Replace(text, m => PlaceholderFor("EMAIL", m.Value));
-        text = Iban.Replace(text, m => PlaceholderFor("IBAN", m.Value));
-        text = TaxCode.Replace(text, m => PlaceholderFor("CF", m.Value));
-        text = Vat.Replace(text, m => PlaceholderFor("PIVA", m.Value));
-        text = Phone.Replace(text, m => PlaceholderFor("TEL", m.Value));
-        return text;
-    }
-
-    private string PlaceholderFor(string kind, string value)
-    {
-        if (_byValue.TryGetValue(value, out var existing)) return existing;
-        _counters.TryGetValue(kind, out int n);
-        _counters[kind] = ++n;
-        string placeholder = $"[{kind}_{n}]";
-        _byValue[value] = placeholder;
-        _byPlaceholder[placeholder] = value;
-        return placeholder;
-    }
-
-    /// <summary>The answer with the original values; a placeholder the request did not contain stays as written.</summary>
-    public string Restore(string text) =>
-        _byPlaceholder.Count == 0 ? text : Placeholder.Replace(text, m => _byPlaceholder.TryGetValue(m.Value, out var v) ? v : m.Value);
-
-    /// <summary>A JSON answer with the original values escaped as JSON string content.</summary>
-    public string RestoreJson(string json) =>
-        _byPlaceholder.Count == 0 ? json : Placeholder.Replace(json, m =>
-            _byPlaceholder.TryGetValue(m.Value, out var v) ? JsonSerializer.Serialize(v, JsonText).Trim('"') : m.Value);
-
-    /// <summary>Restores a streamed answer whose placeholders may be split between chunks.</summary>
+        if (!_byPlaceholder.TryGetValue(m.Value, out var value)) return m.Value;
+        string quoted = JsonSerializer.Serialize(value, JsonText);
+        return quoted.Substring(1, quoted.Length - 2);
+    });
     public sealed class StreamRestorer
     {
-        private const int Longest = 16; // "[PERSONA_99999]"
         private readonly Pseudonymizer _owner;
         private readonly StringBuilder _pending = new();
-
         public StreamRestorer(Pseudonymizer owner) => _owner = owner;
-
-        /// <summary>The text that can be shown now; an opening bracket that may start a placeholder waits for the next chunk.</summary>
         public string Push(string chunk)
         {
-            _pending.Append(chunk);
-            string text = _pending.ToString();
-            int open = text.LastIndexOf('[');
-            int keep = open >= 0 && text.IndexOf(']', open) < 0 && text.Length - open < Longest ? text.Length - open : 0;
-            _pending.Clear();
-            if (keep > 0) _pending.Append(text, text.Length - keep, keep);
+            _pending.Append(chunk); string text = _pending.ToString(); int open = text.LastIndexOf('[');
+            int keep = open >= 0 && text.IndexOf(']', open) < 0 && text.Length - open <= 40 ? text.Length - open : 0;
+            _pending.Clear(); if (keep > 0) _pending.Append(text, text.Length - keep, keep);
             return _owner.Restore(text.Substring(0, text.Length - keep));
         }
-
-        public string Flush()
-        {
-            string rest = _owner.Restore(_pending.ToString());
-            _pending.Clear();
-            return rest;
-        }
+        public string Flush() { string text = _owner.Restore(_pending.ToString()); _pending.Clear(); return text; }
     }
 }

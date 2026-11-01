@@ -17,6 +17,26 @@ namespace OnlyWorkspace.Outlook.UI;
 [ProgId("OnlyWorkspace.TaskPaneControl")]
 public class TaskPaneControl : UserControl
 {
+    /// <summary>Numeric diagnostics only: never returns DOM text, email data or configuration.</summary>
+    internal async Task<string?> ReadLayoutMetricsAsync()
+    {
+        UiSync.Ensure();
+        var core = _core; int generation = _generation;
+        if (!_pageReady || core == null || IsDisposed) return null;
+        double? zoom = _webView?.ZoomFactor;
+        string result = await core.ExecuteScriptAsync("({cssWidth:innerWidth,cssHeight:innerHeight,devicePixelRatio:devicePixelRatio,pageWidth:document.body.getBoundingClientRect().width,scrollWidth:document.documentElement.scrollWidth})");
+        if (IsDisposed || generation != _generation || !ReferenceEquals(core, _core)) return null;
+        // Rebuild from numeric fields so a compromised page cannot inject text into the log.
+        using var json = JsonDocument.Parse(result);
+        double Number(string name)
+        {
+            double value = json.RootElement.GetProperty(name).GetDouble();
+            if (double.IsNaN(value) || double.IsInfinity(value) || value < 0 || value > 100000) throw new InvalidOperationException("Invalid layout metric.");
+            return value;
+        }
+        return JsonSerializer.Serialize(new { cssWidth = Number("cssWidth"), cssHeight = Number("cssHeight"),
+            devicePixelRatio = Number("devicePixelRatio"), pageWidth = Number("pageWidth"), scrollWidth = Number("scrollWidth"), zoom });
+    }
     private static Task<CoreWebView2Environment>? _sharedEnvironmentTask;
     private static readonly object _envLock = new();
     private static bool _loaderPathSet;

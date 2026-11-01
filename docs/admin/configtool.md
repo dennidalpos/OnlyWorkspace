@@ -35,6 +35,8 @@ Il salvataggio diretto e quello elevato preparano configurazione e vault cifrato
 
 **Profili IA → Esposizione dati** offre 0 Solo locale, 1 Minimo (fatti locali con segnaposto, predefinito) e 2 Standard (originali ripuliti con segnaposto). I profili esterni non inviano testo degli allegati; a Standard la ricerca web è limitata ai domini della Verifica sicurezza. Un precedente livello Full/3 viene letto come Standard; l'informativa v3 richiede una nuova accettazione esplicita.
 
+Per i profili esterni sono disponibili anche **Sostituisci gli importi con segnaposto** e **Sostituisci le date con segnaposto**, entrambe inizialmente disattivate. Le risposte ripristinano i valori sul PC. Cambiare queste opzioni apre una nuova conversazione al messaggio successivo. Il PDF dell'informativa include il registro locale degli ultimi 30 giorni, con soli conteggi, revisioni ed esiti: [funzionamento e limiti](../tecnico/pseudonimizzazione.md).
+
 ## Le mie cassette
 
 Vale per l'utente Windows corrente e si applica subito, senza Salva né UAC, anche con la configurazione bloccata. **Archivio attivo per me** spegne o riaccende l'archivio dell'utente. La griglia elenca le cassette viste da Outlook con la colonna **Archivio** e la riga **Tutte le cassette, anche future**: senza «Tutte», una casella vuota è un rifiuto esplicito.

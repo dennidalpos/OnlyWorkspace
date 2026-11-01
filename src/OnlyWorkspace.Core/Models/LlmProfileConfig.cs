@@ -36,6 +36,9 @@ public sealed class LlmProfileConfig
         (Uri.TryCreate(BaseUrl, UriKind.Absolute, out var endpoint) && !ConfigurationValidator.IsLoopback(endpoint));
     /// <summary>External profiles only: how much Outlook data the profile may send (ExposurePolicy).</summary>
     public ExposureLevel Exposure { get; set; } = ExposureLevel.Minimal;
+    /// <summary>Optional reversible substitutions on external requests; both default to false.</summary>
+    public bool PseudonymizeAmounts { get; set; }
+    public bool PseudonymizeDates { get; set; }
     /// <summary>External profiles only: attachment text (extracted locally) may be sent to the provider.</summary>
     public bool AllowAttachmentUpload { get; set; } = false;
     /// <summary>Attachment text may reach the model: always for a local profile, else the flag within the exposure level.</summary>

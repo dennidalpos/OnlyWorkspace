@@ -68,6 +68,25 @@ public sealed class MainConfigFormTests
     }
 
     [Fact]
+    public void PseudonymizationOptionsLoadEditAndSurviveConnectorChanges()
+    {
+        OnSta(directory =>
+        {
+            var cloud = Local("a"); cloud.Type = "qwen"; cloud.BaseUrl = ProviderCatalog.Get("qwen").DefaultBaseUrl;
+            cloud.PseudonymizeAmounts = true;
+            Write(directory, new WorkspaceConfig { DefaultProfile = "a", Profiles = new() { cloud } }, new());
+            using var form = new MainConfigForm(directory);
+            Assert.True(Field<CheckBox>(form, "_chkPseudonymizeAmounts").Checked);
+            Assert.False(Field<CheckBox>(form, "_chkPseudonymizeDates").Checked);
+            Field<CheckBox>(form, "_chkPseudonymizeDates").Checked = true;
+            Assert.True(Field<WorkspaceConfig>(form, "_config").Profiles.Single().PseudonymizeDates);
+            Field<ComboBox>(form, "_cmbProvider").SelectedItem = ProviderCatalog.Get("ollama");
+            Assert.False(Field<CheckBox>(form, "_chkPseudonymizeDates").Enabled);
+            Assert.True(Field<WorkspaceConfig>(form, "_config").Profiles.Single().PseudonymizeDates);
+        });
+    }
+
+    [Fact]
     public void SwitchingCloudConnectorBackToLoopback_DoesNotKeepTheForcedCloudFlag()
     {
         OnSta(directory =>

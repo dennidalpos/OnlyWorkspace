@@ -4,6 +4,12 @@ Test di codice, prova sulla build installata e qualifica su cassette e provider 
 
 Contenuto datato trasferito nel dossier SecondBrain: `02-areas/products/OnlyWorkspace/history/imported/docs/tecnico/verifica.md`. Originale e SHA-256 nel rapporto di migrazione; questa voce conserva i riferimenti esistenti e non autorizza nuovi interventi.
 
+## Pseudonimizzazione e ridimensionamento — 1 novembre 2026
+
+Il candidato supera 1.693 test su ciascun runtime net48/net10, build Release senza errori o avvisi, 16 script, smoke net48 e WebViewFocus x64/x86; PanePolicy passa anche in x86. Le prove sintetiche coprono strategie e categorie versionate, dizionari oltre 200 contatti/identità, scope dell'archivio sulla pipe v15, opzioni importi/date, registro DPAPI a 30 giorni, ripristino JSON/streaming e HTTP reale su loopback. La factory del riquadro verifica il contesto UI della raccolta e la singola notifica cloud. [Funzionamento e limiti](pseudonimizzazione.md).
+
+Il WebView reale verifica anche la nuova telemetria numerica di viewport, scorrimento e zoom, il minimo HTML di 340 pixel CSS e i tentativi nativi limitati dopo il rilascio. La conversione SystemDpi è invariata. Il controllo desktop della build installata ha segnalato input concorrente e geometria non disponibile: scomparsa completa, trasferimento fra monitor e matrice 100/150% restano non qualificati. Nessuna nuova installazione, qualifica dei contatti COM reali o richiesta a provider remoti in questo lotto. Ricevuta e manifest nel dossier SecondBrain: `history/2026-11-01-A201-A221/report.md`.
+
 ## Comandi
 
 Da PowerShell nella radice del repository (gate e comandi ufficiali in [AGENTS.md](../../AGENTS.md)):

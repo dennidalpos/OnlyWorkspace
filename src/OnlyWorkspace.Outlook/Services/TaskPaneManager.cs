@@ -28,6 +28,31 @@ public sealed class TaskPaneEntry : IDisposable
     private int _widthAttempts;
     private bool _isDisposed;
     private bool _stopping;
+    private bool _measuringWidth;
+
+    [DllImport("user32.dll")] private static extern uint GetDpiForWindow(IntPtr window);
+    [DllImport("user32.dll")] private static extern IntPtr GetWindowDpiAwarenessContext(IntPtr window);
+    [DllImport("user32.dll")] private static extern int GetAwarenessFromDpiAwarenessContext(IntPtr context);
+
+    private async void RecordWidthMetrics()
+    {
+        if (_measuringWidth || _isDisposed || _stopping || !Control.IsHandleCreated) return;
+        _measuringWidth = true;
+        try
+        {
+            int width = TaskPane.Width;
+            uint dpi = GetDpiForWindow(Control.Handle);
+            int awareness = GetAwarenessFromDpiAwarenessContext(GetWindowDpiAwarenessContext(Control.Handle));
+            int nativeWidth = Control.ClientSize.Width, nativeHeight = Control.ClientSize.Height;
+            string display = System.Windows.Forms.Screen.FromControl(Control).DeviceName;
+            string? metrics = await Control.ReadLayoutMetricsAsync();
+            if (!_isDisposed && !_stopping)
+                OnlyWorkspaceLog.Logger.Information("Pane layout: Office width {OfficeWidth}; minimum {Minimum}; native client {NativeWidth}x{NativeHeight}; window DPI {Dpi}; awareness {Awareness}; display {Display}; CSS {Metrics}",
+                    width, _minimumWidth, nativeWidth, nativeHeight, dpi, awareness, display, metrics ?? "not-ready");
+        }
+        catch (Exception ex) { OnlyWorkspaceLog.Logger.Debug("Pane layout measurement unavailable: {Kind}", ex.GetType().Name); }
+        finally { _measuringWidth = false; }
+    }
 
     public object Window { get; }
     public _CustomTaskPane TaskPane { get; }
@@ -95,13 +120,13 @@ public sealed class TaskPaneEntry : IDisposable
             _applyingWidth = true;
             if (!TaskPane.Visible) { _widthCheck.Stop(); return; }
             int width = TaskPane.Width;
-            if (width >= _minimumWidth) { _widthCheck.Stop(); return; }
-            if (++_widthAttempts > MaxWidthAttempts) { _widthCheck.Stop(); return; }
+            if (width >= _minimumWidth) { _widthCheck.Stop(); RecordWidthMetrics(); return; }
+            if (++_widthAttempts > MaxWidthAttempts) { _widthCheck.Stop(); RecordWidthMetrics(); return; }
             TaskPane.Width = _minimumWidth;
             bool applied = TaskPane.Width >= _minimumWidth;
             OnlyWorkspaceLog.Logger.Information("TaskPane minimum width attempt {Attempt}: from {Width} to {Minimum} Office units; accepted {Accepted}; viewport {Viewport}px; display {Display}",
                 _widthAttempts, width, _minimumWidth, applied, Control.ClientSize.Width, System.Windows.Forms.Screen.FromControl(Control).DeviceName);
-            if (applied) _widthCheck.Stop();
+            if (applied) { _widthCheck.Stop(); RecordWidthMetrics(); }
         }
         catch (Exception ex)
         {
@@ -317,7 +342,7 @@ public sealed class TaskPaneManager : IDisposable
             int dpi = SystemDpi();
             taskPane.Width = 380 * dpi / 96;
             int minimumWidth = 360 * dpi / 96;
-            OnlyWorkspaceLog.Logger.Information("TaskPane width {Width}px at system DPI {Dpi}", taskPane.Width, dpi);
+            OnlyWorkspaceLog.Logger.Information("TaskPane width {Width} Office units at system DPI {Dpi}", taskPane.Width, dpi);
 
             phase.Restart();
             var coordinator = new TaskPaneCoordinator(control, _dataService, targetWindow);

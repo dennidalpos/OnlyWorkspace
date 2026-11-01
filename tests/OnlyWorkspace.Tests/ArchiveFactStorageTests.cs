@@ -434,6 +434,6 @@ public sealed class ArchiveFactStorageTests : IDisposable
         Assert.Equal(1, (await client.GetFactProgressAsync()).Done);
         var q = Query(new ArchiveFactFilter { Kind = ArchiveFactKind.Amount, AmountMin = 1000, AmountMax = 1000 });
         var hit = Assert.Single(await client.SearchAsync(q)); Assert.Equal(id, hit.Id); Assert.NotEmpty(hit.Facts);
-        Assert.Equal(14, ArchivePipe.Version);
+        Assert.Equal(15, ArchivePipe.Version);
     }
 }

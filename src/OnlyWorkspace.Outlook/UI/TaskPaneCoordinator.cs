@@ -3062,6 +3062,8 @@ public partial class TaskPaneCoordinator : IDisposable
     /// <param name="wholeEmails">The action sends whole Outlook items; false for archive evidence, the user's own text or a probe.</param>
     private ILlmClient CreateLlmClient(LlmProfileConfig profile, bool wholeEmails = true)
     {
+        UiSync.Ensure();
+        var dispatchUi = System.Threading.SynchronizationContext.Current!;
         // Nothing leaves the PC towards a server the administrator's notice does not cover. Checked first: with no notice
         // the level is not the reason, and naming it sent users to raise a level that would still be blocked.
         if (!DataEgress.AllowsModel(_config, profile)) throw new DataEgressBlockedException(DataEgress.BlockedMessageFor(profile));
@@ -3084,7 +3086,8 @@ public partial class TaskPaneCoordinator : IDisposable
                 webSecret != _configService.ResolveSecret(profile.WebSearchSecretRef))
                 throw new OperationCanceledException("La policy del profilo è cambiata.");
             if (!DataEgress.AllowsModel(_config, profile)) throw new DataEgressBlockedException(DataEgress.BlockedMessageFor(profile));
-        }, status, () => { if (profile.IsExternal) PostStream(turn, new { type = "cloud_used" }); });
+        }, status, () => { if (profile.IsExternal) dispatchUi.Send(_ => PostStream(turn, new { type = "cloud_used" }), null); },
+            entities: ct => ReadPrivacyEntitiesOnUiAsync(dispatchUi, ct), audit: _privacyAudit);
     }
 
     public void Dispose()

@@ -61,7 +61,8 @@ public sealed class AppStorageUsageTests : IDisposable
     public void Measure_ListsEveryGeneratedLocationOnce()
     {
         var report = AppStorageUsage.Measure(CancellationToken.None, _directory);
-        Assert.Equal(8, report.Items.Count);
+        Assert.Equal(9, report.Items.Count);
+        Assert.Contains(report.Items, i => i.Path == OnlyWorkspace.Core.AppPaths.PseudonymizationAuditDirectory);
         Assert.Equal(report.Items.Count, report.Items.Select(i => i.Name).Distinct().Count());
         Assert.All(report.Items, i => Assert.True(i.Bytes >= 0 && i.Note.Length > 0));
         Assert.Contains(report.Items, i => i.Path == _directory);

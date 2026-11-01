@@ -20,6 +20,7 @@ public static class AppPaths
     public static string ArchiveDirectory => Path.Combine(LocalDirectory, "archive");
     public static string LogDirectory => Path.Combine(LocalDirectory, "logs");
     public static string HistoryDirectory => Path.Combine(LocalDirectory, "history");
+    public static string PseudonymizationAuditDirectory => Path.Combine(LocalDirectory, "privacy-audit");
     public static string WebViewDirectory => Path.Combine(LocalDirectory, "WebView2");
     /// <summary>Copies of a config.json or secrets.bin the ConfigTool could not read, kept for the administrator.</summary>
     public static string UnreadableConfigDirectory => Path.Combine(LocalDirectory, "config-non-leggibile");

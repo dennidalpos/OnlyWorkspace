@@ -55,7 +55,7 @@ public class OpenAIClientTests
             return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(plain ? json : "data: " + json + "\n\ndata: [DONE]\n\n") };
         })) { BaseAddress = new Uri("http://localhost:1234/v1/") };
         using var client = new OpenAIClient(new LlmProfileConfig { Type = "lmstudio", Model = "synthetic" }, httpClient: http);
-        using var dispatched = new LlmRequestDispatcher(client, new LlmProfileConfig { Type = "lmstudio", Model = "synthetic", ContextBudgetTokens = 4096 });
+        using var dispatched = new LlmRequestDispatcher(client, new LlmProfileConfig { Type = "lmstudio", Model = "synthetic", ContextBudgetTokens = 4096 }, audit: TestPrivacyAudit.Store);
         var messages = new[] { ChatMessage.User("synthetic") };
         Assert.Equal("{}", await dispatched.CompleteStructuredAsync(messages, "{}"));
         Assert.Null(dispatched.LastTokenUsage);

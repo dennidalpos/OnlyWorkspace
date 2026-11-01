@@ -45,7 +45,7 @@ public sealed class P1DispatchPolicyTests
             using var dispatch = new LlmRequestDispatcher(recorder, profile, () =>
             {
                 if (!DataEgress.AllowsModel(config, profile)) throw new DataEgressBlockedException(DataEgress.BlockedMessage);
-            });
+            }, audit: TestPrivacyAudit.Store);
             await Assert.ThrowsAsync<DataEgressBlockedException>(() => dispatch.CompleteStructuredAsync(new[] { ChatMessage.User("BODY") }, "{}"));
             Assert.Equal(0, recorder.Calls);
             Accept(config);
@@ -104,7 +104,7 @@ public sealed class P1DispatchPolicyTests
             var next = ConversationPolicy.Create(p);
             next.Messages.Add(new HistoryChatMessage { Role = "user", Content = "NEW-QUESTION" });
             var recorder = new RecordingClient();
-            using var dispatch = new LlmRequestDispatcher(recorder, p);
+            using var dispatch = new LlmRequestDispatcher(recorder, p, audit: TestPrivacyAudit.Store);
             await dispatch.CompleteStructuredAsync(next.Messages.Select(m => new ChatMessage(m.Role, m.Content)), "{}");
             Assert.DoesNotContain("ATTACHMENT-FACT-SECRET", string.Join("", recorder.Messages.Select(m => m.Content)));
             Assert.Contains("ATTACHMENT-FACT-SECRET", (await storage.LoadConversationAsync(conversation.Id))!.Messages.Single().Content);
@@ -119,7 +119,8 @@ public sealed class P1DispatchPolicyTests
         var profile = new LlmProfileConfig { Id = "legacy-briefing", Model = "synthetic", External = true };
         // Frozen fingerprints for this exact profile: revision 3 could save a local agenda as normal content.
         const string revision3 = "FzRJnISPBVv1LHRDzO0UmZ6ujuddYq0aG6gM18b3teg=";
-        Assert.Equal("J7BqiuCT8DhyR9vugX74aT5RVvXztJCPUd03ZizCRI8=", ConversationPolicy.Key(profile));
+        // Revision 4 did not bind the pseudonymization options/catalog either.
+        Assert.NotEqual("J7BqiuCT8DhyR9vugX74aT5RVvXztJCPUd03ZizCRI8=", ConversationPolicy.Key(profile));
         var old = new ConversationHistory
         {
             ProfileId = profile.Id, PolicyKey = revision3,
@@ -145,7 +146,7 @@ public sealed class P1DispatchPolicyTests
         using var dispatch = new LlmRequestDispatcher(recorder, p, () =>
         {
             if (!ConversationPolicy.Matches(conv, p)) throw new OperationCanceledException();
-        });
+        }, audit: TestPrivacyAudit.Store);
         await Assert.ThrowsAsync<OperationCanceledException>(() => dispatch.CompleteStructuredAsync(new[] { ChatMessage.User("QUESTION") }, "{}"));
         Assert.Equal(1, recorder.Calls);
     }
@@ -165,7 +166,7 @@ public sealed class P1DispatchPolicyTests
         else if (source == "instructions") messages[0] = ChatMessage.System(new string('i', 550));
         else messages.Insert(1, source == "history" ? ChatMessage.Assistant(new string('h', 550)) : PromptCatalog.CreateWebEvidenceMessage(new string('w', 550), "[W1] Source"));
         var recorder = new RecordingClient();
-        using var dispatch = new LlmRequestDispatcher(recorder, p);
+        using var dispatch = new LlmRequestDispatcher(recorder, p, audit: TestPrivacyAudit.Store);
         await Assert.ThrowsAsync<ContextTooLongException>(() => dispatch.CompleteStructuredAsync(messages, schema));
         Assert.Equal(0, recorder.Calls);
     }
@@ -175,7 +176,7 @@ public sealed class P1DispatchPolicyTests
     {
         var p = Local();
         var recorder = new RecordingClient();
-        using var dispatch = new LlmRequestDispatcher(recorder, p);
+        using var dispatch = new LlmRequestDispatcher(recorder, p, audit: TestPrivacyAudit.Store);
         var improve = PromptCatalog.CreateImprovePrompt(new string('x', 3500), "professionale");
         await Assert.ThrowsAsync<ContextTooLongException>(async () => { await foreach (var _ in dispatch.StreamChatAsync(improve)) { } });
         Assert.Equal(0, recorder.Calls);
@@ -193,7 +194,7 @@ public sealed class P1DispatchPolicyTests
         var profile = Local();
         int notifications = 0;
         var client = new RecordingClient { BeforeResult = () => Assert.Equal(1, notifications) };
-        using var dispatch = new LlmRequestDispatcher(client, profile, requestStarting: () => notifications++);
+        using var dispatch = new LlmRequestDispatcher(client, profile, requestStarting: () => notifications++, audit: TestPrivacyAudit.Store);
         var input = new[] { ChatMessage.User("Synthetic question") };
         var unused = dispatch.StreamChatAsync(input); // A local answer can leave this client entirely unused.
         Assert.Equal(0, notifications);
@@ -213,7 +214,7 @@ public sealed class P1DispatchPolicyTests
     {
         int notifications = 0;
         var client = new RecordingClient();
-        using var dispatch = new LlmRequestDispatcher(client, Local(), requestStarting: () => notifications++);
+        using var dispatch = new LlmRequestDispatcher(client, Local(), requestStarting: () => notifications++, audit: TestPrivacyAudit.Store);
         using var cts = new CancellationTokenSource();
         if (cancelled) cts.Cancel();
         var input = new[] { ChatMessage.User(new string('x', 10000)) };

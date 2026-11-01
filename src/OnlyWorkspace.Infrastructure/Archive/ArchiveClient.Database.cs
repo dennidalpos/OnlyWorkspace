@@ -42,10 +42,13 @@ public sealed partial class ArchiveClient
         nameof(ArchiveDb.ExpandRelated),
         nameof(ArchiveDb.GetStoreCoverage),
         nameof(ArchiveDb.FindAddresses),
+        nameof(ArchiveDb.GetPrivacyEntities),
         nameof(ArchiveDb.CounterpartyOf),
     };
 
     public Task ConfirmInitialInventoryAsync(CancellationToken ct = default) => CallAsync<object?>(nameof(ArchiveDb.ConfirmInitialInventory), Array.Empty<object?>(), ct);
+    public Task<IReadOnlyList<OnlyWorkspace.Core.Privacy.PrivacyEntity>> GetPrivacyEntitiesAsync(long afterId, List<string>? storeIds, int take = 500, CancellationToken ct = default) =>
+        CallAsync<IReadOnlyList<OnlyWorkspace.Core.Privacy.PrivacyEntity>>(nameof(ArchiveDb.GetPrivacyEntities), new object?[] { afterId, storeIds, take }, ct);
     public Task<ArchiveBody?> GetOriginalAsync(string entryId, string storeId, CancellationToken ct = default) =>
         CallAsync<ArchiveBody?>(nameof(ArchiveDb.GetOriginal), new object?[] { entryId, storeId }, ct);
 

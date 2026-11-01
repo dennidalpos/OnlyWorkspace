@@ -104,6 +104,8 @@ public sealed partial class MainConfigForm : Form
     private CheckBox _chkExternal = null!;
     private TableLayoutPanel _webActions = null!;
     private CheckBox _chkAllowAttachments = null!;
+    private CheckBox _chkPseudonymizeAmounts = null!;
+    private CheckBox _chkPseudonymizeDates = null!;
     private ComboBox _cmbExposure = null!;
     private SelectableLabel _lblExposure = null!;
     private CheckBox _chkWebSearch = null!;
@@ -707,6 +709,12 @@ public sealed partial class MainConfigForm : Form
         _chkAllowAttachments = AddWide(net, new ThemedCheckBox { Text = "Invio del testo degli allegati", AutoSize = true },
             "Spunta per inviare al servizio anche il testo degli allegati (PDF, Office, testo), letto su questo PC, per Sintesi, Estrai dati, Attività e Cerca e analizza. Spento: arrivano solo i nomi dei file. Solo al livello di esposizione 3.");
         _chkAllowAttachments.CheckedChanged += (s, e) => OnProfileFieldChanged();
+        _chkPseudonymizeAmounts = AddWide(net, new ThemedCheckBox { Text = "Sostituisci gli importi con segnaposto", AutoSize = true },
+            "Negli invii esterni sostituisce gli importi riconosciuti; li ripristina nella risposta su questo PC. Si applica con Salva.");
+        _chkPseudonymizeDates = AddWide(net, new ThemedCheckBox { Text = "Sostituisci le date con segnaposto", AutoSize = true },
+            "Negli invii esterni sostituisce le date riconosciute; le ripristina nella risposta su questo PC. Si applica con Salva.");
+        _chkPseudonymizeAmounts.CheckedChanged += (s, e) => OnProfileFieldChanged();
+        _chkPseudonymizeDates.CheckedChanged += (s, e) => OnProfileFieldChanged();
 
         _lblWebSupport = AddRow(net, "Ricerca web:", new SelectableLabel { AutoSize = true, Text = WebNotChecked, Margin = new Padding(3, 5, 3, 6) },
             "Se il modello scelto sa cercare sul web, secondo il servizio o secondo la prova fatta con il pulsante.");
@@ -1022,7 +1030,8 @@ public sealed partial class MainConfigForm : Form
                 Outlook = $"{WorkstationInfo.OutlookVersion()} {WorkstationInfo.OutlookBitness()}", WebView2 = WorkstationInfo.WebView2Version(),
                 ConfigPath = Path.Combine(_configDir, "config.json"), GeneratedUtc = DateTime.UtcNow
             };
-            string html = DataEgressReport.RenderHtml(saved, workstation);
+            var privacyAudit = await Task.Run(() => new OnlyWorkspace.Infrastructure.Security.PseudonymizationAuditStore().Read());
+            string html = DataEgressReport.RenderHtml(saved, workstation, privacyAudit);
             var consent = saved.DataEgress?.Consent;
             string footer = consent == null ? "Informativa non accettata" : $"Informativa v{consent.NoticeVersion} · SHA-256 {consent.NoticeHash}";
             await DataEgressPdfExporter.ExportAsync(this, html, dialog.FileName, footer);
@@ -1833,6 +1842,8 @@ public sealed partial class MainConfigForm : Form
             foreach (CheckBox box in _webActions.Controls)
                 box.Checked = (p.WebSearchActions ?? new List<string>()).Contains((string)box.Tag!, StringComparer.OrdinalIgnoreCase);
             _chkAllowAttachments.Checked = p.AllowAttachmentUpload;
+            _chkPseudonymizeAmounts.Checked = p.PseudonymizeAmounts;
+            _chkPseudonymizeDates.Checked = p.PseudonymizeDates;
             _cmbExposure.SelectedItem = _cmbExposure.Items.Cast<ExposureItem>().First(i => i.Level == p.Exposure);
             ShowExposure();
             SelectMatchingPreset();
@@ -1961,6 +1972,8 @@ public sealed partial class MainConfigForm : Form
         }
         _chkExternal.Enabled = !caps.IsExternal && !remote;
         _cmbExposure.Enabled = _chkExternal.Checked;
+        _chkPseudonymizeAmounts.Enabled = _chkExternal.Checked;
+        _chkPseudonymizeDates.Enabled = _chkExternal.Checked;
         _chkAllowAttachments.Enabled = _chkExternal.Checked && ExposurePolicy.For(SelectedExposure).Attachments;
         ShowExposure();
         _txtWebSearchKey.Enabled = caps.WebSearch == WebSearchMode.OllamaCom;
@@ -1969,7 +1982,7 @@ public sealed partial class MainConfigForm : Form
         {
             // Another profile shown while locked: unlocking must restore the states of this profile, not of the one locked first.
             foreach (var control in new Control[] { _cmbPreset, _numNumCtx, _numMaxTokens, _numBudget, _txtKeepAlive, _chkDisableThinking,
-                         _cmbAuthType, _txtToken, _chkShowToken, _chkExternal, _cmbExposure, _chkAllowAttachments, _txtWebSearchKey })
+                         _cmbAuthType, _txtToken, _chkShowToken, _chkExternal, _cmbExposure, _chkAllowAttachments, _chkPseudonymizeAmounts, _chkPseudonymizeDates, _txtWebSearchKey })
                 _lockedControls[control] = control.Enabled;
             foreach (var page in _pages) LockInputs(page);
         }
@@ -2076,6 +2089,8 @@ public sealed partial class MainConfigForm : Form
             p.UseSystemProxy = _chkUseProxy.Checked;
             p.AllowAttachmentUpload = p.IsExternal && _chkAllowAttachments.Checked;
             p.Exposure = SelectedExposure;
+            p.PseudonymizeAmounts = _chkPseudonymizeAmounts.Checked;
+            p.PseudonymizeDates = _chkPseudonymizeDates.Checked;
             if (_chkWebSearch.Enabled) p.WebSearchEnabled = _chkWebSearch.Checked;
             p.WebSearchActions = _webActions.Controls.Cast<CheckBox>().Where(b => b.Checked).Select(b => (string)b.Tag!).ToList();
         }

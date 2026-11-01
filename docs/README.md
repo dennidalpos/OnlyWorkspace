@@ -28,6 +28,7 @@ Guide del comportamento disponibile, organizzate per destinatario. [Verifica e q
 | Argomento | Guida |
 | --- | --- |
 | Componenti, thread e confini | [Architettura](tecnico/architettura.md) |
+| Strategie locali, segnaposto e registro delle richieste | [Pseudonimizzazione](tecnico/pseudonimizzazione.md) |
 | Formato, sincronizzazione e limiti dell'archivio | [Motore dell'archivio](tecnico/archivio-motore.md) |
 | Lettura degli allegati, formati e limiti | [Allegati](tecnico/allegati.md) |
 | Programmi, librerie e servizi usati | [Dipendenze](tecnico/dipendenze.md) |

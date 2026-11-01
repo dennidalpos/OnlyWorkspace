@@ -164,6 +164,14 @@ try {
     $service.SaveConfiguration($config)
     [void]$service.LoadConfiguration()
     $script:coordinator = [Runtime.Serialization.FormatterServices]::GetUninitializedObject($type)
+    $privacySource = $type.GetField('_privacyEntitySource', $flags)
+    $privacyEntities = New-Object 'System.Collections.Generic.List[OnlyWorkspace.Core.Privacy.PrivacyEntity]'
+    $script:privacySourceThread = -1
+    $privacyOwnerThread = [Threading.Thread]::CurrentThread.ManagedThreadId
+    $privacyRead = [Action] { $script:privacySourceThread = [Threading.Thread]::CurrentThread.ManagedThreadId }
+    $privacySource.SetValue($script:coordinator, [CalendarFixtureResolver]::Create($privacySource.FieldType, $privacyEntities, $privacyRead))
+    $type.GetField('_privacyAudit', $flags).SetValue($script:coordinator,
+        [OnlyWorkspace.Infrastructure.Security.PseudonymizationAuditStore]::new((Join-Path $scratch 'privacy-audit'), $null))
     Set-Field '_control' $control
     Set-Field '_config' $config
     Set-Field '_configService' $service
@@ -361,6 +369,7 @@ try {
         [void](Wait-PaneTask $task)
         $cloudMessages=@($pending | Select-Object -Skip $beforeCloud | ForEach-Object {$_ | ConvertFrom-Json} | Where-Object type -eq 'cloud_used')
         Assert-Pass ($noticeHandler.Requests -eq 1 -and $cloudMessages.Count -eq 1) 'Real dispatch did not mark the cloud request exactly once'
+        Assert-Pass ($script:privacySourceThread -eq $privacyOwnerThread) 'A221 identity snapshot did not run on the captured UI thread'
     } finally {
         if ($noticeClient) {$noticeClient.Dispose()}; if ($noticeHttp) {$noticeHttp.Dispose()}
         Set-Field '_config' $config
@@ -486,7 +495,7 @@ try {
     $null = Call 'ReloadConfiguration' @()
     Assert-Pass $operation.IsCancellationRequested 'Reload did not cancel pending work'
     $blocked = $false
-    try { [void]$client.CompleteStructuredAsync($messages, '{}', [Threading.CancellationToken]::None).GetAwaiter().GetResult() }
+    try { [void](Wait-PaneTask ($client.CompleteStructuredAsync($messages, '{}', [Threading.CancellationToken]::None))) }
     catch { $blocked = $_.Exception.ToString().Contains('policy del profilo') }
     finally { $client.Dispose(); $operation.Dispose() }
     Assert-Pass $blocked 'A client from the old policy was still dispatched'
@@ -506,7 +515,7 @@ try {
     Assert-Pass $operation.IsCancellationRequested 'Missing vault did not cancel the real pane turn'
     Assert-Pass ($null -eq $service.ResolveSecret('synthetic-key')) 'Missing vault retained the key'
     $blocked = $false
-    try { [void]$client.CompleteStructuredAsync($messages, '{}', [Threading.CancellationToken]::None).GetAwaiter().GetResult() }
+    try { [void](Wait-PaneTask ($client.CompleteStructuredAsync($messages, '{}', [Threading.CancellationToken]::None))) }
     catch { $blocked = $_.Exception.ToString().Contains('policy del profilo') }
     finally { $client.Dispose(); $operation.Dispose() }
     Assert-Pass $blocked 'Client captured before vault removal remained dispatchable'

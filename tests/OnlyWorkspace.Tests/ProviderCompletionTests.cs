@@ -24,7 +24,7 @@ public sealed class ProviderCompletionTests
     public async Task MissingUsage_CompletionReachesDispatcherAndConsumers_AndResets(bool gemini, bool sse, bool truncated)
     {
         using var fixture = new Fixture(gemini, request => Response(gemini, sse, request == 1 && truncated));
-        using var dispatched = new LlmRequestDispatcher(fixture.Client, fixture.Profile, () => { });
+        using var dispatched = new LlmRequestDispatcher(fixture.Client, fixture.Profile, () => { }, audit: TestPrivacyAudit.Store);
         Assert.Equal("{}", await dispatched.CompleteStructuredAsync(Messages(), "{}"));
         Assert.Null(dispatched.LastTokenUsage);
         Assert.Equal(truncated, dispatched.LastCompletion!.IsTruncated);

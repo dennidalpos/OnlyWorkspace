@@ -92,7 +92,7 @@ public sealed class ExposureMinimizationTests
     {
         var recorder = new RecordingClient("Risposta per [PERSONA_1]");
         var profile = new LlmProfileConfig { Id = "c", Type = "qwen", BaseUrl = "https://cloud.example/v1", Model = "m", External = true, Exposure = ExposureLevel.Standard };
-        var dispatcher = new LlmRequestDispatcher(recorder, profile);
+        var dispatcher = new LlmRequestDispatcher(recorder, profile, audit: TestPrivacyAudit.Store);
         var messages = new[] { ChatMessage.User("Da Anna Bianchi <anna@esempio.it>: conferma") };
 
         string answer = string.Concat(await ToListAsync(dispatcher.StreamChatAsync(messages)));

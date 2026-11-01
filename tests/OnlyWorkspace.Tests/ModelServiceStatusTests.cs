@@ -139,7 +139,7 @@ public sealed class ModelServiceStatusTests
         if (stage == "stream") client.Open = () => throw failure;
         if (stage == "enumerator") client.Open = () => new FailedStream(failure);
         var dispatcher = new LlmRequestDispatcher(client, profile, null, status,
-            stage == "callback" ? () => throw failure : null);
+            stage == "callback" ? () => throw failure : null, audit: TestPrivacyAudit.Store);
         await Assert.ThrowsAsync<HttpRequestException>(async () =>
         {
             await foreach (var _ in dispatcher.StreamChatAsync(new[] { ChatMessage.User("prova") })) { }
@@ -147,7 +147,7 @@ public sealed class ModelServiceStatusTests
         Assert.Equal(StatusLight.Error, status.Current.Light);
         Assert.False(client.ChunksRead);
         status.CaptureConnectionCheck().Report(true, null);
-        await foreach (var _ in new LlmRequestDispatcher(new ScriptedClient(), profile, null, status)
+        await foreach (var _ in new LlmRequestDispatcher(new ScriptedClient(), profile, null, status, audit: TestPrivacyAudit.Store)
             .StreamChatAsync(new[] { ChatMessage.User("nuova prova") })) { }
         Assert.Equal(StatusLight.Ok, status.Current.Light);
     }
@@ -167,7 +167,7 @@ public sealed class ModelServiceStatusTests
         var client = new ScriptedClient();
         bool notified = false;
         var dispatcher = new LlmRequestDispatcher(client, profile, null, status, () => notified = true,
-            (_, _) => throw new DataEgressBlockedException("Mascheramento non completato: richiesta non inviata."));
+            (_, _) => throw new DataEgressBlockedException("Mascheramento non completato: richiesta non inviata."), audit: TestPrivacyAudit.Store);
         await Assert.ThrowsAsync<DataEgressBlockedException>(async () =>
         {
             var messages = new[] { ChatMessage.User("contenuto sintetico") };
@@ -204,7 +204,7 @@ public sealed class ModelServiceStatusTests
         var profile = Profile();
         var status = Configured(profile);
         var client = new ScriptedClient();
-        var dispatcher = new LlmRequestDispatcher(client, profile, null, status);
+        var dispatcher = new LlmRequestDispatcher(client, profile, null, status, audit: TestPrivacyAudit.Store);
         var messages = new[] { ChatMessage.User("domanda sintetica") };
 
         client.OnChunk = () => Assert.Equal(StatusLight.Working, status.Current.Light);

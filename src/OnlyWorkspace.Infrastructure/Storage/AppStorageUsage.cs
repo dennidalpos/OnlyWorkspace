@@ -43,6 +43,7 @@ public static class AppStorageUsage
             Archive(AppPaths.ArchiveDirectory, ct),
             Folder("Log", AppPaths.LogDirectory, $"Eventi tecnici dell'add-in, senza contenuto delle email né chiavi. Un file al giorno, al massimo {Logging.OnlyWorkspaceLog.FilesKept} da {Logging.OnlyWorkspaceLog.FileLimitBytes / (1024 * 1024)} MB: i più vecchi si cancellano da soli.", ct),
             Folder("Storico", AppPaths.HistoryDirectory, "Chat e risultati delle azioni, cifrati per utente; giorni e numero di conversazioni si impostano in Generale.", ct),
+            Folder("Registro pseudonimizzazione", AppPaths.PseudonymizationAuditDirectory, "Metadati cifrati per utente: conteggi, revisioni ed esiti delle richieste esterne, conservati per 30 giorni. Nessun testo originale o mappa dei segnaposto.", ct),
             Folder("Dati del riquadro", AppPaths.WebViewDirectory, "Cache del componente WebView2 che disegna il riquadro; si ricrea da sola se viene tolta.", ct),
             File("Preferenze utente", Path.Combine(AppPaths.PreferencesDirectory, "preferences.json"), "Profilo scelto e schermate di primo avvio già viste."),
             Folder("Copie temporanee", AppPaths.TempDirectory, "Allegati copiati per la lettura; eliminati al termine, i residui oltre un'ora all'avvio di Outlook.", ct),

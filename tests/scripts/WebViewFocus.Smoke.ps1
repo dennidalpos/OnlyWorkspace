@@ -127,6 +127,10 @@ try {
         $form.ClientSize = New-Object Drawing.Size($width, 600)
         [Windows.Forms.Application]::DoEvents()
         $layout = Script $second 'JSON.stringify({viewport:innerWidth,page:document.body.getBoundingClientRect().width,scroll:document.documentElement.scrollWidth,overflow:getComputedStyle(document.documentElement).overflowX})' | ConvertFrom-Json | ConvertFrom-Json
+        $metricsTask = $second.GetType().GetMethod('ReadLayoutMetricsAsync', [Reflection.BindingFlags]'Instance,NonPublic').Invoke($second, @())
+        Wait-Until {$metricsTask.IsCompleted} 'numeric layout diagnostics'
+        $metrics = $metricsTask.GetAwaiter().GetResult() | ConvertFrom-Json
+        if ($metrics.cssWidth -ne $layout.viewport -or $metrics.pageWidth -ne $layout.page -or $metrics.devicePixelRatio -le 0) {throw 'A201 numeric layout diagnostics disagree with the real viewport'}
         if ($layout.page -lt 340 -or $layout.overflow -ne 'auto') { throw "Page collapsed at width $width" }
         if ($width -lt 340 -and $layout.scroll -le $layout.viewport) { throw "Narrow viewport is not horizontally scrollable at $width" }
     }

@@ -44,7 +44,8 @@ public static class DataEgressReport
             : "Autorizzata, ma bloccata per server o livelli non coperti: " + string.Join(", ", missing) + ".";
     }
 
-    public static string RenderHtml(WorkspaceConfig config, DataEgressWorkstation workstation)
+    public static string RenderHtml(WorkspaceConfig config, DataEgressWorkstation workstation,
+        IReadOnlyList<PseudonymizationAudit>? pseudonymization = null)
     {
         var consent = config.DataEgress?.Consent;
         var html = new StringBuilder();
@@ -133,6 +134,28 @@ public static class DataEgressReport
             html.Append("</tbody></table></section>");
         }
 
+        if (pseudonymization != null)
+        {
+            html.Append("<section><h2>Pseudonimizzazione — registro locale degli ultimi 30 giorni</h2>")
+                .Append("<p>Solo metadati: nessun testo originale o mappa dei segnaposto. «Invio avviato» indica un tentativo, non conferma la ricezione del server. I conteggi includono anche richieste fallite.</p>");
+            if (pseudonymization.Count == 0) html.Append("<p>Nessuna richiesta registrata.</p>");
+            else
+            {
+                html.Append("<table class=\"grid\"><thead><tr><th>Data e richiesta</th><th>Esito</th><th>Sostituzioni per categoria</th><th>Revisioni</th></tr></thead><tbody>");
+                foreach (var record in pseudonymization.OrderByDescending(r => r.Utc))
+                    html.Append("<tr><td>").Append(E(When(record.Utc))).Append("<br>").Append(E(record.RequestId))
+                        .Append("</td><td>").Append(E(record.Outcome switch
+                        {
+                            "prepared" => "Preparata", "dispatching" => "Invio avviato", "completed" => "Completata",
+                            "failed" => "Non riuscita", "blocked" => "Bloccata prima dell'invio", "cancelled" => "Interrotta", _ => "Esito non disponibile"
+                        })).Append("</td><td>")
+                        .Append(E(string.Join(", ", record.Counts.OrderBy(p => p.Key).Select(p => p.Key + ": " + p.Value))))
+                        .Append("</td><td>").Append(E(string.Join(", ", record.Revisions.OrderBy(p => p.Key).Select(p => p.Key + ": " + p.Value))))
+                        .Append("</td></tr>");
+                html.Append("</tbody></table>");
+            }
+            html.Append("</section>");
+        }
         string text = consent != null && consent.NoticeText.Length > 0 ? consent.NoticeText : DataEgressNotice.Text;
         string version = consent != null && consent.NoticeText.Length > 0
             ? $"Testo accettato, versione {consent.NoticeVersion}, SHA-256 {DataEgressNotice.HashOf(text)}"

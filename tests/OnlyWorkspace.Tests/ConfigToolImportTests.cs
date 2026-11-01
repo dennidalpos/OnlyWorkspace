@@ -25,6 +25,19 @@ public sealed class ConfigToolImportTests : IDisposable
         _listener.Start();
     }
 
+    [Fact]
+    public void ImportPreservesPseudonymizationOptionsAndOlderProfilesDefaultOff()
+    {
+        Seed();
+        var result = Run("{\"profiles\":[" + Profile("first", ",\"pseudonymizeAmounts\":true,\"pseudonymizeDates\":true") + "]}");
+        Assert.Equal(0, result.Exit);
+        var profile = Assert.Single(LoadConfig().Profiles);
+        Assert.True(profile.PseudonymizeAmounts); Assert.True(profile.PseudonymizeDates);
+        result = Run("{\"profiles\":[" + Profile("first") + "]}");
+        Assert.Equal(0, result.Exit); profile = Assert.Single(LoadConfig().Profiles);
+        Assert.False(profile.PseudonymizeAmounts); Assert.False(profile.PseudonymizeDates);
+    }
+
     public static IEnumerable<object[]> Casing()
     {
         foreach (string profiles in new[] { "profiles", "Profiles", "PROFILES" })
