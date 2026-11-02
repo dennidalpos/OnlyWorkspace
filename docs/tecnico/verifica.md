@@ -4,6 +4,16 @@ Test di codice, prova sulla build installata e qualifica su cassette e provider 
 
 Contenuto datato trasferito nel dossier SecondBrain: `02-areas/products/OnlyWorkspace/history/imported/docs/tecnico/verifica.md`. Originale e SHA-256 nel rapporto di migrazione; questa voce conserva i riferimenti esistenti e non autorizza nuovi interventi.
 
+## Installazione e ridimensionamento del riquadro — 2 novembre 2026
+
+Il candidato `18647c6` è installato: setup firmato con marca temporale, registrazione sul percorso installato nelle viste x86/x64 e **91/91 file distribuiti** corrispondenti al manifest. Configurazione, vault, preferenze e valori delle policy del nuovo Outlook sono invariati al confronto dopo il setup. Sono conservati i backup verificati della precedente installazione e dell'archivio cifrato. La versione prodotto resta 1.0.0: l'identità del candidato è attestata dai manifest, non dal solo numero di versione.
+
+Su una copia isolata dei 508 file tracciati del candidato: Release senza errori o avvisi, **1.762 test per ciascun runtime net48/net10**, zero saltati; 17 script, smoke net48 e WebViewFocus x64/x86 superati. Queste prove restano distinte dall'osservazione di Outlook installato.
+
+Nel riquadro installato sul monitor principale al 150%, due restringimenti a 203 e 120 unità Office sono tornati al minimo di 540 con un tentativo ciascuno. I log di layout dopo il rilascio mostrano viewport di 125 e 70 pixel CSS, pagina mantenuta a 340 pixel e successivo ripristino a 350 pixel CSS (DPI finestra 144, devicePixelRatio 1,5). Non sono misure continue durante il trascinamento; nei due casi non è stata osservata la scomparsa completa.
+
+Il passaggio al monitor secondario ha prodotto catture parziali e input senza effetto verificabile anche dopo il recupero della finestra. Gli input desktop sono stati interrotti: matrice 100/150%, velocità di trascinamento e zoom 200% restano non qualificati. È disponibile un PST locale con soli dati sintetici, ma la riprova di Ricostruisci la pratica non è stata completata e la matrice Explorer/Inspector di A212 non è stata avviata. Nessuna nuova qualifica di provider remoti, sintesi IA, consensi o salvataggi Outlook. A201/A208/A212/A219 restano aperte; la CI remota resta distinta dai gate locali. Ricevuta nel dossier: `history/2026-11-02-qualifica-Outlook/report.md`.
+
 ## Errori del ConfigTool — 2 novembre 2026
 
 Esiti in italiano e dettagli tecnici sono separati nei form, nella ricerca dei modelli e nel passaggio elevato di configurazione, password e ripristino. Il Log attività conserva il dettaglio copiabile dell'operazione elevata; le istruzioni applicative mantengono il percorso del vault di recupero se il rollback fallisce. Il logger GUI/tray usa file distinti da Outlook. I quattro client distinguono il servizio raggiungibile con modello mancante dagli errori di connessione, conservando l'elenco dei modelli; la procedura guidata riconosce anche gli alias Ollama e Gemini.
