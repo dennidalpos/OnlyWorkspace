@@ -21,8 +21,14 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
-      - name: Build
-        run: dotnet build OnlyWorkspace.sln -c Release
+      - name: Install PSScriptAnalyzer
+        shell: pwsh
+        run: Install-Module PSScriptAnalyzer -RequiredVersion 1.25.0 -Scope CurrentUser -Repository PSGallery -Force
+
+      # Builds Release with SDK analyzers, then checks scripts and technical data syntax.
+      - name: Static analysis and build
+        shell: pwsh
+        run: pwsh -NoProfile -File scripts/check-code.ps1
 
       # One target at a time: net48 is the shipped runtime, net10 the modern one.
       - name: Test (net48)

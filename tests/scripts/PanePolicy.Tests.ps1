@@ -175,8 +175,8 @@ try {
     $config = New-Object OnlyWorkspace.Core.Models.WorkspaceConfig
     $config.DefaultProfile = 'same-id'
     $config.History.Enabled = $false
-    $profile = New-Object OnlyWorkspace.Core.Models.LlmProfileConfig -Property @{Id='same-id'; Model='synthetic'; AllowAttachmentUpload=$true}
-    $config.Profiles.Add($profile)
+    $llmProfile = New-Object OnlyWorkspace.Core.Models.LlmProfileConfig -Property @{Id='same-id'; Model='synthetic'; AllowAttachmentUpload=$true}
+    $config.Profiles.Add($llmProfile)
     $service = New-Object OnlyWorkspace.Infrastructure.Configuration.FileConfigurationService($scratch, $scratch)
     $service.SaveConfiguration($config)
     [void]$service.LoadConfiguration()
@@ -225,15 +225,15 @@ try {
             try {
                 $turn = $type.GetField('_turn', $flags).GetValue($script:coordinator)
                 $null = Call 'PostStream' @($turn, (PaneMessage @{type='stream_start'; action='Verifica sicurezza'}))
-                $input = New-Object OnlyWorkspace.Core.Security.EmailSecurityInput -Property @{Body='Synthetic body'}
-                $report = [OnlyWorkspace.Core.Security.EmailSecurityAnalyzer]::Analyze($input)
+                $analysisInput = New-Object OnlyWorkspace.Core.Security.EmailSecurityInput -Property @{Body='Synthetic body'}
+                $report = [OnlyWorkspace.Core.Security.EmailSecurityAnalyzer]::Analyze($analysisInput)
                 $securityProfile = $null
-                if ($failure -eq 'analyze') { $input = $null; $report = $null }
+                if ($failure -eq 'analyze') { $analysisInput = $null; $report = $null }
                 if ($failure -eq 'history') {
                     $securityProfile = New-Object OnlyWorkspace.Core.Models.LlmProfileConfig -Property @{Id='same-id'; BaseUrl='https://security.example.invalid'; Model='synthetic'}
                     $config.Profiles.Clear(); $config.Profiles.Add($securityProfile)
                 }
-                $data = New-Object OnlyWorkspace.Outlook.Services.EmailSecurityData($securityEmail, $input, '', $securityFiles)
+                $data = New-Object OnlyWorkspace.Outlook.Services.EmailSecurityData($securityEmail, $analysisInput, '', $securityFiles)
                 $state = [OnlyWorkspace.Core.Security.SecurityCheckState]::Done
                 if ($ending -eq 'stream_cancelled') {
                     $state = [OnlyWorkspace.Core.Security.SecurityCheckState]::Stopped
@@ -258,7 +258,7 @@ try {
                 Assert-Pass (!$replay.Running) "Security $ending/$failure remained running in replay"
             } finally {
                 $null = Call 'EndOperation' @($cts)
-                $config.Profiles.Clear(); $config.Profiles.Add($profile)
+                $config.Profiles.Clear(); $config.Profiles.Add($llmProfile)
             }
         }
     }
@@ -285,25 +285,25 @@ try {
     Set-Field '_configService' $service
     Set-Field '_config' $config
 
-    $old =[OnlyWorkspace.Core.Privacy.ConversationPolicy]::Create($profile)
+    $old =[OnlyWorkspace.Core.Privacy.ConversationPolicy]::Create($llmProfile)
     $old.Messages.Add((New-Object OnlyWorkspace.Core.Models.HistoryChatMessage -Property @{Role='user';Content='Leggi allegato sintetico'}))
     $old.Messages.Add((New-Object OnlyWorkspace.Core.Models.HistoryChatMessage -Property @{Role='assistant';Content='SYNTHETIC-ATTACHMENT-FACT'}))
     [void]$storage.SaveConversationAsync($old).GetAwaiter().GetResult()
     Set-Field '_currentConversation' $old
-    $profile.AllowAttachmentUpload = $false
-    $null = Call 'BeginConversationTurn' @($profile.PSObject.BaseObject, 'Continua', $null)
+    $llmProfile.AllowAttachmentUpload = $false
+    $null = Call 'BeginConversationTurn' @($llmProfile.PSObject.BaseObject, 'Continua', $null)
     $messages = [OnlyWorkspace.Core.Prompts.PromptCatalog]::CreateChatPrompt('Continua')
     $sent = Call 'WithPriorTurns' @($messages, 'Continua', [int]0)
     Assert-Pass (!((($sent | ForEach-Object {$_.Content}) -join "`n").Contains('SYNTHETIC-ATTACHMENT-FACT'))) 'Prior attachment fact escaped into the new request'
     $next = $type.GetField('_currentConversation', $flags).GetValue($script:coordinator)
     Assert-Pass ($next.Id -ne $old.Id) 'Policy change reused the conversation identity'
-    Assert-Pass ([OnlyWorkspace.Core.Privacy.ConversationPolicy]::Matches($next, $profile)) 'New conversation lacks its policy'
+    Assert-Pass ([OnlyWorkspace.Core.Privacy.ConversationPolicy]::Matches($next, $llmProfile)) 'New conversation lacks its policy'
     $reopened = $storage.LoadConversationAsync($old.Id).GetAwaiter().GetResult()
     Assert-Pass ($reopened.Messages[1].Content -eq 'SYNTHETIC-ATTACHMENT-FACT') 'Previous history was changed'
 
     # Same policy continues through the real BeginConversationTurn/WithPriorTurns path.
     $next.Messages.Add((New-Object OnlyWorkspace.Core.Models.HistoryChatMessage -Property @{Role='assistant';Content='SAFE-CURRENT-FACT'}))
-    $null = Call 'BeginConversationTurn' @($profile.PSObject.BaseObject, 'Ancora', $null)
+    $null = Call 'BeginConversationTurn' @($llmProfile.PSObject.BaseObject, 'Ancora', $null)
     $sent = Call 'WithPriorTurns' @($messages, 'Ancora', [int]0)
     Assert-Pass ((($sent | ForEach-Object {$_.Content}) -join "`n").Contains('SAFE-CURRENT-FACT')) 'Unchanged policy lost its history'
 
@@ -315,18 +315,18 @@ try {
     $pending = $control.GetType().GetField('_pendingMessages', $flags).GetValue($control)
     $loaded = @($pending | ForEach-Object { $_ | ConvertFrom-Json } | Where-Object {$_.type -eq 'history_loaded'})[-1]
     Assert-Pass $loaded.policyChanged 'Legacy history was presented as safe to continue'
-    $null = Call 'BeginConversationTurn' @($profile.PSObject.BaseObject, 'Nuova', $null)
+    $null = Call 'BeginConversationTurn' @($llmProfile.PSObject.BaseObject, 'Nuova', $null)
     Assert-Pass ($type.GetField('_currentConversation', $flags).GetValue($script:coordinator).Id -ne $old.Id) 'Legacy history reused'
 
     # Complete request over budget: body alone fits, but schema/roles must stop the real pane dispatch before HTTP.
     $listener = New-Object Net.Sockets.TcpListener([Net.IPAddress]::Loopback, 0)
     $listener.Start()
-    $oldUrl = $profile.BaseUrl; $oldBudget = $profile.ContextBudgetTokens
+    $oldUrl = $llmProfile.BaseUrl; $oldBudget = $llmProfile.ContextBudgetTokens
     $budgetClient = $null
     try {
-        $profile.BaseUrl = 'http://127.0.0.1:' + $listener.LocalEndpoint.Port
-        $profile.ContextBudgetTokens = 100
-        $budgetClient = Call 'CreateLlmClient' @($profile.PSObject.BaseObject, $true)
+        $llmProfile.BaseUrl = 'http://127.0.0.1:' + $listener.LocalEndpoint.Port
+        $llmProfile.ContextBudgetTokens = 100
+        $budgetClient = Call 'CreateLlmClient' @($llmProfile.PSObject.BaseObject, $true)
         $bounded = New-Object 'Collections.Generic.List[OnlyWorkspace.Core.Models.ChatMessage]'
         $bounded.Add([OnlyWorkspace.Core.Models.ChatMessage]::User(('x' * 350)))
         $overflow = $false
@@ -335,34 +335,34 @@ try {
         Assert-Pass $overflow 'The real pane dispatch did not reject full-request overflow'
         Assert-Pass (!$listener.Pending()) 'HTTP was reached for an oversized request'
         $beforeWeb = $false
-        try { $task = Call 'AddWebEvidenceAsync' @($profile.PSObject.BaseObject, $bounded, [int]0, [Threading.CancellationToken]::None, '{"type":"object"}'); [void]$task.GetAwaiter().GetResult() }
+        try { $task = Call 'AddWebEvidenceAsync' @($llmProfile.PSObject.BaseObject, $bounded, [int]0, [Threading.CancellationToken]::None, '{"type":"object"}'); [void]$task.GetAwaiter().GetResult() }
         catch { $beforeWeb = $_.Exception.ToString().Contains('ContextTooLongException') }
         Assert-Pass $beforeWeb 'Pre-web check did not include the structured schema'
     }
     finally {
         if ($null -ne $budgetClient) { $budgetClient.Dispose() }
-        $listener.Stop(); $profile.BaseUrl = $oldUrl; $profile.ContextBudgetTokens = $oldBudget
+        $listener.Stop(); $llmProfile.BaseUrl = $oldUrl; $llmProfile.ContextBudgetTokens = $oldBudget
     }
 
     # Parallel web search (A150): started only for an action the profile searches the web for, and the data-egress
     # notice still stops it when it does not cover the web host (ollama.com for a local Ollama model).
     $type.GetField('_turn', $flags).SetValue($script:coordinator, [int]7)
-    $profile.WebSearchEnabled = $true
+    $llmProfile.WebSearchEnabled = $true
     try {
         Set-Field '_webActionForTurn' 'summary'
-        $none = Call 'StartWebSearch' @($profile.PSObject.BaseObject, 'Novita normative', [int]7, [Threading.CancellationToken]::None)
+        $none = Call 'StartWebSearch' @($llmProfile.PSObject.BaseObject, 'Novita normative', [int]7, [Threading.CancellationToken]::None)
         Assert-Pass ($null -eq $none) 'Web search started for an action the profile does not search'
         Set-Field '_webActionForTurn' 'chat'
-        $started = Call 'StartWebSearch' @($profile.PSObject.BaseObject, 'Novita normative', [int]7, [Threading.CancellationToken]::None)
+        $started = Call 'StartWebSearch' @($llmProfile.PSObject.BaseObject, 'Novita normative', [int]7, [Threading.CancellationToken]::None)
         Assert-Pass ($null -ne $started) 'Web search not started for a chat action'
         $refused = $false
-        try { $task = Call 'AddWebEvidenceAsync' @($profile.PSObject.BaseObject, $messages, $started, [Threading.CancellationToken]::None, $null); [void](Wait-PaneTask $task) }
+        try { $task = Call 'AddWebEvidenceAsync' @($llmProfile.PSObject.BaseObject, $messages, $started, [Threading.CancellationToken]::None, $null); [void](Wait-PaneTask $task) }
         catch { $refused = $_.Exception.ToString().Contains('DataEgressBlockedException') }
         Assert-Pass $refused 'The parallel web search joined the request without the data-egress notice'
         $sources = $type.GetField('_webForTurn', $flags).GetValue($script:coordinator)
         Assert-Pass ($sources.Sources.Count -eq 0) 'A refused web search left sources in the turn'
     }
-    finally { $profile.WebSearchEnabled = $false; Set-Field '_webActionForTurn' $null }
+    finally { $llmProfile.WebSearchEnabled = $false; Set-Field '_webActionForTurn' $null }
 
     # A cloud profile at level 1 with no notice is refused for the notice, not for the level (A163): raising the level would not help.
     $cloud = New-Object OnlyWorkspace.Core.Models.LlmProfileConfig -Property @{Id='cloud-l1';Model='synthetic';BaseUrl='https://remote.example.test/v1';External=$true;Exposure=[OnlyWorkspace.Core.Privacy.ExposureLevel]::Minimal}
@@ -506,7 +506,7 @@ try {
     Write-Host 'OK: Briefing Minimal/Standard/local, real HTTP captures, local display, DPAPI history, reopening and subsequent context'
 
     # Reload cancels both pending work and a client created under the old epoch, before any HTTP request.
-    $client = Call 'CreateLlmClient' @($profile.PSObject.BaseObject, $true)
+    $client = Call 'CreateLlmClient' @($llmProfile.PSObject.BaseObject, $true)
     $operations = $type.GetField('_operations', $flags).GetValue($script:coordinator)
     $operation = $operations.GetType().GetMethod('Begin').Invoke($operations, @())
     # Svuota chat must leave a running turn and its conversation intact, also from the ribbon/host boundary.
@@ -519,7 +519,7 @@ try {
     $config.Profiles.Clear(); $config.Profiles.Add($changed)
     # Preserve the old in-memory config while writing the replacement to the isolated directory.
     $oldConfig = New-Object OnlyWorkspace.Core.Models.WorkspaceConfig
-    $oldConfig.DefaultProfile='same-id'; $oldConfig.History.Enabled=$false; $oldConfig.Profiles.Add($profile)
+    $oldConfig.DefaultProfile='same-id'; $oldConfig.History.Enabled=$false; $oldConfig.Profiles.Add($llmProfile)
     Set-Field '_config' $oldConfig
     $service.SaveConfiguration($config)
     $null = Call 'ReloadConfiguration' @()
@@ -533,11 +533,11 @@ try {
     # Credential disappearance with an unchanged profile must revoke captured clients and the running turn.
     $config = $oldConfig
     $service.SaveConfiguration($config)
-    $profile.SecretRef = 'synthetic-key'
+    $llmProfile.SecretRef = 'synthetic-key'
     $service.SaveConfiguration($config)
     $service.StoreSecret('synthetic-key', 'SYNTHETIC-OLD-KEY')
     $null = Call 'ReloadConfiguration' @()
-    $client = Call 'CreateLlmClient' @($profile, $true)
+    $client = Call 'CreateLlmClient' @($llmProfile, $true)
     $operation = $operations.GetType().GetMethod('Begin').Invoke($operations, @())
     $vaultBackup = [IO.File]::ReadAllBytes((Join-Path $scratch 'secrets.bin'))
     [IO.File]::Delete((Join-Path $scratch 'secrets.bin'))
@@ -560,7 +560,7 @@ try {
     Set-Field '_config' $config
     Set-Field '_turnText' (New-Object Text.StringBuilder)
     foreach ($label in @('Analisi (Riepilogo): fixture', 'Appuntamenti e scadenze: fixture')) {
-        $conversation = [OnlyWorkspace.Core.Privacy.ConversationPolicy]::Create($profile)
+        $conversation = [OnlyWorkspace.Core.Privacy.ConversationPolicy]::Create($llmProfile)
         Set-Field '_currentConversation' $conversation
         $cts = Call 'BeginOperation' @()
         $turn = $type.GetField('_turn', $flags).GetValue($script:coordinator)
@@ -572,7 +572,7 @@ try {
             Assert-Pass ($operations.GetType().GetMethod('IsCurrent').Invoke($operations, @($cts))) 'Repeated Stop lost current identity'
         }
         $resultToken = $operations.GetType().GetMethod('ResultToken').Invoke($operations, @($cts))
-        $save = Call 'RecordActionInHistoryAsync' @($profile, $label, 'SYNTHETIC-PARTIAL-ONCE', $resultToken, $null, $null, $null, $null)
+        $save = Call 'RecordActionInHistoryAsync' @($llmProfile, $label, 'SYNTHETIC-PARTIAL-ONCE', $resultToken, $null, $null, $null, $null)
         [void](Wait-PaneTask $save)
         $null = Call 'StopActiveTask' @()
         $finish = New-Object 'Collections.Generic.Dictionary[string,object]'
@@ -588,7 +588,7 @@ try {
     # E7/A71: production finalizer with real Stop/history/PostStream/EndOperation: the list on screen stays the result.
     $finalizer = $type.Assembly.GetType('OnlyWorkspace.Outlook.UI.AnalysisFinalization').GetMethod('RunAsync', [Reflection.BindingFlags]'Static,NonPublic')
     foreach ($stops in @(1, 3)) {
-        $conversation = [OnlyWorkspace.Core.Privacy.ConversationPolicy]::Create($profile)
+        $conversation = [OnlyWorkspace.Core.Privacy.ConversationPolicy]::Create($llmProfile)
         Set-Field '_currentConversation' $conversation
         $cts = Call 'BeginOperation' @()
         $turn = $type.GetField('_turn', $flags).GetValue($script:coordinator)
@@ -607,7 +607,7 @@ try {
         Assert-Pass ($task.GetAwaiter().GetResult()) 'Final Stop did not retain the result'
         Assert-Pass ($result.ToString().StartsWith('SYNTHETIC-LIST') -and $result.ToString().Contains('Analisi interrotta prima della risposta finale')) 'Final Stop lost the list'
         $resultToken = $operations.GetType().GetMethod('ResultToken').Invoke($operations, @($cts))
-        $save = Call 'RecordActionInHistoryAsync' @($profile, ('Analisi finale '+$stops), $result.ToString(), $resultToken, $null, $null, $null, $null)
+        $save = Call 'RecordActionInHistoryAsync' @($llmProfile, ('Analisi finale '+$stops), $result.ToString(), $resultToken, $null, $null, $null, $null)
         [void](Wait-PaneTask $save)
         $null = Call 'PostStream' @($turn, (PaneMessage @{type='stream_end'}))
         $null = Call 'EndOperation' @($cts)
@@ -667,9 +667,9 @@ try {
     $historyText = Call-Static 'StructuredHistoryText' @($rendered.Item1, $rendered.Item2)
     $config.History.Enabled = $true
     Set-Field '_config' $config
-    $conversation = [OnlyWorkspace.Core.Privacy.ConversationPolicy]::Create($profile)
+    $conversation = [OnlyWorkspace.Core.Privacy.ConversationPolicy]::Create($llmProfile)
     Set-Field '_currentConversation' $conversation
-    $save = Call 'RecordActionInHistoryAsync' @($profile, 'Estrazione dati: synthetic', $historyText, [Threading.CancellationToken]::None, $null, $null, $null, $null)
+    $save = Call 'RecordActionInHistoryAsync' @($llmProfile, 'Estrazione dati: synthetic', $historyText, [Threading.CancellationToken]::None, $null, $null, $null, $null)
     [void](Wait-PaneTask $save)
     $saved = $storage.LoadConversationAsync($conversation.Id).GetAwaiter().GetResult()
     Assert-Pass (($saved.Messages | Where-Object Role -eq 'assistant' | Select-Object -Last 1).Content.Contains('row201')) 'Saved extraction history lost the final row'
@@ -685,9 +685,9 @@ try {
     $scan.ApplyExtraction((New-Object OnlyWorkspace.Core.Security.AttachmentExtraction -Property @{Format='pdf'; Problem='ocr-off'}))
     $documents = [OnlyWorkspace.Core.Agents.DocumentOutcome[]]@($read, $scan)
     $emailAttachments = [Activator]::CreateInstance($type.GetNestedType('EmailAttachments', $staticFlags), @('', $documents))
-    $notice = Call-Static 'AttachmentNoticeFor' @($profile, $emailAttachments)
+    $notice = Call-Static 'AttachmentNoticeFor' @($llmProfile, $emailAttachments)
     Assert-Pass ($notice.Contains('`scansione.pdf`') -and $notice.Contains('scansione o immagine: OCR disattivato nelle impostazioni') -and !$notice.Contains('`offerta.docx`')) 'Pane did not declare the unread attachment with its reason'
-    Assert-Pass ($notice.Contains('verificali sul documento') -eq !$profile.IsExternal) 'Pane caution on read attachments changed'
+    Assert-Pass ($notice.Contains('verificali sul documento') -eq !$llmProfile.IsExternal) 'Pane caution on read attachments changed'
     # A220: real common reader of selected-email and draft attachments, including a saved copy supplied despite a refusal.
     $attachmentRoot = Join-Path $scratch 'extended-attachments'
     [void][IO.Directory]::CreateDirectory($attachmentRoot)

@@ -12,36 +12,36 @@ $bin = Join-Path $repo 'tests\OnlyWorkspace.Tests\bin\Release\net10.0-windows'
 Add-Type -Path (Join-Path $bin 'OnlyWorkspace.Core.dll')
 Add-Type -Path (Join-Path $bin 'OnlyWorkspace.Infrastructure.dll')
 
-$profile = [OnlyWorkspace.Core.Models.LlmProfileConfig]::new()
-$profile.BaseUrl = $BaseUrl
-$profile.Model = $Model
-$profile.NumCtx = $NumCtx
-$profile.MaxOutputTokens = $MaxOutputTokens
-$profile.ContextBudgetTokens = if ($ContextBudgetTokens -gt 0) { $ContextBudgetTokens } else { [OnlyWorkspace.Core.Models.ProviderCatalog]::ComputeBudget($NumCtx, $MaxOutputTokens) }
-$profile.Temperature = 0
-$profile.KeepAlive = '1m'
-$profile.DisableThinking = $true
-$profile.FirstTokenTimeoutSeconds = 120
-$profile.IdleTimeoutSeconds = 60
+$llmProfile = [OnlyWorkspace.Core.Models.LlmProfileConfig]::new()
+$llmProfile.BaseUrl = $BaseUrl
+$llmProfile.Model = $Model
+$llmProfile.NumCtx = $NumCtx
+$llmProfile.MaxOutputTokens = $MaxOutputTokens
+$llmProfile.ContextBudgetTokens = if ($ContextBudgetTokens -gt 0) { $ContextBudgetTokens } else { [OnlyWorkspace.Core.Models.ProviderCatalog]::ComputeBudget($NumCtx, $MaxOutputTokens) }
+$llmProfile.Temperature = 0
+$llmProfile.KeepAlive = '1m'
+$llmProfile.DisableThinking = $true
+$llmProfile.FirstTokenTimeoutSeconds = 120
+$llmProfile.IdleTimeoutSeconds = 60
 
 $context = [OnlyWorkspace.Core.Context.ContextBuilder]::new()
-$tooLong = 'x' * ([OnlyWorkspace.Core.Context.ContextBuilder]::MaxChars($profile.ContextBudgetTokens) + 1)
+$tooLong = 'x' * ([OnlyWorkspace.Core.Context.ContextBuilder]::MaxChars($llmProfile.ContextBudgetTokens) + 1)
 try {
-    [void]$context.EnsureFits($tooLong, $profile.ContextBudgetTokens)
+    [void]$context.EnsureFits($tooLong, $llmProfile.ContextBudgetTokens)
     throw 'The over-budget document was accepted.'
 } catch [OnlyWorkspace.Core.Context.ContextTooLongException] {
-    if ($_.Exception.BudgetTokens -ne $profile.ContextBudgetTokens) { throw }
+    if ($_.Exception.BudgetTokens -ne $llmProfile.ContextBudgetTokens) { throw }
 }
 
 $lines = for ($i = 1; $i -le 160; $i++) {
     'Riga {0:D3}: ordine sintetico; fornitura, data e importo sono segnaposto senza dati personali.' -f $i
 }
 $document = ($lines -join "`n") + "`nCODICE_FINALE: OMEGA-8421"
-$prompt = $context.EnsureFits(('Copia nel campo marker esattamente il valore che segue CODICE_FINALE: nell ultima riga del documento. Imposta found=true. Non usare le parole found o true come marker.' + "`n" + $document), $profile.ContextBudgetTokens)
+$prompt = $context.EnsureFits(('Copia nel campo marker esattamente il valore che segue CODICE_FINALE: nell ultima riga del documento. Imposta found=true. Non usare le parole found o true come marker.' + "`n" + $document), $llmProfile.ContextBudgetTokens)
 $schema = '{"type":"object","properties":{"marker":{"type":"string"},"found":{"type":"boolean"}},"required":["marker","found"],"additionalProperties":false}'
 $messages = [OnlyWorkspace.Core.Models.ChatMessage[]]@([OnlyWorkspace.Core.Models.ChatMessage]::User($prompt))
 
-$client = [OnlyWorkspace.Infrastructure.Llm.OllamaClient]::new($profile)
+$client = [OnlyWorkspace.Infrastructure.Llm.OllamaClient]::new($llmProfile)
 try {
     $health = $client.CheckHealthAsync().GetAwaiter().GetResult()
     if (!$health.IsHealthy) { throw "Ollama is unavailable: $($health.ErrorMessage)" }
@@ -66,5 +66,5 @@ try {
             'PASS in-flight cancellation: structured response stopped without a completed result.'
         }
     } finally { $stop.Dispose() }
-    "PASS context limit: budgetTokens=$($profile.ContextBudgetTokens) maxChars=$([OnlyWorkspace.Core.Context.ContextBuilder]::MaxChars($profile.ContextBudgetTokens)); over-budget input rejected before send."
+    "PASS context limit: budgetTokens=$($llmProfile.ContextBudgetTokens) maxChars=$([OnlyWorkspace.Core.Context.ContextBuilder]::MaxChars($llmProfile.ContextBudgetTokens)); over-budget input rejected before send."
 } finally { $client.Dispose() }

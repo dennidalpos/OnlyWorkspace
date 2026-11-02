@@ -74,6 +74,8 @@ dotnet test tests/OnlyWorkspace.Tests -c Release --no-build -f net10.0-windows -
 
 Esegui i due runtime in sequenza. La compilazione non installa l'add-in. Il setup richiede anche NSIS 3.13, `signtool.exe`, il certificato di firma e la password del PFX nell'ambiente: [procedura di packaging](docs/admin/installazione.md#setup-firmato). Comandi confrontati con progetti, script e [CI](.github/workflows/ci.yml); questa revisione documentale non ripete build o test applicativi. Gate e smoke: [Verifica e qualifica](docs/tecnico/verifica.md).
 
+Controlli essenziali e formattazione circoscritta: [Analisi statica](docs/tecnico/analisi-statica.md).
+
 ## Limiti e assistenza
 
 I risultati IA vanno controllati. La Verifica sicurezza presenta indizi e controlli parziali, senza certificare che un messaggio sia sicuro. La ricerca offline copre soltanto ciò che è stato acquisito; l'aggiornamento richiede Outlook aperto. DPI, combinazioni Office e servizi IA non hanno tutti la stessa copertura: consulta [Verifica e qualifica](docs/tecnico/verifica.md#non-qualificato).

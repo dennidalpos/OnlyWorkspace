@@ -47,19 +47,19 @@ try {
     $html = "<html><body>à`n<script>chrome.webview.postMessage('ready')</script></body></html>"
     $script:expectedDataUri = 'data:text/html;charset=utf-8;base64,' + [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($html))
     $view.CoreWebView2.add_NavigationStarting({
-        param($sender, $eventArgs)
-        $script:navigations.Add($eventArgs.Uri)
-        if ($script:pending -and ($eventArgs.Uri -eq 'about:blank' -or $eventArgs.Uri -ceq $script:expectedDataUri)) {
+        param($eventSender, $eventData)
+        $script:navigations.Add($eventData.Uri)
+        if ($script:pending -and ($eventData.Uri -eq 'about:blank' -or $eventData.Uri -ceq $script:expectedDataUri)) {
             $script:pending = $false
         } else {
-            $eventArgs.Cancel = $true
+            $eventData.Cancel = $true
             $script:cancelled++
         }
     })
     $view.CoreWebView2.add_WebMessageReceived({
-        param($sender, $eventArgs)
-        $script:messageSource = $eventArgs.Source
-        $script:currentSource = $sender.Source
+        param($eventSender, $eventData)
+        $script:messageSource = $eventData.Source
+        $script:currentSource = $eventSender.Source
     })
     $view.NavigateToString($html)
     Wait-WebView { $null -ne $script:messageSource } 'embedded message'

@@ -67,8 +67,8 @@ try {
     $script:queuedSeen = 0
     $environment = Field $first '_environment'
     $environment.add_BrowserProcessExited({
-        param($sender, $eventArgs)
-        if ($eventArgs.BrowserProcessExitKind -eq [Microsoft.Web.WebView2.Core.CoreWebView2BrowserProcessExitKind]::Failed) {
+        param($eventSender, $eventData)
+        if ($eventData.BrowserProcessExitKind -eq [Microsoft.Web.WebView2.Core.CoreWebView2BrowserProcessExitKind]::Failed) {
             foreach ($pane in $panes) {
                 $pane.PostMessage(@{type='toast';message='Synthetic queued recovery';kind='info'})
                 $script:queuedSeen += (Field $pane '_pendingMessages').Count
