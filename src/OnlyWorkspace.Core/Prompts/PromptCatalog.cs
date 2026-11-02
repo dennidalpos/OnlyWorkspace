@@ -43,6 +43,17 @@ public sealed class PromptTemplate
 /// </summary>
 public static class PromptCatalog
 {
+    // Approval is tied to the shipped resource, never to a mutable prompt loaded from a directory.
+    internal static IEnumerable<ChatMessage> CreateCloudFactsPrompt(string facts)
+    {
+        using var resource = typeof(PromptCatalog).Assembly.GetManifestResourceStream("OnlyWorkspace.Core.Prompts.cloud.facts.json")
+            ?? throw new InvalidOperationException("Template cloud protetto non disponibile: nessun invio consentito.");
+        using var reader = new StreamReader(resource);
+        var template = JsonSerializer.Deserialize<PromptTemplate>(reader.ReadToEnd());
+        if (template?.Id != "cloud.facts" || template.Version != 1)
+            throw new InvalidOperationException("Template cloud protetto non valido: nessun invio consentito.");
+        return new[] { ChatMessage.System(template.System), ChatMessage.User(template.UserTemplate.Replace("{facts}", facts)) };
+    }
     private static readonly ConcurrentDictionary<string, PromptTemplate> _templates = new(StringComparer.OrdinalIgnoreCase);
     private static readonly ConcurrentDictionary<string, string> _fragments = new(StringComparer.Ordinal);
 

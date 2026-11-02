@@ -53,16 +53,16 @@ public sealed class UsageObservationTests
         using var http = new HttpClient(handler) { BaseAddress = new Uri("https://fixture.example.test/") };
         var client = Client(provider, http);
         using var lifetime = (IDisposable)client;
-        await client.CompleteStructuredAsync(new[] { ChatMessage.User("synthetic") }, "{}");
+        await client.CompleteProtocolAsync(new[] { ChatMessage.User("synthetic") }, "{}");
         Assert.Null(client.LastTokenUsage);
         Assert.True(client.LastCompletion!.IsTruncated);
         handler.Response = () => Response(provider, "\"INPUT\":0,\"OUTPUT\":0");
-        await client.CompleteStructuredAsync(new[] { ChatMessage.User("synthetic") }, "{}");
+        await client.CompleteProtocolAsync(new[] { ChatMessage.User("synthetic") }, "{}");
         Assert.NotNull(client.LastTokenUsage);
         Assert.Equal(0, client.LastTokenUsage!.PromptTokens);
         Assert.Equal(0, client.LastTokenUsage.CompletionTokens);
         handler.Response = () => Response(provider, "");
-        await client.CompleteStructuredAsync(new[] { ChatMessage.User("synthetic") }, "{}");
+        await client.CompleteProtocolAsync(new[] { ChatMessage.User("synthetic") }, "{}");
         Assert.Null(client.LastTokenUsage);
         Assert.False(client.LastCompletion!.IsTruncated);
     }
@@ -78,7 +78,7 @@ public sealed class UsageObservationTests
         using var http = new HttpClient(new Handler { Response = () => body }) { BaseAddress = new Uri("https://fixture.example.test/") };
         var client = Client(ollama ? "ollama" : "openai-sse", http);
         using var lifetime = (IDisposable)client;
-        await client.CompleteStructuredAsync(new[] { ChatMessage.User("synthetic") }, "{}");
+        await client.CompleteProtocolAsync(new[] { ChatMessage.User("synthetic") }, "{}");
         Assert.Equal(10, client.LastTokenUsage!.PromptTokens);
         Assert.Equal(7, client.LastTokenUsage.CompletionTokens);
     }

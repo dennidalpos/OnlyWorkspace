@@ -36,6 +36,11 @@ public sealed class ExtendedExposureTests
         Assert.Equal(allowed, profile.SendsAttachmentText);
         var config = new WorkspaceConfig { Profiles = new() { profile } };
         Assert.False(DataEgress.AllowsModel(config, profile));
+        if (level == ExposureLevel.LocalOnly)
+        {
+            Assert.Throws<InvalidOperationException>(() => TestEgress.Accepted(config, fullExposure: false));
+            return;
+        }
         TestEgress.Accepted(config, fullExposure: false);
         Assert.Equal(level != ExposureLevel.LocalOnly, DataEgress.AllowsModel(config, profile));
         config.DataEgress.Consent!.NoticeVersion = 3;

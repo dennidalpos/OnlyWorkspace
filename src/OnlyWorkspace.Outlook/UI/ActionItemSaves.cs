@@ -26,7 +26,8 @@ internal sealed class ActionItemSaves
         foreach (var item in document.RootElement.EnumerateArray())
         {
             var fields = item.EnumerateObject().ToDictionary(p => p.Name, p => (object?)p.Value.Clone());
-            if (item.TryGetProperty("selectable", out var selectable) && selectable.ValueKind == JsonValueKind.True)
+            if ((item.TryGetProperty("kind", out var kind) && kind.ValueKind == JsonValueKind.String && (kind.GetString() == "task" || kind.GetString() == "appointment")) ||
+                (item.TryGetProperty("selectable", out var selectable) && selectable.ValueKind == JsonValueKind.True))
             {
                 string id = output.Count.ToString(System.Globalization.CultureInfo.InvariantCulture);
                 entries[id] = new Entry { Item = ActionItemParser.FromPane(item) };
@@ -69,6 +70,14 @@ internal sealed class ActionItemSaves
             }
         }
         return new { type = "action_items_saved", requestId, resultId, outcomes };
+    }
+
+    public ExtractedActionItem Resolve(JsonElement request)
+    {
+        if (!_results.TryGetValue(Read(request, "resultId"), out var result) ||
+            !result.TryGetValue(Read(request, "itemId"), out var entry) || entry.Item == null)
+            throw new InvalidOperationException("Résultat non più disponibile: ripeti l'estrazione.");
+        return entry.Item;
     }
 
     private static string Read(JsonElement value, string name) =>

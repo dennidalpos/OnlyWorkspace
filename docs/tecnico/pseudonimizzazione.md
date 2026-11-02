@@ -1,58 +1,23 @@
 # Pseudonimizzazione delle richieste IA
 
-Le richieste dei profili esterni passano dalla pipeline locale prima del trasporto. La mappa fra valori e segnaposto vive in memoria per una sola richiesta; la risposta viene ripristinata sul PC, anche in JSON e quando un segnaposto è diviso fra frammenti dello streaming. I profili locali non applicano questa pipeline.
+## Confine cloud rigoroso
 
-## Strategie e dati locali
+Il cloud riceve soltanto categorie fisse e riferimenti opachi a fatti strutturati risolti sul PC. `CloudFactsRequest` mantiene una copia locale dei valori e della provenienza; i messaggi contengono solo il template `cloud.facts` incorporato nell’assembly (indipendente da eventuali file di prompt modificati), e righe con numero della fonte, categoria e segnaposto. Non includono `Raw`, contesto, oggetto, nomi dei file, StoreId/EntryId, corpi, nomi, recapiti, importi o date originali.
 
-`Privacy/strategies.json`, incorporato nell'assembly Core, contiene revisione, pattern e parole introduttive dei nomi. Il catalogo iniziale riconosce email, telefoni italiani, IBAN, codici fiscali italiani, partite IVA e riferimenti etichettati a pratiche/protocolli/fascicoli. Non scarica regole né esegue estensioni ricevute dalla rete. Una modifica alle regole richiede una nuova revisione e la distribuzione dell'app.
+Il contratto è immutabile e non serializzabile come autorizzazione: la prova interna dei messaggi non viene ricostruita da storico o JSON. Dispatcher e singoli client HTTP rifiutano messaggi privi della preparazione, messaggi aggiunti e schemi diversi. Le sonde usano esclusivamente input sintetici fissi. Prima del trasporto il riquadro ricontrolla autorizzazione, chiavi e configurazione.
 
-I nomi riconosciuti accanto a un indirizzo email vengono cercati in tutti i messaggi della richiesta. Si aggiungono nomi, aziende, email e telefoni dei contatti negli store aperti, comprese le sottocartelle dei contatti, e nomi visualizzati nell'archivio delle sole cassette consentite. La raccolta dei contatti non usa il limite di 200 risultati della ricerca; opera sul thread UI STA, con pause fra le letture. L'archivio espone pagine ordinate per ID attraverso la pipe v15; il formato del database resta 13. La mappa derivata non è persistita.
+Le risposte ammesse elencano tutti i riferimenti una sola volta. Riferimenti sconosciuti, duplicati, mancanti o output troncato rifiutano la risposta. Valori, date, importi, citazioni e voci agenda sono ricostruiti sul PC; il modello non calcola sui segnaposto. La classificazione generale, sintesi e riscrittura di testo libero richiedono un profilo locale. Non esiste cambio automatico di provider o invio di ripiego.
 
-In caso di sovrapposizioni prevalgono gli identificativi specifici, quindi le corrispondenze più lunghe a parità di priorità. Token già presenti, come `[M1]` e `[PERSONA_1]`, sono preservati; i nuovi segnaposto non ne riutilizzano il nome. Le stesse occorrenze letterali condividono un segnaposto nella richiesta.
+Le richieste esplicite «elenca i fatti», «mostra le scadenze» e «elenca gli importi», anche con «delle email» o «di questa email», hanno una rappresentazione predefinita. Le domande sui fatti già risolvibili localmente continuano a non contattare alcun provider. Le query web libere, i domini ricavati dalla posta e le query generate da Ollama non soddisfano il contratto e restano bloccati. Le verifiche sintetiche della capacità web restano disponibili.
 
-Nel ConfigTool, **Profili IA → Autorizzazioni**, le opzioni per importi e date sono indipendenti e inizialmente disattivate, anche quando mancano nelle configurazioni precedenti. Le date riconosciute sono numeriche con anno; gli importi richiedono un simbolo o codice di valuta. Un cambiamento delle opzioni o del catalogo cambia la policy conversazionale (revisione 6): lo storico resta consultabile e il messaggio successivo apre una nuova conversazione.
+## Strategie e audit locali
 
-Ogni espressione regolare ha un timeout di due secondi; la pipeline ha un budget complessivo di dieci secondi e rispetta l'annullamento. I controlli di timeout sono cooperativi e possono terminare dopo il controllo successivo della regex in corso. Errori di lettura delle fonti, catalogo non valido, timeout e fallimenti delle strategie impediscono il trasporto: non esiste un invio di ripiego senza sostituzioni.
+Il catalogo incorporato è alla revisione 2. La pipeline locale mantiene sostituzioni reversibili, priorità fra pattern, budget di dieci secondi, timeout delle regex e annullamento. Le identità vengono raccolte dagli store autorizzati e cercate con un indice letterale compilato una volta per richiesta, senza una regex per contatto. I valori dei fatti cloud vengono sempre sostituiti integralmente, anche se sconosciuti al dizionario; importi e date non hanno un interruttore di esclusione nel cloud.
 
-Il budget di contesto viene ricontrollato anche dopo le sostituzioni. Lo schema delle risposte strutturate conserva esattamente il proprio contratto: se contiene dati personali riconosciuti, la richiesta viene rifiutata invece di modificarne chiavi, tipi o valori enumerati o di inviarli senza sostituzioni.
+Il registro DPAPI conserva identificativo casuale, data, esito, revisioni e conteggi per categoria; non contiene originali o mappa. Il mutex protegge gli aggiornamenti. Scadono dopo trenta giorni solo i metadati di questo registro. Un errore precedente al trasporto impedisce l'invio; un errore successivo non ritira richieste già ricevute. `dispatching` indica un tentativo, non una ricevuta. Il PDF di Privacy e dati include i metadati disponibili.
 
-## Registro locale
+## Autorizzazione e limiti
 
-```mermaid
-sequenceDiagram
-    participant R as Riquadro
-    participant D as Dispatcher locale
-    participant S as Strategie e identità locali
-    participant A as Registro DPAPI
-    participant P as Provider esterno
-    R->>D: Richiesta con policy e contesto
-    D->>S: Raccoglie identità e sostituisce valori riconosciuti
-    S-->>D: Messaggi con segnaposto e mappa solo in memoria
-    D->>D: Verifica schema e contesto dopo le sostituzioni
-    D->>A: Registra metadati prima del trasporto
-    alt Preparazione e registrazione riuscite
-        D->>P: Richiesta con segnaposto
-        P-->>D: Risposta JSON o streaming
-        D->>D: Ripristina i valori sul PC
-        D->>A: Registra esito e conteggi
-        D-->>R: Risultato
-    else Errore prima del trasporto
-        D-->>R: Errore e richiesta bloccata
-    end
-```
+L'informativa 5 registra una conferma tecnica con utente Windows, postazione, data e testo accettato, distinta per profilo, destinazione, permessi e credenziali effettive. Non registra nuove dichiarazioni aziendali o contrattuali. I record precedenti restano conservati e richiedono rinnovo. La policy conversazionale 7 separa i nuovi contesti dallo storico precedente.
 
-Il flusso rappresenta i profili esterni; una registrazione riuscita non attesta la ricezione del provider. Codice: [LlmRequestDispatcher](../../src/OnlyWorkspace.Infrastructure/Llm/LlmRequestDispatcher.cs), [Pseudonymizer](../../src/OnlyWorkspace.Core/Privacy/Pseudonymizer.cs).
-
-`%LOCALAPPDATA%/OnlyWorkspace/privacy-audit` contiene un file cifrato con DPAPI per ogni richiesta: identificativo casuale, data UTC, esito, revisioni e numero di sostituzioni per categoria. Non contiene testi originali, valori riconosciuti, mappa, chiavi, soggetti o indirizzi del servizio. Un mutex fra processi protegge gli aggiornamenti atomici.
-
-I metadati scadono dopo 30 giorni, alla lettura o alla scrittura del registro. Questa scadenza riguarda esclusivamente i file del nuovo registro: non elimina storico, backup, log tecnici o altri file. Un file non valido blocca l'operazione senza azzerare il registro. Un errore di registrazione prima del trasporto impedisce l'invio; se avviene dopo l'avvio del trasporto, non può ritirare dati già ricevuti dal server.
-
-Il PDF esportato da **Privacy e dati** include il registro disponibile. `dispatching` documenta un tentativo, non una conferma di ricezione del server; `completed`, `failed`, `blocked` e `cancelled` ne distinguono l'esito. Anche i tentativi non riusciti possono avere conteggi di sostituzione. La voce dedicata in Privacy e dati misura lo spazio del registro.
-
-## Limiti
-
-È pseudonimizzazione reversibile, non anonimizzazione completa. Un nome sconosciuto scritto da solo, un identificativo fuori dai pattern, una lingua o un formato non coperto possono restare nel testo. Intestazioni e firme conservano la struttura e sostituiscono solo i valori riconosciuti. Le identità dell'archivio sono nomi visualizzati e non distinguono sempre persona e azienda. Le opzioni importi/date possono ridurre la capacità del modello di calcolare o confrontare i valori.
-
-Le prove sintetiche e i test del trasporto sono distinti dalla raccolta reale dei contatti dentro Outlook e dalla qualità delle risposte di un provider. Qualifica e limiti correnti sono in [Verifica](verifica.md).
-
-Le autorizzazioni esterne sono distinte per profilo e legate a destinazione, livello, permessi e chiavi effettive. Le impronte con salt casuale servono al controllo del consenso, non al registro di pseudonimizzazione; nessuna credenziale o impronta viene inclusa nei report. La policy conversazionale include il legame verificato con l’autorizzazione dopo il caricamento del vault.
+È pseudonimizzazione reversibile, non anonimizzazione né attestazione di conformità. La copertura dipende dai fatti risolti localmente: contenuti non rappresentabili vengono rifiutati, anziché essere dichiarati privi di dati sensibili. I profili locali elaborano il testo completo sul PC. Prove sintetiche, runtime isolato e Outlook installato restano qualifiche distinte: [Verifica](verifica.md).

@@ -62,7 +62,8 @@ public sealed class MailEvidenceReaderTests
 
         Assert.Equal("Piccola", Assert.Single(reading.Pack.Items).Mail.Subject);
         Assert.EndsWith("[allegato]", reading.Pack.Items[0].Text);
-        Assert.Equal("Piccola.pdf", Assert.Single(documents.Documents).Name);
+        Assert.Equal(new[] { "Piccola.pdf", "Grande.pdf" }, documents.Documents.Select(d => d.Name));
+        Assert.All(documents.Documents, d => Assert.False(d.IncludedInRequest));
         Assert.Equal("«Grande» del 21/10/2026", Assert.Single(reading.TooLong));
     }
 

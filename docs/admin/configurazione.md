@@ -25,7 +25,7 @@ Riferimento dei campi: [WorkspaceConfig.cs](../../src/OnlyWorkspace.Core/Models/
 | `history` | attivo, 90 giorni, 200 conversazioni | |
 | `archive.enabled` | `false` nel codice, `true` nel modello installato | Permesso amministrativo; ogni utente restringe o spegne in Le mie cassette |
 | `archive.indexAttachmentText` | `true` | Indice locale del testo degli allegati, per tutti i profili |
-| `dataEgress` | nessuna accettazione | Informativa sull'uscita dei dati: `consent` (responsabile, data, ora, utente Windows, PC, versione e hash del testo, server coperti) e `history` di accettazioni e revoche; senza, profili cloud e ricerca web esterna sono bloccati |
+| `dataEgress` | nessuna accettazione | Informativa sull'uscita dei dati: `consent` (autorizzazione tecnica, data, ora, utente Windows, PC, versione e hash del testo, profili e server coperti) e `history` di accettazioni e revoche; senza, profili cloud e ricerca web esterna sono bloccati |
 | `logging.level` | `Information` | |
 
 L'archivio non ha un tetto di dimensione: la tray avvisa sotto 5 GiB liberi e sospende le acquisizioni sotto 1 GiB.
@@ -62,6 +62,6 @@ Il budget Ollama deve essere positivo e non superare `numCtx − maxOutputTokens
 
 ## Aggiornamento esposizione e archivio
 
-Sono disponibili i livelli 0–2 e **3 · Esteso**. Il nuovo valore JSON è `"Extended"` (valore enum 4); il numero 3 resta riservato al livello ritirato e non abilita Esteso. Il precedente valore `Full`/3 viene convertito in `Standard`/2 durante il caricamento, senza scritture implicite né modifiche a endpoint, modello o riferimenti alle chiavi. I campi `archive.cardsEnabled`, `cardsProfile`, `allowExternalCards`, `cardsDailyTokens` e `cardsBudgetResetUtc` non sono più impostazioni attive e non vengono riscritti al successivo salvataggio esplicito. L'informativa corrente è la versione 4 e richiede nuova accettazione per gli invii esterni. La policy dello storico resta alla revisione 6 e include livello e permesso allegati: il testo precedente resta consultabile e non viene riutilizzato come contesto di nuove richieste.
+Sono disponibili i livelli 0–2 e **3 · Esteso**. Il nuovo valore JSON è `"Extended"` (valore enum 4); il numero 3 resta riservato al livello ritirato e non abilita Esteso. Il precedente valore `Full`/3 viene convertito in `Standard`/2 durante il caricamento, senza scritture implicite né modifiche a endpoint, modello o riferimenti alle chiavi. I campi `archive.cardsEnabled`, `cardsProfile`, `allowExternalCards`, `cardsDailyTokens` e `cardsBudgetResetUtc` non sono più impostazioni attive e non vengono riscritti al successivo salvataggio esplicito. L'informativa corrente è la versione 5 e richiede nuova accettazione per gli invii esterni. La policy dello storico resta alla revisione 7 e include livello e permesso allegati: il testo precedente resta consultabile e non viene riutilizzato come contesto di nuove richieste.
 
 La migrazione dell'archivio personale 11→12 crea e verifica una copia cifrata e la chiave DPAPI prima di eliminare i dati IA pregressi. Backup conservati fuori dall'archivio attivo in `%LOCALAPPDATA%\OnlyWorkspace\archive-migration-backups`; configurazione e vault dei provider non vengono riscritti dalla migrazione. Dettagli e recupero: [Motore dell'archivio](../tecnico/archivio-motore.md#formato-conservazione-e-ricostruzione).

@@ -27,6 +27,7 @@ namespace OnlyWorkspace.Outlook.UI;
 
 public partial class TaskPaneCoordinator
 {
+    private readonly Dictionary<string, List<ArchiveFact>> _actionFactsForTurn = new(StringComparer.Ordinal);
 
     /// <summary>Items ticked in the scan result: saved directly, with the same re-validation as the drafts.</summary>
     private void SaveActionItems(JsonElement message)
@@ -161,6 +162,7 @@ public partial class TaskPaneCoordinator
 
                 var mail = new ChatMailItem
                 {
+                    Facts = _actionFactsForTurn.TryGetValue(h.StoreId + "\n" + h.EntryId, out var typedFacts) ? typedFacts : new List<ArchiveFact>(),
                     ArchiveId = h.ArchiveId, EntryId = h.EntryId, StoreId = h.StoreId, MessageId = h.MessageId, Subject = h.Subject,
                     SenderName = h.Sender, Received = h.Received, Sent = h.Sent, OutsideFilters = h.OutsideFilters, LinkReasons = h.LinkReasons
                 };
@@ -329,7 +331,9 @@ public partial class TaskPaneCoordinator
             foreach (var hit in hits)
             {
                 // Receipt-only material never enters model evidence, even when the profile permits attachments.
-                var facts = hit.Facts.Where(f => f.SourceId.Length == 0 || hit.Attachments.Any(a => a.SourceId == f.SourceId && a.State == "indexed"));
+                var facts = hit.Facts.Where(f => f.SourceId.Length == 0 || attachmentsAllowed && hit.Attachments.Any(a => a.SourceId == f.SourceId && a.State == "indexed")).ToList();
+                ct.ThrowIfCancellationRequested();
+                _actionFactsForTurn[hit.StoreId + "\n" + hit.EntryId] = facts;
                 if (ActionMailEvidence.Facts(facts, attachmentsAllowed) is { } text)
                     result[hit.StoreId + "\n" + hit.EntryId] = text;
             }

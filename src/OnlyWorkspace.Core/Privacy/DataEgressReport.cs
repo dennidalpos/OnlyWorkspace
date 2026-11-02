@@ -66,30 +66,25 @@ public static class DataEgressReport
 
         if (consent != null)
         {
-            Section(html, "Chi ha abilitato l'uscita dei dati", Table(new[]
+            Section(html, "Autorizzazione tecnica", Table(new[]
             {
-                Row("Azienda (titolare del trattamento)", consent.Company), Row("Responsabile", $"{consent.FirstName} {consent.LastName}"),
-                Row("Ruolo", consent.Role), Row("Email", consent.Email), Row("Data indicata", Day(consent.Date)),
                 Row("Registrata il", When(consent.AcceptedUtc)), Row("Utente Windows", consent.WindowsUser), Row("Computer", consent.Machine),
                 Row("Testo accettato", $"versione {consent.NoticeVersion}, SHA-256 {consent.NoticeHash}")
             }));
-            Section(html, "Dichiarazioni dell'azienda", Table(new[]
+            if (consent.NoticeVersion < 5)
             {
-                Row("Referente privacy", consent.PrivacyContact.Length == 0 ? "non indicato" : consent.PrivacyContact),
-                Row("Base giuridica (GDPR art. 6)", Blank(consent.LegalBasis)), Row("Valutazione d'impatto (art. 35)", Blank(consent.Dpia)),
-                Row("Lavoratori informati (L. 132/2025 art. 11)", YesNo(consent.WorkersInformed)),
-                Row("Alfabetizzazione sull'IA (AI Act art. 4)", YesNo(consent.AiLiteracy))
-            }));
+                Section(html, "Dichiarazioni precedenti (storiche)", Table(new[]
+                {
+                    Row("Responsabile", consent.Describe()), Row("Base giuridica", consent.LegalBasis), Row("Valutazione d'impatto", consent.Dpia)
+                }));
+            }
             html.Append("<section><h2>Server autorizzati</h2>");
             if (consent.Providers.Count == 0) html.Append("<p>Nessun server: la configurazione al momento dell'accettazione non inviava dati.</p>");
             else
             {
-                html.Append("<table class=\"grid\"><thead><tr><th>Server</th><th>Fornitore</th><th>Livello massimo</th><th>Nomina art. 28</th>")
-                    .Append("<th>Dove</th><th>Trasferimento</th><th>Addestramento escluso</th><th>Conservazione</th></tr></thead><tbody>");
+                html.Append("<table class=\"grid\"><thead><tr><th>Server</th><th>Livello massimo</th></tr></thead><tbody>");
                 foreach (var p in consent.Providers)
-                    html.Append("<tr><td>").Append(E(p.Host)).Append("</td><td>").Append(E(p.Provider)).Append("</td><td>").Append(E(ExposurePolicy.Label(p.Level)))
-                        .Append("</td><td>").Append(YesNo(p.ProcessingAgreement)).Append("</td><td>").Append(E(p.Region)).Append("</td><td>").Append(E(p.TransferBasis))
-                        .Append("</td><td>").Append(YesNo(p.NoTraining)).Append("</td><td>").Append(E(p.Retention)).Append("</td></tr>");
+                    html.Append("<tr><td>").Append(E(p.Host)).Append("</td><td>").Append(E(ExposurePolicy.Label(p.Level))).Append("</td></tr>");
                 html.Append("</tbody></table>");
             }
             html.Append("</section>");

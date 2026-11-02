@@ -13,7 +13,7 @@ public class PromptCatalogTests
     // Every placeholder the Create* methods fill.
     private static readonly IReadOnlyDictionary<string, string> AllValues = new Dictionary<string, string>
     {
-        ["email_body"] = "X", ["instruction"] = "X", ["draft"] = "X", ["recipients"] = "X", ["reference_date"] = "X",
+        ["facts"] = "X", ["email_body"] = "X", ["instruction"] = "X", ["draft"] = "X", ["recipients"] = "X", ["reference_date"] = "X",
         ["user_query"] = "X", ["question"] = "X", ["context_tag"] = "email", ["context_data"] = "X", ["user_question"] = "X",
         ["context"] = "X", ["text"] = "X", ["style"] = "X", ["language"] = "X", ["agenda"] = "X",
         ["unread_emails"] = "X", ["categories"] = "X", ["sender"] = "X", ["goal"] = "X", ["notes"] = "X", ["columns"] = "X",
@@ -41,7 +41,7 @@ public class PromptCatalogTests
     public void EveryTemplate_RendersWithoutUnfilledPlaceholdersOrFragments()
     {
         var rendered = PromptCatalog.RenderAllForTest(AllValues).ToList();
-        Assert.True(rendered.Count == 23, "prompts\\ not copied next to the test assemblies");
+        Assert.True(rendered.Count == 24, "prompts\\ not copied next to the test assemblies");
         foreach (var (id, messages) in rendered)
             foreach (var message in messages)
             {

@@ -16,7 +16,7 @@ public sealed class DataEgressAuthorizationTests
     private static WorkspaceConfig Config(params LlmProfileConfig[] profiles) => new() { DefaultProfile = profiles[0].Id, Profiles = profiles.ToList() };
     private static string? Secret(string reference) => reference == "model-key" ? "synthetic-model-secret" : "synthetic-web-secret";
     private static DataEgressConsent Accept(WorkspaceConfig config, Func<string, string?>? resolver = null) =>
-        DataEgress.Accept(config, TestEgress.Signer(), TestEgress.Providers(config), "test", "synthetic", DateTime.UtcNow, resolver ?? Secret);
+        DataEgress.Accept(config, "test", "synthetic", DateTime.UtcNow, resolver ?? Secret);
 
     [Fact]
     public void ASecondProfileOnTheSameHostCannotInheritAuthorization()
@@ -53,7 +53,7 @@ public sealed class DataEgressAuthorizationTests
             case 7: profile.SecretRef = "different-key"; break;
             case 8: profile.BaseUrl = "https://provider.example:8443/v1"; break;
         }
-        Assert.False(DataEgress.AllowsModel(config, profile, Secret));
+        Assert.Equal(change is 4 or 5, DataEgress.AllowsModel(config, profile, Secret));
         Accept(config);
         Assert.True(DataEgress.AllowsModel(config, profile, Secret));
     }

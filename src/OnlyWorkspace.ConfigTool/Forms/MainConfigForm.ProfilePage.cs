@@ -57,7 +57,7 @@ public sealed partial class MainConfigForm
         {
             "Servizio, indirizzo, modello, chiave e tempi di attesa del profilo selezionato.",
             "Quanto testo il modello legge e scrive (solo per i modelli locali) e quanto è creativo nelle risposte.",
-            "Cosa può uscire dal PC con questo profilo: email, testo degli allegati e ricerche sul web.",
+            "Cosa può uscire dal PC: solo fatti strutturati protetti; testo libero e query web non verificabili sono bloccati.",
             "Diagnostica del modello: capacità con esito, provenienza e data; Aggiorna capacità e Prova funzioni."
         };
         for (int i = 0; i < sections.Controls.Count && i < sectionTips.Length; i++) Tip(sections.Controls[i], sectionTips[i]);
@@ -250,6 +250,7 @@ public sealed partial class MainConfigForm
         _lblBudgetHint = AddRow(ctx, "", new SelectableLabel { AutoSize = true, Margin = new Padding(3, 0, 3, 6) },
             "Valore consigliato per le impostazioni scelte sopra.");
         Theme.SetTone(_lblBudgetHint, Tone.Muted);
+        DescriptionHelp(_lblBudgetHint, "Budget del contesto");
 
         _numTemp = AddRow(ctx, "Temperatura:", new ThemedNumeric { Width = 100, Minimum = 0M, Maximum = 2M, DecimalPlaces = 2, Increment = 0.05M, Value = 0.3M, Anchor = AnchorStyles.Left },
             "Quanto il modello varia le risposte: 0 = sempre uguali e prudenti, valori alti = più creative ma meno precise. 0,3 va bene per sintesi e bozze.");
@@ -267,8 +268,8 @@ public sealed partial class MainConfigForm
     /// <summary>Autorizzazioni: cloud service, attachment text and Ricerca web.</summary>
     private void BuildPermissionRows(TableLayoutPanel net)
     {
-        _chkExternal = AddWide(net, new ThemedCheckBox { Text = "Servizio cloud: le email delle azioni vengono inviate", AutoSize = true },
-            "Il servizio è fuori da questo PC: le email su cui l'utente avvia un'azione vengono inviate al fornitore, senza altre domande (il riquadro mostra una nuvola gialla). Sempre attivo per i servizi cloud. Richiede l'informativa accettata in Privacy e dati.");
+        _chkExternal = AddWide(net, new ThemedCheckBox { Text = "Servizio esterno: invii soggetti alla protezione dei dati", AutoSize = true },
+            "Il servizio è fuori da questo PC. Solo fatti strutturati protetti possono essere inviati, dopo l'autorizzazione in Privacy e dati. Testo libero non verificabile bloccato. Sempre attivo per servizi cloud e indirizzi esterni.");
         _chkExternal.CheckedChanged += (s, e) =>
         {
             if (!_isLoading && _chkExternal.Enabled && _lstProfiles.SelectedItem is ProfileItem item)
@@ -277,13 +278,13 @@ public sealed partial class MainConfigForm
         };
 
         _cmbExposure = AddRow(net, "Esposizione dati:", new ThemedComboBox { Width = 200, Anchor = AnchorStyles.Left },
-            "Quanti dati di Outlook il profilo cloud può inviare. 0 non invia nulla; 1 e 2 inviano dati consentiti con segnaposto al posto di nomi, " +
-            "indirizzi e codici; 3 invia le email intere. L'informativa deve coprire il server fino a questo livello.");
+            "0 blocca ogni invio. Minimo e Standard consentono solo fatti strutturati protetti; Esteso permette anche quelli degli allegati con permesso distinto. Testo libero, importi e date originali non escono. Si applica con Salva.");
         foreach (var level in ExposurePolicy.All) _cmbExposure.Items.Add(new ExposureItem(level));
         _cmbExposure.SelectedIndexChanged += (s, e) => { ShowExposure(); OnProfileFieldChanged(); ApplyCapabilities(); UpdateWebActionsEnabled(); };
         _lblExposure = AddRow(net, "", new SelectableLabel { AutoSize = true, MaximumSize = new Size(440, 0), Margin = new Padding(3, 0, 3, 6) },
             "Cosa esce dal PC al livello scelto.");
         Theme.SetTone(_lblExposure, Tone.Muted);
+        DescriptionHelp(_lblExposure, "Protezione dei dati");
         net.Layout += (_, _) =>
         {
             // Wrapped at the visible width of the field column: at 440 px it went past the card at 100% (A159).
@@ -292,13 +293,14 @@ public sealed partial class MainConfigForm
             if (_lblExposure.MaximumSize.Width != width) _lblExposure.MaximumSize = new Size(width, 0);
         };
 
-        _chkAllowAttachments = AddWide(net, new ThemedCheckBox { Text = "Invio del testo degli allegati", AutoSize = true },
-            "Spunta per inviare al servizio anche il testo degli allegati (PDF, Office, testo), letto su questo PC, per Sintesi, Estrai dati, Attività e Cerca e analizza. Spento: arrivano solo i nomi dei file. Solo con Esteso e informativa valida; testo e nomi passano dalla pseudonimizzazione. Vale anche per gli allegati delle bozze quando richiesti.");
+        _chkAllowAttachments = AddWide(net, new ThemedCheckBox { Text = "Fatti protetti dagli allegati", AutoSize = true },
+            "Con Esteso autorizza solo fatti strutturati protetti dagli allegati. Testo libero e nomi dei file restano sul PC. Si applica con Salva.");
         _chkAllowAttachments.CheckedChanged += (s, e) => OnProfileFieldChanged();
         _chkPseudonymizeAmounts = AddWide(net, new ThemedCheckBox { Text = "Sostituisci gli importi con segnaposto", AutoSize = true },
             "Negli invii esterni sostituisce gli importi riconosciuti; li ripristina nella risposta su questo PC. Si applica con Salva.");
         _chkPseudonymizeDates = AddWide(net, new ThemedCheckBox { Text = "Sostituisci le date con segnaposto", AutoSize = true },
             "Negli invii esterni sostituisce le date riconosciute; le ripristina nella risposta su questo PC. Si applica con Salva.");
+        _chkPseudonymizeAmounts.Visible = _chkPseudonymizeDates.Visible = false;
         _chkPseudonymizeAmounts.CheckedChanged += (s, e) => OnProfileFieldChanged();
         _chkPseudonymizeDates.CheckedChanged += (s, e) => OnProfileFieldChanged();
 

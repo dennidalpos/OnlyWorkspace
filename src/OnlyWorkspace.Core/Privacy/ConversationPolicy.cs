@@ -18,11 +18,11 @@ public static class ConversationPolicy
             ? uri.AbsoluteUri : profile.BaseUrl;
         return Convert.ToBase64String(hash.ComputeHash(JsonSerializer.SerializeToUtf8Bytes(new
         {
-            Version = 6, profile.Id, Type = profile.Type.Trim().ToLowerInvariant(), profile.Model,
+            Version = 7, profile.Id, Type = profile.Type.Trim().ToLowerInvariant(), profile.Model,
             profile.EgressAuthorizationKey,
             Endpoint = endpoint, Auth = profile.AuthType.ToLowerInvariant(), profile.SecretRef,
             profile.UseSystemProxy, External = profile.IsExternal, profile.Exposure, profile.AllowAttachmentUpload,
-            profile.PseudonymizeAmounts, profile.PseudonymizeDates, PseudonymizationRevision = PseudonymizationCatalog.CurrentRevision,
+            Amounts = profile.IsExternal || profile.PseudonymizeAmounts, Dates = profile.IsExternal || profile.PseudonymizeDates, PseudonymizationRevision = PseudonymizationCatalog.CurrentRevision,
             profile.WebSearchEnabled, profile.WebSearchSecretRef,
             WebActions = (profile.WebSearchActions ?? new()).Select(a => a.ToLowerInvariant()).Distinct().OrderBy(a => a, StringComparer.Ordinal).ToArray(),
             WebHosts = DataEgress.WebHosts(profile)

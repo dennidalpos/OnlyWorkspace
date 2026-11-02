@@ -32,7 +32,7 @@ function node(tag, cls, text) {
   if (text != null) n.text = String(text);
   return n;
 }
-const ctx = vm.createContext({ document: { createTextNode: t => node('#text', '', t) } });
+const ctx = vm.createContext({ addDocumentReport() {}, document: { createTextNode: t => node('#text', '', t) } });
 ctx.el = node;
 vm.runInContext(html.slice(from, to), ctx);
 

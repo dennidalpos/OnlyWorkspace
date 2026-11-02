@@ -40,19 +40,19 @@ public sealed class DataEgressReportTests
         var config = Config();
         var signer = TestEgress.Signer("2026-10-20");
         signer.Company = "Rossi & Figli <Srl>";
-        DataEgress.Accept(config, signer, TestEgress.Providers(config), @"DOM\anna", "WS-PROVA", new DateTime(2026, 10, 20, 8, 0, 0, DateTimeKind.Utc));
+        DataEgress.Accept(config, @"DOM\anna", "WS-PROVA", new DateTime(2026, 10, 20, 8, 0, 0, DateTimeKind.Utc), TestEgress.ResolveSecret);
         string html = DataEgressReport.RenderHtml(config, Pc);
 
         Assert.Contains("Autorizzata per tutti i profili configurati.", html);
-        Assert.Contains("Rossi &amp; Figli &lt;Srl&gt;", html);
+        Assert.DoesNotContain("Rossi &amp; Figli &lt;Srl&gt;", html);
         Assert.DoesNotContain("<Srl>", html);
         Assert.Contains("Qwen &lt;cloud&gt;", html);
         Assert.Contains(@"DOM\anna", html);
         Assert.Contains("20/10/2026", html);
         Assert.Contains("cloud.example", html);
         Assert.Contains(System.Net.WebUtility.HtmlEncode(ExposurePolicy.Label(ExposureLevel.Standard)), html);
-        Assert.Contains("Fornitore di prova", html);
-        Assert.Contains(DataEgress.LegalBases[2], html);
+        Assert.DoesNotContain("Fornitore di prova", html);
+        Assert.DoesNotContain(DataEgress.LegalBases[2], html);
         Assert.DoesNotContain("Schede cloud ·", html);
         Assert.Contains(DataEgressNotice.Hash, html);
         Assert.Contains("utilizzabile", html);
@@ -62,7 +62,7 @@ public sealed class DataEgressReportTests
     public void TheAcceptedText_IsReproducedEvenAfterTheNoticeChanges()
     {
         var config = Config();
-        DataEgress.Accept(config, TestEgress.Signer(), TestEgress.Providers(config), "u", "pc", DateTime.UtcNow);
+        DataEgress.Accept(config, "u", "pc", DateTime.UtcNow, TestEgress.ResolveSecret);
         config.DataEgress.Consent!.NoticeText = "Testo firmato in passato, abbastanza lungo da essere un paragrafo intero.";
         config.DataEgress.Consent.NoticeHash = "vecchio";
         string html = DataEgressReport.RenderHtml(config, Pc);

@@ -6,6 +6,16 @@ Test di codice, prova sulla build installata e qualifica su cassette e provider 
 
 Contenuto datato trasferito nel dossier SecondBrain: `02-areas/products/OnlyWorkspace/history/imported/docs/tecnico/verifica.md`. Originale e SHA-256 nel rapporto di migrazione; questa voce conserva i riferimenti esistenti e non autorizza nuovi interventi.
 
+## Agenda e confine cloud rigoroso — 2 novembre 2026
+
+Il candidato nel checkout aggiunge localmente il corpo integrale della mail e i collegamenti effettivi alle voci Outlook; apertura e salvataggio risolvono la voce nell'host e recuperano la fonte con StoreId/EntryId. La chat mostra esiti documentali locali, distinti dall'inclusione nella richiesta, conservati nello storico cifrato e nel replay. Informativa 5 senza campi manuali, policy conversazionale 7 e catalogo 2: il cloud riceve solo categorie e riferimenti opachi a fatti strutturati; testo libero e query web non verificabili sono bloccati.
+
+Release senza avvisi o errori. Regressione: **1.782 test per runtime net48/net10**, escludendo il test concorrente delle preferenze già instabile; la prova integrale iniziale ne ha riprodotto il timeout. Gli ultimi adeguamenti al template incorporato e allo storico documentale hanno **88 test pertinenti passati su entrambi i runtime**. Passati 20 script, con successivo riesame dei test Node e PanePolicy sul codice finale. Catture sintetiche HTTP per le famiglie OpenAI compatibile, Anthropic, Gemini e Ollama verificano l'assenza dei valori originali; PanePolicy verifica il confine reale net48, le autorizzazioni, i riferimenti a fonti e le query libere bloccate prima dell'HTTP.
+
+Smoke net48 e WebViewFocus x64/x86 passati, insieme a WebViewBoundary e WebViewRecovery. Le modali sono provate nel WebView isolato con input del browser per Esc, ritorno del focus e wrapping. Il tentativo precedente con SendKeys non consegnava Esc all'host fuori schermo e resta distinto dalla prova riuscita. Nessuna qualifica generale di tastiera assistiva, DPI o Outlook installato è dedotta.
+
+Versione prodotto invariata, nessuna installazione, chiamata a provider cloud reale, commit o push. Salvataggio COM delle nuove voci, dati reali, qualità dei modelli e qualifica installata restano da verificare separatamente. La suite non dimostra conformità normativa.
+
 ## Ripresa assistita della qualifica Outlook — 2 novembre 2026
 
 L'installazione del candidato `18647c6` è stata riconfrontata: **91/91 file corrispondenti**. Sul principale al 150% e sul secondario al 100% sono registrati quattro restringimenti sotto il minimo, tutti ripristinati a 540 unità Office in un tentativo. Le misure dopo il rilascio conservano la pagina minima di 340 pixel CSS; sul secondario comprendono anche zoom WebView al 175%. L'utente riferisce prove lente e rapide senza scomparsa su entrambi i monitor e con ingrandimento del riquadro; il 200% esatto non è attestato dalla telemetria. Restano aperte riproduzione e causa della scomparsa e la qualifica completa delle unità Office.

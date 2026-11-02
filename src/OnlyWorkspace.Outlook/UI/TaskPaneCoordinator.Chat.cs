@@ -174,6 +174,8 @@ public partial class TaskPaneCoordinator
                     notice = kept.Notice;
                     listing = kept.Listing;
                     mailPack = kept.Pack;
+                    foreach (var document in kept.Documents) document.IncludedInRequest = false;
+                    TrackDocuments(kept.Documents);
                     if (kept.Web != null) webSearch = ReuseWeb(kept.Web);
                     else if (ChatWebRequest.Wanted(intent.Target, userInstruction)) webSearch = StartWebSearch(activeProfile, userInstruction, turn, ct);
                     messages = PromptCatalog.CreateMailAnswerPrompt(userInstruction, mailPack.Render());
@@ -220,10 +222,17 @@ public partial class TaskPaneCoordinator
                     listing = evidence.Listing;
                     mailPack = evidence.Pack;
                     messages = PromptCatalog.CreateMailAnswerPrompt(userInstruction, mailPack.Render());
-                    _readEvidence = new ReadEvidence { Key = evidenceKey, ReadUtc = _sourceReadUtc, Pack = mailPack, Notice = notice, Listing = listing, Inputs = _inputSourcesForTurn.ToList() };
+                    _readEvidence = new ReadEvidence { Key = evidenceKey, ReadUtc = _sourceReadUtc, Pack = mailPack, Notice = notice, Listing = listing, Inputs = _inputSourcesForTurn.ToList(), Documents = DocumentSnapshot() };
                 }
             }
 
+            if (messages == null && selectedEmail != null && activeProfile.IsExternal && CloudFactsRequest.IsFactRequest(userInstruction))
+            {
+                var source = new ChatMailItem { EntryId = selectedEmail.EntryId, StoreId = selectedEmail.StoreId,
+                    Subject = selectedEmail.Subject, Received = selectedEmail.ReceivedTime, Facts = ArchiveFactExtractor.Extract(selectedEmail.Body ?? "") };
+                mailPack = MailEvidencePack.Chronological(new[] { new MailEvidence { Mail = source } });
+                messages = Array.Empty<ChatMessage>();
+            }
             if (messages == null)
             {
                 // Only an explicit reference supplies the selected email and its attachments.
@@ -255,8 +264,9 @@ public partial class TaskPaneCoordinator
             timings.Web = timings.Lap();
             if (mailPack != null)
             {
+                PrepareDocuments(mailPack);
                 // One structured request on the emails [Mn]; amounts, dates and references checked on the cited emails.
-                var answered = await AnswerOnEvidenceAsync(client, answerMessages, mailPack, turn, ct);
+                var answered = await AnswerOnEvidenceAsync(client, answerMessages, mailPack, turn, ct, userInstruction);
                 timings.FirstToken = timings.Lap();
                 responseBuilder.Append(answered.Text);
                 _mailSourcesForTurn = mailPack.Sources();
@@ -281,7 +291,8 @@ public partial class TaskPaneCoordinator
                 Content = listing.Length > 0 ? listing + "\n" + responseBuilder : responseBuilder.ToString(),
                 Timestamp = DateTimeOffset.UtcNow,
                 WebSources = WebCitations.Used(responseBuilder.ToString(), _webForTurn.Sources),
-                MailSources = new List<HistoryContextReference>(_mailSourcesForTurn)
+                MailSources = new List<HistoryContextReference>(_mailSourcesForTurn),
+                Documents = DocumentSnapshot()
             });
             pendingUserMessage = null;
             // Shown, not stored: it must not come back to the model as part of its own answer.

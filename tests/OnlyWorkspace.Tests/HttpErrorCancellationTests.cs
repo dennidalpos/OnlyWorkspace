@@ -47,7 +47,7 @@ public sealed class HttpErrorCancellationTests
         var client = Client(provider, http);
         using var owner = (IDisposable)client;
         using var cts = new CancellationTokenSource();
-        var pending = client.CompleteStructuredAsync(new[] { ChatMessage.User("synthetic") }, "{}", cts.Token);
+        var pending = client.CompleteProtocolAsync(new[] { ChatMessage.User("synthetic") }, "{}", cts.Token);
         await stream.Waiting.Task.WaitAsync(TimeSpan.FromSeconds(3));
         if (cancel)
         {
@@ -94,7 +94,7 @@ public sealed class HttpErrorCancellationTests
             profile.BaseUrl = "http://127.0.0.1:" + ((IPEndPoint)listener.LocalEndpoint).Port;
             using var client = new OllamaClient(profile);
             using var cts = new CancellationTokenSource();
-            var pending = client.CompleteStructuredAsync(new[] { ChatMessage.User("synthetic") }, "{}", cts.Token);
+            var pending = client.CompleteProtocolAsync(new[] { ChatMessage.User("synthetic") }, "{}", cts.Token);
             await headersSent.Task.WaitAsync(TimeSpan.FromSeconds(3));
             // The body would trickle for 250 s: the bounds prove it cannot, with margin for a saturated CI runner,
             // where the 2 s once allowed after Cancel ran out while continuations waited for a thread (A120).
@@ -125,7 +125,7 @@ public sealed class HttpErrorCancellationTests
             { BaseAddress = new Uri("http://localhost/") };
         var client = Client(provider, http);
         using var owner = (IDisposable)client;
-        var error = await Assert.ThrowsAnyAsync<HttpRequestException>(() => client.CompleteStructuredAsync(new[] { ChatMessage.User("test") }, "{}"));
+        var error = await Assert.ThrowsAnyAsync<HttpRequestException>(() => client.CompleteProtocolAsync(new[] { ChatMessage.User("test") }, "{}"));
         Assert.Contains("400", error.Message);
         Assert.Contains("synthetic diagnostic", error.Message);
     }

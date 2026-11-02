@@ -166,6 +166,31 @@ try {
     }
     $form.ClientSize = $savedSize
     'PASS A210 real WebView Stato: Avanzate closed by default, essentials fit at 380 and 190 px'
+    # Actual contextual help dialog: modal semantics, wrapping, Escape and focus restoration.
+    $second.PostMessage(@{type='toggle_analysis';preset='summary';toggle=$false})
+    Wait-Until {(Script $second '!document.getElementById("analysisDrawer").hidden') -eq 'true'} 'analysis help'
+    [void](Script $second 'document.getElementById("anMaxNote").textContent="Descrizione sintetica del limite di ricerca e dei dati protetti."; document.getElementById("anMaxNote").hidden=false;')
+    Wait-Until {(Script $second '!document.querySelector("button[aria-label=\"Guida al limite di ricerca\"]").hidden') -eq 'true'} 'context help button'
+    [void](Script $second 'window.contextHelpTrigger=document.querySelector("button[aria-label=\"Guida al limite di ricerca\"]"); contextHelpTrigger.focus(); contextHelpTrigger.click();')
+    Wait-Until {(Script $second '!!document.querySelector("dialog:modal") && document.activeElement.textContent === "Chiudi"') -eq 'true'} 'modal help and keyboard focus'
+    $modalFits = Script $second '(function(){var d=document.querySelector("dialog:modal"); return d.scrollWidth <= d.clientWidth + 1;})()'
+    if ($modalFits -ne 'true') {throw 'Context help needs horizontal scrolling'}
+    [void]$focus.Invoke($second,@())
+    [void](Script $second 'document.querySelector("dialog button").focus();')
+    # Browser input on the isolated, deliberately offscreen WebView; SendKeys is not reliable for this host.
+    $escapeDown = (Field $second '_webView').CoreWebView2.CallDevToolsProtocolMethodAsync('Input.dispatchKeyEvent','{"type":"keyDown","key":"Escape","code":"Escape","windowsVirtualKeyCode":27,"nativeVirtualKeyCode":27}')
+    Wait-Until {$escapeDown.IsCompleted} 'browser Escape down'
+    [void]$escapeDown.GetAwaiter().GetResult()
+    $escapeUp = (Field $second '_webView').CoreWebView2.CallDevToolsProtocolMethodAsync('Input.dispatchKeyEvent','{"type":"keyUp","key":"Escape","code":"Escape","windowsVirtualKeyCode":27,"nativeVirtualKeyCode":27}')
+    Wait-Until {$escapeUp.IsCompleted} 'browser Escape up'
+    [void]$escapeUp.GetAwaiter().GetResult()
+    try {
+        Wait-Until {(Script $second '!document.querySelector("dialog") && document.activeElement === window.contextHelpTrigger') -eq 'true'} 'Escape closes help and restores focus'
+    } catch {
+        $helpState = Script $second 'JSON.stringify({modal:!!document.querySelector("dialog"),focus:document.activeElement.outerHTML,hasFocus:document.hasFocus(),trigger:window.contextHelpTrigger.outerHTML,drawer:document.getElementById("analysisDrawer").hidden})'
+        throw "Context help failure: $helpState"
+    }
+    'PASS real WebView contextual help: modal, keyboard focus, Escape, focus return and wrapping'
     # A192: malformed host data triggers the actual page boundary, accessible feedback and native log.
     $second.PostMessage(@{type='archive_status';available=$true;active=$true;metrics=@{invalid='fixture'};stores=@()})
     Wait-Until {(Script $second '!document.getElementById("toast").hidden && document.getElementById("toastText").textContent.indexOf("Il riquadro non") === 0') -eq 'true'} 'translated page failure'

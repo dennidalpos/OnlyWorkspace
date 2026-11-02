@@ -120,7 +120,7 @@ public class AnthropicClientTests
         };
 
         var chunks = new List<string>();
-        await foreach (var chunk in anthropic.StreamChatAsync(messages))
+        await foreach (var chunk in anthropic.StreamProtocolAsync(messages))
         {
             chunks.Add(chunk);
         }
@@ -154,7 +154,7 @@ public class AnthropicClientTests
         using var anthropic = new AnthropicClient(profile, secretToken: "ant-test-key", httpClient: client);
         var messages = new[] { ChatMessage.User("Verifica") };
 
-        var result = await anthropic.CompleteStructuredAsync(messages, "{}");
+        var result = await anthropic.CompleteProtocolAsync(messages, "{}");
         Assert.Equal("{\"status\":\"ok\"}", result);
     }
 
@@ -178,7 +178,7 @@ public class AnthropicClientTests
                         "\"stop_reason\":\"end_turn\",\"usage\":{\"input_tokens\":10,\"output_tokens\":5}}");
         });
 
-        var result = await anthropic.CompleteStructuredAsync(new[] { ChatMessage.User("Estrai") }, OnlyWorkspace.Core.Prompts.PromptCatalog.ActionItemsJsonSchema);
+        var result = await anthropic.CompleteProtocolAsync(new[] { ChatMessage.User("Estrai") }, OnlyWorkspace.Core.Prompts.PromptCatalog.ActionItemsJsonSchema);
 
         Assert.Equal("{\"items\":[]}", result);
         using var sent = System.Text.Json.JsonDocument.Parse(body!);
@@ -201,7 +201,7 @@ public class AnthropicClientTests
                 : Json("{\"content\":[{\"type\":\"text\",\"text\":\"{}\"}],\"stop_reason\":\"end_turn\"}");
         });
 
-        await anthropic.CompleteStructuredAsync(new[] { ChatMessage.User("Verifica") }, "{}");
+        await anthropic.CompleteProtocolAsync(new[] { ChatMessage.User("Verifica") }, "{}");
 
         Assert.Equal(2, bodies.Count);
         Assert.Contains("\"temperature\"", bodies[0]);
@@ -213,7 +213,7 @@ public class AnthropicClientTests
     {
         using var anthropic = Create("claude-refusal-test", _ => Json("{\"content\":[],\"stop_reason\":\"refusal\",\"usage\":{\"input_tokens\":1,\"output_tokens\":0}}"));
 
-        await Assert.ThrowsAsync<HttpRequestException>(() => anthropic.CompleteStructuredAsync(new[] { ChatMessage.User("Verifica") }, "{}"));
+        await Assert.ThrowsAsync<HttpRequestException>(() => anthropic.CompleteProtocolAsync(new[] { ChatMessage.User("Verifica") }, "{}"));
     }
 
     [Fact]
@@ -249,8 +249,8 @@ public class AnthropicClientTests
                 : Json("{\"content\":[{\"type\":\"text\",\"text\":\"{}\"}],\"stop_reason\":\"end_turn\"}");
         });
 
-        await anthropic.CompleteStructuredAsync(new[] { ChatMessage.User("Ciao") }, "{}");
-        await anthropic.CompleteStructuredAsync(new[] { ChatMessage.User("Ciao") }, "{}");
+        await anthropic.CompleteProtocolAsync(new[] { ChatMessage.User("Ciao") }, "{}");
+        await anthropic.CompleteProtocolAsync(new[] { ChatMessage.User("Ciao") }, "{}");
 
         // Streaming request, then the provider's stated cap (remembered).
         Assert.Equal(new[] { 64000, 8192, 8192 }, sent);
@@ -285,7 +285,7 @@ public class AnthropicClientTests
                 Event(new { type = "message_stop" });
             return new HttpResponseMessage(HttpStatusCode.OK) { Content = new UnbufferedHttpContent(sse) };
         });
-        Assert.Equal("{\"ok\":true}", await client.CompleteStructuredAsync(new[] { ChatMessage.User("Test") }, "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"}}}"));
+        Assert.Equal("{\"ok\":true}", await client.CompleteProtocolAsync(new[] { ChatMessage.User("Test") }, "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"}}}"));
         Assert.Equal(15, client.LastTokenUsage!.PromptTokens);
         Assert.Equal(23, client.LastTokenUsage.CompletionTokens);
         Assert.False(client.LastCompletion!.IsTruncated);
@@ -303,7 +303,7 @@ public class AnthropicClientTests
         {
             Content = new UnbufferedHttpContent(sse)
         });
-        var ex = await Assert.ThrowsAsync<HttpRequestException>(() => client.CompleteStructuredAsync(new[] { ChatMessage.User("Test") }, "{}"));
+        var ex = await Assert.ThrowsAsync<HttpRequestException>(() => client.CompleteProtocolAsync(new[] { ChatMessage.User("Test") }, "{}"));
         Assert.Contains(error, ex.Message);
     }
 
@@ -321,7 +321,7 @@ public class AnthropicClientTests
         });
         var ex = await Assert.ThrowsAsync<HttpRequestException>(async () =>
         {
-            await foreach (var _ in client.StreamChatAsync(new[] { ChatMessage.User("Test") })) { }
+            await foreach (var _ in client.StreamProtocolAsync(new[] { ChatMessage.User("Test") })) { }
         });
         Assert.Contains(sse ? "completamento" : "flusso di risposta", ex.Message);
     }
@@ -335,7 +335,7 @@ public class AnthropicClientTests
         {
             Content = new UnbufferedHttpContent(sse)
         });
-        var ex = await Assert.ThrowsAsync<HttpRequestException>(() => client.CompleteStructuredAsync(new[] { ChatMessage.User("Test") }, "{}"));
+        var ex = await Assert.ThrowsAsync<HttpRequestException>(() => client.CompleteProtocolAsync(new[] { ChatMessage.User("Test") }, "{}"));
         Assert.Contains("provider overloaded", ex.Message);
     }
 
@@ -361,7 +361,7 @@ public class AnthropicClientTests
                     Event(new { type = "message_stop" }))
             };
         });
-        Assert.Equal("{}", await client.CompleteStructuredAsync(new[] { ChatMessage.User("Test") }, "{\"type\":\"object\",\"properties\":{}}"));
+        Assert.Equal("{}", await client.CompleteProtocolAsync(new[] { ChatMessage.User("Test") }, "{\"type\":\"object\",\"properties\":{}}"));
         Assert.Equal(2, calls);
         Assert.True(client.LastCompletion!.IsTruncated);
     }
@@ -378,7 +378,7 @@ public class AnthropicClientTests
         })) { BaseAddress = new Uri("https://api.anthropic.com/v1/") };
         using var client = new AnthropicClient(new LlmProfileConfig { Model = "fixture", BaseUrl = "https://api.anthropic.com/v1", IdleTimeoutSeconds = 1 }, httpClient: http);
         using var cts = new CancellationTokenSource();
-        var pending = client.CompleteStructuredAsync(new[] { ChatMessage.User("Test") }, "{}", cts.Token);
+        var pending = client.CompleteProtocolAsync(new[] { ChatMessage.User("Test") }, "{}", cts.Token);
         await stream.Waiting.Task.WaitAsync(TimeSpan.FromSeconds(5));
         if (cancel)
         {

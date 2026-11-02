@@ -75,12 +75,18 @@ public enum DocumentStatus
 /// <summary>One attachment met during an analysis and what happened to it.</summary>
 public sealed class DocumentOutcome
 {
-    private string? _extractionProblem;
+    public string? ExtractionProblem { get; set; }
 
     public string Name { get; set; } = string.Empty;
     public DocumentStatus Status { get; set; } = DocumentStatus.Incomplete;
     public string EmailSubject { get; set; } = string.Empty;
     public DateTime EmailDate { get; set; }
+    public string EntryId { get; set; } = string.Empty;
+    public string StoreId { get; set; } = string.Empty;
+    public string SourceId { get; set; } = string.Empty;
+    public bool IncludedInRequest { get; set; }
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool PreparedForRequest { get; set; }
 
     public bool WasRead => Status == DocumentStatus.Read;
 
@@ -98,12 +104,12 @@ public sealed class DocumentOutcome
     /// <summary>Only complete extraction can contribute text; partial does not necessarily mean oversized.</summary>
     public void ApplyExtraction(AttachmentExtraction extraction)
     {
-        _extractionProblem = extraction.Problem;
+        ExtractionProblem = extraction.Problem;
         Status = extraction.Truncated
-            ? _extractionProblem is null or "" or "text-limit" or "size-limit" or "expanded-size-limit"
+            ? ExtractionProblem is null or "" or "text-limit" or "size-limit" or "expanded-size-limit"
                 ? DocumentStatus.TooLarge : DocumentStatus.Incomplete
             : extraction.Error != null ? DocumentStatus.Error
-            : _extractionProblem switch
+            : ExtractionProblem switch
             {
                 "scanned" or "ocr-unavailable" or "ocr-off" => DocumentStatus.Scanned,
                 "protected" => DocumentStatus.Protected,
@@ -117,7 +123,7 @@ public sealed class DocumentOutcome
 
     public string Reason => Status switch
     {
-        DocumentStatus.Scanned => _extractionProblem switch
+        DocumentStatus.Scanned => ExtractionProblem switch
         {
             "ocr-unavailable" => "scansione o immagine: OCR non disponibile su questo PC",
             "ocr-off" => "scansione o immagine: OCR disattivato nelle impostazioni",
@@ -132,7 +138,7 @@ public sealed class DocumentOutcome
         DocumentStatus.NotSent => "contenuto non inviato al provider esterno",
         DocumentStatus.Empty => "nessun testo all'interno",
         DocumentStatus.Error => "errore di lettura",
-        DocumentStatus.Incomplete => _extractionProblem switch
+        DocumentStatus.Incomplete => ExtractionProblem switch
         {
             "depth-limit" => "contenitore oltre la profondità massima di lettura",
             "scanned" => "documento non letto per intero: contiene pagine scansionate senza testo riconoscibile",

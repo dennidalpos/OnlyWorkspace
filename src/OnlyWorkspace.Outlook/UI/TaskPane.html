@@ -643,6 +643,13 @@
   .field-area { height: auto; min-height: 64px; padding: 6px 8px; resize: vertical; line-height: 1.4; }
   .field:focus, .field-area:focus { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
   .field:disabled { opacity: 0.5; }
+  .context-help-source { display: none !important; }
+  .context-help-button { min-width: 28px; min-height: 28px; border-radius: 50%; }
+  .context-help-modal { max-width: min(560px, 90vw); max-height: 85vh; overflow: auto; background: var(--surface); color: var(--text); border: 1px solid var(--border-input); }
+  .context-help-modal::backdrop { background: rgba(0,0,0,.35); }
+  .context-help-modal p { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .document-report { margin-top: 12px; font-size: var(--text-size-12); }
+  .document-report ul { padding-left: 20px; overflow-wrap: anywhere; }
   .form-note { font-size: var(--text-size-11-5); color: var(--text-2); }
   .picked-list { display: flex; flex-direction: column; gap: 4px; margin-left: 22px; }
   .picked { display: flex; align-items: center; gap: 4px; padding: 2px 2px 2px 8px; font-size: var(--text-size-12); border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
@@ -1656,6 +1663,68 @@
     container.appendChild(footer);
   }
 
+  function openContextHelp(title, description, trigger) {
+    var modal = document.createElement('dialog');
+    modal.className = 'context-help-modal';
+    modal.setAttribute('aria-label', title);
+    modal.appendChild(el('h2', '', title));
+    modal.appendChild(el('p', '', description));
+    var close = el('button', 'btn', 'Chiudi');
+    close.type = 'button';
+    close.addEventListener('click', function () { modal.close(); });
+    modal.appendChild(close);
+    modal.addEventListener('keydown', function (event) {
+      // Keep pane shortcuts and drawer Escape handling outside the active modal.
+      event.stopPropagation();
+      if (event.key === 'Escape') { event.preventDefault(); modal.close(); }
+    });
+    modal.addEventListener('close', function () { modal.remove(); if (trigger && trigger.isConnected) trigger.focus(); });
+    document.body.appendChild(modal);
+    modal.showModal();
+    close.focus();
+  }
+
+  function setupContextHelp() {
+  ['anFactsHelp', 'anMaxNote'].forEach(function (id) {
+    var source = $(id);
+    if (!source) return;
+    var button = el('button', 'btn context-help-button', '?');
+    button.type = 'button'; button.title = 'Apri la descrizione';
+    button.setAttribute('aria-label', id === 'anFactsHelp' ? 'Guida ai filtri locali' : 'Guida al limite di ricerca');
+    source.classList.add('context-help-source');
+    source.parentNode.insertBefore(button, source.nextSibling);
+    function refreshHelp() { button.hidden = source.hidden || !source.textContent.trim(); }
+    button.addEventListener('click', function () { openContextHelp(button.getAttribute('aria-label'), source.textContent, button); });
+    if (typeof MutationObserver !== 'undefined') new MutationObserver(refreshHelp).observe(source, { childList: true, characterData: true, subtree: true, attributes: true, attributeFilter: ['hidden'] });
+    refreshHelp();
+  });
+
+  }
+
+  function addDocumentReport(container, documents) {
+    if (!documents || !documents.length) return;
+    var report = el('div', 'document-report');
+    report.setAttribute('aria-label', 'File e allegati della risposta');
+    [true, false].forEach(function (read) {
+      var entries = documents.filter(function (d) { return !!d.WasRead === read; });
+      if (!entries.length) return;
+      report.appendChild(el('strong', '', (read ? 'Letti' : 'Non letti') + ' (' + entries.length + ')'));
+      var list = el('ul');
+      entries.forEach(function (d, index) {
+        if (index === 10) {
+          var more = document.createElement('details');
+          more.appendChild(el('summary', '', 'Mostra gli altri ' + (entries.length - 10)));
+          list = el('ul'); more.appendChild(list); report.appendChild(more);
+        }
+        var reason = read ? (d.IncludedInRequest ? 'incluso nella richiesta del modello' : 'letto sul PC; non incluso nella richiesta del modello') : d.Reason;
+        var item = el('li', '', d.Name + ' — ' + reason + (d.EmailSubject ? ' · ' + d.EmailSubject : ''));
+        list.appendChild(item);
+        if (index === 0) report.appendChild(list);
+      });
+    });
+    container.appendChild(report);
+  }
+
   function addSources(container, webSources, mailSources, text) {
     var web = (webSources || []).map(function (s, i) {
       return Object.assign({}, s, { citationNumber: s.CitationNumber || s.citationNumber || i + 1 });
@@ -1739,7 +1808,7 @@
       if (it.source) card.appendChild(mailChip({ subject: it.source.label, meta: it.source.meta, entryId: it.source.entryId, storeId: it.source.storeId }));
       // Server may provide the button and the message it posts; default = open the Outlook draft.
       var label = it.buttonLabel || (it.kind === 'appointment' ? 'Apri bozza appuntamento' : 'Apri bozza attività');
-      var message = it.message || { type: 'open_action_item', item: it };
+      var message = it.message || { type: 'open_action_item', resultId: it.saveResultId, itemId: it.saveItemId };
       var btn = actionButton(it.kind === 'triage' ? 'check' : it.message ? 'reply' : 'add', label, function () {
         if (state.busy) return;
         post(message);
@@ -2049,6 +2118,7 @@
       } else if (result.status === 'silent') {
         c.turn.remove();
       }
+      addDocumentReport(c.assistant, result.documents);
       if (c.cloud && (result.status === 'error' || result.status === 'cancelled')) {
         var cloudFooter = el('div', 'msg-footer');
         var cloudMeta = el('span', 'msg-meta');
@@ -2354,7 +2424,7 @@
     var noAttach = followups || ctx.attachmentsAllowed === false;
     setOptDisabled('anOptAttach', [$('anAttachments')], noAttach);
     $('anOptAttach').title = !followups && ctx.attachmentsAllowed === false
-      ? 'Con questo profilo cloud il testo degli allegati non viene inviato: al modello arrivano solo i nomi dei file.'
+      ? 'Questo profilo non consente fatti protetti dagli allegati; testo e nomi restano sul PC.'
       : 'Il testo degli allegati leggibili entra nell\'analisi.';
 
     var list = $('anPicked');
@@ -3073,6 +3143,7 @@
         body.innerHTML = renderMarkdown(shownText, false);
         a.appendChild(body);
         addSources(a, m.webSources, m.mailSources, m.content);
+        addDocumentReport(a, m.documents);
         // A reply draft still goes into Outlook as a reply to its email.
         var email = lastUser && lastUser.email;
         var reply = !!(lastUser && /^Risposta/.test(lastUser.action || '') && email && email.entryId);
@@ -3343,16 +3414,16 @@
         break;
 
       case 'stream_end':
-        finishTurn({ status: 'ok', latencyMs: data.latencyMs, truncated: data.truncated, op: data.op, items: data.items, table: data.table, exportData: data.export, choices: data.choices, analysisNotes: data.analysisNotes, analysisId: data.analysisId, webSources: data.webSources, webNotice: data.webNotice, mailSources: data.mailSources, writing: data.writing });
+        finishTurn({ status: 'ok', latencyMs: data.latencyMs, truncated: data.truncated, op: data.op, items: data.items, table: data.table, exportData: data.export, choices: data.choices, analysisNotes: data.analysisNotes, analysisId: data.analysisId, webSources: data.webSources, webNotice: data.webNotice, mailSources: data.mailSources, documents: data.documents, writing: data.writing });
         break;
 
       case 'stream_error':
         if (!state.current) state.current = createTurn('action', 'Errore', null);
-        finishTurn({ status: 'error', message: data.message, retryable: data.retryable !== false, op: data.op });
+        finishTurn({ status: 'error', message: data.message, retryable: data.retryable !== false, op: data.op, documents: data.documents });
         break;
 
       case 'stream_cancelled':
-        finishTurn({ status: 'cancelled', message: data.message });
+        finishTurn({ status: 'cancelled', message: data.message, documents: data.documents });
         break;
 
 
@@ -3463,6 +3534,7 @@
     });
   }
 
+  setupContextHelp();
   setComposerMode('chat');
   updateActions();
   post({ type: 'ready' });

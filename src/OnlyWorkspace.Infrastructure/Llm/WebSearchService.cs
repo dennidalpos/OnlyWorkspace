@@ -245,80 +245,12 @@ public sealed class WebSearchService : IDisposable
         return WebSearchSupport.Unverified;
     }
 
-    public async Task<WebSearchResult> SearchAsync(IEnumerable<ChatMessage> messages, CancellationToken ct = default, string? action = null)
+    public Task<WebSearchResult> SearchAsync(IEnumerable<ChatMessage> messages, CancellationToken ct = default, string? action = null)
     {
-        // Action instructions are supplied by web.search; only the user data is search context.
-        var input = string.Join("\n", messages.Where(m => m.Role == "user").Select(m => m.Content));
-        bool cut = input.Length > MaxSearchInput;
-        if (cut) input = input.Substring(input.Length - MaxSearchInput);
-        input = string.Join("\n", PromptCatalog.CreateWebSearchPrompt(action ?? "richiesta generale", input).Select(m => m.Role + ": " + m.Content));
-        JsonDocument response;
-        var mode = Caps.WebSearch;
-        switch (mode)
-        {
-            case WebSearchMode.OpenAIResponses:
-            case WebSearchMode.BasicResponses:
-                response = await SendAsync(HttpMethod.Post, ProviderUrl("responses"), Basic
-                    ? new { model = _profile.Model, input = "Usa web_search per questa richiesta e cita le fonti.\n" + input, tools = new[] { new { type = "web_search" } }, store = false }
-                    : (object)new { model = _profile.Model, input, tools = new[] { new { type = "web_search", search_context_size = "low" } }, tool_choice = "required", max_tool_calls = 2, include = new[] { "web_search_call.action.sources" } }, false, ct).ConfigureAwait(false);
-                break;
-            case WebSearchMode.AnthropicTool:
-                response = await SendAsync(HttpMethod.Post, ProviderUrl("messages"), new
-                {
-                    model = _profile.Model, max_tokens = 2048,
-                    messages = new[] { new { role = "user", content = input + "\nUsa la ricerca web e cita le fonti." } },
-                    tools = new[] { new { type = "web_search_20250305", name = "web_search", max_uses = 2 } }
-                }, false, ct).ConfigureAwait(false);
-                break;
-            case WebSearchMode.GeminiGrounding:
-                response = await SendAsync(HttpMethod.Post, ProviderUrl("models/" + Uri.EscapeDataString(_profile.Model) + ":generateContent"), new
-                {
-                    contents = new[] { new { parts = new[] { new { text = input + "\nUsa al massimo una query Google Search e cita le fonti." } } } },
-                    tools = new[] { new { google_search = new { } } }
-                }, false, ct).ConfigureAwait(false);
-                break;
-            case WebSearchMode.OllamaCom:
-                var local = await SearchOllamaAsync(input, ct).ConfigureAwait(false);
-                local.InputCut = cut;
-                return local;
-            default:
-                throw new NotSupportedException("Web Search non disponibile per questo provider.");
-        }
-        using (response)
-        {
-            var result = ParseResult(mode, response.RootElement);
-            result.InputCut = cut;
-            return result;
-        }
-    }
-
-    private async Task<WebSearchResult> SearchOllamaAsync(string input, CancellationToken ct)
-    {
-        if (string.IsNullOrWhiteSpace(_webSecret)) throw new InvalidOperationException("Chiave Ollama Web Search mancante nel vault.");
-        // Ask the local model for one search query through its official tool-calling contract.
-        var payload = new
-        {
-            model = _profile.Model, stream = false,
-            messages = new[] { new { role = "user", content = "Prepara una sola query web breve per questa richiesta. Usa lo strumento web_search.\n" + input } },
-            tools = new[] { new { type = "function", function = new { name = "web_search", description = "Cerca una query sul web", parameters = new { type = "object", properties = new { query = new { type = "string" } }, required = new[] { "query" } } } } }
-        };
-        ModelRequestContext.Prepare(_profile, new[] { ChatMessage.User(payload.messages[0].content) }, JsonSerializer.Serialize(payload.tools));
-        using var request = await SendAsync(HttpMethod.Post, ProviderUrl("api/chat"), payload, false, ct).ConfigureAwait(false);
-        var calls = Path(request.RootElement, "message", "tool_calls");
-        if (calls.ValueKind != JsonValueKind.Array || calls.GetArrayLength() == 0) throw new HttpRequestException("Il modello Ollama non ha richiesto Web Search.");
-        var query = Path(calls[0], "function", "arguments", "query");
-        if (query.ValueKind != JsonValueKind.String || string.IsNullOrWhiteSpace(query.GetString())) throw new HttpRequestException("Query Web Search Ollama non valida.");
-        using var search = await SendAsync(HttpMethod.Post, "https://ollama.com/api/web_search", new { query = query.GetString()!.Substring(0, Math.Min(240, query.GetString()!.Length)), max_results = 5 }, true, ct).ConfigureAwait(false);
-        var result = new WebSearchResult();
-        var hits = Path(search.RootElement, "results");
-        if (hits.ValueKind != JsonValueKind.Array) throw new HttpRequestException("Ollama Web Search non ha restituito risultati validi.");
-        foreach (var hit in hits.EnumerateArray().Take(5))
-        {
-            AddSource(result, Str(hit, "url"), Str(hit, "title"));
-            result.Text += "\n" + Str(hit, "title") + " — " + Str(hit, "content").Substring(0, Math.Min(700, Str(hit, "content").Length));
-        }
-        if (result.Sources.Count == 0) throw new HttpRequestException("Nessuna fonte web valida restituita da Ollama.");
-        return result;
+        ct.ThrowIfCancellationRequested();
+        // Arbitrary questions, sender domains and locally generated queries are not verified structured inputs.
+        return Task.FromException<WebSearchResult>(new OnlyWorkspace.Core.Privacy.DataEgressBlockedException(
+            OnlyWorkspace.Core.Privacy.CloudFactsRequest.BlockedMessage));
     }
 
     internal static WebSearchResult ParseResult(WebSearchMode mode, JsonElement root)

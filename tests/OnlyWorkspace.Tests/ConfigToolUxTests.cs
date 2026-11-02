@@ -390,7 +390,7 @@ public sealed class ConfigToolUxTests
             ErrorText.For(new System.ComponentModel.Win32Exception(1223)));
         Assert.DoesNotContain("path is denied", ErrorText.For(new UnauthorizedAccessException("Access to the path is denied.")));
         Assert.DoesNotContain("Sequence", ErrorText.For(new InvalidOperationException("Sequence contains no elements")));
-        var product = Record.Exception(() => DataEgress.Accept(new WorkspaceConfig(), new DataEgressSigner(), new List<DataEgressProvider>(), "u", "pc", DateTime.UtcNow));
+        var product = Record.Exception(() => DataEgress.Accept(new WorkspaceConfig(), "u", "pc", DateTime.UtcNow, TestEgress.ResolveSecret));
         Assert.NotNull(product);
         Assert.Equal(product!.Message, ErrorText.For(product));
     }

@@ -14,27 +14,7 @@ namespace OnlyWorkspace.Tests;
 
 public sealed class WebSearchServiceTests
 {
-    [Fact]
-    public async Task ExternalNotification_WaitsForTheExternalHttpRequest()
-    {
-        int calls = 0, notices = 0;
-        using var http = new HttpClient(new Handler((request, _) =>
-        {
-            calls++;
-            if (request.RequestUri!.Host == "ollama.com")
-            {
-                Assert.Equal(1, notices);
-                return Task.FromResult(Json("{\"results\":[{\"title\":\"Synthetic\",\"url\":\"https://example.invalid/a\",\"content\":\"Synthetic result\"}]}"));
-            }
-            Assert.Equal(0, notices); // Local query generation itself sends no data outside the PC.
-            return Task.FromResult(Json("{\"message\":{\"tool_calls\":[{\"function\":{\"arguments\":{\"query\":\"synthetic\"}}}]}}"));
-        }));
-        using var search = new WebSearchService(Profile("ollama"), null, "synthetic", http, () => notices++);
-        Assert.Equal(0, notices);
-        await search.SearchAsync(new[] { ChatMessage.User("Synthetic question") });
-        Assert.Equal(2, calls);
-        Assert.Equal(1, notices);
-    }
+
 
     [Fact]
     public async Task CancelledWebRequest_DoesNotNotifyExternalDispatch()
@@ -59,31 +39,11 @@ public sealed class WebSearchServiceTests
         }));
         var profile = new LlmProfileConfig { Type = "ollama", BaseUrl = "http://127.0.0.1:11434", Model = "synthetic", ContextBudgetTokens = 100 };
         using var search = new WebSearchService(profile, null, "synthetic-web-key", http);
-        await Assert.ThrowsAsync<OnlyWorkspace.Core.Context.ContextTooLongException>(() => search.SearchAsync(new[] { ChatMessage.User(new string('x', 300)) }));
+        await Assert.ThrowsAsync<OnlyWorkspace.Core.Privacy.DataEgressBlockedException>(() => search.SearchAsync(new[] { ChatMessage.User(new string('x', 300)) }));
         Assert.Equal(0, calls);
     }
 
-    [Fact]
-    public async Task ActionSpecificTask_ReachesProvider_WithDataSeparatedAndExistingInputLimit()
-    {
-        using var http = new HttpClient(new Handler(async (req, _) =>
-        {
-            using var payload = JsonDocument.Parse(await req.Content!.ReadAsStringAsync());
-            string input = payload.RootElement.GetProperty("input").GetString()!;
-            Assert.Contains("Azione: security", input);
-            Assert.Contains("Non cercare recensioni", input);
-            Assert.Contains("<richiesta>", input);
-            Assert.DoesNotContain("INIZIO-OLTRE-LIMITE", input);
-            Assert.DoesNotContain("ISTRUZIONI-INTERNE", input);
-            Assert.Contains("FINE-DATI", input);
-            return Json("{\"output\":[{\"type\":\"web_search_call\",\"status\":\"completed\"},{\"type\":\"message\",\"content\":[{\"type\":\"output_text\",\"text\":\"Riscontro\",\"annotations\":[{\"url\":\"https://example.test/a\"}]}]}]}");
-        }));
-        using var search = new WebSearchService(Profile("openai"), "fixture", httpClient: http);
-        var result = await search.SearchAsync(new[] { ChatMessage.System("ISTRUZIONI-INTERNE"), ChatMessage.User("INIZIO-OLTRE-LIMITE" + new string('x', 7000) + "FINE-DATI") }, default, "security");
-        // The limit stays (A44): the result says the start was left out, so the pane can tell the user.
-        Assert.True(result.InputCut);
-        Assert.Contains("6.000", WebSearchService.InputCutNotice);
-    }
+
 
     [Fact]
     public void Destinations_NameEveryHostThatReceivesSearchData()
@@ -307,71 +267,11 @@ public sealed class WebSearchServiceTests
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => check);
     }
 
-    [Fact]
-    public async Task Ollama_WebSearch_LimitsResultsAndRejectsUnverifiedUrls()
-    {
-        var calls = 0;
-        using var http = new HttpClient(new Handler(async (req, _) =>
-        {
-            calls++;
-            var body = req.Content == null ? "" : await req.Content.ReadAsStringAsync();
-            if (req.RequestUri!.Host == "ollama.com")
-            {
-                using var parsed = JsonDocument.Parse(body);
-                Assert.Equal(5, parsed.RootElement.GetProperty("max_results").GetInt32());
-                return Json("{\"results\":[{\"title\":\"A\",\"url\":\"https://example.com/a\",\"content\":\"fact\"},{\"title\":\"Unsafe\",\"url\":\"http://example.com\",\"content\":\"bad\"}]}");
-            }
-            Assert.Contains("web_search", body);
-            return Json("{\"message\":{\"tool_calls\":[{\"function\":{\"arguments\":{\"query\":\"test\"}}}]}}");
-        }));
-        using var search = new WebSearchService(Profile("ollama"), null, "web-key", http);
-        var result = await search.SearchAsync(new[] { ChatMessage.User("question") });
-        Assert.Equal(2, calls);
-        Assert.Single(result.Sources);
-        Assert.Equal("https://example.com/a", result.Sources[0].Url);
-        Assert.False(result.InputCut);
-        Assert.True((await search.SearchAsync(new[] { ChatMessage.User(new string('x', 6001)) })).InputCut);
-    }
 
-    [Theory]
-    [InlineData("openai", "max_tool_calls", 2, "{\"output\":[{\"type\":\"web_search_call\",\"status\":\"completed\"},{\"type\":\"message\",\"content\":[{\"type\":\"output_text\",\"text\":\"Answer\",\"annotations\":[{\"url\":\"https://example.org/a\"}]}]}]}")]
-    [InlineData("anthropic", "max_uses", 2, "{\"content\":[{\"type\":\"web_search_tool_result\",\"content\":[{\"url\":\"https://example.org/a\"}]},{\"type\":\"text\",\"text\":\"Answer\"}]}")]
-    public async Task CloudSearch_LimitsProviderToolCalls(string provider, string limitField, int limit, string response)
-    {
-        using var http = new HttpClient(new Handler(async (req, _) =>
-        {
-            using var payload = JsonDocument.Parse(await req.Content!.ReadAsStringAsync());
-            if (provider == "openai") Assert.Equal(limit, payload.RootElement.GetProperty(limitField).GetInt32());
-            else Assert.Equal(limit, payload.RootElement.GetProperty("tools")[0].GetProperty(limitField).GetInt32());
-            return Json(response);
-        }));
-        using var search = new WebSearchService(Profile(provider), "secret", httpClient: http);
-        var result = await search.SearchAsync(new[] { ChatMessage.User("question") });
-        Assert.Single(result.Sources);
-    }
 
-    [Fact]
-    public async Task QwenCloud_SearchAcceptsDocumentedCallWithoutStatus()
-    {
-        var profile = Profile("qwen");
-        profile.BaseUrl = "https://token-plan.maas.qwencloudapi.com/compatible-mode/v1";
-        using var http = new HttpClient(new Handler(async (req, _) =>
-        {
-            Assert.Equal("/compatible-mode/v1/responses", req.RequestUri!.AbsolutePath);
-            using var payload = JsonDocument.Parse(await req.Content!.ReadAsStringAsync());
-            Assert.Equal("web_search", payload.RootElement.GetProperty("tools")[0].GetProperty("type").GetString());
-            Assert.False(payload.RootElement.TryGetProperty("max_tool_calls", out var unusedCalls));
-            Assert.False(payload.RootElement.TryGetProperty("include", out var unusedInclude));
-            Assert.False(payload.RootElement.TryGetProperty("tool_choice", out var unusedChoice));
-            return Json("{\"output\":[{\"type\":\"web_search_call\",\"action\":{\"sources\":[{\"url\":\"https://example.org/a\",\"title\":\"Source\"}]}},{\"type\":\"message\",\"content\":[{\"type\":\"output_text\",\"text\":\"Answer\"}]}]}");
-        }));
-        using var search = new WebSearchService(profile, "secret", httpClient: http);
-        Assert.Equal(WebSearchSupport.Supported, await search.CheckSupportAsync());
-        var result = await search.SearchAsync(new[] { ChatMessage.User("question") });
-        Assert.Equal("Answer", result.Text);
-        Assert.Single(result.Sources);
-        Assert.False(result.InputCut);
-    }
+
+
+
 
     [Theory]
     [InlineData("{\"output\":[{\"type\":\"web_search_call\",\"status\":\"failed\",\"action\":{\"sources\":[{\"url\":\"https://example.org/a\"}]}},{\"type\":\"message\",\"content\":[{\"type\":\"output_text\",\"text\":\"Answer\"}]}]}")]
@@ -382,28 +282,7 @@ public sealed class WebSearchServiceTests
         Assert.Throws<HttpRequestException>(() => WebSearchService.ParseResult(WebSearchMode.BasicResponses, document.RootElement));
     }
 
-    [Theory]
-    [InlineData("completed")]
-    [InlineData(null)]
-    public async Task QwenCloud_SearchAcceptsSourcesInFinalCitations(string? status)
-    {
-        var profile = Profile("qwen");
-        profile.BaseUrl = "https://token-plan.maas.qwencloudapi.com/compatible-mode/v1";
-        string response = JsonSerializer.Serialize(new
-        {
-            output = new object[]
-            {
-                status == null
-                    ? new { type = "web_search_call", action = new { type = "search", query = "UTC date" } }
-                    : (object)new { type = "web_search_call", status, action = new { type = "search", query = "UTC date" } },
-                new { type = "message", content = new[] { new { type = "output_text", text = "Answer", annotations = new[] { new { type = "url_citation", url = "https://example.org/a", title = "Source" } } } } }
-            }
-        });
-        using var http = new HttpClient(new Handler((_, _) => Task.FromResult(Json(response))));
-        using var search = new WebSearchService(profile, "secret", httpClient: http);
-        Assert.Equal(WebSearchSupport.Supported, await search.CheckSupportAsync());
-        Assert.Single((await search.SearchAsync(new[] { ChatMessage.User("question") })).Sources);
-    }
+
 
     /// <summary>Without a forced tool the model may answer directly: a skip, not a failure (actions go on without web).</summary>
     [Theory]
@@ -496,18 +375,5 @@ public sealed class WebSearchServiceTests
         Assert.Equal(0, calls);
     }
 
-    [Fact]
-    public async Task XaiSearch_UsesBasicResponsesPayload()
-    {
-        using var http = new HttpClient(new Handler(async (req, _) =>
-        {
-            Assert.Equal("/v1/responses", req.RequestUri!.AbsolutePath);
-            Assert.Equal("Bearer", req.Headers.Authorization?.Scheme);
-            using var payload = JsonDocument.Parse(await req.Content!.ReadAsStringAsync());
-            Assert.False(payload.RootElement.TryGetProperty("tool_choice", out var unusedChoice));
-            return Json("{\"output\":[{\"type\":\"web_search_call\",\"status\":\"completed\",\"action\":{\"sources\":[{\"url\":\"https://example.org/a\"}]}},{\"type\":\"message\",\"content\":[{\"type\":\"output_text\",\"text\":\"Answer\"}]}]}");
-        }));
-        using var search = new WebSearchService(new LlmProfileConfig { Type = "xai", BaseUrl = "https://api.x.ai/v1", Model = "grok" }, "secret", httpClient: http);
-        Assert.Single((await search.SearchAsync(new[] { ChatMessage.User("question") })).Sources);
-    }
+
 }

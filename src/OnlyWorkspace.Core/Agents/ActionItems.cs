@@ -16,6 +16,8 @@ public sealed class ExtractedActionItem
     public bool AllDay { get; set; }
     public string Location { get; set; } = string.Empty;
     public string Notes { get; set; } = string.Empty;
+    public string SourceEntryId { get; set; } = string.Empty;
+    public string SourceStoreId { get; set; } = string.Empty;
     /// <summary>Email [Mn] of a scan pack the item comes from (0 = not stated).</summary>
     public int Source { get; set; }
     /// <summary>The date as the email writes it («venerdì alle 10», «entro il 30/11/2026»).</summary>
@@ -125,6 +127,11 @@ public static class ActionItemParser
             Location = Raw(e, "location"),
             Notes = Raw(e, "notes")
         };
+        if (e.TryGetProperty("source", out var source) && source.ValueKind == JsonValueKind.Object)
+        {
+            item.SourceEntryId = Raw(source, "entryId");
+            item.SourceStoreId = Raw(source, "storeId");
+        }
         return item.Title.Length == 0 ? null : item;
     }
 

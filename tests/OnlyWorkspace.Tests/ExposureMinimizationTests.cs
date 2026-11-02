@@ -95,9 +95,8 @@ public sealed class ExposureMinimizationTests
         var dispatcher = new LlmRequestDispatcher(recorder, profile, audit: TestPrivacyAudit.Store);
         var messages = new[] { ChatMessage.User("Da Anna Bianchi <anna@esempio.it>: conferma") };
 
-        string answer = string.Concat(await ToListAsync(dispatcher.StreamChatAsync(messages)));
-        Assert.DoesNotContain("anna@esempio.it", recorder.Sent);
-        Assert.Equal("Risposta per Anna Bianchi", answer);
+        await Assert.ThrowsAsync<DataEgressBlockedException>(async () => await ToListAsync(dispatcher.StreamChatAsync(messages)));
+        Assert.True(string.IsNullOrEmpty(recorder.Sent));
 
         profile.External = false;
         profile.Type = "ollama";

@@ -32,11 +32,11 @@ public static partial class DataEgress
     /// <summary>Only privacy-relevant permissions; display name, model and generation settings do not renew consent.</summary>
     public static string AuthorizationPolicyKey(LlmProfileConfig profile) => Digest(new
     {
-        Version = 1, profile.Id, Type = profile.Type.ToLowerInvariant(), Endpoint = Endpoint(profile.BaseUrl),
+        Version = 2, profile.Id, Type = profile.Type.ToLowerInvariant(), Endpoint = Endpoint(profile.BaseUrl),
         External = profile.IsExternal, Exposure = profile.IsExternal ? profile.Exposure : ExposureLevel.LocalOnly,
         Attachments = profile.IsExternal && profile.SendsAttachmentText,
         profile.UseSystemProxy, Auth = profile.AuthType.ToLowerInvariant(), profile.SecretRef, profile.WebSearchSecretRef,
-        profile.PseudonymizeAmounts, profile.PseudonymizeDates, Revision = PseudonymizationCatalog.CurrentRevision,
+        Amounts = profile.IsExternal || profile.PseudonymizeAmounts, Dates = profile.IsExternal || profile.PseudonymizeDates, Revision = PseudonymizationCatalog.CurrentRevision,
         WebHosts = WebHosts(profile),
         WebActions = WebSearchAction.All.Where(a => WebSearchAction.Uses(profile, a.Key)).Select(a => a.Key).OrderBy(a => a, StringComparer.Ordinal).ToArray()
     });
@@ -95,15 +95,8 @@ public static partial class DataEgress
 
     public static string ProfileSummary(LlmProfileConfig profile)
     {
-        string data = !profile.IsExternal ? "query di ricerca web"
-            : profile.Exposure == ExposureLevel.Minimal ? "fatti estratti in locale"
-            : profile.SendsAttachmentText ? "testo email e testo estratto dagli allegati" : "testo email, senza allegati";
-        string masking = profile.IsExternal
-            ? "Testi al modello pseudonimizzati; importi " + (profile.PseudonymizeAmounts ? "sì" : "no") + ", date " + (profile.PseudonymizeDates ? "sì" : "no") + "."
-            : "Il modello locale genera una query di massimo 240 caratteri per ollama.com; può contenere dati della richiesta.";
-        string web = profile.IsExternal && WebHosts(profile).Count > 0 ? " Web: soli domini per Verifica sicurezza." : string.Empty;
-        return $"{(profile.DisplayName.Length == 0 ? profile.Id : profile.DisplayName)} — {Endpoint(profile.BaseUrl)}" +
-            (!profile.IsExternal ? "; web: " + string.Join(", ", WebHosts(profile)) : string.Empty) + "\r\n" +
-            $"{(profile.IsExternal ? ExposurePolicy.Label(profile.Exposure) : "Ricerca web esterna")}: {data}. " + masking + web;
+        string data = profile.IsExternal ? "Solo fatti strutturati protetti; importi e date sempre sostituiti. Testo libero non verificabile bloccato."
+            : "Elaborazione locale. Le query web non verificabili non vengono inviate.";
+        return $"{(profile.DisplayName.Length == 0 ? profile.Id : profile.DisplayName)} — {Endpoint(profile.BaseUrl)}\r\n" + data;
     }
 }

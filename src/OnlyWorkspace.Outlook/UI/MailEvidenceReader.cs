@@ -108,7 +108,7 @@ internal sealed class MailEvidenceReader
                     // The email with its documents whole, or not at all: no reading in parts.
                     if (!Context.Fits(ChatMailDigest.Note(read.Count + 1, item, evidence.Text), budget))
                     {
-                        documents.Documents.RemoveRange(firstDocument, documents.Documents.Count - firstDocument);
+                        foreach (var d in documents.Documents.Skip(firstDocument)) d.PreparedForRequest = false;
                         reading.TooLong.Add($"«{Truncate(item.Subject, 60)}» del {item.Received:dd/MM/yyyy}");
                         continue;
                     }

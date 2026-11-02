@@ -206,31 +206,19 @@ public sealed class ConfigToolTooltipTests
     }
 
     [Fact]
-    public void Notice_AcceptsOnlyCompleteDataAndConfirmedReading()
+    public void Notice_RequiresOnlyConfirmedReadingAndHasNoManualFields()
     {
         OnSta(_ =>
         {
-            // The server's declarations come prefilled from an earlier acceptance; the company's are typed here.
-            var declared = new OnlyWorkspace.Core.Privacy.DataEgressProvider
-            {
-                Host = "cloud.example", Provider = "Fornitore", ProcessingAgreement = true, Region = "UE",
-                TransferBasis = OnlyWorkspace.Core.Privacy.DataEgress.TransferBases[0], NoTraining = true, Retention = "nessuna"
-            };
-            using var notice = new DataEgressConsentForm(new[] { declared }, null);
-            var accept = (Button)typeof(DataEgressConsentForm).GetField("_accept", Flags)!.GetValue(notice)!;
+            static IEnumerable<Control> Walk(Control c) { foreach (Control child in c.Controls) { yield return child; foreach (var nested in Walk(child)) yield return nested; } }
+            using var notice = new DataEgressConsentForm(Array.Empty<OnlyWorkspace.Core.Privacy.DataEgressProvider>(), null);
+            var controls = Walk(notice).ToList();
+            var accept = controls.OfType<Button>().Single(b => b.Text == "Autorizza e salva");
             Assert.False(accept.Enabled);
-            foreach (var (field, value) in new[] { ("_company", "Esempio Srl"), ("_firstName", "Anna"), ("_lastName", "Bianchi"), ("_role", "DPO"), ("_email", "anna@esempio.example"), ("_dpia", "DPIA-1") })
-                ((TextBox)typeof(DataEgressConsentForm).GetField(field, Flags)!.GetValue(notice)!).Text = value;
-            ((ComboBox)typeof(DataEgressConsentForm).GetField("_legalBasis", Flags)!.GetValue(notice)!).SelectedIndex = 2;
-            foreach (var field in new[] { "_workers", "_literacy" })
-                ((CheckBox)typeof(DataEgressConsentForm).GetField(field, Flags)!.GetValue(notice)!).Checked = true;
-            Assert.False(accept.Enabled);
-            ((CheckBox)typeof(DataEgressConsentForm).GetField("_read", Flags)!.GetValue(notice)!).Checked = true;
-            Assert.True(accept.Enabled);
-            Assert.Equal("Anna", notice.Signer.FirstName);
-            Assert.Equal("Fornitore", Assert.Single(notice.Providers).Provider);
-            ((TextBox)typeof(DataEgressConsentForm).GetField("_email", Flags)!.GetValue(notice)!).Text = "anna";
-            Assert.False(accept.Enabled);
+            Assert.DoesNotContain(controls.OfType<TextBox>(), t => !t.ReadOnly);
+            var read = Assert.Single(controls.OfType<CheckBox>());
+            read.Checked = true; Assert.True(accept.Enabled);
+            read.Checked = false; Assert.False(accept.Enabled);
         });
     }
 }

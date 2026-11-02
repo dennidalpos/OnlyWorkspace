@@ -249,8 +249,8 @@ public sealed partial class MainConfigForm
             foreach (CheckBox box in _webActions.Controls)
                 box.Checked = (p.WebSearchActions ?? new List<string>()).Contains((string)box.Tag!, StringComparer.OrdinalIgnoreCase);
             _chkAllowAttachments.Checked = p.AllowAttachmentUpload;
-            _chkPseudonymizeAmounts.Checked = p.PseudonymizeAmounts;
-            _chkPseudonymizeDates.Checked = p.PseudonymizeDates;
+            _chkPseudonymizeAmounts.Checked = p.IsExternal || p.PseudonymizeAmounts;
+            _chkPseudonymizeDates.Checked = p.IsExternal || p.PseudonymizeDates;
             _cmbExposure.SelectedItem = _cmbExposure.Items.Cast<ExposureItem>().First(i => i.Level == p.Exposure);
             ShowExposure();
             SelectMatchingPreset();

@@ -676,8 +676,8 @@ public sealed partial class MainConfigForm : Form
         if (profiles.Count == 0) return false;
         using var dialog = new DataEgressConsentForm(DataEgress.ProvidersFor(_config), _config.DataEgress?.Consent, profiles);
         if (dialog.ShowDialog(this) != DialogResult.OK) return false;
-        var consent = DataEgress.Accept(_config, dialog.Signer, dialog.Providers, WindowsUser, Environment.MachineName, DateTime.UtcNow, _vault.GetSecret);
-        LogActivity($"Informativa compilata, in attesa di salvataggio, da {consent.Describe()} per: " +
+        var consent = DataEgress.Accept(_config, WindowsUser, Environment.MachineName, DateTime.UtcNow, _vault.GetSecret);
+        LogActivity($"Informativa accettata, in attesa di salvataggio, da {consent.Describe()} per: " +
             string.Join(", ", consent.Providers.Select(p => $"{p.Host} ({ExposurePolicy.Label(p.Level)})")) + ".");
         MarkDirty();
         RefreshEgress();
@@ -781,7 +781,7 @@ public sealed partial class MainConfigForm : Form
     private void RefreshEgress()
     {
         string When(DateTime utc) => utc.ToLocalTime().ToString("dd/MM/yyyy HH:mm", Italian);
-        string Day(string date) => DateTime.TryParseExact(date, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var d) ? d.ToString("dd/MM/yyyy", Italian) : date;
+
         var consent = _config.DataEgress?.Consent;
         var hosts = DataEgress.Hosts(_config);
         var missing = DataEgress.Missing(_config, _vault.GetSecret);
@@ -795,9 +795,9 @@ public sealed partial class MainConfigForm : Form
         }
         else
         {
-            lines.Add($"Accettata il {Day(consent.Date)} da {consent.FirstName} {consent.LastName} ({consent.Role}, {consent.Company}, {consent.Email}); " +
+            lines.Add($"Autorizzazione tecnica; " +
                 $"registrata il {When(consent.AcceptedUtc)} dall'utente {consent.WindowsUser} su {consent.Machine}.");
-            lines.Add("Dichiarazioni conservate sui server: " + (consent.Providers.Count == 0 ? "nessuno"
+            lines.Add("Destinazioni autorizzate: " + (consent.Providers.Count == 0 ? "nessuno"
                 : string.Join(", ", consent.Providers.Select(p => $"{p.Host} fino a «{ExposurePolicy.Label(p.Level)}»"))) + ".");
             if (!DataEgress.Current(consent))
             {
@@ -928,7 +928,7 @@ public sealed partial class MainConfigForm : Form
         var egress = AddGroup(stack, "Uscita dei dati da Outlook");
         _lblEgress = AddWide(egress, new SelectableLabel { AutoSize = true, MaximumSize = new Size(600, 0), Margin = new Padding(3, 3, 3, 6) },
             "Se e da chi è stata accettata l'informativa che autorizza l'invio di dati di Outlook a servizi esterni. Senza, i profili cloud e la ricerca web esterna sono bloccati per tutti gli utenti di questo PC.");
-        _btnEgressAccept = SecondaryButton("Compila informativa…");
+        _btnEgressAccept = SecondaryButton("Leggi e autorizza…");
         _btnEgressAccept.Click += async (s, e) => await AcceptAndSaveDataEgressAsync();
         _btnEgressRevoke = SecondaryButton("Revoca");
         _btnEgressRevoke.Margin = new Padding(8, 3, 3, 3);
@@ -1059,7 +1059,7 @@ public sealed partial class MainConfigForm : Form
         {
             var host = Uri.TryCreate(p.BaseUrl, UriKind.Absolute, out var u) ? u.Host : p.BaseUrl;
             var web = p.WebSearchEnabled ? "; ricerca web: " + string.Join(", ", WebSearchService.Destinations(p)) : string.Empty;
-            var kind = p.IsExternal ? "cloud" + (p.SendsAttachmentText ? ", testo allegati consentito" : ", testo allegati escluso") : "locale";
+            var kind = p.IsExternal ? "cloud" + (p.SendsAttachmentText ? ", fatti allegati consentiti" : ", fatti allegati esclusi") : "locale";
             return $"• {(string.IsNullOrWhiteSpace(p.DisplayName) ? p.Id : p.DisplayName)}: {host} ({kind}){web}.";
         }).ToList();
         lines.Add("• Le email vanno a un modello solo per un'azione avviata dall'utente; la posta viene letta solo dalle cassette aperte in Outlook.");
@@ -1942,6 +1942,14 @@ public sealed partial class MainConfigForm : Form
         return grid;
     }
 
+    private void DescriptionHelp(Control description, string title)
+    {
+        var parent = description.Parent;
+        if (parent == null) return;
+        description.Visible = false;
+        parent.Controls.Add(ContextHelp.Button(this, title, () => description.Text, _tips));
+    }
+
     private T AddRow<T>(TableLayoutPanel grid, string label, T field, string tip) where T : Control
     {
         int row = grid.RowCount++;
@@ -1989,6 +1997,8 @@ public sealed partial class MainConfigForm : Form
         // the AutoSize grid is measured, and never grows back: an AutoSize flow wrapper keeps its width.
         bool stretches = (cell.Anchor & AnchorStyles.Right) != 0;
         if (!stretches && cell is not FlowLayoutPanel) cell = Inline(cell);
+        if (cell is FlowLayoutPanel helpCell && label.Length > 0 && tip.Length > 100)
+            helpCell.Controls.Add(ContextHelp.Button(this, label.TrimEnd(':').Length > 0 ? label.TrimEnd(':') : "Dettagli", () => tip, _tips));
         grid.Controls.Add(cell, column + 1, row);
         if (span > 1) grid.SetColumnSpan(cell, span);
     }
@@ -1997,8 +2007,11 @@ public sealed partial class MainConfigForm : Form
     {
         int row = grid.RowCount++;
         grid.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        grid.Controls.Add(field, 0, row);
-        grid.SetColumnSpan(field, grid.ColumnCount);
+        Control shown = field;
+        if (field is SelectableLabel && field.Text.Length > 100)
+            shown = ContextHelp.Button(this, "Informazioni", () => field.Text, _tips);
+        grid.Controls.Add(shown, 0, row);
+        grid.SetColumnSpan(shown, grid.ColumnCount);
         Tip(field, tip);
         return field;
     }

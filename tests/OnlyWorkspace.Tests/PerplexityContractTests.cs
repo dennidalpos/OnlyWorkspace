@@ -55,7 +55,7 @@ public sealed class PerplexityContractTests
             return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(response, Encoding.UTF8, plain ? "application/json" : "text/event-stream") };
         })) { BaseAddress = new Uri(profile.BaseUrl + "/") };
         using var client = new OpenAIClient(profile, "synthetic-test-key", http);
-        string result = await client.CompleteStructuredAsync(new[] { ChatMessage.System("Return synthetic JSON"), ChatMessage.User("Synthetic question") }, schema);
+        string result = await client.CompleteProtocolAsync(new[] { ChatMessage.System("Return synthetic JSON"), ChatMessage.User("Synthetic question") }, schema);
         Assert.Equal(output, result);
         Assert.Equal(1, requests);
         Assert.False(client.LastCompletion!.IsTruncated);
@@ -76,7 +76,7 @@ public sealed class PerplexityContractTests
         using var http = new HttpClient(new Handler(_ => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(sse, Encoding.UTF8, "text/event-stream") }))) { BaseAddress = new Uri(profile.BaseUrl + "/") };
         using var client = new OpenAIClient(profile, "synthetic-test-key", http);
         var output = new StringBuilder();
-        await foreach (var chunk in client.StreamChatAsync(new[] { ChatMessage.User("Synthetic question") })) output.Append(chunk);
+        await foreach (var chunk in client.StreamProtocolAsync(new[] { ChatMessage.User("Synthetic question") })) output.Append(chunk);
         Assert.Equal(text, output.ToString());
         Assert.Equal(reason == "length", client.LastCompletion!.IsTruncated);
         Assert.Null(client.LastTokenUsage);

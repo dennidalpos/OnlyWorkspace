@@ -151,7 +151,7 @@ public sealed class OllamaClient : ILlmClient, IReasoningObserver, IDisposable
         object? format,
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        messages = ModelRequestContext.Prepare(_profile, messages, format == null ? null : JsonSerializer.Serialize(format));
+        messages = ModelRequestContext.Prepare(_profile, OnlyWorkspace.Core.Privacy.CloudRequestGuard.Validate(_profile, messages, format == null ? null : JsonSerializer.Serialize(format)), format == null ? null : JsonSerializer.Serialize(format));
         var requestPayload = BuildChatPayload(messages, stream: true, format: format);
         var json = JsonSerializer.Serialize(requestPayload);
         using var content = new StringContent(json, Encoding.UTF8, "application/json");

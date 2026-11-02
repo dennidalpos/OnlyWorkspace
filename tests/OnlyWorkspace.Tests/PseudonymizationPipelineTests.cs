@@ -27,7 +27,7 @@ public sealed class PseudonymizationPipelineTests
         string outgoing = Assert.Single(mask.Mask(new[] { ChatMessage.User(input) })).Content;
         Assert.Contains("[" + category + "_1]", outgoing);
         Assert.Equal(input, mask.Restore(outgoing));
-        Assert.Equal(1, mask.Audit.Counts[category]); Assert.Equal("1", mask.Audit.Revisions["catalog"]);
+        Assert.Equal(1, mask.Audit.Counts[category]); Assert.Equal("2", mask.Audit.Revisions["catalog"]);
         string audit = JsonSerializer.Serialize(mask.Audit); Assert.DoesNotContain(input, audit);
     }
 
@@ -170,13 +170,13 @@ public sealed class PseudonymizationPipelineTests
         using var dispatcher = new LlmRequestDispatcher(client, Cloud(), entities: _ =>
         { reads++; return Task.FromResult<IReadOnlyList<PrivacyEntity>>(new[] { new PrivacyEntity { Value = "Anna Bianchi" } }); }, audit: store);
         await Send(dispatcher, true); Assert.Equal(1, reads); Assert.DoesNotContain("Anna Bianchi", client.Sent);
-        var record = Assert.Single(store.Read()); Assert.Equal("completed", record.Outcome); Assert.Equal(1, record.Counts["PERSONA"]);
+        var record = Assert.Single(store.Read()); Assert.Equal("completed", record.Outcome); Assert.Empty(record.Counts);
     }
 
     private static async Task Send(LlmRequestDispatcher client, bool structured)
     {
-        var messages = new[] { ChatMessage.User("Anna Bianchi anna@example.invalid") };
-        if (structured) await client.CompleteStructuredAsync(messages, "{}"); else await foreach (var _ in client.StreamChatAsync(messages)) { }
+        var messages = CloudRequestGuard.Probe(structured);
+        if (structured) await client.CompleteStructuredAsync(messages, CloudRequestGuard.ProbeSchema); else await foreach (var _ in client.StreamChatAsync(messages)) { }
     }
     private sealed class Recorder : ILlmClient
     {
@@ -274,7 +274,7 @@ public sealed class PseudonymizationPipelineTests
             using var transport = new OpenAIClient(profile);
             string blocked = Scratch(); File.WriteAllText(blocked, "not a directory");
             using (var refused = new LlmRequestDispatcher(new OpenAIClient(profile), profile, audit: new PseudonymizationAuditStore(blocked)))
-                await Assert.ThrowsAsync<DataEgressBlockedException>(() => refused.CompleteStructuredAsync(new[] { ChatMessage.User("anna@example.invalid") }, "{}"));
+                await Assert.ThrowsAsync<DataEgressBlockedException>(() => refused.CompleteStructuredAsync(CloudRequestGuard.Probe(true), CloudRequestGuard.ProbeSchema));
             Assert.False(listener.Pending());
             var capture = Task.Run(async () =>
             {
@@ -295,12 +295,12 @@ public sealed class PseudonymizationPipelineTests
             using var dispatch = new LlmRequestDispatcher(transport, profile, entities: _ =>
                 Task.FromResult<IReadOnlyList<PrivacyEntity>>(new[] { new PrivacyEntity { Value = "Anna Bianchi" } }), audit: TestPrivacyAudit.Store);
             using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-            string answer = await dispatch.CompleteStructuredAsync(new[] { ChatMessage.User("Anna Bianchi anna@example.invalid: 1.250,00 EUR entro 05/11/2026 [M1]") }, "{}", deadline.Token);
-            Assert.Contains("Anna Bianchi", answer);
+            string answer = await dispatch.CompleteStructuredAsync(CloudRequestGuard.Probe(true), CloudRequestGuard.ProbeSchema, deadline.Token);
+            Assert.Contains("[PERSONA_1]", answer);
             Assert.Same(capture, await Task.WhenAny(capture, Task.Delay(10000)));
             string sent = await capture;
             foreach (var original in new[] { "Anna Bianchi", "anna@example.invalid", "1.250,00 EUR", "05/11/2026" }) Assert.DoesNotContain(original, sent);
-            Assert.Contains("[M1]", sent); Assert.Contains("[IMPORTO_1]", sent); Assert.Contains("[DATA_1]", sent);
+            Assert.Contains("numero della prova", sent);
         }
         finally { listener.Stop(); }
     }

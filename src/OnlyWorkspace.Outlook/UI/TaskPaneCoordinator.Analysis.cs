@@ -280,6 +280,7 @@ public partial class TaskPaneCoordinator
             PackTokens = policy.PackTokens
         };
         var reading = await reader.ReadAsync(items, attachmentsAllowed, budget, documents, ct);
+        TrackDocuments(documents.Documents);
         coverage.Unavailable += reading.Missing.Count;
         return reading;
     }
@@ -293,9 +294,19 @@ public partial class TaskPaneCoordinator
     /// The single request on the pack: structured answer, citations checked against each cited email.
     /// Returns the markdown shown and saved, with the coverage line.
     /// </summary>
-    private async Task<(string Text, MailAnswer Answer)> AnswerOnEvidenceAsync(ILlmClient client, IEnumerable<ChatMessage> prompt, MailEvidencePack pack, int turn, CancellationToken ct)
+    private async Task<(string Text, MailAnswer Answer)> AnswerOnEvidenceAsync(ILlmClient client, IEnumerable<ChatMessage> prompt, MailEvidencePack pack, int turn, CancellationToken ct, string? instruction = null)
     {
+        PrepareDocuments(pack);
         var watch = Stopwatch.StartNew();
+        if (GetActiveProfile() is { IsExternal: true } external)
+        {
+            if (instruction == null || !CloudFactsRequest.IsFactRequest(instruction)) throw new DataEgressBlockedException(CloudFactsRequest.BlockedMessage);
+            var safe = new CloudFactsRequest(pack, external.SendsAttachmentText, CloudFactsRequest.RequestedKind(instruction));
+            var response = await client.CompleteStructuredAsync(safe.Messages, CloudFactsRequest.Schema, ct);
+            ModelOutput.EnsureComplete(client.LastCompletion);
+            var restored = safe.ReadAnswer(response);
+            return (MailAnswerRenderer.Render(restored) + "\n\n" + MailAnswerRenderer.Coverage(pack, restored), restored);
+        }
         string json;
         using (ObserveAnswer(turn, watch))
             json = await client.CompleteStructuredAsync(prompt, PromptCatalog.MailAnswerJsonSchema, ct);
@@ -402,6 +413,9 @@ public partial class TaskPaneCoordinator
         var items = new List<ChatMailItem>(hits.Count);
         foreach (var h in hits)
         {
+            foreach (var attachment in h.Attachments)
+                TrackDocuments(new[] { new DocumentOutcome { Name = attachment.Name, SourceId = attachment.SourceId, EntryId = h.EntryId, StoreId = h.StoreId,
+                    EmailSubject = h.Subject, EmailDate = h.ReceivedUtc.ToLocalTime(), Status = DocumentStatus.Reference } });
             items.Add(new ChatMailItem
             {
                 ArchiveId = h.Id, EntryId = h.EntryId, StoreId = h.StoreId, Subject = h.Subject, MessageId = h.MessageId, Copies = h.Copies,
@@ -823,6 +837,7 @@ public partial class TaskPaneCoordinator
                 {
                     reading = kept.Reading;
                     stats.Documents.AddRange(kept.Documents);
+            TrackDocuments(kept.Documents);
                 }
                 else
                 {
@@ -884,7 +899,7 @@ public partial class TaskPaneCoordinator
                                 prompt = await AddWebEvidenceAsync(activeProfile, prompt, webSearch, token);
                                 if (_analysisRead?.Key == analysisKey && webSearch.Status == TaskStatus.RanToCompletion && webSearch.Result is { } web) _analysisRead.Web = web;
                             }
-                            var answered = await AnswerOnEvidenceAsync(client, prompt, pack, turn, token);
+                            var answered = await AnswerOnEvidenceAsync(client, prompt, pack, turn, token, goal.Instruction);
                             stats.Relevant = answered.Answer.Points.SelectMany(p => p.Sources.Where(s => !p.InvalidSources.Contains(s))).Distinct().Count();
                             answerText = answered.Text;
                         }
@@ -992,7 +1007,7 @@ public partial class TaskPaneCoordinator
             var text = new StringBuilder();
             foreach (var attachment in stored!.Attachments.Where(a => a.State is "indexed" or "reference"))
             {
-                stats.Documents.Add(new DocumentOutcome { Name = attachment.Name, EmailSubject = Truncate(email.Subject, 60), EmailDate = email.Received,
+                stats.Documents.Add(new DocumentOutcome { Name = attachment.Name, SourceId = attachment.SourceId, EmailSubject = email.Subject, EmailDate = email.Received, EntryId = email.EntryId, StoreId = email.StoreId,
                     Status = attachment.State == "reference" ? DocumentStatus.Reference : DocumentStatus.Read });
                 text.Append("\n\n--- Allegato: ").Append(attachment.Name).Append(" ---\n")
                     .Append(attachment.State == "reference" ? attachment.ReferenceDescription() : attachment.Text);
@@ -1003,8 +1018,8 @@ public partial class TaskPaneCoordinator
             a => contentAllowed && DocumentOutcome.CanRead(a) && !a.IsInline && !a.IsPecReceiptData && AttachmentTextFormats.HasTextReader(a.Extension), ct);
         if (copies == null)
         {
-            stats.Documents.Add(new DocumentOutcome { Name = "Allegati non accessibili", EmailSubject = Truncate(email.Subject, 60),
-                EmailDate = email.Received, Status = DocumentStatus.Error });
+            stats.Documents.Add(new DocumentOutcome { Name = "Allegati non accessibili", EmailSubject = email.Subject,
+                EmailDate = email.Received, EntryId = email.EntryId, StoreId = email.StoreId, Status = DocumentStatus.Error });
             return string.Empty;
         }
 
@@ -1016,8 +1031,11 @@ public partial class TaskPaneCoordinator
             using var slots = new SemaphoreSlim(2);
             foreach (var attachment in copies.All.Where(a => !a.IsInline && !a.IsPecReceiptData))
             {
-                var outcome = new DocumentOutcome { Name = attachment.Name, EmailSubject = Truncate(email.Subject, 60), EmailDate = email.Received };
+                var outcome = new DocumentOutcome { Name = attachment.Name, EmailSubject = email.Subject, EmailDate = email.Received };
                 stats.Documents.Add(outcome);
+                outcome.EntryId = email.EntryId; outcome.StoreId = email.StoreId;
+                outcome.SourceId = (copies.All.ToList().IndexOf(attachment) + 1).ToString(System.Globalization.CultureInfo.InvariantCulture);
+                TrackDocuments(new[] { outcome });
 
                 var path = copies.Saved.Where(s => s.Key == attachment).Select(s => s.Value).FirstOrDefault();
                 if (!contentAllowed || path == null || !DocumentOutcome.CanRead(attachment))
@@ -1101,7 +1119,7 @@ public partial class TaskPaneCoordinator
             _mailSourcesForTurn = pack.Sources();
             PostPhase(turn, "Generazione in corso…");
             var answerPrompt = await AddWebEvidenceAsync(activeProfile, PromptCatalog.CreateMailAnswerPrompt(question, pack.Render()), turn, ct);
-            var answered = await AnswerOnEvidenceAsync(client, answerPrompt, pack, turn, ct);
+            var answered = await AnswerOnEvidenceAsync(client, answerPrompt, pack, turn, ct, question);
             PostStream(turn, new { type = "stream_chunk", chunk = answered.Text });
 
             await RecordActionInHistoryAsync(activeProfile, "Domanda sull'analisi: " + Truncate(question, 60), answered.Text, ct);

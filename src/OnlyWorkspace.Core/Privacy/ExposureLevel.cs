@@ -87,13 +87,13 @@ public sealed class ExposurePolicy
         },
         new()
         {
-            Level = ExposureLevel.Standard, ModelAllowed = true, Evidence = EvidenceMode.Original, Pseudonymize = true, WholeEmails = true,
+            Level = ExposureLevel.Standard, ModelAllowed = true, Evidence = EvidenceMode.FactsOnly, Pseudonymize = true,
             PackTokens = 48_000, WebActions = new[] { WebSearchAction.Security }
         },
         new()
         {
-            Level = ExposureLevel.Extended, ModelAllowed = true, Evidence = EvidenceMode.Original, Pseudonymize = true,
-            WholeEmails = true, Attachments = true, PackTokens = 48_000, WebActions = new[] { WebSearchAction.Security }
+            Level = ExposureLevel.Extended, ModelAllowed = true, Evidence = EvidenceMode.FactsOnly, Pseudonymize = true,
+            Attachments = true, PackTokens = 48_000, WebActions = new[] { WebSearchAction.Security }
         }
     };
 
@@ -123,8 +123,8 @@ public sealed class ExposurePolicy
     {
         ExposureLevel.LocalOnly => "Il profilo non invia nulla: restano attivi solo i profili locali.",
         ExposureLevel.Minimal => "Escono solo dati estratti in locale, con nomi, indirizzi, telefoni, IBAN e codici sostituiti da segnaposto. Niente testo integrale, allegati o ricerca web.",
-        ExposureLevel.Standard => "Escono i fatti locali e il testo dell'email ripulito, sempre con segnaposto. Niente allegati; ricerca web solo per la verifica di sicurezza (soli domini).",
-        ExposureLevel.Extended => "Come Standard; se abiliti l'invio degli allegati, esce anche il testo estratto in locale dalle email e dalle bozze, sempre con segnaposto. Nessun file binario viene inviato.",
+        ExposureLevel.Standard => "Solo fatti strutturati protetti. Testo libero, corpi delle email e query web non verificabili sono bloccati.",
+        ExposureLevel.Extended => "Come Standard; con il permesso allegati sono ammessi solo i loro fatti strutturati protetti. Nessun testo libero o file binario viene inviato.",
         _ => "Livello non valido: nessun dato viene inviato."
     };
 }

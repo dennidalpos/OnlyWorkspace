@@ -140,7 +140,7 @@ public sealed class GeminiClient : ILlmClient, IDisposable
         StringBuilder? plain,
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        messages = ModelRequestContext.Prepare(_profile, messages, jsonSchema);
+        messages = ModelRequestContext.Prepare(_profile, OnlyWorkspace.Core.Privacy.CloudRequestGuard.Validate(_profile, messages, jsonSchema), jsonSchema);
         var requestPayload = BuildGeminiPayload(messages, jsonSchema);
         var json = JsonSerializer.Serialize(requestPayload);
         using var content = new StringContent(json, Encoding.UTF8, "application/json");

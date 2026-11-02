@@ -34,7 +34,7 @@ public class DataEgressSigner
     /// <summary>Measures for the AI literacy of whoever uses the add-in were taken (AI Act art. 4).</summary>
     public bool AiLiteracy { get; set; }
 
-    public string Describe() => $"{FirstName} {LastName}, {Role}, {Company} <{Email}>";
+    public string Describe() => string.IsNullOrEmpty(FirstName) && string.IsNullOrEmpty(Company) ? "Autorizzazione tecnica" : $"{FirstName} {LastName}, {Role}, {Company} <{Email}>";
 }
 
 /// <summary>What the company declares about one server that receives data: contract, location, use and level.</summary>
@@ -104,42 +104,18 @@ public sealed class WorkspaceDataEgressConfig
 /// <summary>Text the responsible person accepts. A new version voids every earlier acceptance.</summary>
 public static class DataEgressNotice
 {
-    public const int Version = 4;
+    public const int Version = 5;
 
     public const string Title = "Informativa sull'uscita dei dati verso servizi di intelligenza artificiale esterni";
 
-    public static readonly string Text = string.Join("\r\n", new[]
+    public static readonly string Text = string.Join("\r\n\r\n", new[]
     {
-        "OnlyWorkspace legge posta, calendario e contatti dagli archivi aperti in Outlook su questo PC e li conserva cifrati in un archivio locale. " +
-        "Con i profili IA locali nessun dato lascia il PC. Con un profilo IA «cloud», o con la ricerca web di Ollama su ollama.com, " +
-        "una parte dei dati esce dal PC e raggiunge i server del fornitore elencati sotto, nei limiti del livello di esposizione scelto per ciascun profilo.",
-        "",
-        "Livelli di esposizione",
-        "• 0 Solo locale: il profilo cloud non invia nulla.",
-        "• 1 Minimo: escono solo fatti estratti in locale; nomi, indirizzi email, telefoni, IBAN, partite IVA e codici fiscali sono sostituiti da segnaposto e ripristinati solo sul PC. Niente testo integrale, allegati o ricerca web.",
-        "• 2 Standard: come il livello 1, piu il testo originale dell'email ripulito dalle citazioni; ricerca web solo per la verifica di sicurezza, con i soli nomi di dominio. Nessun testo degli allegati viene inviato.",
-        "• 3 Esteso: come Standard; con l'invio degli allegati abilitato esce anche il testo estratto in locale dagli allegati delle email e delle bozze, dopo pseudonimizzazione. Non vengono caricati file binari. OCR solo locale; documenti protetti, incompleti, bloccati o con minacce note sono esclusi con motivo.",
-        "Le schede IA in background e il precedente livello Completo sono rimossi. I vecchi valori Full e 3 continuano a essere letti come Standard; Esteso richiede una scelta esplicita. Questa informativa richiede una nuova accettazione.",
-        "I segnaposto riducono i dati personali inviati ma non li rendono anonimi: restano dati personali ai sensi del GDPR.",
-        "",
-        "Cosa non esce",
-        "• Le chiavi API restano cifrate su questo PC; archivio locale, storico e log non vengono inviati.",
-        "• Le prove del ConfigTool (Test connessione, Rileva modelli, Verifica Web Search) inviano solo la chiave e richieste di prova, senza dati di Outlook.",
-        "",
-        "Cosa comporta",
-        "• L'azienda resta titolare del trattamento (GDPR art. 24): indica la base giuridica (art. 6), nomina il fornitore responsabile del trattamento " +
-        "(art. 28), valuta l'impatto (art. 35), informa gli interessati, cioè mittenti e destinatari delle email (art. 13-14), e verifica la base " +
-        "degli eventuali trasferimenti fuori dallo Spazio economico europeo (capo V).",
-        "• Il fornitore tratta i dati secondo il proprio contratto (conservazione, uso per l'addestramento, paese dei server): le dichiarazioni " +
-        "richieste per ogni server vanno verificate sul contratto prima di accettare.",
-        "• I lavoratori che usano OnlyWorkspace vanno informati dell'uso dell'intelligenza artificiale (L. 132/2025 art. 11) e messi in condizione " +
-        "di usarla consapevolmente (Regolamento UE 2024/1689, art. 4). I testi proposti dall'IA vanno sempre riletti: OnlyWorkspace non invia email da solo.",
-        "• Una richiesta già ricevuta dal fornitore non si può ritirare.",
-        "",
-        "Accettando, il responsabile indicato dichiara di aver letto questa informativa e che le dichiarazioni rese sono veritiere, e autorizza, " +
-        "per conto dell'azienda, l'uscita dei dati descritta verso i server elencati fino al livello indicato per ciascuno. " +
-        "Senza questa autorizzazione i profili cloud e la ricerca web esterna restano bloccati per tutti gli utenti di questo PC. " +
-        "Ogni nuovo server o livello più alto richiede una nuova accettazione; l'autorizzazione si può revocare in qualsiasi momento dal ConfigTool."
+        "OnlyWorkspace conserva posta e storico cifrati sul PC. Un profilo locale elabora i contenuti sul PC.",
+        "Per i servizi cloud sono ammessi solo fatti strutturati protetti: valori, identità, recapiti, riferimenti, importi e date sono sostituiti con segnaposto. Corpo delle mail, nomi dei file e testo libero non verificabile non vengono inviati. Alcune azioni richiedono un profilo locale.",
+        "I valori originali vengono ripristinati solo sul PC. La pseudonimizzazione è reversibile e non rende anonimi i dati. Nessun file binario viene caricato. La ricerca web con contenuti non verificabili è bloccata, anche quando la query nasce da un modello locale.",
+        "Le prove di connessione e capacità usano richieste sintetiche fisse, senza contenuti di Outlook. Le credenziali necessarie all'autenticazione sono trasmesse al servizio configurato.",
+        "Autorizzi esclusivamente i profili e le destinazioni riepilogati, con i permessi e le chiavi attuali. L'autorizzazione si può revocare; le richieste già ricevute dal servizio non si possono ritirare.",
+        "L'autorizzazione tecnica non certifica adempimenti, contratti o conformità normativa. L'organizzazione verifica le condizioni del fornitore e gli obblighi applicabili al proprio utilizzo. Rileggi sempre i risultati dell'IA."
     });
 
     public static string Hash { get; } = HashOf(Text);
@@ -247,7 +223,7 @@ public static partial class DataEgress
 
     /// <summary>What the pane says when a cloud profile is blocked.</summary>
     public const string BlockedMessage =
-        "Invio a servizi esterni non autorizzato: l'amministratore deve compilare e accettare l'informativa sull'uscita dei dati nel ConfigTool " +
+        "Invio a servizi esterni non autorizzato: l'amministratore deve leggere e accettare l'informativa sull'uscita dei dati nel ConfigTool " +
         "(Privacy e dati) per questo profilo, destinazione, livello e chiavi. Si può salvare la configurazione senza autorizzare l'invio.";
 
     public const string LocalOnlyMessage =
@@ -272,84 +248,32 @@ public static partial class DataEgress
         return null;
     }
 
-    /// <summary>Why the signer's data cannot be accepted, or null when complete.</summary>
-    public static string? Problem(DataEgressSigner signer, DateTime today)
-    {
-        if (string.IsNullOrWhiteSpace(signer.Company)) return "Indicare l'azienda.";
-        if (string.IsNullOrWhiteSpace(signer.FirstName)) return "Indicare il nome del responsabile.";
-        if (string.IsNullOrWhiteSpace(signer.LastName)) return "Indicare il cognome del responsabile.";
-        if (string.IsNullOrWhiteSpace(signer.Role)) return "Indicare il ruolo del responsabile.";
-        if (!EmailPattern.IsMatch(signer.Email.Trim())) return "Indicare un indirizzo email valido del responsabile.";
-        if (!DateTime.TryParseExact(signer.Date, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date)) return "Indicare la data.";
-        if (date.Date > today.Date) return "La data non può essere futura.";
-        if (!LegalBases.Contains(signer.LegalBasis)) return "Indicare la base giuridica del trattamento.";
-        if (string.IsNullOrWhiteSpace(signer.Dpia)) return "Indicare il riferimento della valutazione d'impatto, o perché non è necessaria.";
-        if (!signer.WorkersInformed) return "Confermare che i lavoratori sono stati informati dell'uso dell'IA (L. 132/2025 art. 11).";
-        if (!signer.AiLiteracy) return "Confermare le misure di alfabetizzazione sull'IA per chi usa OnlyWorkspace (AI Act art. 4).";
-        return null;
-    }
-
-    /// <summary>Why a server's declarations cannot be accepted, or null when complete.</summary>
-    public static string? Problem(DataEgressProvider provider)
-    {
-        string host = provider.Host;
-        if (string.IsNullOrWhiteSpace(provider.Provider)) return $"{host}: indicare il fornitore.";
-        if (provider.Level == ExposureLevel.LocalOnly) return $"{host}: il livello «Solo locale» non autorizza alcun invio.";
-        if (!provider.ProcessingAgreement) return $"{host}: senza nomina a responsabile del trattamento (GDPR art. 28) il server non può ricevere dati.";
-        if (string.IsNullOrWhiteSpace(provider.Region)) return $"{host}: indicare dove sono trattati i dati.";
-        if (!TransferBases.Contains(provider.TransferBasis)) return $"{host}: indicare la base del trasferimento.";
-        if (!provider.NoTraining) return $"{host}: il contratto deve escludere l'uso dei dati per l'addestramento.";
-        if (string.IsNullOrWhiteSpace(provider.Retention)) return $"{host}: indicare la conservazione prevista dal contratto.";
-        return null;
-    }
-
     /// <summary>Why a stored acceptance is not complete, or null; an acceptance of an older notice is not checked (it no longer counts).</summary>
     public static string? Problem(DataEgressConsent consent, DateTime today) =>
-        !Current(consent) ? null : Problem((DataEgressSigner)consent, today) ?? consent.Providers.Select(Problem).FirstOrDefault(p => p != null) ??
+        !Current(consent) ? null : string.IsNullOrWhiteSpace(consent!.WindowsUser) || string.IsNullOrWhiteSpace(consent.Machine) ? "Autorizzazione priva di utente o postazione." :
             consent.Hosts.Where(h => !consent.Providers.Any(p => string.Equals(p.Host, h, StringComparison.OrdinalIgnoreCase)))
                 .Select(h => $"{h}: mancano le dichiarazioni sul server.").FirstOrDefault();
 
-    /// <summary>
-    /// Records an acceptance covering the servers of the configuration at the declared levels, and its event.
-    /// Every server needs complete declarations at least at the level its profiles ask for.
-    /// </summary>
-    public static DataEgressConsent Accept(WorkspaceConfig config, DataEgressSigner signer, IReadOnlyList<DataEgressProvider> providers,
-        string windowsUser, string machine, DateTime nowUtc)
-        => Accept(config, signer, providers, windowsUser, machine, nowUtc, null);
-
-    public static DataEgressConsent Accept(WorkspaceConfig config, DataEgressSigner signer, IReadOnlyList<DataEgressProvider> providers,
-        string windowsUser, string machine, DateTime nowUtc, Func<string, string?>? resolveSecret)
+    /// <summary>Technical authorization only; never creates company or provider declarations.</summary>
+    public static DataEgressConsent Accept(WorkspaceConfig config, string windowsUser, string machine,
+        DateTime nowUtc, Func<string, string?> resolveSecret)
     {
-        if (Problem(signer, nowUtc.ToLocalTime()) is { } problem) throw new ArgumentException(problem, nameof(signer));
-        var hosts = Hosts(config).ToList();
-        var declared = new List<DataEgressProvider>();
-        foreach (string host in hosts)
-        {
-            var provider = providers.FirstOrDefault(p => string.Equals(p.Host, host, StringComparison.OrdinalIgnoreCase))
-                ?? throw new ArgumentException($"{host}: mancano le dichiarazioni sul server.", nameof(providers));
-            if (Problem(provider) is { } providerProblem) throw new ArgumentException(providerProblem, nameof(providers));
-            var required = RequiredLevel(config, host);
-            if (provider.Level < required)
-                throw new ArgumentException($"{host}: un profilo chiede il livello «{ExposurePolicy.Label(required)}».", nameof(providers));
-            declared.Add(new DataEgressProvider
-            {
-                Host = host, Provider = provider.Provider.Trim(), Level = provider.Level, ProcessingAgreement = true,
-                Region = provider.Region.Trim(), TransferBasis = provider.TransferBasis, NoTraining = true, Retention = provider.Retention.Trim()
-            });
-        }
+        if (string.IsNullOrWhiteSpace(windowsUser) || string.IsNullOrWhiteSpace(machine))
+            throw new ArgumentException("Utente e postazione sono necessari.");
+        var profiles = EgressProfiles(config).ToList();
+        if (profiles.Count == 0) throw new InvalidOperationException("Nessun profilo esterno da autorizzare.");
         var consent = new DataEgressConsent
         {
-            Company = signer.Company.Trim(), FirstName = signer.FirstName.Trim(), LastName = signer.LastName.Trim(), Role = signer.Role.Trim(),
-            Email = signer.Email.Trim(), Date = signer.Date, PrivacyContact = signer.PrivacyContact.Trim(), LegalBasis = signer.LegalBasis,
-            Dpia = signer.Dpia.Trim(), WorkersInformed = true, AiLiteracy = true,
             AcceptedUtc = nowUtc, WindowsUser = windowsUser, Machine = machine,
             NoticeVersion = DataEgressNotice.Version, NoticeHash = DataEgressNotice.Hash, NoticeText = DataEgressNotice.Text,
-            Hosts = hosts, Providers = declared,
-            Profiles = EgressProfiles(config).Select(p => CreateGrant(p, resolveSecret)).ToList()
+            Date = nowUtc.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+            Hosts = Hosts(config).ToList(),
+            Providers = Hosts(config).Select(h => new DataEgressProvider { Host = h, Level = RequiredLevel(config, h) }).ToList(),
+            Profiles = profiles.Select(p => CreateGrant(p, resolveSecret)).ToList()
         };
         config.DataEgress ??= new WorkspaceDataEgressConfig();
         var previous = config.DataEgress.Consent;
-        if (previous != null && !config.DataEgress.History.Any(e => e.Authorization?.AcceptedUtc == previous.AcceptedUtc))
+        if (previous != null && !config.DataEgress.History.Any(e => e.Authorization?.AcceptedUtc == previous.AcceptedUtc && e.Authorization.NoticeVersion == previous.NoticeVersion && e.Authorization.NoticeHash == previous.NoticeHash && e.Authorization.NoticeText == previous.NoticeText))
             config.DataEgress.History.Add(Event(DataEgressEvent.Accepted, previous, previous.WindowsUser, previous.Machine, previous.AcceptedUtc));
         config.DataEgress.Consent = consent;
         config.DataEgress.History.Add(Event(DataEgressEvent.Accepted, consent, windowsUser, machine, nowUtc));

@@ -20,12 +20,7 @@ public static class ModelCapabilityProbe
     public static readonly TimeSpan Timeout = TimeSpan.FromSeconds(60);
     public const int MaxOutputChars = 2000;
 
-    internal const string JsonSchema =
-        "{\"type\":\"object\",\"properties\":{\"colore\":{\"type\":\"string\",\"enum\":[\"rosso\",\"giallo\",\"verde\"]}," +
-        "\"numero\":{\"type\":\"integer\"}},\"required\":[\"colore\",\"numero\"],\"additionalProperties\":false}";
-
-    private static readonly ChatMessage Rules = ChatMessage.System(
-        "Questa è una prova automatica di OnlyWorkspace con dati inventati. Rispondi in modo brevissimo, senza spiegazioni.");
+    internal const string JsonSchema = OnlyWorkspace.Core.Privacy.CloudRequestGuard.ProbeSchema;
 
     /// <summary>
     /// Runs the probes in order and reports each as it ends. Cancelling stops at once: the results already
@@ -76,10 +71,10 @@ public static class ModelCapabilityProbe
         new() { Kind = kind, Outcome = outcome, Detail = detail, CheckedUtc = DateTime.UtcNow };
 
     /// <summary>The answer, read up to the limit: past it the stream is left, which cancels the request.</summary>
-    private static async Task<string> ReadAsync(ILlmClient client, string question, CancellationToken cancellationToken, Func<bool>? stopEarly = null)
+    private static async Task<string> ReadAsync(ILlmClient client, CancellationToken cancellationToken, Func<bool>? stopEarly = null)
     {
         var text = new StringBuilder();
-        await foreach (var chunk in client.StreamChatAsync(new[] { Rules, ChatMessage.User(question) }, cancellationToken).ConfigureAwait(false))
+        await foreach (var chunk in client.StreamChatAsync(OnlyWorkspace.Core.Privacy.CloudRequestGuard.Probe(reasoning: stopEarly != null), cancellationToken).ConfigureAwait(false))
         {
             text.Append(chunk);
             if (text.Length >= MaxOutputChars || stopEarly?.Invoke() == true) break;
@@ -89,7 +84,7 @@ public static class ModelCapabilityProbe
 
     private static async Task<CapabilityProbeResult> TextAsync(ILlmClient client, CancellationToken cancellationToken)
     {
-        var text = (await ReadAsync(client, "Scrivi esattamente la parola PRONTO.", cancellationToken).ConfigureAwait(false)).Trim();
+        var text = (await ReadAsync(client, cancellationToken).ConfigureAwait(false)).Trim();
         return text.Length > 0
             ? Result(ProbeKind.Text, ProbeOutcome.Supported, "Risposta ricevuta: «" + (text.Length > 40 ? text.Substring(0, 40) + "…" : text) + "».")
             : Result(ProbeKind.Text, ProbeOutcome.Unsupported, "Il servizio ha concluso la risposta senza testo.");
@@ -97,10 +92,8 @@ public static class ModelCapabilityProbe
 
     private static async Task<CapabilityProbeResult> JsonAsync(ILlmClient client, CancellationToken cancellationToken)
     {
-        var answer = await client.CompleteStructuredAsync(new[]
-        {
-            Rules, ChatMessage.User("Il semaforo della prova è verde e il numero della prova è 7. Riporta colore e numero.")
-        }, JsonSchema, cancellationToken).ConfigureAwait(false);
+        var answer = await client.CompleteStructuredAsync(OnlyWorkspace.Core.Privacy.CloudRequestGuard.Probe(structured: true),
+            OnlyWorkspace.Core.Privacy.CloudRequestGuard.ProbeSchema, cancellationToken).ConfigureAwait(false);
         string? problem = SchemaProblem(answer);
         return problem == null
             ? Result(ProbeKind.Json, ProbeOutcome.Supported, "Risposta conforme allo schema richiesto.")
@@ -146,8 +139,7 @@ public static class ModelCapabilityProbe
         });
         try
         {
-            await ReadAsync(client, "Un treno parte alle 9:40 e arriva alle 11:15. Quanti minuti dura il viaggio? Rispondi solo con il numero.",
-                seen.Token, () => observer.ReasoningObserved).ConfigureAwait(false);
+            await ReadAsync(client, seen.Token, () => observer.ReasoningObserved).ConfigureAwait(false);
         }
         catch (Exception) when (observer.ReasoningObserved)
         {

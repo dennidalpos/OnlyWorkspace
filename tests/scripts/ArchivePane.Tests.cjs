@@ -26,7 +26,7 @@ function node(tag) {
 const announced = [];
 const text = n => n.textContent + n.children.map(text).join('');
 const nodes = new Map();
-const context = vm.createContext({
+const context = vm.createContext({ setupContextHelp() {}, addDocumentReport() {},
   $: id => {
     if (!nodes.has(id)) nodes.set(id, node('div'));
     return nodes.get(id);
@@ -147,7 +147,7 @@ console.log('PASS Stato: essentials in view, diagnostics in a closed Avanzate se
 
 // A192: execute the actual WebView event boundary, toast and live-region path.
 const boundaryNodes = new Map(), diagnostics = [], spoken = [], consoleErrors = [];
-const boundary = vm.createContext({
+const boundary = vm.createContext({ setupContextHelp() {}, addDocumentReport() {},
   $: id => { if (!boundaryNodes.has(id)) boundaryNodes.set(id, node('div')); return boundaryNodes.get(id); },
   announce: text => spoken.push(text), clearTimeout: () => {}, setTimeout: () => 1,
   console: { error: error => consoleErrors.push(error) },
@@ -173,7 +173,7 @@ assert.match(spoken.at(-1), /^Errore: Il riquadro/, 'A failed log post must not 
 
 // The terminal event routes keep errors and deliberate interruptions distinct.
 const terminalResults = [];
-const terminal = vm.createContext({ state: { current: {} }, finishTurn: result => terminalResults.push(result) });
+const terminal = vm.createContext({ setupContextHelp() {}, addDocumentReport() {}, state: { current: {} }, finishTurn: result => terminalResults.push(result) });
 const terminalCases = html.slice(html.indexOf("      case 'stream_error':"), html.indexOf("      case 'toast':"));
 vm.runInContext('function dispatch(data) { switch(data.type) {' + terminalCases + '} }', terminal);
 terminal.dispatch({ type: 'stream_error', message: 'Operazione non riuscita.' });
@@ -183,7 +183,7 @@ assert.equal(terminalResults[1].status, 'cancelled');
 console.log('PASS A192: JavaScript exception stays in diagnostic, Italian toast announced, cancellation distinct');
 
 const terminalSpeech = [], terminalState = {};
-const finish = vm.createContext({
+const finish = vm.createContext({ setupContextHelp() {}, addDocumentReport() {},
   state: terminalState, clearTimeout: () => {}, isNearBottom: () => false,
   renderMarkdown: text => text, announce: text => terminalSpeech.push(text),
   el: (tag, cls, value) => Object.assign(node(tag), { className: cls || '', textContent: value || '' }),

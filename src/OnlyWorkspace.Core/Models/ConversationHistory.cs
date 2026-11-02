@@ -13,6 +13,8 @@ public sealed class HistoryChatMessage
     public DateTimeOffset Timestamp { get; set; } = DateTimeOffset.UtcNow;
     public List<WebSource> WebSources { get; set; } = new();
     public List<HistoryContextReference> MailSources { get; set; } = new();
+    /// <summary>Local-only reading evidence. Never appended to reusable model context.</summary>
+    public List<Agents.DocumentOutcome> Documents { get; set; } = new();
     /// <summary>Email the user's message is about: the action's email, «questa email», or the draft being written.</summary>
     public HistoryContextReference? Email { get; set; }
     /// <summary>Action that produced the turn («Sintesi», «Risposta · Accetta»…); null for a chat message.</summary>

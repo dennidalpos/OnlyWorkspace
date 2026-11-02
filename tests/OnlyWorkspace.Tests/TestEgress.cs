@@ -31,7 +31,7 @@ internal static class TestEgress
     {
         if (fullExposure)
             foreach (var profile in config.Profiles.Where(p => p.IsExternal && p.Exposure == ExposureLevel.Minimal)) profile.Exposure = ExposureLevel.Standard;
-        DataEgress.Accept(config, Signer(), Providers(config), "test", "pc", DateTime.UtcNow, ResolveSecret);
+        DataEgress.Accept(config, "test", "pc", DateTime.UtcNow, ResolveSecret);
         return config;
     }
 }

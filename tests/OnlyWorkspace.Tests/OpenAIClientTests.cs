@@ -45,7 +45,7 @@ public class OpenAIClientTests
             return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("{\"choices\":[{\"message\":{\"content\":\"{\\\"summary\\\":\\\"Review requested.\\\"}\"},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":20,\"completion_tokens\":8}}") };
         })) { BaseAddress = new Uri("https://fixture.example.test/v1/") };
         using var client = new OpenAIClient(new LlmProfileConfig { Type = "qwen", Model = "qwen3.8-flash", BaseUrl = "https://fixture.example.test/v1", DisableThinking = true }, secretToken: "synthetic", httpClient: http);
-        await client.CompleteStructuredAsync(new[] { ChatMessage.User("Synthetic JSON request") }, "{\"type\":\"object\",\"properties\":{\"summary\":{\"type\":\"string\",\"minLength\":1,\"maxLength\":73}},\"required\":[\"summary\"],\"additionalProperties\":false}");
+        await client.CompleteProtocolAsync(new[] { ChatMessage.User("Synthetic JSON request") }, "{\"type\":\"object\",\"properties\":{\"summary\":{\"type\":\"string\",\"minLength\":1,\"maxLength\":73}},\"required\":[\"summary\"],\"additionalProperties\":false}");
         using var doc = System.Text.Json.JsonDocument.Parse(sent!);
         var format = doc.RootElement.GetProperty("response_format");
         Assert.Equal("json_schema", format.GetProperty("type").GetString());
@@ -78,13 +78,13 @@ public class OpenAIClientTests
         using var client = new OpenAIClient(new LlmProfileConfig { Type = "lmstudio", Model = "synthetic" }, httpClient: http);
         using var dispatched = new LlmRequestDispatcher(client, new LlmProfileConfig { Type = "lmstudio", Model = "synthetic", ContextBudgetTokens = 4096 }, audit: TestPrivacyAudit.Store);
         var messages = new[] { ChatMessage.User("synthetic") };
-        Assert.Equal("{}", await dispatched.CompleteStructuredAsync(messages, "{}"));
+        Assert.Equal("{}", await dispatched.CompleteProtocolAsync(messages, "{}"));
         Assert.Null(dispatched.LastTokenUsage);
         Assert.Equal(truncated, dispatched.LastCompletion!.IsTruncated);
         Assert.Equal(truncated ? "length" : "stop", dispatched.LastCompletion.Reason);
         if (truncated) Assert.Throws<OnlyWorkspace.Core.Agents.InvalidModelOutputException>(() => OnlyWorkspace.Core.Agents.ModelOutput.EnsureComplete(dispatched.LastCompletion));
         else OnlyWorkspace.Core.Agents.ModelOutput.EnsureComplete(dispatched.LastCompletion);
-        Assert.Equal("{}", await dispatched.CompleteStructuredAsync(messages, "{}"));
+        Assert.Equal("{}", await dispatched.CompleteProtocolAsync(messages, "{}"));
         Assert.False(dispatched.LastCompletion!.IsTruncated);
         Assert.Null(dispatched.LastTokenUsage);
     }
@@ -99,7 +99,7 @@ public class OpenAIClientTests
         using var http = new HttpClient(new MockHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(sse) }))
             { BaseAddress = new Uri("http://localhost:1234/v1/") };
         using var client = new OpenAIClient(new LlmProfileConfig { Type = "lmstudio", Model = "synthetic" }, httpClient: http);
-        await foreach (var chunk in client.StreamChatAsync(new[] { ChatMessage.User("x") })) Assert.Equal("partial", chunk);
+        await foreach (var chunk in client.StreamProtocolAsync(new[] { ChatMessage.User("x") })) Assert.Equal("partial", chunk);
         Assert.True(client.LastCompletion!.IsTruncated);
         Assert.Equal("length", client.LastCompletion.Reason);
         if (lateUsage) Assert.Equal(7, client.LastTokenUsage!.CompletionTokens);
@@ -180,7 +180,7 @@ public class OpenAIClientTests
         var messages = new[] { ChatMessage.User("Ciao") };
 
         var chunks = new List<string>();
-        await foreach (var chunk in openAi.StreamChatAsync(messages))
+        await foreach (var chunk in openAi.StreamProtocolAsync(messages))
         {
             chunks.Add(chunk);
         }
@@ -214,7 +214,7 @@ public class OpenAIClientTests
         using var openAi = new OpenAIClient(profile, secretToken: "sk-test", httpClient: client);
         var messages = new[] { ChatMessage.User("Trova email") };
 
-        var result = await openAi.CompleteStructuredAsync(messages, "{}");
+        var result = await openAi.CompleteProtocolAsync(messages, "{}");
         Assert.Equal("{\"intent\":\"search\"}", result);
     }
 
@@ -234,7 +234,7 @@ public class OpenAIClientTests
         var client = new HttpClient(handler) { BaseAddress = new Uri("https://api.openai.com/v1/") };
         using var openAi = new OpenAIClient(new LlmProfileConfig { Type = "openai", BaseUrl = "https://api.openai.com/v1", Model = "gpt-4o" }, secretToken: "sk-test", httpClient: client);
 
-        var result = await openAi.CompleteStructuredAsync(new[] { ChatMessage.User("Trova email") }, "{}");
+        var result = await openAi.CompleteProtocolAsync(new[] { ChatMessage.User("Trova email") }, "{}");
 
         Assert.Equal("{\"intent\":\"search\"}", result);
         Assert.Contains("\"stream\":true", sent);
@@ -254,7 +254,7 @@ public class OpenAIClientTests
 
         var ex = await Assert.ThrowsAsync<HttpRequestException>(async () =>
         {
-            await foreach (var _ in openAi.StreamChatAsync(new[] { ChatMessage.User("x") })) { }
+            await foreach (var _ in openAi.StreamProtocolAsync(new[] { ChatMessage.User("x") })) { }
         });
         Assert.Contains(error, ex.Message);
     }
@@ -266,7 +266,7 @@ public class OpenAIClientTests
         var client = new HttpClient(handler) { BaseAddress = new Uri("https://api.openai.com/v1/") };
         using var openAi = new OpenAIClient(new LlmProfileConfig { Type = "openai", BaseUrl = "https://api.openai.com/v1", Model = "gpt-4o" }, secretToken: "sk-test", httpClient: client);
 
-        var ex = await Assert.ThrowsAsync<HttpRequestException>(() => openAi.CompleteStructuredAsync(new[] { ChatMessage.User("x") }, "{}"));
+        var ex = await Assert.ThrowsAsync<HttpRequestException>(() => openAi.CompleteProtocolAsync(new[] { ChatMessage.User("x") }, "{}"));
         Assert.Contains("risposta strutturata", ex.Message);
     }
 
@@ -279,7 +279,7 @@ public class OpenAIClientTests
         var client = new HttpClient(handler) { BaseAddress = new Uri("https://api.openai.com/v1/") };
         using var openAi = new OpenAIClient(new LlmProfileConfig { Type = "openai", BaseUrl = "https://api.openai.com/v1", Model = "gpt-4o" }, secretToken: "sk-test", httpClient: client);
 
-        var ex = await Assert.ThrowsAsync<HttpRequestException>(() => openAi.CompleteStructuredAsync(new[] { ChatMessage.User("x") }, "{}"));
+        var ex = await Assert.ThrowsAsync<HttpRequestException>(() => openAi.CompleteProtocolAsync(new[] { ChatMessage.User("x") }, "{}"));
         Assert.Contains("Non posso aiutare.", ex.Message);
     }
 
@@ -320,7 +320,7 @@ public class OpenAIClientTests
         using var openAi = new OpenAIClient(profile, secretToken: "sk-test", httpClient: client);
         var messages = new[] { ChatMessage.User("Hello") };
 
-        await foreach (var _ in openAi.StreamChatAsync(messages)) { }
+        await foreach (var _ in openAi.StreamProtocolAsync(messages)) { }
 
         Assert.NotNull(openAi.LastTokenUsage);
         Assert.Equal(80, openAi.LastTokenUsage!.PromptTokens);
@@ -348,7 +348,7 @@ public class OpenAIClientTests
 
         using var openAi = new OpenAIClient(profile, secretToken: "sk-test", httpClient: client);
         var text = new StringBuilder();
-        await foreach (var chunk in openAi.StreamChatAsync(new[] { ChatMessage.User("Ciao") })) text.Append(chunk);
+        await foreach (var chunk in openAi.StreamProtocolAsync(new[] { ChatMessage.User("Ciao") })) text.Append(chunk);
 
         Assert.Equal("Ciao", text.ToString());
         Assert.Equal(12, openAi.LastTokenUsage!.PromptTokens);
@@ -380,8 +380,8 @@ public class OpenAIClientTests
         var profile = new LlmProfileConfig { Type = "openai", BaseUrl = "https://api.openai.com/v1", Model = "test-reasoning-" + Guid.NewGuid().ToString("N") };
 
         using var openAi = new OpenAIClient(profile, secretToken: "sk-test", httpClient: client);
-        await openAi.CompleteStructuredAsync(new[] { ChatMessage.User("Ciao") }, "{}");
-        await openAi.CompleteStructuredAsync(new[] { ChatMessage.User("Ciao") }, "{}");
+        await openAi.CompleteProtocolAsync(new[] { ChatMessage.User("Ciao") }, "{}");
+        await openAi.CompleteProtocolAsync(new[] { ChatMessage.User("Ciao") }, "{}");
 
         Assert.Equal(3, bodies.Count); // rejected, retried, then remembered
         Assert.DoesNotContain("\"temperature\"", bodies[1]);
@@ -408,7 +408,7 @@ public class OpenAIClientTests
         var profile = new LlmProfileConfig { Type = "openai", BaseUrl = "https://api.openai.com/v1", Model = "gpt-4o" };
 
         using var openAi = new OpenAIClient(profile, secretToken: "sk-test", httpClient: client);
-        await openAi.CompleteStructuredAsync(new[] { ChatMessage.User("Ciao") }, OnlyWorkspace.Core.Prompts.PromptCatalog.ActionItemsJsonSchema);
+        await openAi.CompleteProtocolAsync(new[] { ChatMessage.User("Ciao") }, OnlyWorkspace.Core.Prompts.PromptCatalog.ActionItemsJsonSchema);
 
         using var doc = System.Text.Json.JsonDocument.Parse(sent!);
         var schema = doc.RootElement.GetProperty("response_format").GetProperty("json_schema").GetProperty("schema");
@@ -438,7 +438,7 @@ public class OpenAIClientTests
         var profile = new LlmProfileConfig { Type = "openai", BaseUrl = "https://llm.example.test/v1", Model = "local-model" };
 
         using var openAi = new OpenAIClient(profile, secretToken: "sk-test", httpClient: client);
-        await openAi.CompleteStructuredAsync(new[] { ChatMessage.User("Ciao") }, "{}");
+        await openAi.CompleteProtocolAsync(new[] { ChatMessage.User("Ciao") }, "{}");
 
         Assert.DoesNotContain("\"max_tokens\"", sent);
         Assert.Contains("\"temperature\"", sent);
@@ -464,7 +464,7 @@ public class OpenAIClientTests
         var profile = new LlmProfileConfig { Type = "qwen", BaseUrl = "https://qwen.example.test/v1", Model = "qwen-test", DisableThinking = disableThinking };
 
         using var qwen = new OpenAIClient(profile, secretToken: "sk-test", httpClient: client);
-        await qwen.CompleteStructuredAsync(new[] { ChatMessage.User("Ciao") }, "{}");
+        await qwen.CompleteProtocolAsync(new[] { ChatMessage.User("Ciao") }, "{}");
 
         Assert.Contains(expected, sent);
     }
@@ -481,10 +481,10 @@ public class OpenAIClientTests
         var profile = new LlmProfileConfig { Type = "openai", BaseUrl = "https://api.openai.com/v1", Model = "gpt-test-refusal" };
         using var openAi = new OpenAIClient(profile, secretToken: "sk-test", httpClient: client);
 
-        var ex = await Assert.ThrowsAsync<HttpRequestException>(() => openAi.CompleteStructuredAsync(new[] { ChatMessage.User("x") }, ""));
+        var ex = await Assert.ThrowsAsync<HttpRequestException>(() => openAi.CompleteProtocolAsync(new[] { ChatMessage.User("x") }, ""));
         Assert.Contains("I can't help with that.", ex.Message);
 
         body = "{\"choices\":[{\"finish_reason\":\"stop\",\"message\":{\"role\":\"assistant\",\"content\":\"```json\\n{\\\"a\\\":1}\\n```\"}}]}";
-        Assert.Equal("{\"a\":1}", await openAi.CompleteStructuredAsync(new[] { ChatMessage.User("x") }, ""));
+        Assert.Equal("{\"a\":1}", await openAi.CompleteProtocolAsync(new[] { ChatMessage.User("x") }, ""));
     }
 }

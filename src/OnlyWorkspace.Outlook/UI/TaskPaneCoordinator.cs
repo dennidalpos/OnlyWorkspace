@@ -526,6 +526,7 @@ public partial class TaskPaneCoordinator : IDisposable
         public string Listing { get; set; } = string.Empty;
         public WebSearchResult? Web { get; set; }
         public List<HistoryContextReference> Inputs { get; set; } = new();
+        public List<DocumentOutcome> Documents { get; set; } = new();
     }
 
     private ReadEvidence? _readEvidence;
@@ -823,10 +824,11 @@ public partial class TaskPaneCoordinator : IDisposable
         {
             var sb = new StringBuilder();
             var documents = new List<DocumentOutcome>();
+            ct.ThrowIfCancellationRequested();
             if (copies.Saved.Count > 0) PostPhase(turn, $"Lettura allegati ({copies.Saved.Count})…");
             foreach (var attachment in copies.All.Where(a => !a.IsInline && !a.IsPecReceiptData))
             {
-                var outcome = new DocumentOutcome { Name = attachment.Name };
+                var outcome = new DocumentOutcome { Name = attachment.Name, SourceId = (copies.All.ToList().IndexOf(attachment) + 1).ToString(System.Globalization.CultureInfo.InvariantCulture) };
                 documents.Add(outcome);
                 var path = copies.Saved.Where(s => s.Key == attachment).Select(s => s.Value).FirstOrDefault();
                 if (!local || path == null || !DocumentOutcome.CanRead(attachment))
@@ -841,6 +843,8 @@ public partial class TaskPaneCoordinator : IDisposable
                 else if (extraction.Error != null) OnlyWorkspaceLog.Logger.Warning("Attachment extraction failed: {Error}", extraction.Error);
             }
             sb.Append(AnalysisReport.NotReadForModel(documents));
+            foreach (var d in documents) d.PreparedForRequest = d.WasRead;
+            TrackDocuments(documents);
             return new EmailAttachments(sb.ToString(), documents);
         }
         finally
@@ -871,8 +875,14 @@ public partial class TaskPaneCoordinator : IDisposable
     {
         if (string.IsNullOrEmpty(email.EntryId)) return EmailAttachments.None;
         var key = email.StoreId + "|" + email.EntryId + "|" + ConversationPolicy.Key(profile) + "|" + OcrEnabled;
-        if (_chatAttachments.Key == key) return _chatAttachments.Attachments;
+        if (_chatAttachments.Key == key)
+        {
+            foreach (var d in _chatAttachments.Attachments.Documents) { d.IncludedInRequest = false; d.PreparedForRequest = d.WasRead; }
+            TrackDocuments(_chatAttachments.Attachments.Documents);
+            return _chatAttachments.Attachments;
+        }
         var attachments = await BuildAttachmentContextAsync(email, profile, turn, ct);
+        foreach (var d in attachments.Documents) { d.EntryId = email.EntryId; d.StoreId = email.StoreId; d.EmailSubject = email.Subject; d.EmailDate = email.ReceivedTime; }
         _chatAttachments = (key, attachments);
         return attachments;
     }
@@ -913,7 +923,8 @@ public partial class TaskPaneCoordinator : IDisposable
             end = i.End?.ToString("yyyy-MM-ddTHH:mm", System.Globalization.CultureInfo.InvariantCulture),
             allDay = i.AllDay,
             location = i.Location,
-            notes = string.IsNullOrWhiteSpace(i.Notes) ? source : i.Notes + "\n\n" + source
+            notes = string.IsNullOrWhiteSpace(i.Notes) ? source : i.Notes + "\n\n" + source,
+            source = new { entryId = email.EntryId, storeId = email.StoreId, label = email.Subject }
         }).ToList();
         var export = ListExport(new[] { "Tipo", "Titolo", "Quando", "Luogo", "Note" },
             items.Select(i => new[] { i.Kind, i.Title, i.WhenLabel, i.Location, i.Notes }), items.Diagnostics);
@@ -991,32 +1002,52 @@ public partial class TaskPaneCoordinator : IDisposable
                 PostNotConfigured();
                 return;
             }
-            bool attachmentsAllowed = AttachmentContentAllowed(activeProfile);
-
-            var content = _contextBuilder.CleanEmailBody(email.Body, email.Subject);
-            string? pecOriginal = null;
-            // PEC: the message to work on is the attached original (with its documents), not the envelope.
-            if (attachmentsAllowed && PecMessage.IsEnvelope(email.Subject))
+            string json;
+            string attachmentNotice = string.Empty;
+            if (activeProfile.IsExternal)
             {
-                PostPhase(turn, "Lettura del messaggio originale della PEC…");
-                pecOriginal = await ReadPecMessageAsync(email.EntryId, email.StoreId, ct);
+                if (opType != "action_items") throw new DataEgressBlockedException(CloudFactsRequest.BlockedMessage);
+                var mail = new ChatMailItem { EntryId = email.EntryId, StoreId = email.StoreId, Subject = email.Subject,
+                    Received = email.ReceivedTime, Facts = ArchiveFactExtractor.Extract(email.Body ?? "") };
+                var pack = MailEvidencePack.Chronological(new[] { new MailEvidence { Mail = mail } });
+                var safe = new CloudFactsRequest(pack);
+                client = CreateLlmClient(activeProfile, wholeEmails: false);
+                var protectedJson = await client.CompleteStructuredAsync(safe.Messages, CloudFactsRequest.Schema, ct);
+                ModelOutput.EnsureComplete(client.LastCompletion);
+                var localItems = safe.ReadActionItems(protectedJson);
+                json = JsonSerializer.Serialize(new { items = localItems.Select(i => new { type = i.Kind, title = i.Title,
+                    due = i.Due?.ToString("yyyy-MM-dd"), start = i.Start?.ToString(i.AllDay ? "yyyy-MM-dd" : "yyyy-MM-ddTHH:mm"),
+                    end = i.End?.ToString(i.AllDay ? "yyyy-MM-dd" : "yyyy-MM-ddTHH:mm"), date_text = i.DateText, source = "M1" }) });
             }
-            // The invoice or the order is usually the attached document, not the email text.
-            var attachmentNotice = string.Empty;
-            if (!string.IsNullOrEmpty(pecOriginal)) content = pecOriginal!;
             else
             {
-                var attachments = await BuildAttachmentContextAsync(email, activeProfile, turn, ct);
-                content += attachments.Text;
-                attachmentNotice = AnalysisReport.EmailDocuments(attachments.Documents);
-            }
-            var body = _contextBuilder.EnsureFits(EmailHeaderOf(email, withSender: true) + content, ProviderCatalog.PromptBudget(activeProfile));
+                bool attachmentsAllowed = AttachmentContentAllowed(activeProfile);
 
-            client = CreateLlmClient(activeProfile);
-            PostPhase(turn, phase);
-            var groundedPrompt = await AddWebEvidenceAsync(activeProfile, promptFactory(body, email), turn, ct, jsonSchema);
-            var json = await client.CompleteStructuredAsync(groundedPrompt, jsonSchema, ct);
-            ModelOutput.EnsureComplete(client.LastCompletion);
+                var content = _contextBuilder.CleanEmailBody(email.Body, email.Subject);
+                string? pecOriginal = null;
+                // PEC: the message to work on is the attached original (with its documents), not the envelope.
+                if (attachmentsAllowed && PecMessage.IsEnvelope(email.Subject))
+                {
+                    PostPhase(turn, "Lettura del messaggio originale della PEC…");
+                    pecOriginal = await ReadPecMessageAsync(email.EntryId, email.StoreId, ct);
+                }
+                // The invoice or the order is usually the attached document, not the email text.
+
+                if (!string.IsNullOrEmpty(pecOriginal)) content = pecOriginal!;
+                else
+                {
+                    var attachments = await BuildAttachmentContextAsync(email, activeProfile, turn, ct);
+                    content += attachments.Text;
+                    attachmentNotice = AnalysisReport.EmailDocuments(attachments.Documents);
+                }
+                var body = _contextBuilder.EnsureFits(EmailHeaderOf(email, withSender: true) + content, ProviderCatalog.PromptBudget(activeProfile));
+
+                client = CreateLlmClient(activeProfile);
+                PostPhase(turn, phase);
+                var groundedPrompt = await AddWebEvidenceAsync(activeProfile, promptFactory(body, email), turn, ct, jsonSchema);
+                json = await client.CompleteStructuredAsync(groundedPrompt, jsonSchema, ct);
+                ModelOutput.EnsureComplete(client.LastCompletion);
+            }
             var (text, extra) = render(json, email);
             PostStream(turn, new { type = "stream_chunk", chunk = text });
             await RecordActionInHistoryAsync(activeProfile, actionName + ": " + email.Subject, StructuredHistoryText(text, extra), ct, HistoryRefOf(email), actionName);
@@ -1092,16 +1123,15 @@ public partial class TaskPaneCoordinator : IDisposable
     /// <summary>Item comes back from the pane: re-validated with the same parser rules before touching Outlook.</summary>
     private void OpenActionItemDraft(JsonElement message)
     {
-        if (!message.TryGetProperty("item", out var e)) return;
         try
         {
-            var item = ActionItemParser.FromPane(e);
-            if (item != null) _dataService.DisplayActionItemDraft(item);
+            var item = _actionItemSaves.Resolve(message);
+            _dataService.DisplayActionItemDraft(item);
         }
         catch (Exception ex)
         {
             OnlyWorkspaceLog.Logger.Error(ex, "Failed to open action item draft");
-            Toast("Impossibile aprire la bozza in Outlook.", "error");
+            Toast("Bozza non aperta: fonte completa o risultato non disponibile. Riprova l'estrazione.", "error");
         }
     }
 
@@ -1110,10 +1140,13 @@ public partial class TaskPaneCoordinator : IDisposable
     {
         var watch = Stopwatch.StartNew();
         bool includeDetails = pack.Whole > 0;
-        var json = await client.CompleteStructuredAsync(PromptCatalog.CreateCalendarScanPrompt(pack.Render(includeDetails)), PromptCatalog.CalendarScanJsonSchema, ct);
+        var external = GetActiveProfile() is { IsExternal: true };
+        var safe = external ? new CloudFactsRequest(pack, GetActiveProfile()!.SendsAttachmentText) : null;
+        var json = await client.CompleteStructuredAsync(safe?.Messages ?? PromptCatalog.CreateCalendarScanPrompt(pack.Render(includeDetails)),
+            external ? CloudFactsRequest.Schema : PromptCatalog.CalendarScanJsonSchema, ct);
         LogMailAnswer(client, pack, watch.ElapsedMilliseconds);
         ModelOutput.EnsureComplete(client.LastCompletion);
-        var items = ActionItemParser.Parse(json);
+        var items = safe == null ? ActionItemParser.Parse(json) : safe.ReadActionItems(json);
         MailAnswerVerifier.Verify(items, pack, includeDetails);
         foreach (var item in items)
         {
@@ -1667,6 +1700,8 @@ public partial class TaskPaneCoordinator : IDisposable
     {
         _sourceReadUtc = DateTime.UtcNow;
         _inputSourcesForTurn.Clear();
+        _actionFactsForTurn.Clear();
+        _documentsForTurn.Clear();
         _lastOriginal = null;
         _turn++;
         _webActionForTurn = _pendingWebAction;
@@ -1726,6 +1761,8 @@ public partial class TaskPaneCoordinator : IDisposable
             fields["items"] = _actionItemSaves.Register(actionItems);
         if (fields.TryGetValue("type", out var messageType) && messageType as string == "stream_chunk" && fields.TryGetValue("chunk", out var chunk))
             _turnText.Append(chunk as string);
+        if (fields.TryGetValue("type", out var terminalType) && terminalType as string is "stream_end" or "stream_error" or "stream_cancelled")
+            fields["documents"] = DocumentSnapshot();
         _replay.Record(fields);
         NotifyJobs(fields);
         var type = fields.TryGetValue("type", out var mappedType) ? mappedType as string : null;
@@ -1900,7 +1937,7 @@ public partial class TaskPaneCoordinator : IDisposable
         var now = DateTimeOffset.UtcNow;
         PreserveInputSources();
         _currentConversation.Messages.Add(new HistoryChatMessage { Role = "user", Content = label, Timestamp = now, Email = email, Action = action });
-        _currentConversation.Messages.Add(new HistoryChatMessage { Role = "assistant", Content = response, ModelContent = modelContent, Timestamp = now, WebSources = WebCitations.Used(response, _webForTurn.Sources), MailSources = new List<HistoryContextReference>(_mailSourcesForTurn), Security = security });
+        _currentConversation.Messages.Add(new HistoryChatMessage { Role = "assistant", Content = response, ModelContent = modelContent, Timestamp = now, WebSources = WebCitations.Used(response, _webForTurn.Sources), MailSources = new List<HistoryContextReference>(_mailSourcesForTurn), Security = security, Documents = DocumentSnapshot() });
 
         if (_config?.History?.Enabled != true) return;
         try
@@ -1984,6 +2021,7 @@ public partial class TaskPaneCoordinator : IDisposable
                     mailSources = m.MailSources,
                     email = MailRefForPane(m.Email),
                     action = m.Action,
+                    documents = m.Documents,
                     security = m.Security
                 }).ToList();
                 // Another profile continues in a new conversation (BeginConversationTurn): the pane says so.
@@ -2282,7 +2320,7 @@ public partial class TaskPaneCoordinator : IDisposable
     /// <summary>The action sends whole emails, appointments or contacts: refused at a cards-only exposure level, before any request.</summary>
     private static void EnsureWholeEmails(LlmProfileConfig profile)
     {
-        if (!ExposurePolicy.Of(profile).WholeEmails) throw new DataEgressBlockedException(FactsOnlyMessage);
+        if (!ExposurePolicy.Of(profile).WholeEmails) throw new DataEgressBlockedException(CloudFactsRequest.BlockedMessage);
     }
 
     /// <param name="wholeEmails">The action sends whole Outlook items; false for archive evidence, the user's own text or a probe.</param>
@@ -2316,7 +2354,11 @@ public partial class TaskPaneCoordinator : IDisposable
                 webSecret != _configService.ResolveSecret(profile.WebSearchSecretRef))
                 throw new OperationCanceledException("La policy del profilo è cambiata.");
             if (!DataEgress.AllowsModel(_config, profile, _configService.ResolveSecret)) throw new DataEgressBlockedException(DataEgress.BlockedMessageFor(profile));
-        }, status, () => { if (profile.IsExternal) dispatchUi.Send(_ => PostStream(turn, new { type = "cloud_used" }), null); },
+        }, status, () => dispatchUi.Send(_ =>
+        {
+            if (turn == _turn) DocumentsDispatched();
+            if (profile.IsExternal) PostStream(turn, new { type = "cloud_used" });
+        }, null),
             entities: ct => ReadPrivacyEntitiesOnUiAsync(dispatchUi, ct), audit: _privacyAudit);
     }
 

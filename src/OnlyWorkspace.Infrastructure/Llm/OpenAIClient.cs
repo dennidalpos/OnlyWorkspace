@@ -411,7 +411,7 @@ public sealed class OpenAIClient : ILlmClient, IReasoningObserver, IDisposable
     {
         while (true)
         {
-            messages = ModelRequestContext.Prepare(_profile, messages, jsonSchema);
+            messages = ModelRequestContext.Prepare(_profile, OnlyWorkspace.Core.Privacy.CloudRequestGuard.Validate(_profile, messages, jsonSchema), jsonSchema);
             var json = JsonSerializer.Serialize(BuildChatPayload(messages, stream: true, jsonSchema: jsonSchema));
             using var content = new StringContent(json, Encoding.UTF8, "application/json");
             using var request = new HttpRequestMessage(HttpMethod.Post, GetEndpoint(Caps.ChatPath)) { Content = content };

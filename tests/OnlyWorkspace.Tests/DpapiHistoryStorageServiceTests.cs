@@ -49,7 +49,10 @@ public class DpapiHistoryStorageServiceTests : IDisposable
                 {
                     Role = "assistant", Content = "Le scadenze sono il 15 ottobre.",
                     WebSources = { new WebSource { Title = "Fonte web", Url = "https://example.org/source" } },
-                    MailSources = { new HistoryContextReference { EntryId = "ENTRY-2", Subject = "Precedente", ItemType = "email" } }
+                    MailSources = { new HistoryContextReference { EntryId = "ENTRY-2", Subject = "Precedente", ItemType = "email" } },
+                    Documents = { new OnlyWorkspace.Core.Agents.DocumentOutcome { Name = "PRIVATE-DOCUMENT.pdf",
+                        EntryId = "ENTRY-2", StoreId = "STORE-2", SourceId = "1", IncludedInRequest = false,
+                        Status = OnlyWorkspace.Core.Agents.DocumentStatus.Incomplete, ExtractionProblem = "ocr-off" } }
                 }
             },
             ContextReferences =
@@ -68,6 +71,7 @@ public class DpapiHistoryStorageServiceTests : IDisposable
 
         Assert.DoesNotContain("Quali sono le scadenze?", rawString);
         Assert.DoesNotContain("Discussione Progetto", rawString);
+        Assert.DoesNotContain("PRIVATE-DOCUMENT.pdf", rawString);
 
         // Verify roundtrip
         var loaded = await _storageService.LoadConversationAsync("conv-101");
@@ -79,6 +83,11 @@ public class DpapiHistoryStorageServiceTests : IDisposable
         Assert.Equal("Quali sono le scadenze?", loaded.Messages[0].Content);
         Assert.Equal("https://example.org/source", loaded.Messages[1].WebSources[0].Url);
         Assert.Equal("ENTRY-2", loaded.Messages[1].MailSources[0].EntryId);
+        var document = Assert.Single(loaded.Messages[1].Documents);
+        Assert.Equal("PRIVATE-DOCUMENT.pdf", document.Name);
+        Assert.Equal("STORE-2", document.StoreId); Assert.Equal("1", document.SourceId);
+        Assert.Contains("OCR è disattivato", document.Reason);
+        Assert.False(document.IncludedInRequest);
         Assert.Single(loaded.ContextReferences);
         Assert.Equal("ENTRY-1", loaded.ContextReferences[0].EntryId);
     }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using OnlyWorkspace.Core.Context;
@@ -59,7 +60,7 @@ public sealed class LlmRequestDispatcher : ILlmClient, IDisposable
     {
         cancellationToken.ThrowIfCancellationRequested();
         _validatePolicy?.Invoke();
-        var prepared = ModelRequestContext.Prepare(_profile, messages);
+        var prepared = ModelRequestContext.Prepare(_profile, CloudRequestGuard.Validate(_profile, messages, null));
         Pseudonymizer? mask = null;
         Pseudonymizer.StreamRestorer? restorer = null;
         var request = _status?.Begin();
@@ -117,7 +118,7 @@ public sealed class LlmRequestDispatcher : ILlmClient, IDisposable
     {
         cancellationToken.ThrowIfCancellationRequested();
         _validatePolicy?.Invoke();
-        var prepared = ModelRequestContext.Prepare(_profile, messages, jsonSchema);
+        var prepared = ModelRequestContext.Prepare(_profile, CloudRequestGuard.Validate(_profile, messages, jsonSchema), jsonSchema);
         Pseudonymizer? mask = null;
         var request = _status?.Begin();
         string result;
@@ -149,7 +150,7 @@ public sealed class LlmRequestDispatcher : ILlmClient, IDisposable
         {
             var entities = _entities == null ? Array.Empty<PrivacyEntity>() : await _entities(ct);
             ct.ThrowIfCancellationRequested(); _validatePolicy?.Invoke();
-            return new Pseudonymizer(entities, _profile.PseudonymizeAmounts, _profile.PseudonymizeDates);
+            return new Pseudonymizer(entities, _profile.IsExternal || _profile.PseudonymizeAmounts, _profile.IsExternal || _profile.PseudonymizeDates);
         }
         catch (OperationCanceledException) { throw; }
         catch (Exception ex) when (ex is not OutOfMemoryException)
@@ -169,7 +170,16 @@ public sealed class LlmRequestDispatcher : ILlmClient, IDisposable
         // containing detectable personal data rather than sending it outside the masking boundary.
         if (schema != null && masked[masked.Count - 1].Content != schema)
             throw new DataEgressBlockedException("Lo schema contiene dati personali riconosciuti: la richiesta non è stata inviata.");
-        var outgoing = schema == null ? masked : new List<ChatMessage>(System.Linq.Enumerable.Take(masked, prepared.Count));
+        IReadOnlyList<ChatMessage> outgoing = schema == null ? masked : new List<ChatMessage>(System.Linq.Enumerable.Take(masked, prepared.Count));
+        if (_profile.IsExternal)
+        {
+            // Only exactly the approved immutable text retains its proof. Never approve a masked arbitrary prompt.
+            if (!System.Linq.Enumerable.SequenceEqual(outgoing.Select(m => m.Content), prepared.Select(m => m.Content)))
+                throw new DataEgressBlockedException(CloudFactsRequest.BlockedMessage);
+            outgoing = prepared;
+            foreach (var count in CloudRequestGuard.Counts(prepared)) mask.Audit.Counts[count.Key] = count.Value;
+            mask.Audit.Revisions["cloud-contract"] = "1";
+        }
         ModelRequestContext.Prepare(_profile, outgoing, schema);
         ct.ThrowIfCancellationRequested(); _validatePolicy?.Invoke();
         // A failed write prevents transport. "dispatching" is an attempt, not proof of server receipt.

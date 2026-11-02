@@ -49,8 +49,8 @@ public sealed class P1DispatchPolicyTests
             await Assert.ThrowsAsync<DataEgressBlockedException>(() => dispatch.CompleteStructuredAsync(new[] { ChatMessage.User("BODY") }, "{}"));
             Assert.Equal(0, recorder.Calls);
             Accept(config);
-            Assert.Equal("ok", await dispatch.CompleteStructuredAsync(new[] { ChatMessage.User("BODY") }, "{}"));
-            Assert.Equal(1, recorder.Calls);
+            await Assert.ThrowsAsync<DataEgressBlockedException>(() => dispatch.CompleteStructuredAsync(new[] { ChatMessage.User("BODY") }, "{}"));
+            Assert.Equal(0, recorder.Calls);
             Assert.False(SecurityContentAnalysis.AttachmentContentAllowed(profile, new AttachmentFacts("fixture.txt", 10)));
             profile.AllowAttachmentUpload = true;
             Assert.False(SecurityContentAnalysis.AttachmentContentAllowed(profile, new AttachmentFacts("fixture.txt", 10)));
@@ -105,7 +105,9 @@ public sealed class P1DispatchPolicyTests
             next.Messages.Add(new HistoryChatMessage { Role = "user", Content = "NEW-QUESTION" });
             var recorder = new RecordingClient();
             using var dispatch = new LlmRequestDispatcher(recorder, p, audit: TestPrivacyAudit.Store);
-            await dispatch.CompleteStructuredAsync(next.Messages.Select(m => new ChatMessage(m.Role, m.Content)), "{}");
+            if (p.IsExternal)
+                await Assert.ThrowsAsync<DataEgressBlockedException>(() => dispatch.CompleteStructuredAsync(next.Messages.Select(m => new ChatMessage(m.Role, m.Content)), "{}"));
+            else await dispatch.CompleteStructuredAsync(next.Messages.Select(m => new ChatMessage(m.Role, m.Content)), "{}");
             Assert.DoesNotContain("ATTACHMENT-FACT-SECRET", string.Join("", recorder.Messages.Select(m => m.Content)));
             Assert.Contains("ATTACHMENT-FACT-SECRET", (await storage.LoadConversationAsync(conversation.Id))!.Messages.Single().Content);
             Assert.NotEqual(conversation.Id, next.Id);

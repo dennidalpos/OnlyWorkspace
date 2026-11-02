@@ -102,7 +102,7 @@ public sealed class SetupWizardForm : Form
         _chkArchive.Checked = archiveEnabled;
         _chkAttachments.Checked = indexAttachments;
         _steps.Add(Page(
-            Note("L'archivio rende cercabile la posta di tutte le cassette aperte in Outlook, anche a Outlook chiuso, e alimenta Controparti e Ricostruisci flusso."),
+            Note("L'archivio rende cercabile la posta delle cassette consentite, anche a Outlook chiuso, e alimenta Ricostruisci la pratica."),
             _chkArchive, _chkAttachments,
             Note("Il database cifrato in %LOCALAPPDATA%\\OnlyWorkspace\\archive conserva intestazioni, corpo integrale acquisito e, se abilitato, testo degli allegati leggibili. La ricerca usa tutto il testo conservato; l'anteprima mostra solo i primi 255 caratteri. I file allegati originali non vengono archiviati."),
             Note("La raccolta e la ricerca sono locali e non usano modelli IA. Le azioni di analisi seguono il livello di esposizione del profilo e l'informativa accettata."),
@@ -167,7 +167,13 @@ public sealed class SetupWizardForm : Form
     private static LlmProfileConfig Copy(LlmProfileConfig p) =>
         System.Text.Json.JsonSerializer.Deserialize<LlmProfileConfig>(System.Text.Json.JsonSerializer.Serialize(p))!;
 
-    private static SelectableLabel Note(string text) => new() { Text = text, AutoSize = true, MaximumSize = new Size(580, 0), Margin = new Padding(0, 0, 0, 10) };
+    private Control Note(string text)
+    {
+        string title = text.Length > 70 ? text.Substring(0, 70) + "…" : text;
+        var button = ContextHelp.Button(this, title, () => text, _tips);
+        button.AccessibleDescription = text;
+        return button;
+    }
 
     private static Control Row(string label, Control field) => Row(new SelectableLabel { Text = label, AutoSize = true }, field);
 

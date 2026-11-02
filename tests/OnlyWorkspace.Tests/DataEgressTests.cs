@@ -17,15 +17,8 @@ public sealed class DataEgressTests
         Id = "local", DisplayName = "local", Type = "ollama", BaseUrl = "http://127.0.0.1:11434", Model = "m", WebSearchEnabled = web
     };
 
-    private static DataEgressSigner Signer(string date = "2026-10-20")
-    {
-        var signer = TestEgress.Signer(date);
-        signer.Company = "Esempio Srl"; signer.FirstName = "Anna"; signer.LastName = "Bianchi"; signer.Role = "DPO"; signer.Email = "anna@esempio.example";
-        return signer;
-    }
-
     private static DataEgressConsent Accept(WorkspaceConfig config, DateTime? nowUtc = null) =>
-        DataEgress.Accept(config, Signer(), TestEgress.Providers(config), @"PC\admin", "PC", nowUtc ?? DateTime.UtcNow, TestEgress.ResolveSecret);
+        DataEgress.Accept(config, @"PC\admin", "PC", nowUtc ?? DateTime.UtcNow, TestEgress.ResolveSecret);
 
     private static WorkspaceConfig Config(params LlmProfileConfig[] profiles) => new() { DefaultProfile = profiles[0].Id, Profiles = profiles.ToList() };
 
@@ -76,22 +69,17 @@ public sealed class DataEgressTests
         DataEgress.Revoke(config, "u", "pc", DateTime.UtcNow);
         Assert.Null(config.DataEgress.Consent);
         Assert.False(DataEgress.AllowsModel(config, qwen, TestEgress.ResolveSecret));
-        Assert.Equal(new[] { DataEgressEvent.Accepted, DataEgressEvent.Accepted, DataEgressEvent.Revoked }, config.DataEgress.History.Select(e => e.Action));
-        Assert.Equal("Anna Bianchi, DPO, Esempio Srl <anna@esempio.example>", config.DataEgress.History[2].Responsible);
+        Assert.Equal(new[] { DataEgressEvent.Accepted, DataEgressEvent.Accepted, DataEgressEvent.Accepted, DataEgressEvent.Revoked }, config.DataEgress.History.Select(e => e.Action));
+        Assert.Equal("Autorizzazione tecnica", config.DataEgress.History.Last().Responsible);
     }
 
     [Theory]
-    [InlineData("", "Anna", "Bianchi", "DPO", "anna@esempio.example", "2026-10-20")]
-    [InlineData("Esempio Srl", "Anna", "Bianchi", "", "anna@esempio.example", "2026-10-20")]
-    [InlineData("Esempio Srl", "Anna", "Bianchi", "DPO", "anna", "2026-10-20")]
-    [InlineData("Esempio Srl", "Anna", "Bianchi", "DPO", "anna@esempio.example", "2026-10-21")]
-    [InlineData("Esempio Srl", "Anna", "", "DPO", "anna@esempio.example", "20/10/2026")]
-    public void IncompleteSigner_IsRefused(string company, string first, string last, string role, string email, string date)
+    [InlineData("", "PC")]
+    [InlineData("utente", "")]
+    public void MissingAutomaticIdentityIsRefused(string user, string machine)
     {
-        var signer = Signer(date);
-        signer.Company = company; signer.FirstName = first; signer.LastName = last; signer.Role = role; signer.Email = email;
-        Assert.NotNull(DataEgress.Problem(signer, new DateTime(2026, 10, 20)));
-        Assert.Throws<ArgumentException>(() => DataEgress.Accept(Config(Ollama(false)), signer, new List<DataEgressProvider>(), "u", "pc", new DateTime(2026, 10, 20, 8, 0, 0, DateTimeKind.Utc)));
+        Assert.Throws<ArgumentException>(() => DataEgress.Accept(Config(Cloud("c", "https://cloud.example")), user, machine,
+            DateTime.UtcNow, TestEgress.ResolveSecret));
     }
 
     [Fact]
@@ -104,7 +92,7 @@ public sealed class DataEgressTests
         Assert.Single(read.DataEgress.History);
         Assert.True(ConfigurationValidator.Validate(read).IsValid);
 
-        read.DataEgress.Consent!.Email = "nessuna";
+        read.DataEgress.Consent!.WindowsUser = "";
         Assert.Contains(ConfigurationValidator.Validate(read).Errors, e => e.Contains("uscita dei dati"));
     }
 
@@ -112,48 +100,20 @@ public sealed class DataEgressTests
     public void NoticeHash_IsStableAcrossLineEndings()
     {
         Assert.Equal(64, DataEgressNotice.Hash.Length);
-        Assert.Contains("ollama.com", DataEgressNotice.Text);
+        Assert.Equal(DataEgressNotice.Hash, DataEgressNotice.HashOf(DataEgressNotice.Text.Replace("\r\n", "\n")));
     }
 
     [Fact]
-    public void CompanyStatements_AreRequired()
+    public void NewAuthorizationUsesAutomaticDestinationWithoutCompanyDeclarations()
     {
-        var today = new DateTime(2026, 10, 20);
-        Assert.Null(DataEgress.Problem(Signer(), today));
-        foreach (var change in new Action<DataEgressSigner>[]
-                 {
-                     s => s.LegalBasis = "", s => s.LegalBasis = "inventata", s => s.Dpia = " ", s => s.WorkersInformed = false, s => s.AiLiteracy = false
-                 })
-        {
-            var signer = Signer();
-            change(signer);
-            Assert.NotNull(DataEgress.Problem(signer, today));
-        }
-    }
-
-    [Fact]
-    public void ServerDeclarations_AreRequired_AndAcceptanceStoresThem()
-    {
-        var qwen = Cloud("qwen", "https://cloud.example/v1");
-        var config = Config(qwen);
-        foreach (var change in new Action<DataEgressProvider>[]
-                 {
-                     p => p.Provider = "", p => p.ProcessingAgreement = false, p => p.Region = "", p => p.TransferBasis = "x",
-                     p => p.NoTraining = false, p => p.Retention = "", p => p.Level = ExposureLevel.LocalOnly
-                 })
-        {
-            var providers = TestEgress.Providers(config);
-            change(providers[0]);
-            Assert.NotNull(DataEgress.Problem(providers[0]));
-            Assert.Throws<ArgumentException>(() => DataEgress.Accept(config, Signer(), providers, "u", "pc", DateTime.UtcNow));
-        }
-        Assert.Throws<ArgumentException>(() => DataEgress.Accept(config, Signer(), new List<DataEgressProvider>(), "u", "pc", DateTime.UtcNow));
-
+        var config = Config(Cloud("qwen", "https://cloud.example/v1"));
         var consent = Accept(config);
         Assert.Equal(DataEgressNotice.Text, consent.NoticeText);
-        Assert.Equal("Fornitore di prova", Assert.Single(consent.Providers).Provider);
+        Assert.Empty(consent.Company); Assert.Empty(consent.LegalBasis);
+        var provider = Assert.Single(consent.Providers);
+        Assert.Equal("cloud.example", provider.Host);
+        Assert.False(provider.ProcessingAgreement); Assert.False(provider.NoTraining);
         Assert.Equal(DataEgressNotice.Hash, config.DataEgress.History[0].NoticeHash);
-        Assert.Equal(new[] { "cloud.example: " + ExposurePolicy.Label(ExposureLevel.Minimal) }, config.DataEgress.History[0].Levels);
     }
 
     [Fact]
@@ -170,8 +130,6 @@ public sealed class DataEgressTests
         Assert.Equal(new[] { "cloud.example" }, DataEgress.Missing(config, TestEgress.ResolveSecret));
         var providers = TestEgress.Providers(config);
         Assert.Equal(ExposureLevel.Standard, providers[0].Level);
-        providers[0].Level = ExposureLevel.Minimal;
-        Assert.Throws<ArgumentException>(() => DataEgress.Accept(config, Signer(), providers, "u", "pc", DateTime.UtcNow));
         Accept(config);
         Assert.True(DataEgress.AllowsModel(config, qwen, TestEgress.ResolveSecret));
 
@@ -199,7 +157,7 @@ public sealed class DataEgressTests
         Assert.False(qwen.SendsAttachmentText);
         Assert.True(WebSearchAction.Uses(qwen, WebSearchAction.Security));
         Assert.False(WebSearchAction.Uses(qwen, WebSearchAction.Chat));
-        Assert.Equal(EvidenceMode.Original, ExposurePolicy.Of(qwen).Evidence);
+        Assert.Equal(EvidenceMode.FactsOnly, ExposurePolicy.Of(qwen).Evidence);
 
         qwen.Exposure = (ExposureLevel)3;
         Assert.False(qwen.SendsAttachmentText);

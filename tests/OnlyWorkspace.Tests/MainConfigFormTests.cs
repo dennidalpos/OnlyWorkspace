@@ -77,8 +77,9 @@ public sealed class MainConfigFormTests
             Write(directory, new WorkspaceConfig { DefaultProfile = "a", Profiles = new() { cloud } }, new());
             using var form = new MainConfigForm(directory);
             Assert.True(Field<CheckBox>(form, "_chkPseudonymizeAmounts").Checked);
-            Assert.False(Field<CheckBox>(form, "_chkPseudonymizeDates").Checked);
-            Field<CheckBox>(form, "_chkPseudonymizeDates").Checked = true;
+            Assert.True(Field<CheckBox>(form, "_chkPseudonymizeDates").Checked);
+            Assert.False(Field<CheckBox>(form, "_chkPseudonymizeDates").Visible);
+            Call(form, "UpdateSelectedProfileFromUi");
             Assert.True(Field<WorkspaceConfig>(form, "_config").Profiles.Single().PseudonymizeDates);
             Field<ComboBox>(form, "_cmbProvider").SelectedItem = ProviderCatalog.Get("ollama");
             Assert.False(Field<CheckBox>(form, "_chkPseudonymizeDates").Enabled);
@@ -503,7 +504,8 @@ public sealed class MainConfigFormTests
             grid.PerformLayout();
             Application.DoEvents();
 
-            Assert.StartsWith("Escono i fatti locali", note.Text);
+            Assert.StartsWith("Solo fatti strutturati protetti", note.Text);
+            Assert.False(note.Visible);
             int right = grid.PointToClient(note.PointToScreen(new System.Drawing.Point(note.Width, 0))).X;
             Assert.True(right <= grid.ClientSize.Width, $"note ends at {right}, grid is {grid.ClientSize.Width} wide");
         });

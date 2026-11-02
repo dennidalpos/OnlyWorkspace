@@ -50,7 +50,7 @@ node('analysisDrawer').appendChild(body);
 for (const id of ['flowList', 'flowPossible', 'flowCoverage']) body.appendChild(node(id));
 const messages = [];
 const state = { busy: false, configOk: true, analysis: { preset: 'reconstruct' } };
-const context = vm.createContext({
+const context = vm.createContext({ addDocumentReport() {},
   document: { get activeElement() { return activeElement; } },
   finishDrawerLoad: () => {}, beginDrawerLoad: () => {}, announce: () => {},
   $: node, state, el: element, post: message => messages.push(message),
@@ -131,7 +131,7 @@ const cancelled = {
     text: '', startedAt: Date.now(), kind: 'action', action: 'Ricostruisci la pratica', cloud: false
   }, busy: true
 };
-const cancelContext = vm.createContext({
+const cancelContext = vm.createContext({ addDocumentReport() {},
   state: cancelled, clearTimeout: () => {}, isNearBottom: () => false, scrollToBottom: () => {},
   renderMarkdown: text => text, announce: () => {}, el: element, openDrawerId: () => null,
   hideConfirm: () => {}, setBusy: value => { cancelled.busy = value; }

@@ -94,7 +94,7 @@ public class GeminiClientTests
         };
 
         var chunks = new List<string>();
-        await foreach (var chunk in gemini.StreamChatAsync(messages))
+        await foreach (var chunk in gemini.StreamProtocolAsync(messages))
         {
             chunks.Add(chunk);
         }
@@ -130,7 +130,7 @@ public class GeminiClientTests
         using var gemini = new GeminiClient(profile, secretToken: "gemini-test-key", httpClient: client);
         var messages = new[] { ChatMessage.User("Analizza") };
 
-        var result = await gemini.CompleteStructuredAsync(messages, "{}");
+        var result = await gemini.CompleteProtocolAsync(messages, "{}");
         Assert.Equal("{\"sentiment\":\"positive\"}", result);
     }
 
@@ -154,7 +154,7 @@ public class GeminiClientTests
                         "\"usageMetadata\":{\"promptTokenCount\":10,\"candidatesTokenCount\":4,\"thoughtsTokenCount\":20}}");
         });
 
-        var result = await gemini.CompleteStructuredAsync(new[] { ChatMessage.User("Analizza") }, "{}");
+        var result = await gemini.CompleteProtocolAsync(new[] { ChatMessage.User("Analizza") }, "{}");
 
         Assert.Equal("{\"a\":1}", result);
         Assert.Equal(24, gemini.LastTokenUsage!.CompletionTokens);
@@ -174,7 +174,7 @@ public class GeminiClientTests
             return Json("{\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"{}\"}]}}]}");
         });
 
-        await gemini.CompleteStructuredAsync(new[] { ChatMessage.User("Analizza") },
+        await gemini.CompleteProtocolAsync(new[] { ChatMessage.User("Analizza") },
             "{\"type\":\"object\",\"properties\":{\"title\":{\"type\":\"string\"},\"due\":{\"type\":\"string\"}},\"required\":[\"title\"]}");
 
         // Optional properties made gemini-3.8-flash stop after the first array item (2026-10-11).
@@ -192,7 +192,7 @@ public class GeminiClientTests
             return Json("{\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"{}\"}]}}]}");
         });
 
-        await gemini.CompleteStructuredAsync(new[] { ChatMessage.User("Analizza") }, "{}");
+        await gemini.CompleteProtocolAsync(new[] { ChatMessage.User("Analizza") }, "{}");
 
         // The value, not its text: System.Text.Json on net48 writes 0.3 as 0.29999999999999999.
         using var json = JsonDocument.Parse(body!);
@@ -209,7 +209,7 @@ public class GeminiClientTests
 
         var ex = await Assert.ThrowsAsync<HttpRequestException>(async () =>
         {
-            await foreach (var _ in gemini.StreamChatAsync(new[] { ChatMessage.User("Ciao") })) { }
+            await foreach (var _ in gemini.StreamProtocolAsync(new[] { ChatMessage.User("Ciao") })) { }
         });
         Assert.Contains("PROHIBITED_CONTENT", ex.Message);
     }
@@ -249,7 +249,7 @@ public class GeminiClientTests
                 Event(new { candidates = new[] { new { content = new { parts = new[] { new { text = "true}" } } }, finishReason = "STOP" } }, usageMetadata = new { promptTokenCount = 10, candidatesTokenCount = 5, thoughtsTokenCount = 20 } });
             return new HttpResponseMessage(HttpStatusCode.OK) { Content = new UnbufferedHttpContent(sse) };
         });
-        Assert.Equal("{\"ok\":true}", await client.CompleteStructuredAsync(new[] { ChatMessage.User("Test") }, "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"}}}"));
+        Assert.Equal("{\"ok\":true}", await client.CompleteProtocolAsync(new[] { ChatMessage.User("Test") }, "{\"type\":\"object\",\"properties\":{\"ok\":{\"type\":\"boolean\"}}}"));
         Assert.Equal(10, client.LastTokenUsage!.PromptTokens);
         Assert.Equal(25, client.LastTokenUsage.CompletionTokens);
         Assert.False(client.LastCompletion!.IsTruncated);
@@ -262,7 +262,7 @@ public class GeminiClientTests
     {
         var sse = Event(new { candidates = new[] { new { content = new { parts = new[] { new { text = "{}" } } }, finishReason = reason } } });
         using var client = Create("gemini-3-invalid-stream", _ => new HttpResponseMessage(HttpStatusCode.OK) { Content = new UnbufferedHttpContent(sse) });
-        var ex = await Assert.ThrowsAsync<HttpRequestException>(() => client.CompleteStructuredAsync(new[] { ChatMessage.User("Test") }, "{}"));
+        var ex = await Assert.ThrowsAsync<HttpRequestException>(() => client.CompleteProtocolAsync(new[] { ChatMessage.User("Test") }, "{}"));
         Assert.Contains(error, ex.Message);
     }
 
@@ -273,7 +273,7 @@ public class GeminiClientTests
         using var client = Create("gemini-3-chat-cut", _ => new HttpResponseMessage(HttpStatusCode.OK) { Content = new UnbufferedHttpContent(sse) });
         var ex = await Assert.ThrowsAsync<HttpRequestException>(async () =>
         {
-            await foreach (var _ in client.StreamChatAsync(new[] { ChatMessage.User("Test") })) { }
+            await foreach (var _ in client.StreamProtocolAsync(new[] { ChatMessage.User("Test") })) { }
         });
         Assert.Contains("completamento", ex.Message);
     }
@@ -284,7 +284,7 @@ public class GeminiClientTests
         var sse = Event(new { candidates = new[] { new { content = new { parts = new[] { new { text = "{" } } } } } }) +
             Event(new { error = new { code = 429, message = "quota exhausted" } });
         using var client = Create("gemini-3-stream-error", _ => new HttpResponseMessage(HttpStatusCode.OK) { Content = new UnbufferedHttpContent(sse) });
-        var ex = await Assert.ThrowsAsync<HttpRequestException>(() => client.CompleteStructuredAsync(new[] { ChatMessage.User("Test") }, "{}"));
+        var ex = await Assert.ThrowsAsync<HttpRequestException>(() => client.CompleteProtocolAsync(new[] { ChatMessage.User("Test") }, "{}"));
         Assert.Contains("quota exhausted", ex.Message);
     }
 
@@ -301,7 +301,7 @@ public class GeminiClientTests
             };
         }))) { BaseAddress = new Uri("https://generativelanguage.googleapis.com/v1beta/") };
         using var client = new GeminiClient(new LlmProfileConfig { Model = "fixture", BaseUrl = "https://generativelanguage.googleapis.com/v1beta" }, httpClient: http);
-        var ex = await Assert.ThrowsAsync<LlmRequestException>(() => client.CompleteStructuredAsync(new[] { ChatMessage.User("Test") }, "{}"));
+        var ex = await Assert.ThrowsAsync<LlmRequestException>(() => client.CompleteProtocolAsync(new[] { ChatMessage.User("Test") }, "{}"));
         Assert.Equal(429, ex.Status);
         Assert.Contains("quota exhausted", ex.Message);
         Assert.Equal(1, calls);
@@ -312,7 +312,7 @@ public class GeminiClientTests
     {
         var sse = Event(new { candidates = new[] { new { content = new { parts = new[] { new { text = "{}" } } }, finishReason = "MAX_TOKENS" } }, usageMetadata = new { candidatesTokenCount = 20 } });
         using var client = Create("gemini-3-truncated-stream", _ => new HttpResponseMessage(HttpStatusCode.OK) { Content = new UnbufferedHttpContent(sse) });
-        Assert.Equal("{}", await client.CompleteStructuredAsync(new[] { ChatMessage.User("Test") }, "{}"));
+        Assert.Equal("{}", await client.CompleteProtocolAsync(new[] { ChatMessage.User("Test") }, "{}"));
         Assert.True(client.LastCompletion!.IsTruncated);
     }
 
@@ -328,7 +328,7 @@ public class GeminiClientTests
         })) { BaseAddress = new Uri("https://generativelanguage.googleapis.com/v1beta/") };
         using var client = new GeminiClient(new LlmProfileConfig { Model = "fixture", BaseUrl = "https://generativelanguage.googleapis.com/v1beta", IdleTimeoutSeconds = 1 }, httpClient: http);
         using var cts = new CancellationTokenSource();
-        var pending = client.CompleteStructuredAsync(new[] { ChatMessage.User("Test") }, "{}", cts.Token);
+        var pending = client.CompleteProtocolAsync(new[] { ChatMessage.User("Test") }, "{}", cts.Token);
         await stream.Waiting.Task.WaitAsync(TimeSpan.FromSeconds(5));
         if (cancel)
         {

@@ -5,6 +5,22 @@ namespace OnlyWorkspace.Tests;
 
 public sealed class ActionItemSavesTests
 {
+    [Fact]
+    public void DraftResolvesHostValuesAndBodyPreservesCompleteOriginalAndHiddenLinks()
+    {
+        var ledger = new ActionItemSaves();
+        var values = Json(ledger.Register(new[] { new { title = "Call", kind = "appointment", notes = "Dettagli",
+            source = new { entryId = "entry", storeId = "store" } } }));
+        var request = Json(new { resultId = values[0].GetProperty("saveResultId").GetString(), itemId = "0", title = "Forged" });
+        var item = ledger.Resolve(request);
+        Assert.Equal("Call", item.Title); Assert.Equal("entry", item.SourceEntryId); Assert.Equal("store", item.SourceStoreId);
+        const string original = "Call ID: 123; codice: 456\r\nFirma\r\n> intero messaggio precedente";
+        string body = OnlyWorkspace.Core.Agents.ActionItemBody.Compose(item.Notes, "Origine", "Persona", new DateTime(2026, 11, 2), original,
+            "<a href='https://meet.example.invalid/join?key=secret&amp;id=123'>Partecipa</a>");
+        Assert.Contains(original, body); Assert.Contains("https://meet.example.invalid/join?key=secret&id=123", body);
+        Assert.Contains("Dettagli", body);
+        Assert.Throws<InvalidOperationException>(() => ledger.Resolve(Json(new { resultId = "forged", itemId = "0" })));
+    }
     private static JsonElement Json(object value) => JsonDocument.Parse(JsonSerializer.Serialize(value)).RootElement.Clone();
 
     [Fact]

@@ -61,7 +61,7 @@ public class ProviderCatalogTests
         var profile = new LlmProfileConfig { Type = "azure-openai", AuthType = "apiKey", BaseUrl = "https://risorsa.openai.azure.com/openai/v1", Model = "deploy" };
         using var client = new OpenAIClient(profile, "azure-key", http);
 
-        await foreach (var _ in client.StreamChatAsync(new[] { ChatMessage.User("ciao") })) { }
+        await foreach (var _ in client.StreamProtocolAsync(new[] { ChatMessage.User("ciao") })) { }
 
         Assert.Equal("/openai/v1/chat/completions", sent!.RequestUri!.AbsolutePath);
         Assert.Null(http.DefaultRequestHeaders.Authorization);
@@ -76,7 +76,7 @@ public class ProviderCatalogTests
         { BaseAddress = new Uri("https://api.perplexity.ai/") };
         using var client = new OpenAIClient(new LlmProfileConfig { Type = "perplexity", BaseUrl = "https://api.perplexity.ai", Model = "sonar" }, "key", http);
 
-        await foreach (var _ in client.StreamChatAsync(new[] { ChatMessage.User("ciao") })) { }
+        await foreach (var _ in client.StreamProtocolAsync(new[] { ChatMessage.User("ciao") })) { }
 
         Assert.Equal("/v1/sonar", sent!.RequestUri!.AbsolutePath);
     }

@@ -4,6 +4,9 @@ public sealed class ChatMessage
 {
     public string Role { get; }
     public string Content { get; }
+    internal Privacy.CloudRequestProof? CloudProof { get; }
+
+    internal ChatMessage(string role, string content, Privacy.CloudRequestProof proof) : this(role, content) => CloudProof = proof;
 
     public ChatMessage(string role, string content)
     {

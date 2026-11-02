@@ -25,6 +25,8 @@ public sealed class PseudonymizationContext
     private readonly Stopwatch _elapsed = Stopwatch.StartNew();
     private readonly TimeSpan _budget;
     private readonly CancellationToken _token;
+    private PrivacyEntityIndex? _index;
+    internal IEnumerable<PseudonymMatch> MatchEntities(string text) => (_index ??= new PrivacyEntityIndex(Entities, Check)).Detect(text, Check);
     public PseudonymizationContext(IEnumerable<PrivacyEntity>? entities = null, bool maskAmounts = false,
         bool maskDates = false, CancellationToken token = default, TimeSpan? budget = null)
     {
@@ -143,20 +145,7 @@ public sealed class PseudonymizationCatalog
         public EntityStrategy(string revision) => Revision = revision;
         public IEnumerable<PseudonymMatch> Detect(string text, PseudonymizationContext context)
         {
-            foreach (var entity in context.Entities)
-            {
-                context.Check();
-                if (!ValidCategory(entity.Category)) throw new InvalidDataException("Invalid privacy entity.");
-                string value = entity.Value.Trim();
-                if (value.Length < 3) continue;
-                var regex = new Regex(@"(?<![\p{L}\p{Nd}])" + System.Text.RegularExpressions.Regex.Escape(value) + @"(?![\p{L}\p{Nd}])",
-                    RegexOptions.CultureInvariant | RegexOptions.IgnoreCase, TimeSpan.FromSeconds(2));
-                foreach (Match match in regex.Matches(text))
-                {
-                    context.Check();
-                    yield return new PseudonymMatch(match.Index, match.Length, entity.Category);
-                }
-            }
+            foreach (var match in context.MatchEntities(text)) yield return match;
         }
     }
 }

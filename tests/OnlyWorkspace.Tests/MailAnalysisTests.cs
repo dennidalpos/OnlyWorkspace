@@ -10,6 +10,17 @@ namespace OnlyWorkspace.Tests;
 
 public class MailAnalysisTests
 {
+    [Fact]
+    public void DocumentHistoryRetainsPreciseReasonAndLocalRequestDistinction()
+    {
+        var outcome = new DocumentOutcome { Name = "scansione.pdf", EntryId = "entry", StoreId = "store" };
+        outcome.ApplyExtraction(new AttachmentExtraction { Truncated = true, Problem = "ocr-off" });
+        var restored = System.Text.Json.JsonSerializer.Deserialize<DocumentOutcome>(System.Text.Json.JsonSerializer.Serialize(outcome))!;
+        Assert.Equal(outcome.Reason, restored.Reason);
+        Assert.Contains("OCR è disattivato", restored.Reason);
+        Assert.False(restored.WasRead); Assert.False(restored.IncludedInRequest);
+        Assert.Equal("entry", restored.EntryId); Assert.Equal("store", restored.StoreId);
+    }
     [Theory]
     [InlineData("unsupported", DocumentStatus.Incomplete, "elementi non supportati")]
     [InlineData("depth-limit", DocumentStatus.Incomplete, "profondità massima")]

@@ -561,6 +561,12 @@ public sealed partial class OutlookDataService
     private void CreateActionItem(ExtractedActionItem item, bool save)
     {
         EnsureUiThread();
+        if (string.IsNullOrEmpty(item.SourceEntryId) || string.IsNullOrEmpty(item.SourceStoreId))
+            throw new InvalidOperationException("Fonte completa non disponibile: ripeti l'estrazione prima di salvare.");
+        var completeBody = WithMailById(item.SourceEntryId, item.SourceStoreId, mail =>
+            ActionItemBody.Compose(item.Notes, mail.Subject ?? "", mail.SenderName ?? "", mail.ReceivedTime,
+                mail.Body ?? "", mail.BodyFormat == MSOutlook.OlBodyFormat.olFormatHTML ? mail.HTMLBody ?? "" : ""))
+            ?? throw new InvalidOperationException("Email originale non disponibile: riprova quando la fonte è accessibile.");
         object? created = null;
         try
         {
@@ -573,7 +579,7 @@ public sealed partial class OutlookDataService
                 appointment.Start = item.Start.Value;
                 appointment.End = item.End ?? item.Start.Value.AddHours(1);
                 if (item.Location.Length > 0) appointment.Location = item.Location;
-                appointment.Body = item.Notes;
+                appointment.Body = completeBody;
                 if (save)
                 {
                     appointment.Categories = SavedItemCategory;
@@ -587,7 +593,7 @@ public sealed partial class OutlookDataService
                 var task = (MSOutlook.TaskItem)created;
                 task.Subject = item.Title;
                 if (item.Due.HasValue) task.DueDate = item.Due.Value.Date;
-                task.Body = item.Notes;
+                task.Body = completeBody;
                 if (save)
                 {
                     task.Categories = SavedItemCategory;

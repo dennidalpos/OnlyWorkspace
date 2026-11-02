@@ -12,6 +12,7 @@
     <PackageReference Include="Nager.PublicSuffix" Version="3.8.0" />
     <EmbeddedResource Include="Security\public_suffix_list.dat" />
     <EmbeddedResource Include="Privacy\strategies.json" />
+    <EmbeddedResource Include="..\..\prompts\cloud.facts.json" LogicalName="OnlyWorkspace.Core.Prompts.cloud.facts.json" />
     <InternalsVisibleTo Include="OnlyWorkspace.Tests" />
   </ItemGroup>
 

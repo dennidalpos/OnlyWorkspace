@@ -155,7 +155,7 @@ public sealed class ModelCapabilityProbeTests
         using var http = new HttpClient(new Responder(body)) { BaseAddress = new Uri("https://fixture.example.test/v1/") };
         using var client = new OpenAIClient(new LlmProfileConfig { Type = "qwen", Model = "synthetic", BaseUrl = "https://fixture.example.test/v1" }, secretToken: "synthetic", httpClient: http);
         var text = new List<string>();
-        await foreach (var chunk in client.StreamChatAsync(new[] { ChatMessage.User("prova") })) text.Add(chunk);
+        await foreach (var chunk in client.StreamProtocolAsync(new[] { ChatMessage.User("prova") })) text.Add(chunk);
         Assert.Equal(observed, client.ReasoningObserved);
         Assert.DoesNotContain("penso", string.Concat(text));
 
@@ -163,7 +163,7 @@ public sealed class ModelCapabilityProbeTests
         body = "data: {\"choices\":[{\"delta\":{\"content\":\"95\"},\"finish_reason\":\"stop\"}]}\n\ndata: {\"choices\":[],\"usage\":{\"prompt_tokens\":5,\"completion_tokens\":9,\"completion_tokens_details\":{\"reasoning_tokens\":7}}}\n\ndata: [DONE]\n\n";
         using var http2 = new HttpClient(new Responder(body)) { BaseAddress = new Uri("https://fixture.example.test/v1/") };
         using var hidden = new OpenAIClient(new LlmProfileConfig { Type = "openai", Model = "synthetic", BaseUrl = "https://fixture.example.test/v1" }, secretToken: "synthetic", httpClient: http2);
-        await foreach (var _ in hidden.StreamChatAsync(new[] { ChatMessage.User("prova") })) { }
+        await foreach (var _ in hidden.StreamProtocolAsync(new[] { ChatMessage.User("prova") })) { }
         Assert.True(hidden.ReasoningObserved);
     }
 
@@ -174,7 +174,7 @@ public sealed class ModelCapabilityProbeTests
         using var http = new HttpClient(new Responder(body)) { BaseAddress = new Uri("http://127.0.0.1:11434/") };
         using var client = new OllamaClient(new LlmProfileConfig { Type = "ollama", Model = "synthetic" }, httpClient: http);
         var text = new List<string>();
-        await foreach (var chunk in client.StreamChatAsync(new[] { ChatMessage.User("prova") })) text.Add(chunk);
+        await foreach (var chunk in client.StreamProtocolAsync(new[] { ChatMessage.User("prova") })) text.Add(chunk);
         Assert.True(client.ReasoningObserved);
         Assert.Equal("95", string.Concat(text));
     }

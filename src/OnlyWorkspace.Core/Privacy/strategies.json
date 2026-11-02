@@ -1,5 +1,5 @@
 {
-  "Revision": "1",
+  "Revision": "2",
   "NamePattern": "(?<name>\\p{Lu}[\\p{L}'’\\-]+(?:[ \\t]+(?:d[aeiu]|de|del|della|van|von|di|la|le|\\p{Lu}[\\p{L}'’\\-]+)){1,3})[ \\t]*[<(\\[]\\s*(?<email>[A-Za-z0-9._%+\\-]+@[A-Za-z0-9.\\-]+\\.[A-Za-z]{2,})",
   "NameOpeners": ["Da", "A", "Cc", "Ccn", "Per", "From", "To", "Gentile", "Gentili", "Caro", "Cara", "Cari", "Egregio", "Egregia", "Spett", "Spettabile", "Dear", "Hi", "Hello", "Ciao", "Salve", "Buongiorno", "Buonasera", "Dott", "Dott.ssa", "Ing", "Avv", "Sig", "Sig.ra", "Mittente", "Destinatario"],
   "Patterns": [

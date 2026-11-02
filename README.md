@@ -41,7 +41,7 @@ Cattura reale già presente nel repository: Outlook classico, PST sintetico con 
 Servono **Windows x64**, **Outlook classico 2016 o successivo** a 32 o 64 bit, **.NET Framework 4.8** e **WebView2 Evergreen**. Il setup può installare WebView2 se manca, verificandone la firma Microsoft. Il nuovo Outlook non è supportato da questo add-in COM.
 
 1. Ottieni dall'amministratore il setup firmato e chiudi Outlook. [Installazione e aggiornamento](docs/admin/installazione.md) descrive prerequisiti, elevazione e conservazione dei dati.
-2. Apri **Configurazione** e completa il primo avvio: scegli servizio IA, modello e profilo predefinito. Per un servizio esterno il responsabile deve compilare e accettare l'informativa in **Privacy e dati** prima degli invii.
+2. Apri **Configurazione** e completa il primo avvio: scegli servizio IA, modello e profilo predefinito. Per un servizio esterno l'amministratore deve leggere e accettare l'informativa in **Privacy e dati** prima degli invii.
 3. Controlla **Archivio email → Le mie cassette**: l'archivio, se abilitato, include inizialmente tutte le cassette, anche future. Escludere una cassetta elimina i suoi dati dall'archivio locale.
 4. Riapri Outlook. Seleziona un'email e usa **OnlyWorkspace → Sintesi**, oppure apri **Chat** o **Cerca e analizza**. La raccolta dell'archivio parte dopo 60 secondi e lavora durante l'inattività: la ricerca non è subito completa.
 
@@ -51,7 +51,7 @@ La [guida del riquadro](docs/utente/riquadro.md) spiega azioni, scorciatoie e in
 
 - **Archivio**: database cifrato sul PC, gestito dalla tray, con chiave protetta da DPAPI Windows. Conserva i testi acquisiti degli allegati, non i file allegati originali.
 - **IA locale**: Ollama su loopback elabora sul PC. Per lavorare offline occorre anche disattivare la ricerca web.
-- **Servizi esterni**: il livello 0 blocca gli invii; Minimo invia fatti locali, Standard anche originali ripuliti, con segnaposto. Esteso aggiunge il testo degli allegati estratto localmente dalle email e dalle bozze, con permesso distinto e pseudonimizzazione; nessun file binario viene inviato. Standard ed Esteso consentono il web solo per i domini della Verifica sicurezza. Gli invii richiedono autorizzazione esplicita per profilo con informativa v4.
+- **Servizi esterni**: il livello 0 blocca gli invii. Gli altri livelli ammettono solo fatti strutturati protetti; Esteso aggiunge i fatti degli allegati con permesso distinto. Testo libero, corpi delle mail, nomi dei file e query web non verificabili restano sul PC. Importi e date sono sempre sostituiti; il ripristino avviene localmente. Sintesi e riscritture richiedono un profilo locale. Gli invii richiedono autorizzazione tecnica per profilo con informativa 5, senza campi manuali.
 - **Pseudonimizzazione**: sostituisce i valori riconosciuti e li ripristina nella risposta sul PC. Può lasciare dati non riconosciuti; non garantisce anonimato. Importi e date hanno opzioni separate, inizialmente disattivate.
 
 Dettagli e limiti: [Modelli IA e Web Search](docs/utente/modelli-web.md), [Sicurezza e privacy](docs/admin/sicurezza.md), [Pseudonimizzazione](docs/tecnico/pseudonimizzazione.md).

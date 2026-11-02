@@ -78,11 +78,11 @@ public sealed class ExposureRetirementTests
         Assert.False(DataEgress.Current(old));
         Assert.False(DataEgress.AllowsModel(config, profile));
         Assert.Contains(priorText, DataEgressReport.RenderHtml(config, new DataEgressWorkstation()));
-        DataEgress.Accept(config, TestEgress.Signer(), TestEgress.Providers(config), "fixture", "fixture", DateTime.UtcNow);
+        DataEgress.Accept(config, "fixture", "fixture", DateTime.UtcNow, TestEgress.ResolveSecret);
         Assert.True(DataEgress.AllowsModel(config, profile));
-        Assert.Equal(4, config.DataEgress.Consent!.NoticeVersion);
+        Assert.Equal(5, config.DataEgress.Consent!.NoticeVersion);
         Assert.Equal(priorText, old.NoticeText);
-        Assert.Equal(2, config.DataEgress.History.Count);
+        Assert.Equal(3, config.DataEgress.History.Count);
         Assert.Equal(2, config.DataEgress.History[0].NoticeVersion);
         Assert.Equal(old.NoticeHash, config.DataEgress.History[0].NoticeHash);
     }
