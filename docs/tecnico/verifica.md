@@ -4,6 +4,14 @@ Test di codice, prova sulla build installata e qualifica su cassette e provider 
 
 Contenuto datato trasferito nel dossier SecondBrain: `02-areas/products/OnlyWorkspace/history/imported/docs/tecnico/verifica.md`. Originale e SHA-256 nel rapporto di migrazione; questa voce conserva i riferimenti esistenti e non autorizza nuovi interventi.
 
+## Ripresa assistita della qualifica Outlook — 2 novembre 2026
+
+L'installazione del candidato `18647c6` è stata riconfrontata: **91/91 file corrispondenti**. Sul principale al 150% e sul secondario al 100% sono registrati quattro restringimenti sotto il minimo, tutti ripristinati a 540 unità Office in un tentativo. Le misure dopo il rilascio conservano la pagina minima di 340 pixel CSS; sul secondario comprendono anche zoom WebView al 175%. L'utente riferisce prove lente e rapide senza scomparsa su entrambi i monitor e con ingrandimento del riquadro; il 200% esatto non è attestato dalla telemetria. Restano aperte riproduzione e causa della scomparsa e la qualifica completa delle unità Office.
+
+I cinque messaggi del PST sintetico hanno identità e cartelle verificate tramite COM in STA; il client archivio installato rileva cinque corpi indicizzati e quattro cartelle completate. Una lettura locale del motore, limitata a quello store, restituisce tre messaggi collegati, la copia consolidata e nessun collegamento alla pratica separata. Questa prova non qualifica il preset nel riquadro: il controllo desktop non ha fornito coordinate affidabili per continuare. A208 resta aperta e la matrice A212 non è stata avviata; A219 riceve soltanto le osservazioni della Chat.
+
+Codice e dipendenze invariati: riutilizzati i gate del candidato (1.762 test per runtime, Release senza errori o avvisi, 17 script, smoke e WebViewFocus x64/x86). Nessuna nuova installazione o richiesta IA. La CI resta queued senza job, con nessun check osservato sugli altri commit censiti. **Nessun task chiuso.** Ricevuta nel dossier: `history/2026-11-02-ripresa-qualifica-Outlook/report.md`.
+
 ## Installazione e ridimensionamento del riquadro — 2 novembre 2026
 
 Il candidato `18647c6` è installato: setup firmato con marca temporale, registrazione sul percorso installato nelle viste x86/x64 e **91/91 file distribuiti** corrispondenti al manifest. Configurazione, vault, preferenze e valori delle policy del nuovo Outlook sono invariati al confronto dopo il setup. Sono conservati i backup verificati della precedente installazione e dell'archivio cifrato. La versione prodotto resta 1.0.0: l'identità del candidato è attestata dai manifest, non dal solo numero di versione.
