@@ -101,7 +101,7 @@ public class ArchiveOwnAddressesTests : IDisposable
 
     public void Dispose()
     {
-        try { Directory.Delete(_dir, true); }
+        try { TestArtifacts.DeleteDirectory(_dir, true); }
         catch { /* temp folder */ }
     }
 

@@ -60,7 +60,7 @@ public sealed class ExposureRetirementTests
             Assert.DoesNotContain("cardsDailyTokens", serialized);
             Assert.DoesNotContain("\"Full\"", serialized);
         }
-        finally { Directory.Delete(directory, true); }
+        finally { TestArtifacts.DeleteDirectory(directory, true); }
     }
 
     [Fact]

@@ -59,7 +59,7 @@ public sealed class SelectableUiTests
                 type.GetMethod("SetLocked", flags)!.Invoke(form, new object[] { false });
                 Assert.True(endpoint.Enabled);
             }
-            finally { if (Directory.Exists(directory)) Directory.Delete(directory, true); }
+            finally { if (Directory.Exists(directory)) TestArtifacts.DeleteDirectory(directory, true); }
         });
     }
 

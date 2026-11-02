@@ -2,7 +2,9 @@ param([string]$Dir = '')
 $ErrorActionPreference = 'Stop'
 if ($PSVersionTable.PSVersion.Major -ne 5) { throw 'Run with Windows PowerShell 5.1.' }
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
-if (!$Dir) { $Dir = Join-Path $repo 'src\OnlyWorkspace.Outlook\bin\Release\net48' }
+. (Join-Path $PSScriptRoot "../../scripts/build-paths.ps1")
+Set-OnlyWorkspaceVerificationEnvironment -RepositoryRoot $repo
+if (!$Dir) { $Dir = Get-OnlyWorkspaceOutputDirectory -RepositoryRoot (Resolve-Path "$PSScriptRoot/../..").Path }
 $scratch = Join-Path ([IO.Path]::GetTempPath()) ('OnlyWorkspace_Recovery_' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $scratch | Out-Null
 $child = Join-Path $scratch 'writer.ps1'
@@ -67,5 +69,5 @@ while ($true) { Start-Sleep -Seconds 1 }
     $resolved = [IO.Path]::GetFullPath($scratch)
     $tempRoot = [IO.Path]::GetFullPath([IO.Path]::GetTempPath()).TrimEnd('\') + '\'
     if (!$resolved.StartsWith($tempRoot, [StringComparison]::OrdinalIgnoreCase) -or !(Split-Path $resolved -Leaf).StartsWith('OnlyWorkspace_Recovery_')) { throw 'Unexpected recovery scratch path.' }
-    if (Test-Path -LiteralPath $resolved) { Remove-Item -LiteralPath $resolved -Recurse -Force }
+    if (!(Test-Path Env:ONLYWORKSPACE_TEST_ARTIFACTS) -and (Test-Path -LiteralPath $resolved)) { Remove-Item -LiteralPath $resolved -Recurse -Force }
 }

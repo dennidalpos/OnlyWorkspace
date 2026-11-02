@@ -120,7 +120,7 @@ public class FileConfigurationServiceTests : IDisposable
         {
             if (Directory.Exists(_tempDir))
             {
-                Directory.Delete(_tempDir, true);
+                TestArtifacts.DeleteDirectory(_tempDir, true);
             }
         }
         catch { }
@@ -161,8 +161,7 @@ public class FileConfigurationServiceTests : IDisposable
     [Fact]
     public void Template_AllowsTheArchiveAndKeepsCardsOff()
     {
-        var root = AppContext.BaseDirectory;
-        while (!File.Exists(Path.Combine(root, "OnlyWorkspace.sln"))) root = Path.GetDirectoryName(root)!;
+        var root = TestBuildPaths.RepositoryRoot;
         File.Copy(Path.Combine(root, "deployment", "config.template.json"), Path.Combine(_tempDir, "config.json"));
         var config = new FileConfigurationService(configDir: _tempDir, preferencesDir: _tempDir).LoadConfiguration();
 

@@ -51,7 +51,7 @@ La [guida del riquadro](docs/utente/riquadro.md) spiega azioni, scorciatoie e in
 
 - **Archivio**: database cifrato sul PC, gestito dalla tray, con chiave protetta da DPAPI Windows. Conserva i testi acquisiti degli allegati, non i file allegati originali.
 - **IA locale**: Ollama su loopback elabora sul PC. Per lavorare offline occorre anche disattivare la ricerca web.
-- **Servizi esterni**: il livello 0 blocca gli invii; Minimo invia fatti locali, Standard anche originali ripuliti, con segnaposto. I livelli esterni correnti escludono il testo degli allegati e consentono il web solo per i domini della Verifica sicurezza a Standard.
+- **Servizi esterni**: il livello 0 blocca gli invii; Minimo invia fatti locali, Standard anche originali ripuliti, con segnaposto. Esteso aggiunge il testo degli allegati estratto localmente dalle email e dalle bozze, con permesso distinto e pseudonimizzazione; nessun file binario viene inviato. Standard ed Esteso consentono il web solo per i domini della Verifica sicurezza. Gli invii richiedono autorizzazione esplicita per profilo con informativa v4.
 - **Pseudonimizzazione**: sostituisce i valori riconosciuti e li ripristina nella risposta sul PC. Può lasciare dati non riconosciuti; non garantisce anonimato. Importi e date hanno opzioni separate, inizialmente disattivate.
 
 Dettagli e limiti: [Modelli IA e Web Search](docs/utente/modelli-web.md), [Sicurezza e privacy](docs/admin/sicurezza.md), [Pseudonimizzazione](docs/tecnico/pseudonimizzazione.md).

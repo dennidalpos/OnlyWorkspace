@@ -10,6 +10,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
+    <RunSettingsFilePath Condition="'$(ONLYWORKSPACE_RUNTIME_ROOT)' != ''">$(BaseIntermediateOutputPath)$(Configuration)-$(TargetFramework).runsettings</RunSettingsFilePath>
+    <VSTestResultsDirectory Condition="'$(ONLYWORKSPACE_RUNTIME_ROOT)' != ''">$(ArtifactsPath)\test-results\$(Configuration)\$(TargetFramework)</VSTestResultsDirectory>
   </PropertyGroup>
 
   <ItemGroup>
@@ -81,17 +83,41 @@
     <ProjectReference Include="..\..\src\OnlyWorkspace.Outlook\OnlyWorkspace.Outlook.csproj" ReferenceOutputAssembly="false" SkipGetTargetFrameworkProperties="true" GlobalPropertiesToRemove="TargetFramework" />
   </ItemGroup>
 
-  <!-- WebView2 flows in from the ConfigTool with its WPF reference (net10, build/Common.targets): WinForms only, as there. -->
+  <!-- The WebView2 NuGet package adds a WPF reference to the net10 ConfigTool: WinForms only, as there. -->
   <Target Name="DropWebView2WpfReference" BeforeTargets="ResolveAssemblyReferences">
     <ItemGroup>
       <Reference Remove="@(Reference)" Condition="'%(Filename)' == 'Microsoft.Web.WebView2.Wpf'" />
     </ItemGroup>
   </Target>
 
-  <!-- Same layout as the installation: "extractor" next to the assemblies. -->
-  <Target Name="CopyExtractor" AfterTargets="Build" Condition="'$(TargetFramework)' != ''">
+  <Target Name="ResolveTestBuildPaths" BeforeTargets="GetAssemblyAttributes">
+    <MSBuild Projects="..\..\src\OnlyWorkspace.Outlook\OnlyWorkspace.Outlook.csproj;..\..\src\OnlyWorkspace.AttachmentExtractor\OnlyWorkspace.AttachmentExtractor.csproj"
+             Targets="GetOnlyWorkspaceBuildInfo" RemoveProperties="TargetFramework">
+      <Output TaskParameter="TargetOutputs" ItemName="_TestBuildInfo" />
+    </MSBuild>
     <ItemGroup>
-      <ExtractorFiles Include="..\..\src\OnlyWorkspace.AttachmentExtractor\bin\$(Configuration)\net48\*.*" />
+      <_TestOutlook Include="@(_TestBuildInfo)" Condition="'%(_TestBuildInfo.ProjectName)' == 'OnlyWorkspace.Outlook'" />
+      <_TestExtractor Include="@(_TestBuildInfo)" Condition="'%(_TestBuildInfo.ProjectName)' == 'OnlyWorkspace.AttachmentExtractor'" />
+      <AssemblyMetadata Include="RepositoryRoot" Value="$(OnlyWorkspaceRepositoryRoot)" />
+      <AssemblyMetadata Include="OutlookTargetPath" Value="@(_TestOutlook)" />
+      <AssemblyMetadata Include="OutlookAssetsFile" Value="@(_TestOutlook->'%(AssetsFile)')" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="PrepareTestEnvironment" BeforeTargets="PrepareForBuild;VSTest" Condition="'$(ONLYWORKSPACE_RUNTIME_ROOT)' != ''">
+    <Exec Command="pwsh -NoProfile -File &quot;$(OnlyWorkspaceRepositoryRoot)scripts\test-environment.ps1&quot; -SettingsPath &quot;$(RunSettingsFilePath)&quot; -CheckoutKey &quot;$(OnlyWorkspaceCheckoutKey)&quot;" />
+  </Target>
+
+  <!-- Same layout as the installation: "extractor" next to the assemblies, from this graph. -->
+  <Target Name="CopyExtractor" AfterTargets="Build" DependsOnTargets="ResolveTestBuildPaths" Condition="'$(TargetFramework)' != ''">
+    <Error Condition="'@(_TestExtractor->Count())' != '1'" Text="Expected one extractor output in this build graph." />
+    <Error Condition="!Exists('@(_TestExtractor)')" Text="Extractor output is missing from this build graph." />
+    <PropertyGroup>
+      <_TestExtractorDirectory>@(_TestExtractor->'%(RootDir)%(Directory)')</_TestExtractorDirectory>
+    </PropertyGroup>
+    <Error Condition="'$(_TestExtractorDirectory)' == ''" Text="Extractor output directory is empty." />
+    <ItemGroup>
+      <ExtractorFiles Include="$(_TestExtractorDirectory)*.*" />
     </ItemGroup>
     <Copy SourceFiles="@(ExtractorFiles)" DestinationFolder="$(OutDir)extractor" SkipUnchangedFiles="true" />
   </Target>

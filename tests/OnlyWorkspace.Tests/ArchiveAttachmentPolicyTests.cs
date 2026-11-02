@@ -12,7 +12,7 @@ namespace OnlyWorkspace.Tests;
 public sealed class ArchiveAttachmentPolicyTests : IDisposable
 {
     private readonly string _dir = Path.Combine(Path.GetTempPath(), "ow-archive-policy-" + Guid.NewGuid().ToString("N"));
-    public void Dispose() { if (Directory.Exists(_dir)) Directory.Delete(_dir, true); }
+    public void Dispose() { if (Directory.Exists(_dir)) TestArtifacts.DeleteDirectory(_dir, true); }
 
     [Theory]
     [InlineData("ZIP", "archive-container")]

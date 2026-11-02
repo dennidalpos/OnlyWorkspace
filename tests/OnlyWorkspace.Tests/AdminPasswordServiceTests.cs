@@ -37,7 +37,7 @@ public sealed class AdminPasswordServiceTests
             guard.ApplyRecord(null);
             Assert.False(guard.Enabled);
         }
-        finally { Directory.Delete(directory, true); }
+        finally { TestArtifacts.DeleteDirectory(directory, true); }
     }
 
     [Fact]
@@ -71,7 +71,7 @@ public sealed class AdminPasswordServiceTests
             Assert.Equal(0, Run("correct-secret"));
             Assert.True(File.Exists(Path.Combine(target, "config.json")));
         }
-        finally { Directory.Delete(directory, true); }
+        finally { TestArtifacts.DeleteDirectory(directory, true); }
     }
 
     [Fact]
@@ -101,7 +101,7 @@ public sealed class AdminPasswordServiceTests
             Assert.True(thread.Join(30000));
             if (failure != null) ExceptionDispatchInfo.Capture(failure).Throw();
         }
-        finally { Directory.Delete(directory, true); }
+        finally { TestArtifacts.DeleteDirectory(directory, true); }
     }
 
     [Fact]
@@ -137,7 +137,7 @@ public sealed class AdminPasswordServiceTests
             Assert.Equal(0, Run("correct-secret"));
             Assert.True(File.Exists(Path.Combine(target, "config.json")));
         }
-        finally { Directory.Delete(directory, true); }
+        finally { TestArtifacts.DeleteDirectory(directory, true); }
     }
 
     /// <summary>The ConfigTool command line: through the dotnet host on net10, the net48 exe itself otherwise.</summary>

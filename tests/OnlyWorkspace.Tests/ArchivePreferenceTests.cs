@@ -41,7 +41,7 @@ public sealed class ArchivePreferenceTests
                 return Task.CompletedTask;
             });
         }
-        finally { if (Directory.Exists(directory)) Directory.Delete(directory, true); }
+        finally { if (Directory.Exists(directory)) TestArtifacts.DeleteDirectory(directory, true); }
     }
 
     [Fact]
@@ -95,6 +95,6 @@ public sealed class ArchivePreferenceTests
                 Assert.Equal(0, outlook.OffUiThread);
             });
         }
-        finally { if (Directory.Exists(directory)) Directory.Delete(directory, true); }
+        finally { if (Directory.Exists(directory)) TestArtifacts.DeleteDirectory(directory, true); }
     }
 }

@@ -15,8 +15,8 @@ public sealed class ArchiveIndexerUiThreadTests : IDisposable
     public void Dispose()
     {
         foreach (var engine in _engines) engine.Dispose();
-        foreach (var copy in _copies) if (Directory.Exists(copy)) Directory.Delete(copy, true);
-        if (Directory.Exists(_directory)) Directory.Delete(_directory, true);
+        foreach (var copy in _copies) if (Directory.Exists(copy)) TestArtifacts.DeleteDirectory(copy, true);
+        if (Directory.Exists(_directory)) TestArtifacts.DeleteDirectory(_directory, true);
     }
 
     [Fact]

@@ -113,7 +113,7 @@ public sealed class DpiFontTests
             Application.DoEvents();
             check(form);
         }
-        finally { if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true); }
+        finally { if (Directory.Exists(directory)) TestArtifacts.DeleteDirectory(directory, recursive: true); }
     }
 
     private static void OnSta(Action action)

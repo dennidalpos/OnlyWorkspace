@@ -8,17 +8,16 @@
       %WINDIR%\SysWOW64\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\smoke-net48.ps1
     Non tocca configurazione, storico o Outlook: lavora in una cartella temporanea.
 .PARAMETER Dir
-    Cartella con OnlyWorkspace.Outlook.dll (default: publish, altrimenti l'output Release).
+    Cartella con OnlyWorkspace.Outlook.dll (default: output Release risolto da MSBuild).
 #>
 param([string]$Dir = "")
 $ErrorActionPreference = 'Stop'
 
 if ($PSVersionTable.PSVersion.Major -ne 5) { throw "Serve Windows PowerShell 5.1 (CLR di .NET Framework), non pwsh." }
 $repoRoot = (Resolve-Path "$PSScriptRoot\..").Path
-if (!$Dir) {
-    $Dir = Join-Path $repoRoot "publish"
-    if (!(Test-Path "$Dir\OnlyWorkspace.Outlook.dll")) { $Dir = Join-Path $repoRoot "src\OnlyWorkspace.Outlook\bin\Release\net48" }
-}
+. (Join-Path $PSScriptRoot "build-paths.ps1")
+Set-OnlyWorkspaceVerificationEnvironment -RepositoryRoot $repoRoot
+if (!$Dir) { $Dir = Get-OnlyWorkspaceOutputDirectory -RepositoryRoot $repoRoot }
 "Host: CLR $([Environment]::Version), 64 bit: $([Environment]::Is64BitProcess) - $Dir"
 
 [void][Reflection.Assembly]::LoadFrom("$Dir\OnlyWorkspace.Outlook.dll")

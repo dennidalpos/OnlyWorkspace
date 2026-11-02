@@ -1,12 +1,19 @@
 param([string]$Dir = '', [string]$EvidenceDirectory = '')
 $ErrorActionPreference = 'Stop'
-if (!$Dir) { $Dir = Join-Path (Resolve-Path "$PSScriptRoot\..\..").Path 'src\OnlyWorkspace.Outlook\bin\Release\net48' }
+. (Join-Path $PSScriptRoot "../../scripts/build-paths.ps1")
+Set-OnlyWorkspaceVerificationEnvironment -RepositoryRoot (Resolve-Path "$PSScriptRoot/../..").Path
+if (!$Dir) { $Dir = Get-OnlyWorkspaceOutputDirectory -RepositoryRoot (Resolve-Path "$PSScriptRoot/../..").Path }
+$buildOutput = (Get-OnlyWorkspaceBuildPaths -RepositoryRoot (Resolve-Path "$PSScriptRoot/../..").Path).TargetDir
+$fromBuildGraph = [IO.Path]::GetFullPath($Dir).TrimEnd('\', '/') -ieq [IO.Path]::GetFullPath($buildOutput).TrimEnd('\', '/')
+if (!$fromBuildGraph -and (!(Test-Path -LiteralPath (Join-Path $Dir 'extractor/OnlyWorkspace.AttachmentExtractor.exe')) -or
+    !(Test-Path -LiteralPath (Join-Path $Dir 'OnlyWorkspace.ConfigTool.exe')))) {
+    throw 'An external candidate must include its own extractor and ConfigTool; components from another build are not substituted.'
+}
 $scratch = Join-Path ([IO.Path]::GetTempPath()) ('OnlyWorkspace-PanePolicy-' + [Guid]::NewGuid().ToString('N'))
 # The real reader needs the installed extractor layout. Stage build outputs, preserving the supplied candidate directory.
 if (!(Test-Path -LiteralPath (Join-Path $Dir 'extractor/OnlyWorkspace.AttachmentExtractor.exe'))) {
     $candidateDir = $Dir
-    $configuration = Split-Path (Split-Path $candidateDir -Parent) -Leaf
-    $helperDir = Join-Path (Resolve-Path "$PSScriptRoot/../..").Path "src/OnlyWorkspace.AttachmentExtractor/bin/$configuration/net48"
+    $helperDir = Get-OnlyWorkspaceOutputDirectory -RepositoryRoot (Resolve-Path "$PSScriptRoot/../..").Path -Project OnlyWorkspace.AttachmentExtractor
     if (!(Test-Path -LiteralPath (Join-Path $helperDir 'OnlyWorkspace.AttachmentExtractor.exe'))) { throw 'Build the complete solution before PanePolicy: extractor output is missing.' }
     $Dir = Join-Path $scratch 'runtime'
     [void][IO.Directory]::CreateDirectory($Dir)
@@ -97,7 +104,7 @@ $addin = New-Object OnlyWorkspace.Outlook.OnlyWorkspaceAddin
 [void][Reflection.Assembly]::LoadFrom((Join-Path $Dir 'OnlyWorkspace.Infrastructure.dll'))
 $configToolAssembly = Join-Path $Dir 'OnlyWorkspace.ConfigTool.exe'
 if (!(Test-Path -LiteralPath $configToolAssembly)) {
-    $configToolAssembly = Join-Path (Resolve-Path "$PSScriptRoot\..\..").Path 'src\OnlyWorkspace.ConfigTool\bin\Release\net48\OnlyWorkspace.ConfigTool.exe'
+    $configToolAssembly = (Get-OnlyWorkspaceBuildPaths -RepositoryRoot (Resolve-Path "$PSScriptRoot/../..").Path -Project OnlyWorkspace.ConfigTool).TargetPath
 }
 [void][Reflection.Assembly]::LoadFrom($configToolAssembly)
 # The pane logs through OnlyWorkspaceLog: capture it in memory so the user's log under %LOCALAPPDATA% stays untouched.

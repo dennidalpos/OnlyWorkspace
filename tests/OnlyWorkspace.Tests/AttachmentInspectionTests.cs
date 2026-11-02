@@ -35,7 +35,7 @@ public class AttachmentInspectionTests
         }
         finally
         {
-            if (artifacts == null) Directory.Delete(dir, recursive: true);
+            if (artifacts == null) TestArtifacts.DeleteDirectory(dir, recursive: true);
         }
     }
 
@@ -127,7 +127,7 @@ public class AttachmentInspectionTests
             Assert.True(result.HasMacros);
             Assert.Equal(0, result.Inspected);
         }
-        finally { File.Delete(path); }
+        finally { TestArtifacts.DeleteFile(path); }
     }
 
     [Fact]

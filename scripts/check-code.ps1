@@ -4,7 +4,7 @@
 .DESCRIPTION
     Richiede .NET SDK 10, pwsh 7, PSScriptAnalyzer 1.25.0, node e python.
     Non esegue generatori, script applicativi o formattazioni automatiche.
-    Per conservare gli output fuori dal checkout, eseguire su una copia isolata.
+    ONLYWORKSPACE_RUNTIME_ROOT abilita gli output centrali anche per i comandi dotnet diretti.
 #>
 #requires -Version 7.0
 [CmdletBinding()]

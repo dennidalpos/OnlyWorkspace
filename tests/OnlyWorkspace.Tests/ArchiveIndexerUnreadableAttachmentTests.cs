@@ -14,8 +14,8 @@ public sealed class ArchiveIndexerUnreadableAttachmentTests : IDisposable
     public void Dispose()
     {
         _engine?.Dispose();
-        foreach (var copy in _copies) if (Directory.Exists(copy)) Directory.Delete(copy, true);
-        if (Directory.Exists(_directory)) Directory.Delete(_directory, true);
+        foreach (var copy in _copies) if (Directory.Exists(copy)) TestArtifacts.DeleteDirectory(copy, true);
+        if (Directory.Exists(_directory)) TestArtifacts.DeleteDirectory(_directory, true);
     }
     private ArchiveClient Client() => new(FakeOutlook.Profile, _directory);
     private async Task StartAsync() { _engine = new ArchiveEngine(_directory); await _engine.Ready; }

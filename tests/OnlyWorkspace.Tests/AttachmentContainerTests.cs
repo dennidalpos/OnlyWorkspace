@@ -124,6 +124,6 @@ public sealed class AttachmentContainerTests
             }
             return File.ReadAllBytes(path);
         }
-        finally { File.Delete(path); }
+        finally { TestArtifacts.DeleteFile(path); }
     }
 }

@@ -59,7 +59,7 @@ public sealed class P1DispatchPolicyTests
             Assert.False(profile.IsExternal);
             Assert.True(DataEgress.AllowsModel(Config(profile), profile));
         }
-        finally { if (Directory.Exists(directory)) Directory.Delete(directory, true); }
+        finally { if (Directory.Exists(directory)) TestArtifacts.DeleteDirectory(directory, true); }
     }
 
     [Fact]
@@ -110,7 +110,7 @@ public sealed class P1DispatchPolicyTests
             Assert.Contains("ATTACHMENT-FACT-SECRET", (await storage.LoadConversationAsync(conversation.Id))!.Messages.Single().Content);
             Assert.NotEqual(conversation.Id, next.Id);
         }
-        finally { if (Directory.Exists(directory)) Directory.Delete(directory, true); }
+        finally { if (Directory.Exists(directory)) TestArtifacts.DeleteDirectory(directory, true); }
     }
 
     [Fact]

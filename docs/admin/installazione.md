@@ -4,7 +4,7 @@ Il setup [NSIS](../../installer/OnlyWorkspaceSetup.nsi) installa l'add-in COM ge
 
 ## Setup firmato
 
-`.\scripts\build-installer.ps1 [-SkipTests]` compila, esegue i test (salvo `-SkipTests`), prepara `publish\`, firma binari e disinstallatore, compila NSIS e firma `dist\OnlyWorkspaceSetup.exe`.
+`.\scripts\build-installer.ps1 [-SkipTests] [-OutputDirectory <nuova-cartella>]` compila, esegue i test (salvo `-SkipTests`), prepara `publish\` nella nuova cartella del pacchetto, firma binari e disinstallatore, compila NSIS e firma `dist\OnlyWorkspaceSetup.exe` nella stessa cartella. La destinazione viene stampata al termine. Senza `-OutputDirectory` viene creata una cartella univoca sotto gli artifact centrali, se configurati, altrimenti sotto `dist\` del checkout. Una destinazione già esistente è rifiutata; i pacchetti precedenti e i tentativi falliti restano conservati. Dettagli: [Output locali](../tecnico/output-locali.md).
 
 - Richiede .NET SDK, NSIS 3.13, `signtool.exe`, `certs\OnlyApps.pfx` e `OnlyApps.cer`: senza la coppia la build si ferma e non genera un certificato nuovo. Ogni firma ha la marca temporale RFC 3161; se il server non risponde la firma si ferma (`sign-binaries.ps1 -AllowNoTimestamp` solo per prove locali).
 - La password del PFX sta solo nella variabile `ONLYAPPS_PFX_PASSWORD` (il file ignorato `.local-secrets/onlyapps-signing.ps1` la imposta nella sessione; non mostrarne il contenuto). Non rigenerare il certificato già distribuito.

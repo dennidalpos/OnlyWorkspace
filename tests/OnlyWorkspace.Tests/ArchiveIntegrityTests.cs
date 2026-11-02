@@ -142,7 +142,7 @@ public sealed class ArchiveIntegrityTests : IDisposable
 
     private readonly string _directory = Path.Combine(Path.GetTempPath(), "OnlyWorkspace_Test_Integrity_" + Guid.NewGuid().ToString("N"));
 
-    public void Dispose() { if (Directory.Exists(_directory)) Directory.Delete(_directory, true); }
+    public void Dispose() { if (Directory.Exists(_directory)) TestArtifacts.DeleteDirectory(_directory, true); }
 
     private SqliteConnection Connection(string path)
     {

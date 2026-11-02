@@ -13,7 +13,7 @@ namespace OnlyWorkspace.Tests;
 public sealed class ArchiveMirrorTests : IDisposable
 {
     private readonly string _dir = Path.Combine(Path.GetTempPath(), "ow-mirror-" + Guid.NewGuid().ToString("N"));
-    public void Dispose() { if (Directory.Exists(_dir)) Directory.Delete(_dir, true); }
+    public void Dispose() { if (Directory.Exists(_dir)) TestArtifacts.DeleteDirectory(_dir, true); }
     private static ArchiveHeader Header(string id, string mid = "<shared@example.test>") => new()
     { EntryId = id, MessageId = mid, Subject = "Synthetic", ReceivedUtc = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc) };
     private static ArchiveBody Body(string text = "Complete original")

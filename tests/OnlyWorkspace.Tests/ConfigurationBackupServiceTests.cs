@@ -116,7 +116,7 @@ public sealed class ConfigurationBackupServiceTests : IDisposable
         {
             if (Directory.Exists(_testDir))
             {
-                Directory.Delete(_testDir, recursive: true);
+                TestArtifacts.DeleteDirectory(_testDir, recursive: true);
             }
         }
         catch { }

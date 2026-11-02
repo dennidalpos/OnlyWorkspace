@@ -166,7 +166,7 @@ public sealed class OutlookProfilesTests
                 Application.DoEvents();
                 check(form, panel, o => outlook = o, a => archives = a);
             }
-            finally { if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true); }
+            finally { if (Directory.Exists(directory)) TestArtifacts.DeleteDirectory(directory, recursive: true); }
         });
     }
 

@@ -10,7 +10,8 @@ $ErrorActionPreference = 'Stop'
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 if (!$CorpusPath) { $CorpusPath = Join-Path $repo 'tests\fixtures\fidelity\corpus.json' }
 $framework = if ($PSVersionTable.PSVersion.Major -lt 7) { 'net48' } else { 'net10.0-windows' }
-$bin = Join-Path $repo "tests\OnlyWorkspace.Tests\bin\Release\$framework"
+. (Join-Path $PSScriptRoot "build-paths.ps1")
+$bin = Get-OnlyWorkspaceOutputDirectory -RepositoryRoot $repo -Project OnlyWorkspace.Tests -Framework $framework
 $output = [IO.Path]::GetFullPath($OutputDirectory)
 [void][IO.Directory]::CreateDirectory($output)
 $archivedCorpus = Join-Path $output 'corpus.json'

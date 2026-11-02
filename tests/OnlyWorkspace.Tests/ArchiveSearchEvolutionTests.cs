@@ -362,5 +362,5 @@ public sealed class ArchiveSearchEvolutionTests : IDisposable
         var flow = await client.GetFlowAsync(new ArchiveFlowSeed { Id = a }); Assert.All(flow.Timeline, m => Assert.Single(m.Copies));
     }
 
-    public void Dispose() { if (Environment.GetEnvironmentVariable("ONLYWORKSPACE_TEST_ARTIFACTS") == null && Directory.Exists(_directory)) Directory.Delete(_directory, true); }
+    public void Dispose() { if (Environment.GetEnvironmentVariable("ONLYWORKSPACE_TEST_ARTIFACTS") == null && Directory.Exists(_directory)) TestArtifacts.DeleteDirectory(_directory, true); }
 }

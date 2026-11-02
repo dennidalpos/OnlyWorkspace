@@ -14,7 +14,7 @@ public sealed class ArchiveFactStorageTests : IDisposable
     private readonly string _directory = Path.Combine(Environment.GetEnvironmentVariable("ONLYWORKSPACE_TEST_ARTIFACTS") ?? Path.GetTempPath(), "ow-facts-" + Guid.NewGuid().ToString("N"));
     private readonly ITestOutputHelper _output;
     public ArchiveFactStorageTests(ITestOutputHelper output) => _output = output;
-    public void Dispose() { if (Environment.GetEnvironmentVariable("ONLYWORKSPACE_TEST_ARTIFACTS") == null && Directory.Exists(_directory)) Directory.Delete(_directory, true); }
+    public void Dispose() { if (Environment.GetEnvironmentVariable("ONLYWORKSPACE_TEST_ARTIFACTS") == null && Directory.Exists(_directory)) TestArtifacts.DeleteDirectory(_directory, true); }
     private ArchiveDb Open() => ArchiveDb.Open(_directory, "p");
     private static long Add(ArchiveDb db, string entry, string text = "Importo EUR 1.000,00\nScadenza: 2026-11-30", ArchiveAttachment? attachment = null)
     {

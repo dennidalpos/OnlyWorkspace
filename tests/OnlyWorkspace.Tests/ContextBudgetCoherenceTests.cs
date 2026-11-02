@@ -41,7 +41,7 @@ public sealed class ContextBudgetCoherenceTests
             await Assert.ThrowsAsync<InvalidOperationException>(() => client.CompleteStructuredAsync(messages, "{}"));
             Assert.Equal(0, handler.Calls);
         }
-        finally { Directory.Delete(directory, true); }
+        finally { TestArtifacts.DeleteDirectory(directory, true); }
     }
 
     [Fact]
@@ -67,7 +67,7 @@ public sealed class ContextBudgetCoherenceTests
             var service = new FileConfigurationService(target, directory);
             for (int i = 0; i < 2; i++) Assert.Equal(5325, ProviderCatalog.PromptBudget(service.LoadConfiguration().Profiles.Single()));
         }
-        finally { Directory.Delete(directory, true); }
+        finally { TestArtifacts.DeleteDirectory(directory, true); }
     }
 
     [Fact]

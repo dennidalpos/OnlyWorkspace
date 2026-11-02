@@ -25,7 +25,7 @@ public class DpapiHistoryStorageServiceTests : IDisposable
         {
             try
             {
-                Directory.Delete(_tempDir, true);
+                TestArtifacts.DeleteDirectory(_tempDir, true);
             }
             catch
             {
@@ -261,7 +261,7 @@ public class DpapiHistoryStorageServiceTests : IDisposable
         }
         finally
         {
-            File.Delete(outside);
+            TestArtifacts.DeleteFile(outside);
         }
     }
 }

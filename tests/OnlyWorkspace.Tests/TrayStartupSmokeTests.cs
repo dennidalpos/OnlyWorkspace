@@ -94,7 +94,7 @@ public sealed class TrayStartupSmokeTests
         }
         finally
         {
-            if (exited && Directory.Exists(root)) Directory.Delete(root, recursive: true);
+            if (exited && Directory.Exists(root)) TestArtifacts.DeleteDirectory(root, recursive: true);
         }
     }
 
@@ -165,7 +165,7 @@ public sealed class TrayStartupSmokeTests
         }
         finally
         {
-            if (exited && Directory.Exists(root)) Directory.Delete(root, recursive: true);
+            if (exited && Directory.Exists(root)) TestArtifacts.DeleteDirectory(root, recursive: true);
         }
     }
 }

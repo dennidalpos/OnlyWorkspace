@@ -8,7 +8,8 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
-$bin = Join-Path $repo 'tests\OnlyWorkspace.Tests\bin\Release\net10.0-windows'
+. (Join-Path $PSScriptRoot "../../scripts/build-paths.ps1")
+$bin = Get-OnlyWorkspaceOutputDirectory -RepositoryRoot $repo -Project OnlyWorkspace.Tests -Framework net10.0-windows
 Add-Type -Path (Join-Path $bin 'OnlyWorkspace.Core.dll')
 Add-Type -Path (Join-Path $bin 'OnlyWorkspace.Infrastructure.dll')
 

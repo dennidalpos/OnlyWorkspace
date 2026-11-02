@@ -27,7 +27,7 @@ public sealed class ApplyStagedTests : IDisposable
 
     public void Dispose()
     {
-        try { if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true); }
+        try { if (Directory.Exists(_root)) TestArtifacts.DeleteDirectory(_root, recursive: true); }
         catch { }
     }
 
@@ -51,7 +51,7 @@ public sealed class ApplyStagedTests : IDisposable
             vault.Save(path);
             return File.ReadAllBytes(path);
         }
-        finally { File.Delete(path); }
+        finally { TestArtifacts.DeleteFile(path); }
     }
 
     private static string TokenIn(string path)

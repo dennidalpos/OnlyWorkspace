@@ -1,6 +1,8 @@
 param([int]$TimeoutSeconds = 30)
 $ErrorActionPreference = 'Stop'
-$output = Join-Path (Resolve-Path "$PSScriptRoot\..\..").Path 'src\OnlyWorkspace.Outlook\bin\Release\net48'
+. (Join-Path $PSScriptRoot "../../scripts/build-paths.ps1")
+Set-OnlyWorkspaceVerificationEnvironment -RepositoryRoot (Resolve-Path "$PSScriptRoot/../..").Path
+$output = Get-OnlyWorkspaceOutputDirectory -RepositoryRoot (Resolve-Path "$PSScriptRoot/../..").Path
 Add-Type -AssemblyName System.Windows.Forms
 [void][Reflection.Assembly]::LoadFrom((Join-Path $output 'OnlyWorkspace.Outlook.dll'))
 $addin = New-Object OnlyWorkspace.Outlook.OnlyWorkspaceAddin

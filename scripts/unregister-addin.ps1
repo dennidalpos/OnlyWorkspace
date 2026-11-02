@@ -7,10 +7,14 @@
 #>
 [CmdletBinding()]
 param(
-    [string]$AssemblyPath = "$PSScriptRoot\..\src\OnlyWorkspace.Outlook\bin\Release\net48\OnlyWorkspace.Outlook.dll"
+    [string]$AssemblyPath = ''
 )
 
 $ErrorActionPreference = "Stop"
+if (!$AssemblyPath) {
+    . (Join-Path $PSScriptRoot "build-paths.ps1")
+    $AssemblyPath = (Get-OnlyWorkspaceBuildPaths -RepositoryRoot (Resolve-Path "$PSScriptRoot/..").Path).TargetPath
+}
 
 if (Test-Path $AssemblyPath) {
     $assembly = (Resolve-Path $AssemblyPath).Path

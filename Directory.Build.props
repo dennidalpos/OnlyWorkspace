@@ -5,5 +5,11 @@
     <!-- Include the shipped net48 targets; SDK defaults only enable analyzers for modern .NET. -->
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
     <AnalysisLevel>10.0</AnalysisLevel>
+    <!-- Optional workstation configuration; no SecondBrain path is embedded in the repository. -->
+    <OnlyWorkspaceRepositoryRoot>$(MSBuildThisFileDirectory)</OnlyWorkspaceRepositoryRoot>
+    <OnlyWorkspaceCheckoutKey>$([MSBuild]::StableStringHash($(OnlyWorkspaceRepositoryRoot.ToLowerInvariant()), 'Sha256').Substring(0, 12))</OnlyWorkspaceCheckoutKey>
+    <ArtifactsPath Condition="'$(ONLYWORKSPACE_RUNTIME_ROOT)' != '' and '$(ArtifactsPath)' == ''">$(ONLYWORKSPACE_RUNTIME_ROOT)\$(OnlyWorkspaceCheckoutKey)</ArtifactsPath>
+    <!-- Old outputs are retained when switching layouts, but must never become source inputs. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);**\bin\**;**\obj\**</DefaultItemExcludes>
   </PropertyGroup>
 </Project>

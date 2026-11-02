@@ -8,7 +8,8 @@
 [CmdletBinding()]
 param(
     [string]$Configuration = "Release",
-    [switch]$SkipTests
+    [switch]$SkipTests,
+    [string]$OutputDirectory = ''
 )
 
 $ErrorActionPreference = "Stop"
@@ -21,8 +22,16 @@ function Assert-SignedFile([string]$Path, [string]$Thumbprint) {
 }
 
 $repoRoot = (Resolve-Path "$PSScriptRoot\..").Path
-$publishDir = Join-Path $repoRoot "publish"
-$distDir = Join-Path $repoRoot "dist"
+. (Join-Path $PSScriptRoot 'build-paths.ps1')
+$outlookPaths = Get-OnlyWorkspaceBuildPaths -RepositoryRoot $repoRoot -Configuration $Configuration
+if (!$OutputDirectory) {
+    $packageParent = if ($outlookPaths.ArtifactsPath) { Join-Path $outlookPaths.ArtifactsPath 'package' } else { Join-Path $repoRoot 'dist' }
+    $OutputDirectory = Join-Path $packageParent ('package-' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '-' + [Guid]::NewGuid().ToString('N').Substring(0, 8))
+}
+$OutputDirectory = [IO.Path]::GetFullPath($OutputDirectory)
+if (Test-Path -LiteralPath $OutputDirectory) { throw "La cartella del pacchetto esiste già: $OutputDirectory. Usare una destinazione nuova." }
+$publishDir = Join-Path $OutputDirectory 'publish'
+$distDir = Join-Path $OutputDirectory 'dist'
 $certsDir = Join-Path $repoRoot "certs"
 $nsisExe = "C:\Program Files (x86)\NSIS\makensis.exe"
 
@@ -46,35 +55,25 @@ if (!$SkipTests) {
 }
 
 Write-Host "==> 3. Preparazione cartella publish..." -ForegroundColor Cyan
-# Antivirus/indicizzazione possono bloccare per qualche istante i file appena scritti: breve retry.
-for ($attempt = 1; (Test-Path $publishDir); $attempt++) {
-    try {
-        Remove-Item $publishDir -Recurse -Force
-    }
-    catch {
-        if ($attempt -ge 5) { throw }
-        Write-Host "    publish bloccata, nuovo tentativo ($attempt/5)..." -ForegroundColor Yellow
-        Start-Sleep -Seconds 2
-    }
-}
+# Every invocation owns a new staging directory; previous packages and failed attempts are retained.
 New-Item -ItemType Directory -Path $publishDir -Force | Out-Null
 if (!(Test-Path $distDir)) {
     New-Item -ItemType Directory -Path $distDir -Force | Out-Null
 }
 
 # Copia file Outlook Add-in
-$outlookBin = Join-Path $repoRoot "src\OnlyWorkspace.Outlook\bin\$Configuration\net48"
+$outlookBin = Get-OnlyWorkspaceOutputDirectory -RepositoryRoot $repoRoot -Configuration $Configuration
 Copy-Item -Path "$outlookBin\*" -Destination $publishDir -Recurse -Force
 # Fuori dal pacchetto: simboli di debug e loader WebView2 ARM64 (TaskPaneControl usa solo win-x64/win-x86)
 Remove-Item -Path "$publishDir\*.pdb" -Force
 Remove-Item -Path "$publishDir\runtimes\win-arm64" -Recurse -Force -ErrorAction SilentlyContinue
 
 # Copia ConfigTool (versione net48 per ambiente Windows client)
-$configToolBin = Join-Path $repoRoot "src\OnlyWorkspace.ConfigTool\bin\$Configuration\net48"
+$configToolBin = Get-OnlyWorkspaceOutputDirectory -RepositoryRoot $repoRoot -Configuration $Configuration -Project OnlyWorkspace.ConfigTool
 Copy-Item -Path "$configToolBin\OnlyWorkspace.ConfigTool.exe*" -Destination $publishDir -Force
 
 # Copia estrattore allegati in sottocartella (dipendenze isolate da quelle dell'add-in)
-$extractorBin = Join-Path $repoRoot "src\OnlyWorkspace.AttachmentExtractor\bin\$Configuration\net48"
+$extractorBin = Get-OnlyWorkspaceOutputDirectory -RepositoryRoot $repoRoot -Configuration $Configuration -Project OnlyWorkspace.AttachmentExtractor
 $extractorDest = Join-Path $publishDir "extractor"
 New-Item -ItemType Directory -Path $extractorDest -Force | Out-Null
 Copy-Item -Path "$extractorBin\*" -Destination $extractorDest -Exclude "*.pdb" -Force
@@ -137,10 +136,10 @@ $nsiScript = Join-Path $repoRoot "installer\OnlyWorkspaceSetup.nsi"
 # Versione del prodotto: unica fonte Directory.Build.props
 $version = ([xml](Get-Content (Join-Path $repoRoot "Directory.Build.props") -Raw)).Project.PropertyGroup.Version
 if ($version -notmatch '^\d+\.\d+\.\d+$') { throw "Versione non valida in Directory.Build.props: '$version' (atteso x.y.z)." }
-& $nsisExe "/DPRODUCT_VERSION=$version" $nsiScript
+$installerPath = Join-Path $distDir "OnlyWorkspaceSetup.exe"
+& $nsisExe "/DPRODUCT_VERSION=$version" "/DPUBLISH_DIR=$publishDir" "/DINSTALLER_PATH=$installerPath" $nsiScript
 if ($LASTEXITCODE -ne 0) { throw "Compilazione NSIS fallita con codice $LASTEXITCODE" }
 
-$installerPath = Join-Path $distDir "OnlyWorkspaceSetup.exe"
 if (!(Test-Path $installerPath)) {
     throw "Installer generato non trovato in $installerPath"
 }

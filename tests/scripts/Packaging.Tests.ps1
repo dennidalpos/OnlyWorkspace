@@ -1,6 +1,9 @@
 # Isolated fixtures and command doubles; no real signing, build, or certificate-store changes.
 $ErrorActionPreference = 'Stop'
 $repoRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
+. (Join-Path $repoRoot 'scripts/build-paths.ps1')
+Set-OnlyWorkspaceVerificationEnvironment -RepositoryRoot $repoRoot
+$coreOutput = Get-OnlyWorkspaceOutputDirectory -RepositoryRoot $repoRoot -Project OnlyWorkspace.Core
 $scratchRoot = Join-Path ([IO.Path]::GetTempPath()) ('OnlyWorkspace-packaging-' + [guid]::NewGuid())
 $savedPassword = $env:ONLYAPPS_PFX_PASSWORD
 $savedExitCode = $global:LASTEXITCODE
@@ -21,10 +24,11 @@ try {
                 New-Item -ItemType Directory -Path (Join-Path $global:packagingfixture $folder) -Force | Out-Null
             }
             Copy-Item -LiteralPath (Join-Path $repoRoot 'scripts\build-installer.ps1') -Destination (Join-Path $global:packagingfixture 'scripts')
+            Copy-Item -LiteralPath (Join-Path $repoRoot 'scripts\build-paths.ps1') -Destination (Join-Path $global:packagingfixture 'scripts')
             [IO.File]::WriteAllText((Join-Path $global:packagingfixture 'Directory.Build.props'), '<Project><PropertyGroup><Version>1.0.0</Version></PropertyGroup></Project>')
             foreach ($file in @('src\OnlyWorkspace.Outlook\bin\Release\net48\OnlyWorkspace.Outlook.dll', 'src\OnlyWorkspace.Outlook\bin\Release\net48\fixture.pdb', 'src\OnlyWorkspace.ConfigTool\bin\Release\net48\OnlyWorkspace.ConfigTool.exe', 'src\OnlyWorkspace.AttachmentExtractor\bin\Release\net48\OnlyWorkspace.AttachmentExtractor.exe')) {
                 if ($file.EndsWith('.pdb')) { [IO.File]::WriteAllText((Join-Path $global:packagingfixture $file), 'fixture') }
-                else { Copy-Item -LiteralPath (Join-Path $repoRoot 'src\OnlyWorkspace.Core\bin\Release\net48\OnlyWorkspace.Core.dll') -Destination (Join-Path $global:packagingfixture $file) }
+                else { Copy-Item -LiteralPath (Join-Path $coreOutput 'OnlyWorkspace.Core.dll') -Destination (Join-Path $global:packagingfixture $file) }
             }
             [IO.File]::WriteAllText((Join-Path $global:packagingfixture 'src\OnlyWorkspace.Outlook\bin\Release\net48\Microsoft.Office.Interop.Outlook.dll'), 'stale PIA')
             if ($global:packagingscenario -ne 'certificate') {
@@ -41,6 +45,14 @@ try {
                 else { Microsoft.PowerShell.Management\Test-Path -Path $Path }
             }
             function dotnet {
+                if ($args[0] -eq 'msbuild') {
+                    $project = [IO.Path]::GetFileNameWithoutExtension([string]$args[1])
+                    $extension = if ($project -eq 'OnlyWorkspace.Outlook') { '.dll' } else { '.exe' }
+                    $target = Join-Path $global:packagingfixture "src/$project/bin/Release/net48/$project$extension"
+                    @{ Properties = @{ TargetPath = $target; TargetDir = (Split-Path $target -Parent); ArtifactsPath = '' } } | ConvertTo-Json -Depth 3
+                    $global:LASTEXITCODE = 0
+                    return
+                }
                 $stage = if ($args[0] -eq 'build') { 'build' } else { 'tests' }
                 $global:packagingcalls.Add($stage)
                 $global:LASTEXITCODE = if ($global:packagingscenario -eq $stage) { 23 } else { 0 }
@@ -64,14 +76,15 @@ try {
             Set-Item -Path 'Function:local:C:\Program Files (x86)\NSIS\makensis.exe' -Value {
                 $global:packagingcalls.Add('nsis')
                 $global:LASTEXITCODE = if ($global:packagingscenario -eq 'nsis') { 23 } else { 0 }
-                [IO.File]::WriteAllText((Join-Path $global:packagingfixture 'dist\OnlyWorkspaceSetup.exe'), 'fixture')
+                $destination = ([string]($args | Where-Object { $_ -like '/DINSTALLER_PATH=*' })).Substring('/DINSTALLER_PATH='.Length)
+                [IO.File]::WriteAllText($destination, 'fixture')
             }
             $failure = $null
-            try { & (Join-Path $global:packagingfixture 'scripts\build-installer.ps1') }
+            try { & (Join-Path $global:packagingfixture 'scripts\build-installer.ps1') -OutputDirectory (Join-Path $global:packagingfixture 'package') }
             catch { $failure = $_ }
             if ($global:packagingscenario -eq 'success') {
                 if ($failure -or $global:packagingcalls[-1] -ne 'setup-signature') { throw "Success path failed: $failure" }
-                if (Test-Path -LiteralPath (Join-Path $global:packagingfixture 'publish\Microsoft.Office.Interop.Outlook.dll')) { throw 'Stale PIA packaged despite No-PIA verification' }
+                if (Test-Path -LiteralPath (Join-Path $global:packagingfixture 'package\publish\Microsoft.Office.Interop.Outlook.dll')) { throw 'Stale PIA packaged despite No-PIA verification' }
             }
             else {
                 # A missing certificate pair stops the build before signing, without generating a new identity.

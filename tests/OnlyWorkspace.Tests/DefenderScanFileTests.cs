@@ -24,7 +24,7 @@ public sealed class DefenderScanFileTests : IDisposable
 
     public void Dispose()
     {
-        try { if (Directory.Exists(_dir)) Directory.Delete(_dir, recursive: true); }
+        try { if (Directory.Exists(_dir)) TestArtifacts.DeleteDirectory(_dir, recursive: true); }
         catch { }
     }
 

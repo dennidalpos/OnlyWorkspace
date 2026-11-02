@@ -8,7 +8,13 @@
 
 ; Informazioni Generali
 Name "OnlyWorkspace"
-OutFile "..\dist\OnlyWorkspaceSetup.exe"
+!ifndef INSTALLER_PATH
+    !define INSTALLER_PATH "..\dist\OnlyWorkspaceSetup.exe"
+!endif
+!ifndef PUBLISH_DIR
+    !define PUBLISH_DIR "..\publish"
+!endif
+OutFile "${INSTALLER_PATH}"
 RequestExecutionLevel admin
 Unicode True
 ; Sharp text at 125/150% instead of a stretched bitmap.
@@ -240,7 +246,7 @@ Section "Add-in OnlyWorkspace" SecOnlyWorkspace
     ${EndIf}
 
     ; Binari, librerie, prompts\ e licenze di terze parti (publish\ e' preparata da scripts\build-installer.ps1)
-    File /r "..\publish\*.*"
+    File /r "${PUBLISH_DIR}\*.*"
 
     ; Copia certificato pubblico
     File "..\certs\OnlyApps.cer"

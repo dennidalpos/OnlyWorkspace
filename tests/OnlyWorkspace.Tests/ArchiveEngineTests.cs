@@ -245,7 +245,7 @@ public sealed class ArchiveEngineTests : IDisposable
     }
 
     private readonly string _directory = Path.Combine(Path.GetTempPath(), "OnlyWorkspace_Test_Engine_" + Guid.NewGuid().ToString("N"));
-    public void Dispose() { if (Directory.Exists(_directory)) Directory.Delete(_directory, true); }
+    public void Dispose() { if (Directory.Exists(_directory)) TestArtifacts.DeleteDirectory(_directory, true); }
 
     [Fact]
     public async Task SearchSurvivesOutlookDisconnectionAndEngineRestart_WithOnlyOneWriter()

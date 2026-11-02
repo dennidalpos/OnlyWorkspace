@@ -21,7 +21,7 @@ public sealed class ConfigToolTooltipTests
         {
             try { action(directory); }
             catch (Exception ex) { error = ex; }
-            finally { if (Directory.Exists(directory)) Directory.Delete(directory, true); }
+            finally { if (Directory.Exists(directory)) TestArtifacts.DeleteDirectory(directory, true); }
         });
         thread.SetApartmentState(ApartmentState.STA);
         thread.Start();

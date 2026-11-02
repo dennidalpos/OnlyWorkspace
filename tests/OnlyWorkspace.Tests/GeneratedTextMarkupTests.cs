@@ -91,7 +91,7 @@ public sealed class GeneratedTextMarkupTests
             Assert.Equal(2, GeneratedTextInspectionCommand.Run(new[] { "inspect-ai-html", path }, output, error));
             Assert.Equal("", output.ToString());
         }
-        finally { File.Delete(path); }
+        finally { TestArtifacts.DeleteFile(path); }
     }
 
     [Theory]
@@ -180,7 +180,7 @@ public sealed class GeneratedTextMarkupTests
             Assert.DoesNotContain(path, output.ToString());
             Assert.Equal("", error.ToString());
         }
-        finally { File.Delete(path); }
+        finally { TestArtifacts.DeleteFile(path); }
     }
 
     [Theory]
@@ -209,6 +209,6 @@ public sealed class GeneratedTextMarkupTests
             Assert.Equal("", output.ToString());
             Assert.DoesNotContain(path, error.ToString());
         }
-        finally { File.Delete(path); }
+        finally { TestArtifacts.DeleteFile(path); }
     }
 }

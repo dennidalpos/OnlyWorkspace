@@ -37,8 +37,8 @@ public sealed class ArchiveIndexerInteractiveTests
         {
             if (Environment.GetEnvironmentVariable("ONLYWORKSPACE_TEST_ARTIFACTS") == null)
             {
-                foreach (var copy in copies) if (Directory.Exists(copy)) Directory.Delete(copy, true);
-                if (Directory.Exists(directory)) Directory.Delete(directory, true);
+                foreach (var copy in copies) if (Directory.Exists(copy)) TestArtifacts.DeleteDirectory(copy, true);
+                if (Directory.Exists(directory)) TestArtifacts.DeleteDirectory(directory, true);
             }
         }
     }
@@ -73,8 +73,8 @@ public sealed class ArchiveIndexerInteractiveTests
         }
         finally
         {
-            foreach (var copy in copies) if (Directory.Exists(copy)) Directory.Delete(copy, true);
-            if (Directory.Exists(directory)) Directory.Delete(directory, true);
+            foreach (var copy in copies) if (Directory.Exists(copy)) TestArtifacts.DeleteDirectory(copy, true);
+            if (Directory.Exists(directory)) TestArtifacts.DeleteDirectory(directory, true);
         }
     }
 }

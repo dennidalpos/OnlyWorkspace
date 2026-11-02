@@ -48,6 +48,6 @@ public sealed class ArchiveQueryScopeTests
                 Assert.Equal(0, outlook.OffUiThread);
             });
         }
-        finally { if (Directory.Exists(directory)) Directory.Delete(directory, true); }
+        finally { if (Directory.Exists(directory)) TestArtifacts.DeleteDirectory(directory, true); }
     }
 }

@@ -19,13 +19,16 @@ $ErrorActionPreference = 'Stop'
 if ($PSVersionTable.PSVersion.Major -lt 7) { throw 'Serve pwsh 7: Packaging.Tests.ps1 usa API di .NET moderno.' }
 $repoRoot = (Resolve-Path "$PSScriptRoot\..").Path
 $tests = Join-Path $repoRoot 'tests\scripts'
-if (!$Dir) { $Dir = Join-Path $repoRoot 'src\OnlyWorkspace.Outlook\bin\Release\net48' }
+. (Join-Path $PSScriptRoot "build-paths.ps1")
+Set-OnlyWorkspaceVerificationEnvironment -RepositoryRoot $repoRoot
+if (!$Dir) { $Dir = Get-OnlyWorkspaceOutputDirectory -RepositoryRoot $repoRoot }
 if (!(Test-Path "$Dir\OnlyWorkspace.Outlook.dll")) { throw "OnlyWorkspace.Outlook.dll non trovato in ${Dir}: eseguire prima il Build Release." }
 $windowsPowerShell = Join-Path $env:WINDIR 'System32\WindowsPowerShell\v1.0\powershell.exe'
 
 $runs = @(Get-ChildItem "$tests\*.Tests.cjs" | Sort-Object Name | ForEach-Object { , @($_.Name, 'node', @($_.FullName)) })
 if ($runs.Count -eq 0) { throw "Nessuno script node in $tests." }
 $runs += , @('Packaging.Tests.ps1', 'pwsh', @('-NoProfile', '-File', "$tests\Packaging.Tests.ps1"))
+$runs += , @('BuildPaths.Tests.ps1', 'pwsh', @('-NoProfile', '-File', "$tests\BuildPaths.Tests.ps1"))
 foreach ($name in 'ArchiveRecovery.Tests.ps1', 'ArchiveCapacity.Tests.ps1', 'PanePolicy.Tests.ps1', 'EndpointInitialization.Tests.ps1') {
     $runs += , @($name, $windowsPowerShell, @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "$tests\$name", '-Dir', $Dir))
 }

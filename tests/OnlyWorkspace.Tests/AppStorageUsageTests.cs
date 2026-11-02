@@ -12,7 +12,7 @@ public sealed class AppStorageUsageTests : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(_directory)) Directory.Delete(_directory, true);
+        if (Directory.Exists(_directory)) TestArtifacts.DeleteDirectory(_directory, true);
     }
 
     private void Write(string name, int bytes) => File.WriteAllBytes(Path.Combine(_directory, name), new byte[bytes]);

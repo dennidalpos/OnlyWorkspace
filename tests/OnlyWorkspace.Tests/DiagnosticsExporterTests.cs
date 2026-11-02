@@ -51,7 +51,7 @@ public class DiagnosticsExporterTests
         {
             if (File.Exists(tempZip))
             {
-                try { File.Delete(tempZip); } catch { }
+                try { TestArtifacts.DeleteFile(tempZip); } catch { }
             }
         }
     }

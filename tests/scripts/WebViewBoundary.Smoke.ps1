@@ -2,7 +2,9 @@ param([int]$TimeoutSeconds = 20)
 
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
-$output = Join-Path $root 'src/OnlyWorkspace.Outlook/bin/Release/net48'
+. (Join-Path $PSScriptRoot "../../scripts/build-paths.ps1")
+Set-OnlyWorkspaceVerificationEnvironment -RepositoryRoot $root
+$output = Get-OnlyWorkspaceOutputDirectory -RepositoryRoot (Resolve-Path "$PSScriptRoot/../..").Path
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -Path (Join-Path $output 'Microsoft.Web.WebView2.Core.dll')
 Add-Type -Path (Join-Path $output 'Microsoft.Web.WebView2.WinForms.dll')
@@ -90,7 +92,7 @@ finally {
     $resolved = [IO.Path]::GetFullPath($userData)
     if (!$resolved.StartsWith($tempRoot, [StringComparison]::OrdinalIgnoreCase) -or
         ![IO.Path]::GetFileName($resolved).StartsWith('OnlyWorkspace-WebViewSmoke-', [StringComparison]::Ordinal)) { throw 'Unsafe fixture cleanup path' }
-    try { if (Test-Path -LiteralPath $resolved) { Remove-Item -LiteralPath $resolved -Recurse -Force } }
+    try { if (!(Test-Path Env:ONLYWORKSPACE_TEST_ARTIFACTS) -and (Test-Path -LiteralPath $resolved)) { Remove-Item -LiteralPath $resolved -Recurse -Force } }
     catch { $cleanupError = "WebView2 profile left behind: $resolved ($($_.Exception.Message))"; Write-Warning $cleanupError }
 }
 if ($cleanupError) { throw $cleanupError }

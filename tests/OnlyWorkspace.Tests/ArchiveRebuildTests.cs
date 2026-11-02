@@ -11,7 +11,7 @@ public sealed class ArchiveRebuildTests : IDisposable
     private readonly string _directory = Path.Combine(Environment.GetEnvironmentVariable("ONLYWORKSPACE_TEST_ARTIFACTS") ?? Path.GetTempPath(), "ow-migration-" + Guid.NewGuid().ToString("N"));
     private string PathOf => ArchiveDb.EngineFileOf(_directory, "p");
     private string Backups => Path.Combine(_directory, "migration-backups");
-    public void Dispose() { if (Environment.GetEnvironmentVariable("ONLYWORKSPACE_TEST_ARTIFACTS") == null && Directory.Exists(_directory)) Directory.Delete(_directory, true); }
+    public void Dispose() { if (Environment.GetEnvironmentVariable("ONLYWORKSPACE_TEST_ARTIFACTS") == null && Directory.Exists(_directory)) TestArtifacts.DeleteDirectory(_directory, true); }
 
     private SqliteConnection Raw(string? path = null)
     {

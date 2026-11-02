@@ -57,7 +57,7 @@ public sealed class StatusAndCreditsTests
     [Fact]
     public void Credits_MatchThePackageReferencesOfTheProjects()
     {
-        string root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        string root = TestBuildPaths.RepositoryRoot;
         var referenced = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (var project in Directory.GetFiles(Path.Combine(root, "src"), "*.csproj", SearchOption.AllDirectories)
                      .Concat(Directory.GetFiles(Path.Combine(root, "tests"), "*.csproj", SearchOption.AllDirectories)))
@@ -78,7 +78,7 @@ public sealed class StatusAndCreditsTests
     [Fact]
     public void EveryDistributedComponent_HasItsNotice()
     {
-        string root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        string root = TestBuildPaths.RepositoryRoot;
         string notices = File.ReadAllText(Path.Combine(root, "THIRD-PARTY-NOTICES.txt"));
         Assert.All(ThirdPartyComponents.All.Where(c => c.Distributed), c => Assert.Contains(c.Name, notices));
         Assert.DoesNotContain("Polly", notices);

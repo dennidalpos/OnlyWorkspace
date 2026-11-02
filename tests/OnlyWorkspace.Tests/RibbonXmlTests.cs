@@ -73,8 +73,6 @@ public class RibbonXmlTests
 
     private static string SourceOf(string file)
     {
-        var dir = System.AppDomain.CurrentDomain.BaseDirectory;
-        while (dir != null && !File.Exists(Path.Combine(dir, "OnlyWorkspace.sln"))) dir = Path.GetDirectoryName(dir);
-        return Path.Combine(dir!, "src", "OnlyWorkspace.Outlook", file);
+        return Path.Combine(TestBuildPaths.RepositoryRoot, "src", "OnlyWorkspace.Outlook", file);
     }
 }

@@ -9,7 +9,7 @@ namespace OnlyWorkspace.Tests;
 public sealed class ArchiveAttachmentTests : IDisposable
 {
     private readonly string _directory = Path.Combine(Path.GetTempPath(), "OnlyWorkspace_AttachmentIndex_" + Guid.NewGuid().ToString("N"));
-    public void Dispose() { if (Directory.Exists(_directory)) Directory.Delete(_directory, true); }
+    public void Dispose() { if (Directory.Exists(_directory)) TestArtifacts.DeleteDirectory(_directory, true); }
 
     [Fact]
     public async Task MixedPdf_RealArchiveReader_RejectsWholeTextAndCard()

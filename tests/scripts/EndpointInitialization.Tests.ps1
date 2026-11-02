@@ -12,7 +12,9 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 if ($PSVersionTable.PSVersion.Major -ne 5) { throw 'Use Windows PowerShell 5.1 for the net48 initialization test.' }
-if (!$Dir) { $Dir = Join-Path (Resolve-Path "$PSScriptRoot/../..").Path 'src/OnlyWorkspace.Outlook/bin/Release/net48' }
+. (Join-Path $PSScriptRoot "../../scripts/build-paths.ps1")
+Set-OnlyWorkspaceVerificationEnvironment -RepositoryRoot (Resolve-Path "$PSScriptRoot/../..").Path
+if (!$Dir) { $Dir = Get-OnlyWorkspaceOutputDirectory -RepositoryRoot (Resolve-Path "$PSScriptRoot/../..").Path }
 $Dir = (Resolve-Path -LiteralPath $Dir).Path
 if (!$Provider) {
     $shell = Join-Path $PSHOME 'powershell.exe'

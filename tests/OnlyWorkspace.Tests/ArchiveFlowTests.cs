@@ -239,6 +239,6 @@ public sealed class ArchiveFlowTests : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(_directory)) Directory.Delete(_directory, true);
+        if (Directory.Exists(_directory)) TestArtifacts.DeleteDirectory(_directory, true);
     }
 }

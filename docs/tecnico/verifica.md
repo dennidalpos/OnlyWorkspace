@@ -1,5 +1,7 @@
 # Verifica e qualifica
 
+Per la configurazione degli output centrali, delle cache e delle fixture conservate vedere [Output locali](output-locali.md).
+
 Test di codice, prova sulla build installata e qualifica su cassette e provider reali sono evidenze diverse. Le prove si fanno solo su WS-DP01, con copie isolate per quelle distruttive e Ollama solo su loopback. I resoconti completi delle prove fino al 19/10/2026 sono nella storia git (file `collaudo-qualita.md`, rimosso il 19/10/2026).
 
 Contenuto datato trasferito nel dossier SecondBrain: `02-areas/products/OnlyWorkspace/history/imported/docs/tecnico/verifica.md`. Originale e SHA-256 nel rapporto di migrazione; questa voce conserva i riferimenti esistenti e non autorizza nuovi interventi.

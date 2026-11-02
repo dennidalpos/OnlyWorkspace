@@ -203,6 +203,6 @@ public sealed class ConfigToolImportTests : IDisposable
     public void Dispose()
     {
         _listener.Stop();
-        Directory.Delete(_directory, true);
+        TestArtifacts.DeleteDirectory(_directory, true);
     }
 }

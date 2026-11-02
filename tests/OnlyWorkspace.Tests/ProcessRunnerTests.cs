@@ -60,8 +60,8 @@ public class ProcessRunnerTests
             cts.Cancel();
             if (run != null) { try { await run; } catch (OperationCanceledException) { } }
             descendant?.Dispose();
-            File.Delete(marker);
-            File.Delete(marker + ".tmp");
+            TestArtifacts.DeleteFile(marker);
+            TestArtifacts.DeleteFile(marker + ".tmp");
         }
     }
 

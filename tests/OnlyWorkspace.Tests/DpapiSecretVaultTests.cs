@@ -29,7 +29,7 @@ public class DpapiSecretVaultTests
             vault.Load(path);
             Assert.Empty(vault.Keys);
         }
-        finally { if (File.Exists(path)) File.Delete(path); }
+        finally { if (File.Exists(path)) TestArtifacts.DeleteFile(path); }
     }
 
     [Fact]
@@ -59,7 +59,7 @@ public class DpapiSecretVaultTests
         }
         finally
         {
-            if (File.Exists(tempFile)) File.Delete(tempFile);
+            if (File.Exists(tempFile)) TestArtifacts.DeleteFile(tempFile);
         }
     }
 }

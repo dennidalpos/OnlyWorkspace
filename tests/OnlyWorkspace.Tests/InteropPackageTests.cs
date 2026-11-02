@@ -13,8 +13,7 @@ public sealed class InteropPackageTests
     [Fact]
     public void BuiltAddin_EmbedsOfficeTypes_WithoutRuntimePiaReferences()
     {
-        string root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
-        string binary = Path.Combine(root, "src", "OnlyWorkspace.Outlook", "bin", "Release", "net48", "OnlyWorkspace.Outlook.dll");
+        string binary = TestBuildPaths.Get("OutlookTargetPath");
         var assembly = System.Reflection.Assembly.Load(File.ReadAllBytes(binary));
         Assert.DoesNotContain(assembly.GetReferencedAssemblies(), reference =>
             reference.Name!.StartsWith("Microsoft.Office.Interop.", StringComparison.Ordinal));
@@ -49,8 +48,7 @@ public sealed class InteropPackageTests
     /// <summary>The DLL the Outlook project compiles against, from its restore output (package folder and version).</summary>
     private static string RestoredDll(string package)
     {
-        string root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
-        using var assets = JsonDocument.Parse(File.ReadAllText(Path.Combine(root, "src", "OnlyWorkspace.Outlook", "obj", "project.assets.json")));
+        using var assets = JsonDocument.Parse(File.ReadAllText(TestBuildPaths.Get("OutlookAssetsFile")));
         string folder = assets.RootElement.GetProperty("packageFolders").EnumerateObject().First().Name;
         var library = assets.RootElement.GetProperty("libraries").EnumerateObject()
             .Single(l => l.Name.StartsWith(package + "/", StringComparison.OrdinalIgnoreCase));

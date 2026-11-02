@@ -3,7 +3,9 @@ $ErrorActionPreference = 'Stop'
 if ($PSVersionTable.PSVersion.Major -ne 5) { throw 'Run with Windows PowerShell 5.1.' }
 if ($Emails -lt 100 -or $Emails -gt 100000 -or $Emails % 100 -ne 0) { throw 'Emails must be a multiple of 100 between 100 and 100000.' }
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
-if (!$Dir) { $Dir = Join-Path $repo 'src\OnlyWorkspace.Outlook\bin\Release\net48' }
+. (Join-Path $PSScriptRoot "../../scripts/build-paths.ps1")
+Set-OnlyWorkspaceVerificationEnvironment -RepositoryRoot $repo
+if (!$Dir) { $Dir = Get-OnlyWorkspaceOutputDirectory -RepositoryRoot (Resolve-Path "$PSScriptRoot/../..").Path }
 [void][Reflection.Assembly]::LoadFrom((Join-Path $Dir 'OnlyWorkspace.Outlook.dll'))
 $addin = New-Object OnlyWorkspace.Outlook.OnlyWorkspaceAddin
 [void][Reflection.Assembly]::LoadFrom((Join-Path $Dir 'OnlyWorkspace.Infrastructure.dll'))
@@ -56,5 +58,5 @@ try {
     $resolved = [IO.Path]::GetFullPath($scratch)
     $tempRoot = [IO.Path]::GetFullPath([IO.Path]::GetTempPath()).TrimEnd('\') + '\'
     if (!$resolved.StartsWith($tempRoot, [StringComparison]::OrdinalIgnoreCase) -or !(Split-Path $resolved -Leaf).StartsWith('OnlyWorkspace_Capacity_')) { throw 'Unexpected capacity scratch path.' }
-    if (Test-Path -LiteralPath $resolved) { Remove-Item -LiteralPath $resolved -Recurse -Force }
+    if (!(Test-Path Env:ONLYWORKSPACE_TEST_ARTIFACTS) -and (Test-Path -LiteralPath $resolved)) { Remove-Item -LiteralPath $resolved -Recurse -Force }
 }

@@ -227,7 +227,7 @@ public class AttachmentExtractionTests
         }
         finally
         {
-            Directory.Delete(dir, recursive: true);
+            TestArtifacts.DeleteDirectory(dir, recursive: true);
         }
     }
 
@@ -373,7 +373,7 @@ public class AttachmentExtractionTests
         }
         finally
         {
-            File.Delete(path);
+            TestArtifacts.DeleteFile(path);
         }
 
         static void Text(Storage storage, string id, string value) => Write(storage, "__substg1.0_" + id + "001F", Encoding.Unicode.GetBytes(value));
