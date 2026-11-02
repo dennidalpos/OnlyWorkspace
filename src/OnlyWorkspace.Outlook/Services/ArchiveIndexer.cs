@@ -246,7 +246,7 @@ public sealed class ArchiveIndexer : IDisposable
             if (_stopping) return;
             // A folder or a store can fail (offline, closed PST): drop the current step and slow down.
             OnlyWorkspaceLog.Logger.Warning(ex, "Archive indexing step failed");
-            _error = ex.Message;
+            _error = "Indicizzazione non riuscita. Riprova; se il problema continua, consulta il log.";
             _phase = "error";
             if ((_recentFolder ?? _folder) is { } failedFolder && _db != null)
             {
@@ -532,7 +532,7 @@ public sealed class ArchiveIndexer : IDisposable
         {
             OnlyWorkspaceLog.Logger.Error(ex, "Archive database cannot be read");
             _phase = "error";
-            _error = "Motore dell'archivio non disponibile: " + ex.Message;
+            _error = "Motore dell'archivio non disponibile. Riprova; se il problema continua, consulta il log.";
             _connectAfterUtc = DateTime.UtcNow.AddSeconds(15);
         }
     }

@@ -2814,17 +2814,20 @@
   // «1 indirizzo», «3 indirizzi»: counts in sentences agree with their noun.
   function plural(n, one, many) { return formatCount(n) + ' ' + (n === 1 ? one : many); }
   // Top-bar indicator: light, label and reason as the host computed them; the pane reads no Italian text to decide a state.
-  // s = { light, label, reason, phase, at, external }. Entering or leaving an error is announced, without moving the focus.
+  // s = { light, label, reason, phase, at, external }. Announce a new error/reason or recovery, without repeating polling updates.
   function setIndicator(id, name, s) {
     var b = $(id);
     var light = s.light || 'Off';
     var was = b.dataset.light;
+    var previousReason = b.dataset.reason;
+    var reason = s.reason || '';
     b.dataset.light = light;
+    b.dataset.reason = reason;
     var text = name + ': ' + (s.label || '–') + (s.phase ? ' · fase ' + s.phase : '') + (s.at ? ' · alle ' + s.at : '') + (s.reason ? '. ' + s.reason : '');
     b.title = text + (s.external ? '\nDestinazione: cloud esterno' : '\nDestinazione: questo PC o la rete locale');
     b.setAttribute('aria-label', text);
     b.querySelector('.ind-dest').textContent = s.external ? 'Cloud' : 'PC';
-    if (was && was !== light && (light === 'Error' || was === 'Error')) announce(text);
+    if (light === 'Error' ? was !== light || previousReason !== reason : was === 'Error') announce(text);
   }
   function setArchiveIndicator(d) {
     setIndicator('btnArchiveState', 'Archivio', { light: d.light, label: d.label, reason: d.error || d.reason, phase: d.phase,
@@ -3184,6 +3187,7 @@
     btn.addEventListener('click', function () { post({ type: 'open_config' }); });
     card.appendChild(btn);
     conv.appendChild(card);
+    announce('Errore di configurazione: ' + (message || 'Configurazione non valida.'));
     updateActions();
   }
 
@@ -3452,8 +3456,9 @@
     webview.addEventListener('message', function (event) {
       try { onHostMessage(event.data); } catch (e) {
         console.error(e);
-        // Not only in a console nobody sees: the page says an update was lost instead of staying on a stale state.
-        try { showToast('Il riquadro non è riuscito a mostrare un aggiornamento. Se resta fermo, chiudilo e riaprilo. Dettaglio: ' + ((e && e.message) || e), 'error'); } catch (ignored) { /* page broken */ }
+        // Preserve the diagnostic in the host log; only Italian recovery instructions reach the toast.
+        try { post({ type: 'page_error', detail: String((e && (e.stack || e.message)) || e).slice(0, 2048) }); } catch (ignored) { /* host unavailable */ }
+        try { showToast('Il riquadro non è riuscito a mostrare un aggiornamento. Se resta fermo, chiudilo e riaprilo.', 'error'); } catch (ignored) { /* page broken */ }
       }
     });
   }

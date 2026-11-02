@@ -25,9 +25,11 @@ In basso: **Sblocca**, **Reimposta password (UAC)**, **Salva** (con UAC per un u
 
 Il salvataggio diretto e quello elevato preparano configurazione e vault cifrato prima di sostituire la coppia attiva. Se fallisce la scrittura del JSON, recuperano il vault precedente; le modifiche restano nella finestra per riprovare. Se anche il recupero fallisce, il messaggio indica la copia conservata. Questa gestione degli errori non garantisce l'atomicità dei due file in caso di crash o perdita di alimentazione: conservare un backup verificato.
 
+I messaggi d'errore mostrano istruzioni in italiano; il dettaglio tecnico resta nei log. Per i salvataggi elevati, l'esito italiano è separato dal dettaglio copiabile in **Manutenzione e backup → Log attività**. La procedura guidata distingue la connessione non riuscita dal servizio raggiungibile con il modello configurato assente: in questo secondo caso invita a scegliere un modello dall'elenco.
+
 ## Spazio occupato
 
-**Privacy e dati → File sul PC e spazio occupato** misura, all'apertura della pagina e con **Aggiorna**, le cartelle che l'app scrive: archivio (diviso in database, giornali, copie di ripristino, chiave e blocchi), log, storico, dati del riquadro, preferenze, copie temporanee, configurazioni non leggibili e configurazione comune, con totale e spazio libero sul disco dell'archivio. Legge solo le dimensioni dei file, senza aprire l'archivio. I log ruotano da soli: un file al giorno, al massimo 14 da 10 MB. Le cartelle sono quelle dell'utente Windows che apre il ConfigTool.
+**Privacy e dati → File sul PC e spazio occupato** misura, all'apertura della pagina e con **Aggiorna**, le cartelle che l'app scrive: archivio (diviso in database, giornali, copie di ripristino, chiave e blocchi), log, storico, dati del riquadro, preferenze, copie temporanee, configurazioni non leggibili e configurazione comune, con totale e spazio libero sul disco dell'archivio. Legge solo le dimensioni dei file, senza aprire l'archivio. Outlook e ConfigTool scrivono log separati, con rotazione giornaliera e al massimo 14 file da 10 MB per componente; quelli del ConfigTool hanno prefisso `onlyworkspace-configtool-`. Le cartelle sono quelle dell'utente Windows che apre il ConfigTool.
 
 ## Uscita dei dati
 

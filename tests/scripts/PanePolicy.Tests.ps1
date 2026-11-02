@@ -203,6 +203,17 @@ try {
     Set-Field '_historyStorage' $storage
     $pending = $control.GetType().GetField('_pendingMessages', $flags).GetValue($control)
 
+    # A192: force a real non-COM failure inside the writing handler. The UI gets recovery
+    # instructions, while the original NullReferenceException remains in the captured log.
+    Set-Field '_dataService' $null
+    $writingMessage = [System.Text.Json.JsonDocument]::Parse('{"mode":"new_mail","text":"Testo sintetico"}')
+    try { $null = Call 'ApplyWrittenText' @($writingMessage.RootElement) } finally { $writingMessage.Dispose() }
+    $writingError = @($pending | ForEach-Object { $_ | ConvertFrom-Json } | Where-Object type -eq 'toast')[-1]
+    Assert-Pass ($writingError.kind -eq 'error' -and $writingError.message -eq "Inserimento non riuscito. Verifica che l'email sia ancora aperta in scrittura e riprova.") 'Writing failure leaked exception text or lost recovery instructions'
+    Assert-Pass (@($capturedLog.Errors.ToArray() | Where-Object { $_ -match 'NullReferenceException' }).Count -gt 0) 'Writing failure lost its technical log'
+    $pending.Clear()
+    'PASS A192 real writing failure: Italian recovery message and original exception in log'
+
     # A181: production security finalization. Analyzer failure and history policy failure must not
     # prevent the terminal message; an existing local report stays visible even when saving fails.
     Set-Field '_turnText' (New-Object Text.StringBuilder)

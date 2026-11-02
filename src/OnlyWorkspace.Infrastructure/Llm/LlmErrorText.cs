@@ -5,6 +5,9 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using OnlyWorkspace.Core.Models;
+using OnlyWorkspace.Core.Agents;
+using OnlyWorkspace.Core.Context;
+using OnlyWorkspace.Core.Privacy;
 
 namespace OnlyWorkspace.Infrastructure.Llm;
 
@@ -27,12 +30,15 @@ public static class LlmErrorText
 
             // net48 HttpRequestException has no StatusCode: clients write "HTTP 404" / EnsureSuccessStatusCode "success: 404".
             var status = HttpStatusRegex.Match(http.Message);
-            // No status and no inner exception: raised by the client itself (refusal, error inside the stream), not by the network.
-            if (!status.Success && http.InnerException == null) return http.Message;
+            if (http is LlmRequestException { Status: >= 300 and < 400 })
+                return "Il server ha richiesto un reindirizzamento HTTP, bloccato per proteggere dati e credenziali. Configura l'URL finale dell'endpoint nel ConfigTool.";
+            // Provider/stream text may be in any language and contain request data. Keep it in the log.
+            if (!status.Success && http.InnerException == null)
+                return $"{target} ha interrotto o rifiutato la risposta. Riprova; se il problema continua, consulta il log.";
             if (status.Success && IsContextOverflow(status.Groups[1].Value, http.Message))
             {
                 return $"{target}: il testo è troppo lungo per il contesto del modello. Non è stato elaborato a pezzi, per non rispondere su una parte sola: " +
-                       $"scegli un modello con un contesto più ampio o riduci l'ambito. Dettaglio: {Truncate(http.Message, 160)}";
+                       "scegli un modello con un contesto più ampio o riduci l'ambito.";
             }
             return !status.Success
                 ? $"Impossibile contattare {target}. Verifica la rete, l'URL dell'endpoint o che il server sia attivo."
@@ -43,17 +49,19 @@ public static class LlmErrorText
                     "408" => $"{target} non ha risposto in tempo. Riprova tra qualche istante.",
                     "429" => $"{target} sta limitando le richieste (troppe richieste o quota esaurita). Riprova tra poco.",
                     var code when code.StartsWith("5") => $"{target} ha un problema temporaneo (errore {code}). Riprova più tardi.",
-                    var code => $"{target} ha rifiutato la richiesta (errore {code}). Dettaglio: {Truncate(http.Message, 160)}"
+                    var code => $"{target} ha rifiutato la richiesta (errore {code}). Verifica le impostazioni del profilo nel ConfigTool."
                 };
         }
 
         return root switch
         {
-            TimeoutException te => $"{target}: {te.Message} Riprova o aumenta i timeout del profilo.",
+            // These domain exceptions contain application-authored Italian instructions.
+            ContextTooLongException or DataEgressBlockedException or InvalidModelOutputException => root.Message,
+            TimeoutException => $"{target} non ha risposto in tempo. Riprova o aumenta i timeout del profilo.",
             TaskCanceledException => $"{target} non ha risposto in tempo. Riprova tra qualche istante.",
             JsonException => $"{target} ha restituito una risposta non valida. Riprova.",
             InvalidOperationException ioe when ioe.Message.Contains("Object Model") => "Outlook era occupato. Riprova.",
-            _ => root.Message
+            _ => "Operazione non riuscita. Riprova; se il problema continua, consulta il log."
         };
     }
 
@@ -66,6 +74,4 @@ public static class LlmErrorText
     private static bool IsContextOverflow(string status, string message) =>
         status == "413" || (status == "400" && ContextOverflowRegex.IsMatch(message));
 
-    private static string Truncate(string text, int max) =>
-        text.Length > max ? text.Substring(0, max - 1).TrimEnd() + "…" : text;
 }

@@ -18,7 +18,7 @@ public static class OnlyWorkspaceLog
 
     private static readonly Serilog.Core.LoggingLevelSwitch _level = new(LogEventLevel.Information);
 
-    public static void Initialize(string? configuredLevel = null)
+    public static void Initialize(string? configuredLevel = null, bool configTool = false)
     {
         lock (_syncLock)
         {
@@ -33,7 +33,8 @@ public static class OnlyWorkspaceLog
                 Directory.CreateDirectory(logDirectory);
             }
 
-            var logFilePath = Path.Combine(logDirectory, "onlyworkspace-.log");
+            // The tray and Outlook are separate processes: each owns a distinct rolling file.
+            var logFilePath = Path.Combine(logDirectory, configTool ? "onlyworkspace-configtool-.log" : "onlyworkspace-.log");
 
             Serilog.Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.ControlledBy(_level)

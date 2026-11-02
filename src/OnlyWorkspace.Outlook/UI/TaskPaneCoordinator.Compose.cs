@@ -181,7 +181,7 @@ public partial class TaskPaneCoordinator
         catch (Exception ex)
         {
             OnlyWorkspaceLog.Logger.Error(ex, "Failed to apply written text");
-            Toast("Inserimento non riuscito: " + ex.Message, "error");
+            Toast("Inserimento non riuscito. Verifica che l'email sia ancora aperta in scrittura e riprova.", "error");
         }
     }
 

@@ -394,4 +394,27 @@ public sealed class ConfigToolUxTests
         Assert.NotNull(product);
         Assert.Equal(product!.Message, ErrorText.For(product));
     }
+
+    [Fact]
+    public void ElevationErrorsKeepItalianInstructionsSeparateFromTheCopyableTechnicalDetail()
+    {
+        OnSta(directory =>
+        {
+            var error = new IOException("synthetic English detail");
+            var result = OnlyWorkspace.ConfigTool.Services.ElevatedConfigWriter.Failure(error);
+            Assert.DoesNotContain("synthetic English detail", result.Message);
+            Assert.Contains("synthetic English detail", result.TechnicalDetail);
+            Directory.CreateDirectory(directory);
+            OnlyWorkspace.ConfigTool.Services.ElevatedConfigWriter.WriteFailure(directory, error);
+            Assert.Equal(result.Message, File.ReadAllText(Path.Combine(directory, OnlyWorkspace.ConfigTool.Services.ElevatedConfigWriter.ResultFileName)));
+            Assert.Equal(result.TechnicalDetail, File.ReadAllText(Path.Combine(directory, OnlyWorkspace.ConfigTool.Services.ElevatedConfigWriter.DetailFileName)));
+
+            using var form = Open(directory, new WorkspaceConfig { DefaultProfile = "a", Profiles = new() { Local("a") } });
+            Func<string, string?, Task<OnlyWorkspace.ConfigTool.Services.ElevatedConfigWriter.ElevationResult>> writer = (_, _) => Task.FromResult(result);
+            typeof(MainConfigForm).GetField("_elevatedWriter", Flags)!.SetValue(form, writer);
+            var task = (Task<OnlyWorkspace.ConfigTool.Services.ElevatedConfigWriter.ElevationResult>)typeof(MainConfigForm).GetMethod("RunElevatedAsync", Flags)!.Invoke(form, new object?[] { "synthetic", null })!;
+            Assert.Same(result, task.GetAwaiter().GetResult());
+            Assert.Contains("synthetic English detail", Field<TextBox>(form, "_txtLog").Text);
+        });
+    }
 }

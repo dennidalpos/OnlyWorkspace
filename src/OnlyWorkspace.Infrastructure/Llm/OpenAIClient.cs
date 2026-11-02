@@ -67,18 +67,15 @@ public sealed class OpenAIClient : ILlmClient, IReasoningObserver, IDisposable
 
             if (!hasModel && models.Count > 0 && !string.IsNullOrWhiteSpace(_profile.Model))
             {
-                return LlmHealthResult.Failure($"OpenAI raggiungibile, ma il modello configurato '{_profile.Model}' non è tra i modelli disponibili.");
+                return LlmHealthResult.ModelMissing("openai", models, $"OpenAI raggiungibile, ma il modello configurato '{_profile.Model}' non è tra i modelli disponibili.");
             }
 
             return LlmHealthResult.Success("openai", models);
         }
-        catch (HttpRequestException ex)
-        {
-            return LlmHealthResult.Failure($"Errore di rete o HTTP verso OpenAI: {ex.Message}");
-        }
         catch (Exception ex)
         {
-            return LlmHealthResult.Failure($"Verifica non riuscita: {ex.Message}");
+            Logging.OnlyWorkspaceLog.Logger.Warning(ex, "OpenAI connection check failed");
+            return LlmHealthResult.Failure(LlmErrorText.Describe(ex, _profile));
         }
     }
 

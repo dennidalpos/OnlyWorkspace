@@ -125,7 +125,8 @@ internal sealed class MailboxAuthorizationPanel : TableLayoutPanel
             catch (Exception ex)
             {
                 RefreshUserPreference();
-                SetStatus("Scelta non salvata: " + ex.Message, Tone.Danger);
+                OnlyWorkspace.Infrastructure.Logging.OnlyWorkspaceLog.Logger.Warning(ex, "Archive preference save failed");
+                SetStatus("Scelta non salvata: " + ErrorText.For(ex), Tone.Danger);
             }
             _grid.Enabled = _mine.CheckState == CheckState.Checked && !_scopeUnknown && _busy == 0;
         };
@@ -158,7 +159,8 @@ internal sealed class MailboxAuthorizationPanel : TableLayoutPanel
         catch (Exception ex)
         {
             _mine.CheckState = CheckState.Indeterminate;
-            _preferenceError = "Scelta archivio non leggibile; raccolta sospesa: " + ex.Message;
+            OnlyWorkspace.Infrastructure.Logging.OnlyWorkspaceLog.Logger.Warning(ex, "Archive preference read failed");
+            _preferenceError = "Scelta archivio non leggibile; raccolta sospesa: " + ErrorText.For(ex);
         }
         finally { _building = building; }
         _grid.Enabled = _mine.CheckState == CheckState.Checked && !_scopeUnknown && _busy == 0;

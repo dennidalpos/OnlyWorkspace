@@ -6,6 +6,7 @@ using System.Security.AccessControl;
 using System.Security.Principal;
 using System.Windows.Forms;
 using System.Threading.Tasks;
+using OnlyWorkspace.ConfigTool.Forms;
 
 namespace OnlyWorkspace.ConfigTool.Services;
 
@@ -17,6 +18,7 @@ namespace OnlyWorkspace.ConfigTool.Services;
 public static class ElevatedConfigWriter
 {
     public const string ResultFileName = "result.txt";
+    public const string DetailFileName = "result-detail.txt";
     private const int ErrorCancelled = 1223;
 
     public static bool CanWriteConfig(string configDir)
@@ -114,6 +116,7 @@ public static class ElevatedConfigWriter
         public bool Success { get; set; }
         public bool Cancelled { get; set; }
         public string Message { get; set; } = string.Empty;
+        public string TechnicalDetail { get; set; } = string.Empty;
     }
 
     /// <summary>Runs this executable elevated with the given CLI arguments and waits for it.</summary>
@@ -142,7 +145,7 @@ public static class ElevatedConfigWriter
 
             process.WaitForExit();
 
-            string detail = string.Empty;
+            string detail = string.Empty, technicalDetail = string.Empty;
             if (resultDir != null)
             {
                 var resultFile = Path.Combine(resultDir, ResultFileName);
@@ -150,11 +153,13 @@ public static class ElevatedConfigWriter
                 {
                     detail = File.ReadAllText(resultFile).Trim();
                 }
+                var detailFile = Path.Combine(resultDir, DetailFileName);
+                if (File.Exists(detailFile)) technicalDetail = File.ReadAllText(detailFile);
             }
 
             return process.ExitCode == 0
                 ? new ElevationResult { Success = true, Message = detail }
-                : new ElevationResult { Message = string.IsNullOrEmpty(detail) ? $"Operazione non riuscita (codice {process.ExitCode})." : detail };
+                : new ElevationResult { Message = string.IsNullOrEmpty(detail) ? $"Operazione non riuscita (codice {process.ExitCode})." : detail, TechnicalDetail = technicalDetail };
         }
         catch (Win32Exception ex) when (ex.NativeErrorCode == ErrorCancelled)
         {
@@ -162,8 +167,21 @@ public static class ElevatedConfigWriter
         }
         catch (Exception ex)
         {
-            return new ElevationResult { Message = ex.Message };
+            return Failure(ex);
         }
+    }
+
+    internal static ElevationResult Failure(Exception ex) => new()
+    {
+        Message = ErrorText.For(ex), TechnicalDetail = ex.ToString()
+    };
+
+    /// <summary>The GUI reads the Italian outcome separately from the original, copyable diagnostic.</summary>
+    internal static void WriteFailure(string stagingDir, Exception ex)
+    {
+        var result = Failure(ex);
+        File.WriteAllText(Path.Combine(stagingDir, ResultFileName), result.Message);
+        File.WriteAllText(Path.Combine(stagingDir, DetailFileName), result.TechnicalDetail);
     }
 
     public static string Quote(string value) => "\"" + value.TrimEnd('\\') + "\"";

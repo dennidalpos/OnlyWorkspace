@@ -184,7 +184,7 @@ public class TaskPaneControl : UserControl
             if (IsDisposed || generation != _generation) return;
             OnlyWorkspaceLog.Logger.Error(ex, "Failed to initialize WebView2 in TaskPaneControl");
             ReleaseWebView();
-            ShowFatalMessage("Impossibile caricare Microsoft Edge WebView2.\nVerificare che il runtime sia installato.\n\n" + ex.Message);
+            ShowFatalMessage("Impossibile caricare Microsoft Edge WebView2.\nVerificare che il runtime sia installato. Se il problema continua, consultare il log.");
         }
     }
 
@@ -295,6 +295,19 @@ public class TaskPaneControl : UserControl
 
         try
         {
+            // Reached only after the document/source boundary check above. Bound page diagnostics
+            // independently of the JavaScript limit and never send them back as a user message.
+            if (root.ValueKind == JsonValueKind.Object &&
+                root.TryGetProperty("type", out var diagnosticType) &&
+                diagnosticType.ValueKind == JsonValueKind.String && diagnosticType.GetString() == "page_error")
+            {
+                if (root.TryGetProperty("detail", out var detail) && detail.ValueKind == JsonValueKind.String)
+                {
+                    var text = detail.GetString() ?? string.Empty;
+                    OnlyWorkspaceLog.Logger.Warning("Pane page update failed: {Detail}", text.Length > 2048 ? text.Substring(0, 2048) : text);
+                }
+                return;
+            }
             if (root.ValueKind == JsonValueKind.Object &&
                 root.TryGetProperty("type", out var typeProp) &&
                 typeProp.ValueKind == JsonValueKind.String &&

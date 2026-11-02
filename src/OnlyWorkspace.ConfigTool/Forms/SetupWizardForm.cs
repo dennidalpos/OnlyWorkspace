@@ -270,10 +270,11 @@ public sealed class SetupWizardForm : Form
                     var health = await client.CheckHealthAsync(run.Token);
                     run.Token.ThrowIfCancellationRequested();
                     if (IsDisposed) return;
-                    bool modelFound = health.AvailableModels.Count == 0 || health.AvailableModels.Any(m => string.Equals(m, p.Model, StringComparison.OrdinalIgnoreCase));
-                    _lblTest.Text = !health.IsHealthy ? "Connessione non riuscita: " + health.ErrorMessage
+                    bool modelFound = !health.IsModelMissing && (health.AvailableModels.Count == 0 || health.AvailableModels.Any(m => ModelMatches(p, m)));
+                    _lblTest.Text = health.IsModelMissing ? MissingModelText(p, health.AvailableModels.Count)
+                        : !health.IsHealthy ? "Connessione non riuscita: " + health.ErrorMessage
                         : modelFound ? $"Connessione riuscita ({health.AvailableModels.Count} modelli disponibili)."
-                        : $"Connessione riuscita, ma il modello «{p.Model}» non è tra i {health.AvailableModels.Count} disponibili.";
+                        : MissingModelText(p, health.AvailableModels.Count);
                     Theme.SetTone(_lblTest, health.IsHealthy && modelFound ? Tone.Success : Tone.Danger);
                 }
             }
@@ -285,9 +286,25 @@ public sealed class SetupWizardForm : Form
         }
         catch (Exception ex)
         {
+            OnlyWorkspace.Infrastructure.Logging.OnlyWorkspaceLog.Logger.Warning(ex, "Setup connection check failed");
             if (!IsDisposed) { _lblTest.Text = "Errore: " + ErrorText.For(ex); Theme.SetTone(_lblTest, Tone.Danger); }
         }
         finally { _connectionCheck = null; if (!IsDisposed) button.Text = label; }
+    }
+
+    private static string MissingModelText(LlmProfileConfig profile, int count) =>
+        $"Connessione riuscita, ma il modello «{profile.Model}» non è tra i {count} disponibili. Scegli un modello dall'elenco.";
+
+    private static bool ModelMatches(LlmProfileConfig profile, string model)
+    {
+        var expected = profile.Model;
+        if (profile.Type.Equals("gemini", StringComparison.OrdinalIgnoreCase))
+        {
+            if (model.StartsWith("models/", StringComparison.OrdinalIgnoreCase)) model = model.Substring(7);
+            if (expected.StartsWith("models/", StringComparison.OrdinalIgnoreCase)) expected = expected.Substring(7);
+        }
+        return string.Equals(model, expected, StringComparison.OrdinalIgnoreCase) ||
+            profile.Type.Equals("ollama", StringComparison.OrdinalIgnoreCase) && model.StartsWith(expected + ":", StringComparison.OrdinalIgnoreCase);
     }
 
     private void PickModel(string model)

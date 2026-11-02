@@ -1072,8 +1072,9 @@ public sealed partial class MainConfigForm : Form
         }
         catch (Exception ex) when (ex is WebView2RuntimeNotFoundException or InvalidOperationException or IOException or UnauthorizedAccessException or System.Runtime.InteropServices.COMException)
         {
-            SetStatus("Esportazione non riuscita: " + ex.Message, Tone.Danger);
-            CopyableMessageBox.Show(this, "Esportazione non riuscita: " + ex.Message +
+            LogActivity("Esportazione informativa non riuscita: " + ex);
+            SetStatus("Esportazione non riuscita: " + ErrorText.For(ex), Tone.Danger);
+            CopyableMessageBox.Show(this, "Esportazione non riuscita: " + ErrorText.For(ex) +
                 (ex is WebView2RuntimeNotFoundException ? "\n\nServe il runtime Microsoft Edge WebView2, lo stesso richiesto dal riquadro di Outlook." : ""),
                 "Uscita dei dati", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
@@ -1183,7 +1184,8 @@ public sealed partial class MainConfigForm : Form
         catch (Exception ex)
         {
             // Called from async void handlers: nothing may escape.
-            try { OnUi(() => _lblStorageTotal.Text = "Spazio non calcolato: " + ex.Message); }
+            OnlyWorkspace.Infrastructure.Logging.OnlyWorkspaceLog.Logger.Warning(ex, "Storage measurement failed");
+            try { OnUi(() => _lblStorageTotal.Text = "Spazio non calcolato: " + ErrorText.For(ex)); }
             catch (InvalidOperationException) { }
         }
     }
@@ -1378,7 +1380,7 @@ public sealed partial class MainConfigForm : Form
         link.LinkClicked += (s, e) =>
         {
             try { Process.Start(new ProcessStartInfo(url) { UseShellExecute = true }); }
-            catch (Exception ex) { SetStatus("Impossibile aprire il collegamento: " + ex.Message, Tone.Danger); }
+            catch (Exception ex) { LogActivity("Apertura collegamento non riuscita: " + ex); SetStatus("Impossibile aprire il collegamento: " + ErrorText.For(ex), Tone.Danger); }
         };
         return link;
     }
@@ -1428,8 +1430,8 @@ public sealed partial class MainConfigForm : Form
         catch (System.Security.Cryptography.CryptographicException ex)
         {
             // The service reads the vault together with the configuration.
-            _loadProblem = "secrets.bin (chiavi API cifrate) non è leggibile su questo PC: " + ex.Message;
-            LogActivity(_loadProblem);
+            _loadProblem = "secrets.bin (chiavi API cifrate) non è leggibile su questo PC: " + ErrorText.For(ex);
+            LogActivity(_loadProblem + "\r\nDettaglio tecnico: " + ex);
             _config = FileOrDefaultConfiguration();
         }
         catch (FileNotFoundException)
@@ -1439,8 +1441,8 @@ public sealed partial class MainConfigForm : Form
         }
         catch (Exception ex)
         {
-            _loadProblem = "config.json non è leggibile o non è valido: " + ex.Message;
-            LogActivity(_loadProblem);
+            _loadProblem = "config.json non è leggibile o non è valido: " + ErrorText.For(ex);
+            LogActivity(_loadProblem + "\r\nDettaglio tecnico: " + ex);
             _config = FileOrDefaultConfiguration();
         }
 
@@ -1466,7 +1468,7 @@ public sealed partial class MainConfigForm : Form
             }
             catch (Exception ex)
             {
-                _loadProblem ??= "secrets.bin (chiavi API cifrate) non è leggibile su questo PC: " + ex.Message;
+                _loadProblem ??= "secrets.bin (chiavi API cifrate) non è leggibile su questo PC: " + ErrorText.For(ex);
                 LogActivity("Vault non leggibile: " + ex.Message);
             }
         }
@@ -1595,7 +1597,8 @@ public sealed partial class MainConfigForm : Form
         }
         catch (Exception ex)
         {
-            CopyableMessageBox.Show(this, "Impossibile copiare i file attuali: " + ex.Message, "Nuova configurazione", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            LogActivity("Copia configurazione non riuscita: " + ex);
+            CopyableMessageBox.Show(this, "Impossibile copiare i file attuali: " + ErrorText.For(ex), "Nuova configurazione", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
@@ -2569,7 +2572,13 @@ public sealed partial class MainConfigForm : Form
         Disable(this);
         UseWaitCursor = true;
         SetStatus("In attesa dell'autorizzazione di amministratore…", Tone.Warning);
-        try { return await _elevatedWriter(arguments, resultDir); }
+        try
+        {
+            var result = await _elevatedWriter(arguments, resultDir);
+            if (!IsDisposed && !string.IsNullOrEmpty(result.TechnicalDetail))
+                LogActivity("Dettaglio tecnico dell'operazione amministrativa: " + result.TechnicalDetail);
+            return result;
+        }
         finally
         {
             _elevationBusy = false;

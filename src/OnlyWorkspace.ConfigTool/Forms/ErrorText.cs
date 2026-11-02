@@ -22,6 +22,9 @@ internal static class ErrorText
         AggregateException { InnerExceptions.Count: 1 } a => For(a.InnerException!),
         Win32Exception { NativeErrorCode: ErrorCancelled } => "Autorizzazione di amministratore annullata: nessuna modifica è stata applicata.",
         Win32Exception => "Windows non ha eseguito l'operazione. Il dettaglio tecnico è nel log.",
+        // Direct throws from this layer are authored instructions, including the retained vault's
+        // recovery path. Framework I/O exceptions thrown inside it still follow the mappings below.
+        _ when ex.TargetSite?.DeclaringType == typeof(OnlyWorkspace.Infrastructure.Configuration.ConfigurationBackupService) => ex.Message,
         UnauthorizedAccessException => "Accesso negato al file o alla cartella: serve un amministratore di Windows oppure il file è protetto.",
         PathTooLongException or DirectoryNotFoundException or FileNotFoundException => "File o cartella non trovati: controlla il percorso e riprova.",
         IOException => "File in uso o non accessibile: chiudi i programmi che lo usano (Outlook, la tray) e riprova.",

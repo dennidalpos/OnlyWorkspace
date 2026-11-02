@@ -232,6 +232,8 @@ public sealed class ApplyStagedTests : IDisposable
             string cause = File.ReadAllText(Path.Combine(staging, ElevatedConfigWriter.ResultFileName));
             Assert.False(string.IsNullOrWhiteSpace(cause));
             Assert.NotEqual("OK", cause);
+            Assert.Contains("archivio di backup di OnlyWorkspace", cause);
+            Assert.Contains("InvalidOperationException", File.ReadAllText(Path.Combine(staging, ElevatedConfigWriter.DetailFileName)));
             Assert.Equal(ConfigJson("kept"), File.ReadAllText(TargetConfig));
 
             // Only a folder made by CreateStagingDirectory receives the result.

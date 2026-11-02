@@ -54,18 +54,15 @@ public sealed class OllamaClient : ILlmClient, IReasoningObserver, IDisposable
 
             if (!hasModel && models.Count > 0)
             {
-                return LlmHealthResult.Failure($"Server raggiungibile, ma il modello configurato '{_profile.Model}' non è installato.");
+                return LlmHealthResult.ModelMissing("ollama", models, $"Server raggiungibile, ma il modello configurato '{_profile.Model}' non è installato.");
             }
 
             return LlmHealthResult.Success("ollama", models);
         }
-        catch (HttpRequestException ex)
-        {
-            return LlmHealthResult.Failure($"Errore di rete o HTTP verso Ollama: {ex.Message}");
-        }
         catch (Exception ex)
         {
-            return LlmHealthResult.Failure($"Verifica non riuscita: {ex.Message}");
+            Logging.OnlyWorkspaceLog.Logger.Warning(ex, "Ollama connection check failed");
+            return LlmHealthResult.Failure(LlmErrorText.Describe(ex, _profile));
         }
     }
 

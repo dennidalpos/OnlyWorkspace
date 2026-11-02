@@ -59,7 +59,8 @@ internal static class ModelPicker
         }
         catch (Exception ex)
         {
-            return new(Array.Empty<string>(), $"Errore nel rilevamento dei modelli da '{profile.BaseUrl}':\n{ex.Message}");
+            OnlyWorkspace.Infrastructure.Logging.OnlyWorkspaceLog.Logger.Warning(ex, "Model discovery failed");
+            return new(Array.Empty<string>(), $"Rilevamento dei modelli non riuscito: {LlmErrorText.Describe(ex, profile)}");
         }
     }
 

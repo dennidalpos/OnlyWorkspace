@@ -57,6 +57,7 @@ internal static class Program
 
             using (singleInstance)
             {
+                OnlyWorkspaceLog.Initialize(configTool: true);
 #if NET
                 // net48 reads DpiAwareness from App.config.
                 Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
@@ -78,8 +79,12 @@ internal static class Program
 
                 Application.EnableVisualStyles();
                 Application.SetCompatibleTextRenderingDefault(false);
-                using var trayContext = new TrayApplicationContext(startMinimized: isTrayOnly, singleInstance: singleInstance, startPage: page);
-                Application.Run(trayContext);
+                try
+                {
+                    using var trayContext = new TrayApplicationContext(startMinimized: isTrayOnly, singleInstance: singleInstance, startPage: page);
+                    Application.Run(trayContext);
+                }
+                finally { OnlyWorkspaceLog.CloseAndFlush(); }
                 return 0;
             }
         }
@@ -199,8 +204,8 @@ internal static class Program
         }
         catch (Exception ex)
         {
-            // The GUI shows this text: it names the previous vault copy when a rollback could not complete.
-            try { File.WriteAllText(resultFile, ex.Message); } catch { }
+            // The GUI receives Italian instructions; the copyable detail retains any recovery path.
+            try { ElevatedConfigWriter.WriteFailure(stagingDir, ex); } catch { }
             return 1;
         }
     }
@@ -248,7 +253,7 @@ internal static class Program
         }
         catch (Exception ex)
         {
-            try { File.WriteAllText(resultFile, ex.Message); } catch { }
+            try { ElevatedConfigWriter.WriteFailure(staging, ex); } catch { }
             return 1;
         }
     }
@@ -306,7 +311,7 @@ internal static class Program
         }
         catch (Exception ex)
         {
-            File.WriteAllText(Path.Combine(staging, ElevatedConfigWriter.ResultFileName), ex.Message);
+            ElevatedConfigWriter.WriteFailure(staging, ex);
             return 1;
         }
     }

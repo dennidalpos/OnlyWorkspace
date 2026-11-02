@@ -175,7 +175,7 @@ public partial class TaskPaneCoordinator : IDisposable
                 _control.PostMessage(new
                 {
                     type = "config_error",
-                    message = "Configurazione non valida o assente: " + ex.Message
+                    message = "Configurazione non valida o assente. Apri ConfigTool per verificarla."
                 });
                 return;
             }
@@ -548,7 +548,11 @@ public partial class TaskPaneCoordinator : IDisposable
     {
         if (!Uri.TryCreate(sourceUrl, UriKind.Absolute, out var sourceUri) || sourceUri.Scheme != Uri.UriSchemeHttps || !string.IsNullOrEmpty(sourceUri.UserInfo)) return;
         try { Process.Start(new ProcessStartInfo(sourceUri.AbsoluteUri) { UseShellExecute = true }); }
-        catch (Exception ex) { Toast("Impossibile aprire la fonte: " + ex.Message, "error"); }
+        catch (Exception ex)
+        {
+            OnlyWorkspaceLog.Logger.Warning(ex, "Failed to open source");
+            Toast("Impossibile aprire la fonte. Verifica che sia ancora disponibile e riprova.", "error");
+        }
     }
 
     private static string? GetString(JsonElement message, string property)
@@ -1535,7 +1539,7 @@ public partial class TaskPaneCoordinator : IDisposable
         catch (Exception ex)
         {
             OnlyWorkspaceLog.Logger.Error(ex, "Failed to save CSV");
-            Toast("Salvataggio CSV non riuscito: " + ex.Message, "error");
+            Toast("Salvataggio CSV non riuscito. Verifica la cartella di destinazione e riprova.", "error");
         }
     }
 
@@ -2099,7 +2103,7 @@ public partial class TaskPaneCoordinator : IDisposable
         catch (Exception ex)
         {
             OnlyWorkspaceLog.Logger.Error(ex, "Failed to apply category");
-            Toast("Impossibile applicare la categoria: " + ex.Message, "error");
+            Toast("Impossibile applicare la categoria. Verifica che l'email sia disponibile e riprova.", "error");
         }
     }
 
@@ -2172,7 +2176,7 @@ public partial class TaskPaneCoordinator : IDisposable
         catch (Exception ex)
         {
             OnlyWorkspaceLog.Logger.Error(ex, "Follow-up scan failed");
-            PostStream(turn, new { type = "stream_error", message = "Analisi della posta inviata non riuscita: " + ex.Message, retryable = true, op });
+            PostStream(turn, new { type = "stream_error", message = "Analisi della posta inviata non riuscita. Riprova; se il problema continua, consulta il log.", retryable = true, op });
         }
         finally
         {
@@ -2856,7 +2860,7 @@ public partial class TaskPaneCoordinator : IDisposable
         }
         catch (Exception ex)
         {
-            Toast("Inserimento bozza non riuscito: " + ex.Message, "error");
+            Toast("Inserimento bozza non riuscito. Verifica che Outlook sia disponibile e riprova.", "error");
             OnlyWorkspaceLog.Logger.Error(ex, "Failed to insert reply draft");
         }
     }
@@ -2982,7 +2986,7 @@ public partial class TaskPaneCoordinator : IDisposable
         }
         catch (Exception ex)
         {
-            Toast("Esportazione diagnostica non riuscita: " + ex.Message, "error");
+            Toast("Esportazione diagnostica non riuscita. Verifica la cartella di destinazione e riprova.", "error");
             OnlyWorkspaceLog.Logger.Error(ex, "Diagnostics export failed");
         }
     }

@@ -47,8 +47,8 @@ public partial class TaskPaneCoordinator
         }
         catch (Exception ex)
         {
-            OnlyWorkspaceLog.Logger.Warning("Archive light status failed: {Kind}", ex.GetType().Name);
-            if (!_isDisposed) _control.PostMessage(new { type = "archive_light", light = StatusLight.Error, label = "errori", reason = "Stato archivio non disponibile: " + ex.Message });
+            OnlyWorkspaceLog.Logger.Warning(ex, "Archive light status failed");
+            if (!_isDisposed) _control.PostMessage(new { type = "archive_light", light = StatusLight.Error, label = "errori", reason = "Stato archivio non disponibile. Riprova; se il problema continua, consulta il log." });
         }
     }
 
@@ -97,7 +97,7 @@ public partial class TaskPaneCoordinator
         catch (Exception ex)
         {
             OnlyWorkspaceLog.Logger.Warning(ex, "Failed to read the archive status");
-            if (!_isDisposed) _control.PostMessage(new { type = "archive_status_error", message = "Stato archivio non disponibile: " + ex.Message });
+            if (!_isDisposed) _control.PostMessage(new { type = "archive_status_error", message = "Stato archivio non disponibile. Riprova; se il problema continua, consulta il log." });
         }
     }
 
@@ -114,7 +114,7 @@ public partial class TaskPaneCoordinator
         catch (Exception ex)
         {
             OnlyWorkspaceLog.Logger.Error(ex, "Archive command {Command} failed", type);
-            Toast("Operazione sull'archivio non riuscita: " + ex.Message, "error");
+            Toast("Operazione sull'archivio non riuscita. Riprova; se il problema continua, consulta il log.", "error");
         }
         await SendArchiveStatusAsync();
     }
@@ -125,7 +125,7 @@ public partial class TaskPaneCoordinator
         catch (Exception ex)
         {
             OnlyWorkspaceLog.Logger.Warning(ex, "Archive pane operation failed");
-            if (!_isDisposed) Toast("Archivio non disponibile: " + ex.Message, "error");
+            if (!_isDisposed) Toast("Archivio non disponibile. Riprova; se il problema continua, consulta il log.", "error");
         }
     }
 
@@ -143,7 +143,7 @@ public partial class TaskPaneCoordinator
         catch (Exception ex)
         {
             OnlyWorkspaceLog.Logger.Error(ex, "Opening an archived email failed");
-            Toast("Apertura dell'email non riuscita: " + ex.Message, "error");
+            Toast("Apertura dell'email non riuscita. Verifica che Outlook sia disponibile e riprova.", "error");
         }
     }
 }

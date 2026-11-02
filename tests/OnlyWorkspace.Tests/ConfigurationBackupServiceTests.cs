@@ -60,6 +60,8 @@ public sealed class ConfigurationBackupServiceTests : IDisposable
             (source, destination, backup) => { if (++writes > 1) throw new IOException("synthetic failure"); File.Replace(source, destination, backup); }));
         string retained = Assert.Single(Directory.GetFiles(target, "*.bak"));
         Assert.Contains(retained, error.Message);
+        Assert.Equal(error.Message, OnlyWorkspace.ConfigTool.Forms.ErrorText.For(error));
+        Assert.Contains(retained, OnlyWorkspace.ConfigTool.Services.ElevatedConfigWriter.Failure(error).Message);
         Assert.Equal(old, File.ReadAllBytes(retained));
         var recovered = new DpapiSecretVault();
         recovered.Load(retained);

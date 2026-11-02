@@ -35,10 +35,10 @@ public sealed class ModelPickerTests
         Assert.Empty(empty.Models);
         Assert.Null(empty.Error);
 
-        var failing = new FakeClient(_ => throw new HttpRequestException("401 Unauthorized"));
+        var failing = new FakeClient(_ => throw new HttpRequestException("HTTP 401: Unauthorized"));
         var failed = await ModelPicker.ListAsync(Local, null, (_, _) => failing);
-        Assert.Contains("401 Unauthorized", failed.Error);
-        Assert.Contains(Local.BaseUrl, failed.Error);
+        Assert.Contains("ha rifiutato le credenziali", failed.Error);
+        Assert.DoesNotContain("Unauthorized", failed.Error);
         Assert.True(failing.Disposed);
 
         var silent = await ModelPicker.ListAsync(Local, null, (_, _) => new FakeClient(async ct =>

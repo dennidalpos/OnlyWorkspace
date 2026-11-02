@@ -62,18 +62,15 @@ public sealed class AnthropicClient : ILlmClient, IDisposable
 
             if (!hasModel && models.Count > 0 && !string.IsNullOrWhiteSpace(_profile.Model))
             {
-                return LlmHealthResult.Failure($"Anthropic raggiungibile, ma il modello configurato '{_profile.Model}' non è tra i modelli disponibili.");
+                return LlmHealthResult.ModelMissing("anthropic", models, $"Anthropic raggiungibile, ma il modello configurato '{_profile.Model}' non è tra i modelli disponibili.");
             }
 
             return LlmHealthResult.Success("anthropic", models);
         }
-        catch (HttpRequestException ex)
-        {
-            return LlmHealthResult.Failure($"Errore di rete o HTTP verso Anthropic: {ex.Message}");
-        }
         catch (Exception ex)
         {
-            return LlmHealthResult.Failure($"Verifica non riuscita: {ex.Message}");
+            Logging.OnlyWorkspaceLog.Logger.Warning(ex, "Anthropic connection check failed");
+            return LlmHealthResult.Failure(LlmErrorText.Describe(ex, _profile));
         }
     }
 

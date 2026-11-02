@@ -144,3 +144,67 @@ assert.equal(nodes.get('arDetail').hidden, true);
 context.renderArchive({ available: true, active: true, light: 'Working', phase: 'testi', metrics, stores });
 assert.equal(nodes.get('arDetail').hidden, false);
 console.log('PASS Stato: essentials in view, diagnostics in a closed Avanzate section');
+
+// A192: execute the actual WebView event boundary, toast and live-region path.
+const boundaryNodes = new Map(), diagnostics = [], spoken = [], consoleErrors = [];
+const boundary = vm.createContext({
+  $: id => { if (!boundaryNodes.has(id)) boundaryNodes.set(id, node('div')); return boundaryNodes.get(id); },
+  announce: text => spoken.push(text), clearTimeout: () => {}, setTimeout: () => 1,
+  console: { error: error => consoleErrors.push(error) },
+  post: data => diagnostics.push(data),
+  onHostMessage: () => { throw new TypeError('synthetic English detail'); },
+  webview: { addEventListener: (event, listener) => { assert.equal(event, 'message'); boundary.listener = listener; } }
+});
+vm.runInContext(html.slice(html.indexOf('  var toastTimer = null;'), html.indexOf("  $('toastClose')")), boundary);
+vm.runInContext(html.slice(html.lastIndexOf('  if (webview) {'), html.lastIndexOf("  setComposerMode('chat');")), boundary);
+boundary.listener({ data: { type: 'archive_status' } });
+assert.match(boundaryNodes.get('toastText').textContent, /Il riquadro non è riuscito.*chiudilo e riaprilo/);
+assert.doesNotMatch(boundaryNodes.get('toastText').textContent, /synthetic English detail|TypeError|Dettaglio:/);
+assert.match(spoken.at(-1), /^Errore: Il riquadro/);
+assert.equal(diagnostics[0].type, 'page_error');
+assert.match(diagnostics[0].detail, /TypeError: synthetic English detail/);
+assert.equal(consoleErrors.length, 1);
+boundary.onHostMessage = () => { throw new Error('x'.repeat(5000)); };
+boundary.listener({ data: {} });
+assert.equal(diagnostics[1].detail.length, 2048, 'Host diagnostic is bounded.');
+boundary.post = () => { throw new Error('host unavailable'); };
+boundary.listener({ data: {} });
+assert.match(spoken.at(-1), /^Errore: Il riquadro/, 'A failed log post must not suppress user feedback.');
+
+// The terminal event routes keep errors and deliberate interruptions distinct.
+const terminalResults = [];
+const terminal = vm.createContext({ state: { current: {} }, finishTurn: result => terminalResults.push(result) });
+const terminalCases = html.slice(html.indexOf("      case 'stream_error':"), html.indexOf("      case 'toast':"));
+vm.runInContext('function dispatch(data) { switch(data.type) {' + terminalCases + '} }', terminal);
+terminal.dispatch({ type: 'stream_error', message: 'Operazione non riuscita.' });
+terminal.dispatch({ type: 'stream_cancelled', message: 'Operazione annullata.' });
+assert.equal(terminalResults[0].status, 'error');
+assert.equal(terminalResults[1].status, 'cancelled');
+console.log('PASS A192: JavaScript exception stays in diagnostic, Italian toast announced, cancellation distinct');
+
+const terminalSpeech = [], terminalState = {};
+const finish = vm.createContext({
+  state: terminalState, clearTimeout: () => {}, isNearBottom: () => false,
+  renderMarkdown: text => text, announce: text => terminalSpeech.push(text),
+  el: (tag, cls, value) => Object.assign(node(tag), { className: cls || '', textContent: value || '' }),
+  icon: () => '', actionButton: () => node('button'), openDrawerId: () => null, setBusy: () => {}
+});
+vm.runInContext(html.slice(html.indexOf('  function finishTurn(result)'), html.indexOf('  // ---------- Toast ----------')), finish);
+function ending(status, message) {
+  const assistant = node('div');
+  terminalState.current = { phase: { remove() {} }, body: node('div'), assistant, text: '', startedAt: 0 };
+  finish.finishTurn({ status, message });
+  return assistant;
+}
+assert.equal(ending('error', 'Operazione non riuscita.').children[0].className, 'error-box');
+assert.equal(ending('cancelled', 'Operazione annullata.').children[0].className, 'msg-note');
+assert.deepEqual(terminalSpeech, ['Errore: Operazione non riuscita.', 'Operazione annullata.']);
+console.log('PASS A192: real finishTurn renders and announces failures separately from cancellation');
+
+announced.length = 0;
+context.setArchiveIndicator({ light: 'Error', label: 'errori', reason: 'Primo errore.' });
+context.setArchiveIndicator({ light: 'Error', label: 'errori', reason: 'Secondo errore.' });
+context.setArchiveIndicator({ light: 'Error', label: 'errori', reason: 'Secondo errore.', phase: 'errore' });
+assert.equal(announced.length, 2, 'A different error is announced even while already red; polling repeats are quiet.');
+assert.match(announced[1], /Secondo errore/);
+console.log('PASS A192: changed archive error announced once without polling repetitions');

@@ -125,6 +125,48 @@ public sealed class ConfigToolRequestTests
     }
 
     [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void WizardDistinguishesAnUnavailableModelFromAnUnreachableService(bool missingModel)
+    {
+        Sta(dir =>
+        {
+            using var form = new SetupWizardForm(Profile(), null, true, true);
+            using var client = new SlowClient { IgnoreCancellation = true };
+            client.Late.SetResult(missingModel
+                ? LlmHealthResult.ModelMissing("fixture", new[] { "another-model" }, "Servizio raggiungibile, modello assente.")
+                : LlmHealthResult.Failure("Servizio non raggiungibile: controlla l'indirizzo."));
+            form.ClientFactory = (_, _) => client;
+            using var button = new Button { Text = "Verifica" };
+            var task = (Task)Call(form, "TestAsync", button)!; Pump(() => task.IsCompleted); task.GetAwaiter().GetResult();
+            string text = Field<Label>(form, "_lblTest").Text;
+            Assert.StartsWith(missingModel ? "Connessione riuscita, ma il modello" : "Connessione non riuscita:", text);
+            Assert.DoesNotContain(missingModel ? "Connessione non riuscita" : "Connessione riuscita", text);
+            Assert.True(client.Disposed);
+        });
+    }
+
+    [Theory]
+    [InlineData("ollama", "synthetic", "synthetic:latest")]
+    [InlineData("gemini", "models/synthetic", "synthetic")]
+    public void WizardAcceptsTheProvidersModelAlias(string provider, string configured, string listed)
+    {
+        Sta(dir =>
+        {
+            var profile = Profile(); profile.Type = provider; profile.Model = configured;
+            using var form = new SetupWizardForm(profile, null, true, true);
+            using var client = new SlowClient { IgnoreCancellation = true };
+            client.Late.SetResult(LlmHealthResult.Success("fixture", new[] { listed }));
+            form.ClientFactory = (_, _) => client;
+            using var button = new Button { Text = "Verifica" };
+            var task = (Task)Call(form, "TestAsync", button)!; Pump(() => task.IsCompleted); task.GetAwaiter().GetResult();
+            string text = Field<Label>(form, "_lblTest").Text;
+            Assert.StartsWith("Connessione riuscita (", text);
+            Assert.DoesNotContain("non è tra", text);
+        });
+    }
+
+    [Theory]
     [InlineData(false, false)]
     [InlineData(true, false)]
     [InlineData(true, true)]

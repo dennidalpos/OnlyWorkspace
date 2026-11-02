@@ -42,6 +42,20 @@ function Script($pane, [string]$code) {
     Wait-Until {$task.IsCompleted} 'script result'
     return $task.GetAwaiter().GetResult()
 }
+$serilog = [Reflection.Assembly]::LoadFrom((Join-Path $output 'Serilog.dll'))
+Add-Type -ReferencedAssemblies $serilog.Location, netstandard -TypeDefinition @'
+using System.Collections.Concurrent;
+using Serilog.Core;
+using Serilog.Events;
+public sealed class FocusDiagnosticLog : ILogEventSink {
+    public readonly ConcurrentQueue<string> Lines = new ConcurrentQueue<string>();
+    public void Emit(LogEvent entry) { Lines.Enqueue(entry.RenderMessage()); }
+}
+'@
+$diagnosticLog = New-Object FocusDiagnosticLog
+$previousLogger = [Serilog.Log]::Logger
+$fixtureLogger = (New-Object Serilog.LoggerConfiguration).WriteTo.Sink($diagnosticLog).CreateLogger()
+[Serilog.Log]::Logger = $fixtureLogger
 try {
     $factory = New-Object FocusEnvironmentFactory
     $pane = $constructor.Invoke(@($factory.Callback)); $panes += $pane
@@ -113,6 +127,7 @@ try {
     $second.PostMessage(@{type='analysis_context';requestId=[int]$requestId;selectionScope='flow';hasEmail=$true;entryId='practice-email';storeId='practice-store';subject='<b>Pratica sintetica</b>';archive=@{active=$true;emails=2};stores=@()})
     Wait-Until {(Script $second 'document.getElementById("anSeedSubject").textContent === "<b>Pratica sintetica</b>" && !document.getElementById("anStart").disabled') -eq 'true'} 'reconstruction source'
     $second.PostMessage(@{type='config_error';message='Profilo IA sintetico assente'})
+    Wait-Until {(Script $second 'document.getElementById("srStatus").textContent === "Errore di configurazione: Profilo IA sintetico assente"') -eq 'true'} 'configuration error announcement'
     if ((Script $second 'document.getElementById("anStart").disabled') -ne 'false') {throw 'Local reconstruction requires an AI profile'}
     [void](Script $second 'document.getElementById("anStart").click();')
     if ((Script $second 'JSON.stringify(window.selectionMessages.filter(function(m){return m.type === "mail_analysis";}).slice(-1)[0].scope)') -notmatch 'practice-email') {throw 'Reconstruction lost its explicit source'}
@@ -120,6 +135,7 @@ try {
     $second.PostMessage(@{type='analysis_reconstruction';requestId=[int]$chainRequest;seed=@{entryId='practice-email';storeId='practice-store';subject='<b>Pratica sintetica</b>'};items=@(@{entryId='practice-email';storeId='practice-store';subject='Email sintetica';bodyState='indexed'});coverage=@()})
     Wait-Until {(Script $second '!document.getElementById("anReconstruction").hidden && document.getElementById("flowList").children.length === 1 && document.getElementById("flowAnalyze").disabled && !document.getElementById("flowDrawer")') -eq 'true'} 'local reconstruction in analysis'
     'PASS A208 real WebView local preset without AI, literal source and explicit synthesis'
+    [void](Script $second 'chrome.webview.postMessage=window.selectionPost;')
     # A201: actual WebView layout at a splitter width Office may temporarily permit. This is
     # isolated layout evidence, not a qualification of monitor DPI or the installed Outlook splitter.
     $savedSize = $form.ClientSize
@@ -148,6 +164,18 @@ try {
     }
     $form.ClientSize = $savedSize
     'PASS A210 real WebView Stato: Avanzate closed by default, essentials fit at 380 and 190 px'
+    # A192: malformed host data triggers the actual page boundary, accessible feedback and native log.
+    $second.PostMessage(@{type='archive_status';available=$true;active=$true;metrics=@{invalid='fixture'};stores=@()})
+    Wait-Until {(Script $second '!document.getElementById("toast").hidden && document.getElementById("toastText").textContent.indexOf("Il riquadro non") === 0') -eq 'true'} 'translated page failure'
+    Wait-Until {@($diagnosticLog.Lines.ToArray() | Where-Object {$_ -like '*Pane page update failed:*TypeError*'}).Count -gt 0} 'native page diagnostic log'
+    $feedback = Script $second 'document.getElementById("toastText").textContent'
+    if ($feedback -match 'TypeError|forEach|Dettaglio:') {throw 'Raw JavaScript exception reached the toast'}
+    # Send a deliberately oversized diagnostic: native code independently enforces its own bound.
+    [void](Script $second 'window.chrome.webview.postMessage({type:"page_error",detail:"BOUND192"+"x".repeat(5000)})')
+    Wait-Until {@($diagnosticLog.Lines.ToArray() | Where-Object {$_ -like '*BOUND192*'}).Count -gt 0} 'bounded native diagnostic'
+    $bounded = @($diagnosticLog.Lines.ToArray() | Where-Object {$_ -like '*BOUND192*'})[-1]
+    if ($bounded.Length -gt 2100) {throw 'Native page diagnostic was not bounded'}
+    'PASS A192 real WebView: Italian failure toast, original JavaScript exception in native log, independent 2048-character bound'
     'PASS real WebView2 focus: queued and ready ribbon actions, Chat/Status/History, no background or delayed focus theft'
     "Runtime=$((Field $second '_environment').BrowserVersionString); SDK=$((Get-Item (Join-Path $output 'Microsoft.Web.WebView2.Core.dll')).VersionInfo.FileVersion)"
     Add-Type -ReferencedAssemblies (Join-Path $output 'OnlyWorkspace.Outlook.dll') -TypeDefinition @'
@@ -192,6 +220,8 @@ public sealed class WidthFixturePane : _CustomTaskPane {
     } finally {$entry.Dispose()}
 }
 finally {
+    [Serilog.Log]::Logger = $previousLogger
+    $fixtureLogger.Dispose()
     $form.Close(); $form.Dispose()
     foreach ($pane in $panes) {$pane.Dispose()}
     $processes=@(Get-CimInstance Win32_Process -Filter "Name='msedgewebview2.exe'" | Where-Object {$_.CommandLine -and $_.CommandLine.Contains($browserFolder)})
@@ -199,5 +229,5 @@ finally {
     $tempRoot=[IO.Path]::GetFullPath([IO.Path]::GetTempPath()).TrimEnd('\')+'\'
     $resolved=[IO.Path]::GetFullPath($scratch)
     if (!$resolved.StartsWith($tempRoot,[StringComparison]::OrdinalIgnoreCase) -or ![IO.Path]::GetFileName($resolved).StartsWith('OnlyWorkspace-WebViewFocus-')) {throw 'Unsafe fixture cleanup path'}
-    if (Test-Path -LiteralPath $resolved) {Remove-Item -LiteralPath $resolved -Recurse -Force}
+    if (!(Test-Path Env:ONLYWORKSPACE_TEST_ARTIFACTS) -and (Test-Path -LiteralPath $resolved)) {Remove-Item -LiteralPath $resolved -Recurse -Force}
 }

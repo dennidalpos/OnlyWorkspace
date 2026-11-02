@@ -146,7 +146,7 @@ try {
 
 }
 finally {
-    Remove-Item -LiteralPath $tmp -Recurse -Force
+    if (!(Test-Path Env:ONLYWORKSPACE_TEST_ARTIFACTS)) { Remove-Item -LiteralPath $tmp -Recurse -Force }
 }
 
 "Assembly caricati dalla cartella dell'add-in:"

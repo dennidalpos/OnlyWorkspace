@@ -239,11 +239,110 @@ public class PaneRequestTests
         var profile = new LlmProfileConfig { Id = "gemini" };
         Assert.StartsWith("Impossibile contattare gemini", LlmErrorText.Describe(new HttpRequestException("send failed", new WebException("refused", WebExceptionStatus.ConnectFailure)), profile));
         Assert.StartsWith("Connessione sicura (TLS) con gemini", LlmErrorText.Describe(new HttpRequestException("send failed", new WebException("tls", WebExceptionStatus.TrustFailure)), profile));
-        Assert.Equal("Il modello ha rifiutato la richiesta.", LlmErrorText.Describe(new HttpRequestException("Il modello ha rifiutato la richiesta."), profile));
+        Assert.Contains("ha interrotto o rifiutato la risposta", LlmErrorText.Describe(new HttpRequestException("Il modello ha rifiutato la richiesta."), profile));
 
         Assert.Contains("non ha risposto in tempo", LlmErrorText.Describe(new AggregateException(new TaskCanceledException()), profile));
         Assert.Contains("aumenta i timeout", LlmErrorText.Describe(new TimeoutException("Nessun testo entro 60 s."), profile));
         Assert.StartsWith("il modello ha restituito una risposta non valida", LlmErrorText.Describe(new JsonException("bad"), null));
-        Assert.Equal("altro", LlmErrorText.Describe(new InvalidOperationException("altro"), profile));
+        Assert.Equal("Operazione non riuscita. Riprova; se il problema continua, consulta il log.", LlmErrorText.Describe(new InvalidOperationException("altro"), profile));
+    }
+
+    [Theory]
+    [InlineData("http", "Anthropic stream error: synthetic English detail")]
+    [InlineData("http", "HTTP 400: context length exceeded; synthetic English detail")]
+    [InlineData("http", "HTTP 422: synthetic English detail")]
+    [InlineData("timeout", "synthetic English detail")]
+    [InlineData("other", "synthetic English detail")]
+    public void Error_NeverDisplaysRawSystemOrProviderDetails(string kind, string detail)
+    {
+        Exception error = kind == "http" ? new HttpRequestException(detail)
+            : kind == "timeout" ? new TimeoutException(detail) : new InvalidOperationException(detail);
+        var text = LlmErrorText.Describe(error, new LlmProfileConfig { Id = "fixture" });
+        Assert.DoesNotContain("synthetic English detail", text);
+        Assert.DoesNotContain("Dettaglio:", text);
+        Assert.Contains(".", text);
+    }
+
+    [Fact]
+    public void Error_PreservesApplicationPolicyAndStructuredOutputInstructions()
+    {
+        const string policy = "Invio bloccato: rinnova l'informativa nel ConfigTool.";
+        Assert.Equal(policy, LlmErrorText.Describe(new OnlyWorkspace.Core.Privacy.DataEgressBlockedException(policy), null));
+        Assert.Equal(ModelOutput.TruncatedMessage, LlmErrorText.Describe(new InvalidModelOutputException(ModelOutput.TruncatedMessage), null));
+        var redirect = LlmErrorText.Describe(new LlmRequestException("fixture internal detail", 307), null);
+        Assert.Contains("reindirizzamento HTTP, bloccato", redirect);
+        Assert.DoesNotContain("fixture internal detail", redirect);
+    }
+
+    [Theory]
+    [InlineData("Ollama", false)]
+    [InlineData("OpenAI", false)]
+    [InlineData("Anthropic", false)]
+    [InlineData("Gemini", false)]
+    [InlineData("Ollama", true)]
+    [InlineData("OpenAI", true)]
+    [InlineData("Anthropic", true)]
+    [InlineData("Gemini", true)]
+    public async Task ConnectionCheck_TranslatesHttpAndMalformedResponses(string provider, bool malformed)
+    {
+        using var http = new HttpClient(new ErrorResponseHandler(() => new HttpResponseMessage(malformed ? HttpStatusCode.OK : HttpStatusCode.Unauthorized)
+        {
+            Content = new StringContent(malformed ? "synthetic English detail" : "{\"error\":{\"message\":\"synthetic English detail\"}}")
+        })) { BaseAddress = new Uri("http://127.0.0.1/") };
+        var profile = new LlmProfileConfig { Id = "fixture", Model = "fixture" };
+        OnlyWorkspace.Core.Interfaces.ILlmClient client = provider switch
+        {
+            "Ollama" => new OllamaClient(profile, httpClient: http),
+            "OpenAI" => new OpenAIClient(profile, httpClient: http),
+            "Anthropic" => new AnthropicClient(profile, httpClient: http),
+            _ => new GeminiClient(profile, httpClient: http)
+        };
+        try
+        {
+            var result = await client.CheckHealthAsync();
+            Assert.False(result.IsHealthy);
+            Assert.Contains(malformed ? "risposta non valida" : "ha rifiutato le credenziali", result.ErrorMessage);
+            Assert.DoesNotContain("synthetic English detail", result.ErrorMessage);
+        }
+        finally { (client as IDisposable)?.Dispose(); }
+    }
+
+    [Theory]
+    [InlineData("Ollama")]
+    [InlineData("OpenAI")]
+    [InlineData("Anthropic")]
+    [InlineData("Gemini")]
+    public async Task ConnectionCheck_PreservesReachabilityAndModelsWhenTheConfiguredModelIsMissing(string provider)
+    {
+        string json = provider == "Ollama" ? "{\"models\":[{\"name\":\"another-model\"}]}"
+            : provider == "Gemini" ? "{\"models\":[{\"name\":\"models/another-model\"}]}"
+            : "{\"data\":[{\"id\":\"another-model\"}]}";
+        using var http = new HttpClient(new ErrorResponseHandler(() => new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(json) }))
+            { BaseAddress = new Uri("http://127.0.0.1/") };
+        var profile = new LlmProfileConfig { Id = "fixture", Model = "missing" };
+        OnlyWorkspace.Core.Interfaces.ILlmClient client = provider switch
+        {
+            "Ollama" => new OllamaClient(profile, httpClient: http),
+            "OpenAI" => new OpenAIClient(profile, httpClient: http),
+            "Anthropic" => new AnthropicClient(profile, httpClient: http),
+            _ => new GeminiClient(profile, httpClient: http)
+        };
+        try
+        {
+            var result = await client.CheckHealthAsync();
+            Assert.False(result.IsHealthy);
+            Assert.True(result.IsModelMissing);
+            Assert.Equal(new[] { "another-model" }, result.AvailableModels);
+            Assert.NotEmpty(result.Version);
+            Assert.Contains("raggiungibile", result.ErrorMessage);
+        }
+        finally { (client as IDisposable)?.Dispose(); }
+    }
+
+    private sealed class ErrorResponseHandler : HttpMessageHandler
+    {
+        private readonly Func<HttpResponseMessage> _response;
+        public ErrorResponseHandler(Func<HttpResponseMessage> response) => _response = response;
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, System.Threading.CancellationToken cancellationToken) => Task.FromResult(_response());
     }
 }

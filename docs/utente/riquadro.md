@@ -2,6 +2,8 @@
 
 Il riquadro WebView2 appartiene alla finestra Outlook che lo apre. Ogni azione usa il profilo IA attivo e le sue [autorizzazioni](modelli-web.md); nessun invio chiede conferma nel riquadro.
 
+Gli errori del riquadro mostrano istruzioni in italiano; i dettagli delle eccezioni restano nei log. Un errore viene annunciato come tale, mentre un annullamento mantiene il proprio messaggio. Se un aggiornamento non viene visualizzato, il riquadro invita a chiuderlo e riaprirlo se resta fermo. I log si esportano da **Stato → Avanzate → Diagnostica**.
+
 Se Storico o il flusso restano in caricamento per 15 secondi compare **Riprova**; la richiesta precedente può ancora terminare. Stato mostra profilo, modello, destinazione, errore e fase dell'archivio; indirizzo del servizio, versioni, metriche e Diagnostica stanno nella sezione **Avanzate**, chiusa all'apertura, e le tabelle strette scorrono orizzontalmente. Le cartelle non leggibili sono separate da quelle ancora da leggere; la percentuale esclude le non leggibili, mentre il totale le comprende. Gli errori indicano la cartella e invitano a verificarne l'accesso in Outlook, anche nel Cestino: ripristinala solo se necessario, senza ricreare una cartella eliminata. Lascia aperta la cassetta e attendi il prossimo controllo completo; l'errore non prova che i dati siano stati eliminati.
 
 Se il browser del riquadro si interrompe, il pannello tenta una sola ricreazione automatica, mantenendo il lavoro e il risultato da ripristinare. Se il caricamento fallisce compare **Riprova a caricare il pannello**.

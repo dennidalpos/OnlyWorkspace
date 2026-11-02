@@ -4,6 +4,18 @@ Test di codice, prova sulla build installata e qualifica su cassette e provider 
 
 Contenuto datato trasferito nel dossier SecondBrain: `02-areas/products/OnlyWorkspace/history/imported/docs/tecnico/verifica.md`. Originale e SHA-256 nel rapporto di migrazione; questa voce conserva i riferimenti esistenti e non autorizza nuovi interventi.
 
+## Errori del ConfigTool — 2 novembre 2026
+
+Esiti in italiano e dettagli tecnici sono separati nei form, nella ricerca dei modelli e nel passaggio elevato di configurazione, password e ripristino. Il Log attività conserva il dettaglio copiabile dell'operazione elevata; le istruzioni applicative mantengono il percorso del vault di recupero se il rollback fallisce. Il logger GUI/tray usa file distinti da Outlook. I quattro client distinguono il servizio raggiungibile con modello mancante dagli errori di connessione, conservando l'elenco dei modelli; la procedura guidata riconosce anche gli alias Ollama e Gemini.
+
+**118 test mirati per runtime** e **1.762 test nella suite finale per ciascun runtime net48/net10**, zero saltati; build Release senza errori o avvisi, 17 script e smoke net48 x64/x86 superati. I test usano form su UI STA, risposte HTTP sintetiche e copie isolate dei file, compreso il comando interno di ripristino. Non qualificano UAC reale, ConfigTool installato o provider remoti. NuGet e WebViewFocus del lotto precedente sono riutilizzati nel perimetro invariato. Ricevuta nel dossier: `history/2026-11-02-A195/report.md`.
+
+## Errori del riquadro — 2 novembre 2026
+
+I messaggi del riquadro separano le istruzioni in italiano dai dettagli di eccezioni JavaScript, .NET e provider, conservati nei log. I client IA usano lo stesso traduttore anche nelle verifiche di connessione; restano le istruzioni applicative per consenso, contesto insufficiente e risposta strutturata inutilizzabile. Configurazione e nuovi motivi d'errore dello Stato vengono annunciati nella live region; il polling dello stesso errore resta silenzioso e l'annullamento mantiene un esito distinto. La diagnostica della pagina passa dal controllo di fiducia WebView2 e ha un limite di 2.048 caratteri applicato anche dal codice nativo.
+
+La suite finale supera **1.753 test per ciascun runtime net48/net10**, zero saltati; build Release senza errori o avvisi, 17 script e smoke net48 x64/x86 superati. Le regressioni coprono errori HTTP e risposte malformate dei quattro client, errore dell'indicizzatore, listener JavaScript, toast e annunci. PanePolicy verifica un errore reale d'inserimento con messaggio e log separati; WebViewFocus x64/x86 verifica il toast, il log nativo e il limite diagnostico in un WebView reale. Il controllo NuGet non segnala vulnerabilità. Sono prove isolate con dati sintetici: non qualificano Outlook installato, Narrator o provider remoti. Ricevuta nel dossier: `history/2026-11-02-A233-A192/report.md`.
+
 ## Consensi per profilo e istruzioni tecniche — 1 novembre 2026
 
 Il candidato lega ogni autorizzazione al profilo, agli endpoint, al livello, ai permessi e alle due chiavi effettive del vault. I consensi precedenti per solo host, anche v4, richiedono rinnovo esplicito; testo dell'informativa e dichiarazioni obbligatorie sono invariati. ConfigTool permette di salvare o revocare anche con un predefinito cloud bloccato. Le prove del form coprono annullamento, revoca, riapertura e ripristino dopo UAC negato. Chat ed elenchi locali, compreso l'elenco vuoto, precedono la creazione del client; i fatti locali possono rispondere senza consenso esterno.
