@@ -22,6 +22,11 @@ public static class ModelOutput
         if (completion?.IsTruncated == true) throw new InvalidModelOutputException(TruncatedMessage);
     }
 
+    /// <summary>Model strings are trimmed; missing fields and other JSON kinds are not converted to text.</summary>
+    internal static string ReadTrimmedString(JsonElement element, string name) =>
+        element.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String
+            ? (value.GetString() ?? string.Empty).Trim() : string.Empty;
+
     /// <summary>The JSON object in the answer (a code fence or text around it is tolerated) with the array <paramref name="required"/>.</summary>
     public static JsonDocument ParseObject(string? text, string required)
     {

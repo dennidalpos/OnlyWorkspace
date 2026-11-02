@@ -65,16 +65,16 @@ public static class ActionItemParser
         {
             if (e.ValueKind != JsonValueKind.Object) { result.Diagnostics.Discard("attività non oggetto"); continue; }
 
-            var title = Str(e, "title");
+            var title = ModelOutput.ReadTrimmedString(e, "title");
             if (title.Length == 0) { result.Diagnostics.Discard("attività senza titolo valido"); continue; }
 
             var item = new ExtractedActionItem
             {
-                Kind = Str(e, "type").Equals("appointment", StringComparison.OrdinalIgnoreCase) ? "appointment" : "task",
+                Kind = ModelOutput.ReadTrimmedString(e, "type").Equals("appointment", StringComparison.OrdinalIgnoreCase) ? "appointment" : "task",
                 Title = title,
-                Location = Str(e, "location"),
-                Notes = Str(e, "notes"),
-                DateText = Str(e, "date_text")
+                Location = ModelOutput.ReadTrimmedString(e, "location"),
+                Notes = ModelOutput.ReadTrimmedString(e, "notes"),
+                DateText = ModelOutput.ReadTrimmedString(e, "date_text")
             };
             if (e.TryGetProperty("source", out var source))
             {
@@ -85,24 +85,24 @@ public static class ActionItemParser
 
             if (item.IsAppointment)
             {
-                var start = ParseDate(Str(e, "start"), out bool dateOnly);
+                var start = ParseDate(ModelOutput.ReadTrimmedString(e, "start"), out bool dateOnly);
                 if (start == null)
                 {
                     // No usable start: keep it as a task so the information is not lost.
                     item.Kind = "task";
-                    item.Due = ParseDate(Str(e, "due"), out _);
+                    item.Due = ParseDate(ModelOutput.ReadTrimmedString(e, "due"), out _);
                 }
                 else
                 {
                     item.Start = start;
                     item.AllDay = dateOnly;
-                    var end = ParseDate(Str(e, "end"), out _);
+                    var end = ParseDate(ModelOutput.ReadTrimmedString(e, "end"), out _);
                     item.End = end.HasValue && end > start ? end : dateOnly ? start.Value.AddDays(1) : start.Value.AddHours(1);
                 }
             }
             else
             {
-                item.Due = ParseDate(Str(e, "due"), out _);
+                item.Due = ParseDate(ModelOutput.ReadTrimmedString(e, "due"), out _);
             }
 
             result.Add(item);
@@ -130,9 +130,6 @@ public static class ActionItemParser
 
     private static string Raw(JsonElement e, string name) =>
         e.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() ?? string.Empty : string.Empty;
-
-    private static string Str(JsonElement e, string name) =>
-        e.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String ? (v.GetString() ?? string.Empty).Trim() : string.Empty;
 
     public static DateTime? ParseDate(string value, out bool dateOnly)
     {

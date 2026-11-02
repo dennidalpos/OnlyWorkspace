@@ -7,6 +7,22 @@ public class BriefingParserTests
 {
     private static readonly string[] Categories = { "Clienti", "Fornitori" };
 
+    [Theory]
+    [InlineData("\"  Motivo\\t \\r\\n\"", "Motivo")]
+    [InlineData("\"   \"", "")]
+    [InlineData("null", "")]
+    [InlineData("42", "")]
+    [InlineData("true", "")]
+    [InlineData("[]", "")]
+    [InlineData("{}", "")]
+    public void ModelTextFields_TrimStringsWithoutConvertingOtherJsonKinds(string value, string expected)
+    {
+        var result = BriefingParser.Parse("{\"summary\":" + value + ",\"emails\":[{\"id\":1,\"reason\":" + value + "}]}", 1, Categories);
+
+        Assert.Equal(expected, result.Summary);
+        Assert.Equal(expected, Assert.Single(result.Emails).Reason);
+    }
+
     [Fact]
     public void KeepsValidEntries_AndOnlyExistingCategories()
     {

@@ -6,6 +6,23 @@ namespace OnlyWorkspace.Tests;
 
 public class ActionItemParserTests
 {
+    [Theory]
+    [InlineData("\"  Porto\\t \\r\\n\"", "Porto")]
+    [InlineData("\"   \"", "")]
+    [InlineData("null", "")]
+    [InlineData("42", "")]
+    [InlineData("true", "")]
+    [InlineData("[]", "")]
+    [InlineData("{}", "")]
+    public void ModelTextFields_TrimStringsWithoutConvertingOtherJsonKinds(string value, string expected)
+    {
+        var item = Assert.Single(ActionItemParser.Parse("{\"items\":[{\"title\":\"  Azione  \",\"location\":" + value + ",\"notes\":" + value + "}]}"));
+
+        Assert.Equal("Azione", item.Title);
+        Assert.Equal(expected, item.Location);
+        Assert.Equal(expected, item.Notes);
+    }
+
     [Fact]
     public void ParsesTasksAndAppointments_WithDefaults()
     {
