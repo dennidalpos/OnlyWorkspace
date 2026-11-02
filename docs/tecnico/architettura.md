@@ -10,6 +10,21 @@
 
 Il setup installa la build `net48`; i target moderni servono a build e test fuori da Outlook. La versione è in [Directory.Build.props](../../Directory.Build.props). Outlook e Word usano tipi Interop incorporati (No-PIA); il packaging verifica l'assenza di riferimenti runtime prima di escludere le DLL Interop. Dettagli in [Dipendenze](dipendenze.md).
 
+## Orientarsi nel codice
+
+I file parziali compongono lo stesso tipo ([Microsoft](https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/classes-and-structs/partial-classes-and-methods)). Per coordinatore e form, partire dal file principale per stato, ciclo di vita e collegamenti; seguire poi il file della funzione interessata.
+
+| Area | File e responsabilità |
+| --- | --- |
+| Risposte strutturate | [ModelOutput](../../src/OnlyWorkspace.Core/Agents/ModelOutput.cs): struttura della risposta e stringhe del modello; i parser mantengono le proprie regole per numeri, date e testo del riquadro. |
+| Endpoint IA | [LlmEndpoint](../../src/OnlyWorkspace.Infrastructure/Llm/LlmEndpoint.cs): prefisso relativo v1, senza inizializzare il trasporto; [LlmHttp](../../src/OnlyWorkspace.Infrastructure/Llm/LlmHttp.cs): HTTP, TLS, errori e lettura del flusso. |
+| Conversazioni | [TaskPaneCoordinator.Chat](../../src/OnlyWorkspace.Outlook/UI/TaskPaneCoordinator.Chat.cs): Chat, contesto dei messaggi e storico della conversazione. |
+| Appuntamenti e scadenze | [TaskPaneCoordinator.Calendar](../../src/OnlyWorkspace.Outlook/UI/TaskPaneCoordinator.Calendar.cs): scansione, verifica delle fonti e salvataggio degli elementi scelti. |
+| Pagina profili | [MainConfigForm.ProfilePage](../../src/OnlyWorkspace.ConfigTool/Forms/MainConfigForm.ProfilePage.cs): costruzione dei controlli della pagina. |
+| Modifica dei profili | [MainConfigForm.Profiles](../../src/OnlyWorkspace.ConfigTool/Forms/MainConfigForm.Profiles.cs): selezione, campi, budget, modelli e verifiche; [Capabilities](../../src/OnlyWorkspace.ConfigTool/Forms/MainConfigForm.Capabilities.cs): comandi di Avanzate. |
+
+Campi e inizializzatori di coordinatore e form restano nelle parti originarie; i nuovi file parziali raccolgono i metodi per responsabilità.
+
 ## Confini
 
 ```mermaid
