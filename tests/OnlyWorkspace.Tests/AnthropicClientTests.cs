@@ -13,6 +13,27 @@ namespace OnlyWorkspace.Tests;
 
 public class AnthropicClientTests
 {
+    [Theory]
+    [InlineData("https://fixture.invalid", "/v1/models")]
+    [InlineData("https://fixture.invalid/v1", "/v1/models")]
+    [InlineData("https://fixture.invalid/V1///", "/V1/models")]
+    [InlineData("https://fixture.invalid/tenant/", "/tenant/v1/models")]
+    [InlineData("https://fixture.invalid/gateway/v1", "/gateway/v1/models")]
+    [InlineData("https://fixture.invalid/v1beta", "/v1beta/v1/models")]
+    public async Task ListModels_PreservesConfiguredApiPrefix(string baseUrl, string expectedPath)
+    {
+        string? requestedPath = null;
+        using var http = new HttpClient(new MockHttpMessageHandler(request =>
+        {
+            requestedPath = request.RequestUri!.AbsolutePath;
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("{\"data\":[{\"id\":\"fixture\"}]}") };
+        })) { BaseAddress = new Uri(baseUrl.TrimEnd('/') + "/") };
+        using var client = new AnthropicClient(new LlmProfileConfig { Type = "anthropic", BaseUrl = baseUrl, Model = "fixture" }, httpClient: http);
+
+        Assert.Equal(new[] { "fixture" }, await client.ListModelsAsync());
+        Assert.Equal(expectedPath, requestedPath);
+    }
+
     private class MockHttpMessageHandler : HttpMessageHandler
     {
         private readonly Func<HttpRequestMessage, HttpResponseMessage> _responder;

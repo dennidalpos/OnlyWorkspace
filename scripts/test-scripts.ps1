@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Esegue i test a script di tests\scripts: riquadro (node), pipeline di firma e NSIS (pwsh), archivio e riquadro net48 (Windows PowerShell 5.1: ArchiveRecovery, ArchiveCapacity, PanePolicy).
+    Esegue i test a script di tests\scripts: riquadro (node), pipeline di firma e NSIS (pwsh), archivio e riquadro net48 (Windows PowerShell 5.1: ArchiveRecovery, ArchiveCapacity, PanePolicy, EndpointInitialization).
 .DESCRIPTION
     Da lanciare con pwsh dalla radice, dopo il Build Release:
       pwsh -NoProfile -File scripts\test-scripts.ps1
@@ -26,7 +26,7 @@ $windowsPowerShell = Join-Path $env:WINDIR 'System32\WindowsPowerShell\v1.0\powe
 $runs = @(Get-ChildItem "$tests\*.Tests.cjs" | Sort-Object Name | ForEach-Object { , @($_.Name, 'node', @($_.FullName)) })
 if ($runs.Count -eq 0) { throw "Nessuno script node in $tests." }
 $runs += , @('Packaging.Tests.ps1', 'pwsh', @('-NoProfile', '-File', "$tests\Packaging.Tests.ps1"))
-foreach ($name in 'ArchiveRecovery.Tests.ps1', 'ArchiveCapacity.Tests.ps1', 'PanePolicy.Tests.ps1') {
+foreach ($name in 'ArchiveRecovery.Tests.ps1', 'ArchiveCapacity.Tests.ps1', 'PanePolicy.Tests.ps1', 'EndpointInitialization.Tests.ps1') {
     $runs += , @($name, $windowsPowerShell, @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "$tests\$name", '-Dir', $Dir))
 }
 

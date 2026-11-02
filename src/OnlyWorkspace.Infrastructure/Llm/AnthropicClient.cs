@@ -434,15 +434,7 @@ public sealed class AnthropicClient : ILlmClient, IDisposable
         }
     }
 
-    private string GetEndpoint(string relative)
-    {
-        var baseStr = _profile.BaseUrl.TrimEnd('/');
-        if (baseStr.EndsWith("/v1", StringComparison.OrdinalIgnoreCase))
-        {
-            return relative;
-        }
-        return "v1/" + relative;
-    }
+    private string GetEndpoint(string relative) => LlmEndpoint.WithV1Prefix(_profile.BaseUrl, relative);
 
     private static Task EnsureSuccessOrThrowAsync(HttpResponseMessage response, CancellationToken ct) => LlmHttp.EnsureSuccessAsync(response, "Anthropic", ct);
 
