@@ -1,70 +1,60 @@
 # OnlyWorkspace
 
-Sintesi, bozze, ricerca e analisi della corrispondenza dentro **Outlook classico**, con un archivio cifrato sul PC e modelli IA locali o servizi esterni configurati dall'amministratore.
+Summaries, reply drafts, search and analysis of your correspondence inside **classic Outlook**, with an encrypted local archive on the PC and local AI models or external services configured by the administrator.
 
-OnlyWorkspace è un add-in COM gestito con riquadro WebView2. Legge la posta dagli store aperti in Outlook; l'archivio già acquisito si può cercare anche a Outlook chiuso dalla tray. Non usa connettori Graph, IMAP o OAuth.
+OnlyWorkspace is a managed COM add-in with a WebView2 task pane. It reads mail from the stores open in Outlook; the already archived mail can also be searched with Outlook closed, from the tray. It does not use Graph, IMAP or OAuth connectors. The interface and documentation are in Italian.
 
-## Cosa puoi fare
+## Features
 
-| Compito | Risultato |
+| Task | Result |
 | --- | --- |
-| Capire un'email | Sintesi dell'email, del thread disponibile e degli allegati leggibili consentiti |
-| Preparare una risposta | Bozza da inserire e rivedere in Outlook; scrittura, miglioramento, traduzione e proposta dell'oggetto |
-| Verificare un messaggio | Indizi locali su mittente, link e allegati, con limiti dichiarati; osservazioni IA quando consentite |
-| Recuperare informazioni | Ricerca per testo, persona, periodo e fatti locali; analisi con riferimenti alle email di origine |
-| Ricostruire una pratica | Catena locale di email collegate, copie e copertura; sintesi IA su comando separato |
-| Organizzare il lavoro | Briefing, proposte di attività e appuntamenti, estrazione di tabelle e CSV |
+| Understand an email | Summary of the email, the available thread and the readable attachments allowed |
+| Prepare a reply | Draft to insert and review in Outlook; writing, improving, translating and subject suggestions |
+| Check a message | Local hints about sender, links and attachments with stated limits; AI observations when allowed |
+| Retrieve information | Search by text, person, period and local facts; analysis with references to the source emails |
+| Reconstruct a case | Local chain of linked emails, copies and coverage; AI summary on a separate command |
+| Organize work | Briefings, task and appointment proposals, table and CSV extraction |
 
-Le email non vengono inviate automaticamente: controlli il risultato e scegli cosa inserire, salvare o inviare. Le funzioni disponibili dipendono dal profilo IA, dalle autorizzazioni e dai dati acquisiti.
+Emails are never sent automatically: you review the result and choose what to insert, save or send. Available functions depend on the AI profile, permissions and archived data.
 
 ```mermaid
 flowchart TD
-    O["Outlook classico: cassette aperte"] --> D[("Raccolta e archivio cifrato sul PC")]
-    O --> R["Riquadro: azione scelta dall'utente"]
+    O["Classic Outlook: open mailboxes"] --> D[("Collection and encrypted archive on the PC")]
+    O --> R["Task pane: user-chosen action"]
     D --> R
-    R --> V["Ricerca e ricostruzione locale con fonti e copertura"]
-    R -->|"Azione IA richiesta"| M["Profilo IA e controlli sui dati"]
-    M --> L["Modello locale su loopback"]
-    M -->|"Informativa e livello consentono l'invio"| C["Pseudonimizzazione e servizio esterno"]
-    L --> E["Risultato da rivedere"]
+    R --> V["Local search and reconstruction with sources and coverage"]
+    R -->|"AI action requested"| M["AI profile and data controls"]
+    M --> L["Local model on loopback"]
+    M -->|"Privacy notice and level allow sending"| C["Pseudonymization and external service"]
+    L --> E["Result to review"]
     C --> E
 ```
 
-## Uno sguardo al prodotto
+## Screenshot
 
-![Outlook classico con email sintetica del progetto Aurora e risultato di Sintesi nel riquadro OnlyWorkspace, cattura del 21 ottobre 2026](assets/screenshots/installed/01-sintesi.png)
+![Classic Outlook with a synthetic Aurora project email and the Summary result in the OnlyWorkspace pane, captured on 21 October 2026](assets/screenshots/installed/01-sintesi.png)
 
-Cattura reale già presente nel repository: Outlook classico, PST sintetico con indirizzi `.example`, profilo QwenCloud, 21 ottobre 2026. Mostra l'interfaccia di allora, precedente alle attuali restrizioni cloud sugli allegati; la versione esatta della build non è attestata nel corredo della cattura. [Provenienza delle immagini](assets/social_copy.md#inventario-e-provenienza) e [stato delle verifiche](docs/tecnico/verifica.md). Non rappresenta una prova della build corrente.
+Real capture: classic Outlook, synthetic PST with `.example` addresses, QwenCloud profile, 21 October 2026. It shows the interface at that time and is not proof of the current build. See the [image provenance](assets/social_copy.md#inventario-e-provenienza) and [verification status](docs/tecnico/verifica.md).
 
-## Iniziare su un PC Windows
+## Requirements
 
-Servono **Windows x64**, **Outlook classico 2016 o successivo** a 32 o 64 bit, **.NET Framework 4.8** e **WebView2 Evergreen**. Il setup può installare WebView2 se manca, verificandone la firma Microsoft. Il nuovo Outlook non è supportato da questo add-in COM.
+- Windows x64, classic Outlook 2016 or later (32 or 64 bit), .NET Framework 4.8 and WebView2 Evergreen. The setup can install WebView2 and verifies its Microsoft signature. The new Outlook is not supported by this COM add-in.
+- A signed setup from your administrator: see [installation and update](docs/admin/installazione.md).
 
-1. Ottieni dall'amministratore il setup firmato e chiudi Outlook. [Installazione e aggiornamento](docs/admin/installazione.md) descrive prerequisiti, elevazione e conservazione dei dati.
-2. Apri **Configurazione** e completa il primo avvio: scegli servizio IA, modello e profilo predefinito. Per un servizio esterno l'amministratore deve leggere e accettare l'informativa in **Privacy e dati** prima degli invii.
-3. Controlla **Archivio email → Le mie cassette**: l'archivio, se abilitato, include inizialmente tutte le cassette, anche future. Escludere una cassetta elimina i suoi dati dall'archivio locale.
-4. Riapri Outlook. Seleziona un'email e usa **OnlyWorkspace → Sintesi**, oppure apri **Chat** o **Cerca e analizza**. La raccolta dell'archivio parte dopo 60 secondi e lavora durante l'inattività: la ricerca non è subito completa.
+First run: open **Configurazione**, choose the AI service, model and default profile, then reopen Outlook and use **OnlyWorkspace → Sintesi** on a selected email. Archive collection starts after 60 seconds and works during idle time, so search is not complete immediately. See the [task pane guide](docs/utente/riquadro.md) and [ConfigTool and tray](docs/admin/configtool.md).
 
-La [guida del riquadro](docs/utente/riquadro.md) spiega azioni, scorciatoie e interruzioni; [ConfigTool e tray](docs/admin/configtool.md) descrive la configurazione.
+## Data and privacy
 
-## Dove vanno i dati
+- **Archive**: encrypted database on the PC, managed by the tray, with the key protected by Windows DPAPI. It keeps the extracted text of attachments, not the original files. Excluding a mailbox deletes its data from the local archive.
+- **Local AI**: Ollama on loopback processes data on the PC. To work offline, web search must also be disabled.
+- **External services**: level 0 blocks all sending; higher levels allow only protected structured facts, and the extended level adds attachment facts with a separate permission. Free text, mail bodies, file names and unverifiable web queries stay on the PC. Amounts and dates are always replaced and restored locally.
+- **Pseudonymization** replaces recognized values and restores them in the response on the PC. It can miss unrecognized data and does not guarantee anonymity.
 
-- **Archivio**: database cifrato sul PC, gestito dalla tray, con chiave protetta da DPAPI Windows. Conserva i testi acquisiti degli allegati, non i file allegati originali.
-- **IA locale**: Ollama su loopback elabora sul PC. Per lavorare offline occorre anche disattivare la ricerca web.
-- **Servizi esterni**: il livello 0 blocca gli invii. Gli altri livelli ammettono solo fatti strutturati protetti; Esteso aggiunge i fatti degli allegati con permesso distinto. Testo libero, corpi delle mail, nomi dei file e query web non verificabili restano sul PC. Importi e date sono sempre sostituiti; il ripristino avviene localmente. Sintesi e riscritture richiedono un profilo locale. Gli invii richiedono autorizzazione tecnica per profilo con informativa 5, senza campi manuali.
-- **Pseudonimizzazione**: sostituisce i valori riconosciuti e li ripristina nella risposta sul PC. Può lasciare dati non riconosciuti; non garantisce anonimato. Importi e date hanno opzioni separate, inizialmente disattivate.
+Details and limits: [AI models and web search](docs/utente/modelli-web.md), [security and privacy](docs/admin/sicurezza.md), [pseudonymization](docs/tecnico/pseudonimizzazione.md).
 
-Dettagli e limiti: [Modelli IA e Web Search](docs/utente/modelli-web.md), [Sicurezza e privacy](docs/admin/sicurezza.md), [Pseudonimizzazione](docs/tecnico/pseudonimizzazione.md).
+## Development
 
-## Documentazione
-
-[Indice delle guide](docs/README.md): [utente](docs/README.md#utente), [amministratore](docs/README.md#amministratore), [tecnico](docs/README.md#tecnico). Per iniziare: [Riquadro](docs/utente/riquadro.md) e [Installazione](docs/admin/installazione.md).
-
-Le guide descrivono il codice disponibile; le prove sulla build installata hanno una copertura distinta. Diagrammi di dettaglio: [percorsi utente](docs/utente/guida-visiva.md) e [architettura](docs/tecnico/architettura.md).
-
-## Sviluppo
-
-Il repository usa .NET SDK 10 e PowerShell su Windows. L'add-in installato usa `net48`; i target moderni servono a build e test fuori da Outlook. Da PowerShell nella radice del checkout:
+.NET SDK 10 and PowerShell on Windows. The installed add-in targets `net48`; the modern targets are used for build and tests outside Outlook.
 
 ```powershell
 dotnet build OnlyWorkspace.sln -c Release --nologo
@@ -72,16 +62,18 @@ dotnet test tests/OnlyWorkspace.Tests -c Release --no-build -f net48 --nologo
 dotnet test tests/OnlyWorkspace.Tests -c Release --no-build -f net10.0-windows --nologo
 ```
 
-Esegui i due runtime in sequenza. La compilazione non installa l'add-in. Il setup richiede anche NSIS 3.13, `signtool.exe`, il certificato di firma e la password del PFX nell'ambiente: [procedura di packaging](docs/admin/installazione.md#setup-firmato). Comandi confrontati con progetti, script e [CI](.github/workflows/ci.yml); questa revisione documentale non ripete build o test applicativi. Gate e smoke: [Verifica e qualifica](docs/tecnico/verifica.md).
+Run the two test runtimes in sequence. Building does not install the add-in. The setup needs NSIS 3.13, `signtool.exe`, the signing certificate and the PFX password in the environment: see the [packaging procedure](docs/admin/installazione.md#setup-firmato). The repository contains a CI workflow ([ci.yml](.github/workflows/ci.yml)), but GitHub Actions are disabled: build and test locally. Gates and smoke tests: [verification and qualification](docs/tecnico/verifica.md).
 
-Controlli essenziali e formattazione circoscritta: [Analisi statica](docs/tecnico/analisi-statica.md).
+## Documentation
 
-## Limiti e assistenza
+Documentation is written in Italian: the [guide index](docs/README.md) (user, administrator, technical) and the [full Italian overview](docs/OVERVIEW.it.md).
 
-I risultati IA vanno controllati. La Verifica sicurezza presenta indizi e controlli parziali, senza certificare che un messaggio sia sicuro. La ricerca offline copre soltanto ciò che è stato acquisito; l'aggiornamento richiede Outlook aperto. DPI, combinazioni Office e servizi IA non hanno tutti la stessa copertura: consulta [Verifica e qualifica](docs/tecnico/verifica.md#non-qualificato).
+## Limits and support
 
-Per un problema di configurazione parti da **Stato (Archivio e IA)** e dalle guide. Per una segnalazione al manutentore indica versione, azione, messaggio d'errore e uno scenario sintetico riproducibile; evita email, credenziali e log non sanificati.
+AI results must be reviewed. The security check presents partial hints and does not certify that a message is safe. Offline search covers only what has been archived, and updating requires Outlook to be open. DPI, Office combinations and AI services do not all have the same coverage: see [what is not qualified](docs/tecnico/verifica.md#non-qualificato).
 
-## Licenza
+For a report, include version, action, error message and a synthetic reproducible scenario; do not attach emails, credentials or unsanitized logs. See [SECURITY.md](SECURITY.md) to report a vulnerability.
 
-OnlyWorkspace è software proprietario OnlyApps, autore Danny Perondi ([GitHub](https://github.com/dennidalpos)). Licenze delle dipendenze: [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt); i crediti sono nella pagina **Informazioni** della Configurazione.
+## License
+
+OnlyWorkspace is proprietary software by OnlyApps, author Danny Perondi ([GitHub](https://github.com/dennidalpos)). See [LICENSE](LICENSE). Third-party licenses: [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt).
