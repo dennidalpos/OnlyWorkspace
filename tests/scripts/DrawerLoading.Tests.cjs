@@ -10,6 +10,8 @@ function element() {
     appendChild(c) { this.children.push(c); }, addEventListener(k, f) { this.listeners[k] = f; } };
 }
 const context = vm.createContext({
+  historyMutation: null, historyReadRequest: null, historyRefreshPending: false,
+  historyRequestPage: 'drawer-test', historyRequestSequence: 0,
   $: id => { if (!nodes.has(id)) nodes.set(id, element()); return nodes.get(id); },
   el: () => element(), post: m => sent.push(m),
   setTimeout: (fn, ms) => { assert.equal(ms, 15000); timers.set(++sequence, fn); return sequence; },

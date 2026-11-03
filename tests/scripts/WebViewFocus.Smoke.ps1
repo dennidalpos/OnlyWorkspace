@@ -1,4 +1,4 @@
-param([int]$TimeoutSeconds = 30, [string]$EvidenceDirectory = '')
+﻿param([int]$TimeoutSeconds = 30, [string]$EvidenceDirectory = '')
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot "../../scripts/build-paths.ps1")
 Set-OnlyWorkspaceVerificationEnvironment -RepositoryRoot (Resolve-Path "$PSScriptRoot/../..").Path
@@ -236,7 +236,8 @@ JSON.stringify((function(){
     $second.PostMessage(@{type='toggle_history';toggle=$false})
     Wait-Until {(Script $second 'document.body.dataset.page === "historyDrawer"') -eq 'true'} 'A194 history'
     $historyItems = @(@{id='a194-a';title='Synthetic A';messageCount=1},@{id='a194-b';title='Synthetic B';messageCount=1},@{id='a194-c';title='Synthetic C';messageCount=1})
-    $second.PostMessage(@{type='history_list';items=$historyItems})
+    $historyRead = Script $second 'JSON.stringify(historyPosts.filter(function(m){return m.type==="list_history";}).pop())' | ConvertFrom-Json | ConvertFrom-Json
+    $second.PostMessage(@{type='history_list';items=$historyItems;requestId=$historyRead.requestId})
     try {
         Wait-Until {(Script $second 'document.querySelectorAll("#historyList .history-item").length===3') -eq 'true'} 'A194 history rows'
     } catch {
@@ -255,7 +256,12 @@ JSON.stringify((function(){
     $tab = $view.CoreWebView2.CallDevToolsProtocolMethodAsync('Input.dispatchKeyEvent','{"type":"keyUp","key":"Tab","code":"Tab","windowsVirtualKeyCode":9,"nativeVirtualKeyCode":9}')
     Wait-Until {$tab.IsCompleted} 'A194 keyboard Tab up'; [void]$tab.GetAwaiter().GetResult()
     Wait-Until {(Script $second 'document.activeElement.dataset.historyId === "a194-c" && document.activeElement.dataset.historyAction === "resume"') -eq 'true'} 'A194 keyboard resumes beside restored focus'
-    $second.PostMessage(@{type='history_list';items=@($historyItems[2],$historyItems[0])})
+    $second.PostMessage(@{type='history_list';items=$historyItems;requestId=$historyRead.requestId})
+    Wait-Until {(Script $second 'document.querySelectorAll("#historyList .history-item").length===2') -eq 'true'} 'A194 stale pre-delete read rejected'
+    $second.PostMessage(@{type='history_changed'})
+    Wait-Until {(Script $second 'historyPosts.filter(function(m){return m.type==="list_history";}).length>=2') -eq 'true'} 'A194 correlated refresh'
+    $historyRead = Script $second 'JSON.stringify(historyPosts.filter(function(m){return m.type==="list_history";}).pop())' | ConvertFrom-Json | ConvertFrom-Json
+    $second.PostMessage(@{type='history_list';items=@($historyItems[2],$historyItems[0]);requestId=$historyRead.requestId})
     Wait-Until {(Script $second 'document.activeElement.dataset.historyId === "a194-c" && document.activeElement.dataset.historyAction === "resume" && document.querySelector("#historyList .history-open").dataset.historyId === "a194-c"') -eq 'true'} 'A194 refresh preserves focused identity'
     [void](Script $second 'var b=document.getElementById("btnDeleteAll"); b.focus(); b.click(); b.click();')
     $deleteAllRequest = Script $second 'JSON.stringify(historyPosts.filter(function(m){return m.type==="delete_all_history";}).pop())' | ConvertFrom-Json | ConvertFrom-Json
@@ -263,7 +269,10 @@ JSON.stringify((function(){
     $second.PostMessage(@{type='new_chat_ready';preservePage=$true})
     $second.PostMessage(@{type='history_list';items=@();deleted=$true;requestId=$deleteAllRequest.requestId})
     Wait-Until {(Script $second 'document.body.dataset.page === "historyDrawer" && document.activeElement.id === "historyTitle" && document.getElementById("srStatus").textContent === "Tutte le conversazioni eliminate."') -eq 'true'} 'A194 delete all stays in empty history'
-    $second.PostMessage(@{type='history_list';items=$historyItems})
+    $second.PostMessage(@{type='history_changed'})
+    Wait-Until {(Script $second 'historyPosts.filter(function(m){return m.type==="list_history";}).length>=3') -eq 'true'} 'A194 next history read'
+    $historyRead = Script $second 'JSON.stringify(historyPosts.filter(function(m){return m.type==="list_history";}).pop())' | ConvertFrom-Json | ConvertFrom-Json
+    $second.PostMessage(@{type='history_list';items=$historyItems;requestId=$historyRead.requestId})
     Wait-Until {(Script $second 'document.querySelectorAll("#historyList .history-item").length===3') -eq 'true'} 'A194 navigation fixture'
     [void](Script $second 'var b=document.querySelector("[data-history-id=\"a194-b\"][data-history-action=delete]"); b.focus(); b.click(); b.click(); document.getElementById("btnChatPage").click(); document.getElementById("btnChatPage").focus();')
     $deleteRequest = Script $second 'JSON.stringify(historyPosts.filter(function(m){return m.type==="delete_history";}).pop())' | ConvertFrom-Json | ConvertFrom-Json

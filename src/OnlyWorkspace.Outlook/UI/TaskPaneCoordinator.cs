@@ -450,7 +450,7 @@ public partial class TaskPaneCoordinator : IDisposable
             case "open_web_source": OpenWebSource(GetString(message, "url")); break;
 
             // History.
-            case "list_history": _ = SendHistoryListAsync(); break;
+            case "list_history": _ = SendHistoryListAsync(GetString(message, "requestId")); break;
             case "load_history": _ = LoadHistoryAsync(GetString(message, "id")); break;
             case "delete_history": _ = DeleteHistoryAsync(GetString(message, "id"), GetString(message, "requestId")); break;
             case "delete_all_history": _ = DeleteAllHistoryAsync(GetString(message, "requestId")); break;
@@ -2117,7 +2117,7 @@ public partial class TaskPaneCoordinator : IDisposable
             if (!await invalidation.IsValidAsync(conversation) && ReferenceEquals(conversation, _currentConversation))
             {
                 StartNewChat();
-                await SendHistoryListAsync();
+                _control.PostMessage(new { type = "history_changed" });
                 Toast("Conversazione rimossa: usava un'email eliminata dall'archivio.", "info");
             }
         }

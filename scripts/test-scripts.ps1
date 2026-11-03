@@ -29,7 +29,7 @@ $runs = @(Get-ChildItem "$tests\*.Tests.cjs" | Sort-Object Name | ForEach-Object
 if ($runs.Count -eq 0) { throw "Nessuno script node in $tests." }
 $runs += , @('Packaging.Tests.ps1', 'pwsh', @('-NoProfile', '-File', "$tests\Packaging.Tests.ps1"))
 $runs += , @('BuildPaths.Tests.ps1', 'pwsh', @('-NoProfile', '-File', "$tests\BuildPaths.Tests.ps1"))
-foreach ($name in 'ArchiveRecovery.Tests.ps1', 'ArchiveCapacity.Tests.ps1', 'PanePolicy.Tests.ps1', 'EndpointInitialization.Tests.ps1') {
+foreach ($name in 'ArchiveRecovery.Tests.ps1', 'ArchiveCapacity.Tests.ps1', 'PanePolicy.Tests.ps1', 'EndpointInitialization.Tests.ps1', 'HistoryDeletion.Tests.ps1') {
     $runs += , @($name, $windowsPowerShell, @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "$tests\$name", '-Dir', $Dir))
 }
 

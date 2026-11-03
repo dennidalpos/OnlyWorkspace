@@ -3,7 +3,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 const assert = require('node:assert/strict');
 const html = fs.readFileSync(path.join(__dirname, '../../src/OnlyWorkspace.Outlook/UI/TaskPane.html'), 'utf8');
-const sent = [], spoken = [], nodes = new Map();
+const sent = [], spoken = [], nodes = new Map(), deferred = [];
 let focusListener;
 let historyReads = 0;
 const document = { body: { dataset: { page: 'historyDrawer' } }, activeElement: null,
@@ -23,14 +23,19 @@ const ctx = vm.createContext({ document, historyPageVersion: 0,
   $: id => { if (!nodes.has(id)) nodes.set(id, new Element('div')); return nodes.get(id); },
   el: (tag, cls, text) => new Element(tag, cls, text), icon: () => '',
   plural: n => String(n), finishDrawerLoad() {}, busyBlocked: () => false,
-  requestHistory() { historyReads++; },
-  post: data => sent.push(data), announce: text => spoken.push(text),
+  beginDrawerLoad() {}, setTimeout(fn) { deferred.push(fn); },
+  post: data => { sent.push(data); if (data.type === 'list_history') historyReads++; }, announce: text => spoken.push(text),
   armConfirm: (button, label, action) => action()
 });
 vm.runInContext(html.slice(html.indexOf('  var historyMutation = null,'), html.indexOf('  function renderLoadedConversation(')), ctx);
+vm.runInContext(html.slice(html.indexOf('  function requestHistory('), html.indexOf('  // ---------- Drawers ----------')), ctx);
 const item = id => ({ id, title: id, messageCount: 1 });
 const list = ctx.$('historyList');
-function render(ids, extra) { ctx.renderHistoryList(Object.assign({ items: ids.map(item) }, extra)); }
+function render(ids, extra) {
+  if (!extra || !extra.requestId) { ctx.requestHistory(true); extra = Object.assign({ requestId: ctx.historyReadRequest }, extra); }
+  ctx.renderHistoryList(Object.assign({ items: ids.map(item) }, extra));
+  while (deferred.length) deferred.shift()();
+}
 function button(id, action) { return list.querySelectorAll().find(b => b.dataset.historyId === id && b.dataset.historyAction === action); }
 function remove(id) { const trigger = id == null ? ctx.$('btnDeleteAll') : button(id, 'delete'); trigger.focus(); ctx.deleteHistory(trigger, id); return sent.at(-1).requestId; }
 function assertFocus(id, action = 'open') { assert.equal(document.activeElement, button(id, action)); }
@@ -78,8 +83,9 @@ requestId = remove('a');
 render([], { requestId, deleted: true, error: 'Lettura non riuscita' });
 assert.equal(document.activeElement, ctx.$('historyTitle'), 'Committed deletion remains successful if the subsequent read fails');
 assert.match(spoken.at(-1), /Conversazione eliminata.*Lettura non riuscita/);
+const readsBeforeRetry = historyReads;
 list.children.find(child => child.textContent === 'Riprova').listeners.click();
-assert.equal(historyReads, 1, 'Retry reads the history without repeating the committed deletion');
+assert.equal(historyReads, readsBeforeRetry + 1, 'Retry reads the history without repeating the committed deletion');
 assert.equal(document.activeElement, ctx.$('historyTitle'));
 
 render(['a', 'b']);
@@ -104,3 +110,43 @@ assert.equal(document.activeElement, beforeBackground, 'Background refresh does 
 render(['b'], { requestId, deleted: true });
 assert.equal(list.children.length, 2, 'Duplicate completion ignored');
 console.log('PASS history: stable identity, next/previous/empty focus, persisted outcomes, failures, stale replies and navigation');
+
+// The real read protocol rejects responses from before a mutation and from older reads.
+document.body.dataset.page = 'historyDrawer';
+render(['a', 'b']);
+ctx.requestHistory(true);
+const obsoleteRead = ctx.historyReadRequest;
+requestId = remove('b');
+render(['a'], { requestId, deleted: true });
+render(['a', 'b'], { requestId: obsoleteRead });
+assert.equal(list.children.length, 1, 'Pre-deletion read cannot restore a deleted row');
+ctx.requestHistory(true);
+const olderRead = ctx.historyReadRequest;
+ctx.requestHistory(true);
+const newestRead = ctx.historyReadRequest;
+render(['c'], { requestId: newestRead });
+render(['a'], { requestId: olderRead, error: 'Late error' });
+render(['a'], { requestId: newestRead });
+assert.ok(button('c', 'open'), 'Older errors and duplicate completions are ignored');
+ctx.requestHistory(true);
+const previousPageRead = ctx.historyReadRequest;
+ctx.historyPageVersion++;
+ctx.requestHistory(true);
+render(['a'], { requestId: previousPageRead });
+assert.ok(button('c', 'open'), 'Reopened page keeps the new read pending');
+render(['c', 'b'], { requestId: ctx.historyReadRequest });
+requestId = remove('b');
+const beforeInvalidation = historyReads;
+ctx.historyChanged();
+assert.equal(historyReads, beforeInvalidation, 'Invalidation is deferred during mutation');
+render(['c'], { requestId, deleted: true });
+assert.equal(historyReads, beforeInvalidation + 1);
+const refresh = ctx.historyReadRequest;
+assertFocus('c');
+render(['c'], { requestId: refresh });
+assertFocus('c');
+requestId = remove('c');
+ctx.historyChanged();
+ctx.failHistoryDelete({ requestId });
+assert.ok(ctx.historyReadRequest, 'Failed deletion also releases a deferred refresh');
+console.log('PASS history read correlation: mutation barrier, reverse order, duplicate/error, reopened page, deferred invalidation');

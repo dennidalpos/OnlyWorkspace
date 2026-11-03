@@ -50,6 +50,7 @@ public class DpapiHistoryStorageServiceTests : IDisposable
             Assert.Single(Directory.GetFiles(_tempDir, "*.bin"));
         }
         Assert.Equal(locked.Title, (await _storageService.LoadConversationAsync(locked.Id))!.Title);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _storageService.SaveConversationAsync(locked));
         await _storageService.DeleteAllConversationsAsync();
         Assert.Empty(await _storageService.ListConversationsAsync());
     }
@@ -221,6 +222,83 @@ public class DpapiHistoryStorageServiceTests : IDisposable
 
         var loaded = await _storageService.LoadConversationAsync("to-delete");
         Assert.Null(loaded);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Deletion_RejectsQueuedIndependentWriter_AndSurvivesReopen(bool all)
+    {
+        var conversation = new ConversationHistory { Id = "revoked", Title = "Before" };
+        await _storageService.SaveConversationAsync(conversation);
+        var writer = new DpapiHistoryStorageService(_tempDir);
+        var release = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        // Hold the existing save queue, before its mutex acquisition: no scheduler ordering assumption.
+        typeof(DpapiHistoryStorageService).GetField("_saves", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+            .SetValue(writer, release.Task);
+        conversation.Id = "REVOKED";
+        var queued = writer.SaveConversationAsync(conversation);
+        try
+        {
+            if (all) await _storageService.DeleteAllConversationsAsync();
+            else Assert.True(await _storageService.DeleteConversationAsync("revoked"));
+        }
+        finally { release.TrySetResult(true); }
+        await Assert.ThrowsAsync<InvalidOperationException>(() => queued);
+        var reopened = new DpapiHistoryStorageService(_tempDir);
+        Assert.Null(await reopened.LoadConversationAsync("revoked"));
+        Assert.Empty(await reopened.ListConversationsAsync());
+        await Assert.ThrowsAsync<InvalidOperationException>(() => reopened.SaveConversationAsync(conversation));
+        await reopened.SaveConversationAsync(new ConversationHistory { Id = "new-after-delete" });
+        Assert.Single(await reopened.ListConversationsAsync());
+    }
+
+    [Fact]
+    public async Task DeleteAll_LeavesUnsavedNewIdentitiesEligible()
+    {
+        await _storageService.SaveConversationAsync(new ConversationHistory { Id = "persisted" });
+        var unsaved = new ConversationHistory { Id = "not-persisted-yet" };
+        await _storageService.DeleteAllConversationsAsync();
+        await _storageService.SaveConversationAsync(unsaved);
+        Assert.Equal(unsaved.Id, Assert.Single(await _storageService.ListConversationsAsync()).Id);
+    }
+
+    [Fact]
+    public async Task FailedDelete_PreservesReadableFile_ButRevokesStaleSaves()
+    {
+        var conversation = new ConversationHistory { Id = "locked-single", Title = "Original" };
+        await _storageService.SaveConversationAsync(conversation);
+        using (var held = new FileStream(Path.Combine(_tempDir, conversation.Id + ".bin"), FileMode.Open, FileAccess.Read, FileShare.Read))
+            await Assert.ThrowsAsync<IOException>(() => _storageService.DeleteConversationAsync(conversation.Id));
+        Assert.Equal("Original", (await _storageService.LoadConversationAsync(conversation.Id))!.Title);
+        conversation.Title = "Must not replace survivor";
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _storageService.SaveConversationAsync(conversation));
+        Assert.True(await _storageService.DeleteConversationAsync(conversation.Id));
+        Assert.Null(await _storageService.LoadConversationAsync(conversation.Id));
+    }
+
+    [Fact]
+    public async Task UnreadableRevocations_FailSavesAndDeletesWithoutLosingExistingFiles()
+    {
+        var conversation = new ConversationHistory { Id = "survivor" };
+        await _storageService.SaveConversationAsync(conversation);
+        File.WriteAllBytes(Path.Combine(_tempDir, "deleted-conversations.dat"), new byte[] { 1, 2, 3 });
+        await Assert.ThrowsAnyAsync<System.Security.Cryptography.CryptographicException>(() => _storageService.SaveConversationAsync(conversation));
+        await Assert.ThrowsAnyAsync<System.Security.Cryptography.CryptographicException>(() => _storageService.DeleteConversationAsync(conversation.Id));
+        await Assert.ThrowsAnyAsync<System.Security.Cryptography.CryptographicException>(() => _storageService.DeleteAllConversationsAsync());
+        Assert.NotNull(await _storageService.LoadConversationAsync(conversation.Id));
+    }
+
+    [Fact]
+    public async Task RevocationWriteFailure_DoesNotDeleteAnyConversation()
+    {
+        await _storageService.SaveConversationAsync(new ConversationHistory { Id = "keep-a" });
+        await _storageService.SaveConversationAsync(new ConversationHistory { Id = "keep-b" });
+        await _storageService.SaveConversationAsync(new ConversationHistory { Id = "seed-revocation" });
+        Assert.True(await _storageService.DeleteConversationAsync("seed-revocation"));
+        using (var held = new FileStream(Path.Combine(_tempDir, "deleted-conversations.dat"), FileMode.Open, FileAccess.Read, FileShare.Read))
+            await Assert.ThrowsAnyAsync<IOException>(() => _storageService.DeleteAllConversationsAsync());
+        Assert.Equal(2, (await _storageService.ListConversationsAsync()).Count);
     }
 
     [Fact]

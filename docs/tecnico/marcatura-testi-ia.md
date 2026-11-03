@@ -19,8 +19,12 @@ I commenti sono aggiunti al contenuto sintetico dopo la generazione, senza cambi
 ## Rilevatore locale
 
 ```powershell
-& .\src\OnlyWorkspace.ConfigTool\bin\Release\net48\OnlyWorkspace.ConfigTool.exe inspect-ai-html .\prova.html | Out-Host
+. .\scripts\build-paths.ps1
+$configToolDir = Get-OnlyWorkspaceOutputDirectory -RepositoryRoot (Get-Location).Path -Project OnlyWorkspace.ConfigTool
+& (Join-Path $configToolDir 'OnlyWorkspace.ConfigTool.exe') inspect-ai-html .\prova.html | Out-Host
 ```
+
+Eseguire dalla radice dopo la build Release, con la [radice degli output](output-locali.md) configurata e valida. Il comando usa l'output del grafo corrente, senza ripiegare su un precedente `bin` o `publish`.
 
 Il comando legge un solo file `.html`/`.htm` locale, con limite di 4 MiB di file e di caratteri, senza troncamenti. Rifiuta i percorsi UNC e di dispositivo. Non carica configurazioni, segreti, immagini o collegamenti, non esegue HTML e non invia il testo a un servizio. L'output JSON contiene soltanto stato, conteggi, `authenticated: false` e un avviso; non riporta testo o percorso del file.
 

@@ -2674,10 +2674,14 @@
       $('srStatus').textContent = 'Caricamento in attesa. È disponibile Riprova.';
     }, 15000);
   }
-  function requestHistory() {
-    $('historyList').innerHTML = '<div class="muted">Caricamento…</div>';
-    beginDrawerLoad('history', $('historyList'), requestHistory);
-    post({ type: 'list_history' });
+  function requestHistory(preserveList) {
+    if (historyMutation) { historyRefreshPending = true; return; }
+    historyReadRequest = 'history-read-' + historyRequestPage + '-' + (++historyRequestSequence);
+    if (!preserveList) {
+      $('historyList').innerHTML = '<div class="muted">Caricamento…</div>';
+      beginDrawerLoad('history', $('historyList'), requestHistory);
+    }
+    post({ type: 'list_history', requestId: historyReadRequest });
   }
 
   // ---------- Drawers ----------
@@ -3081,12 +3085,14 @@
   });
 
   var historyMutation = null, historyRequestSequence = 0;
+  var historyReadRequest = null, historyRefreshPending = false;
   var historyRequestPage = Date.now().toString(36) + '-' + Math.random().toString(36).slice(2);
   document.addEventListener('focusin', function (event) {
     if (historyMutation && event.target !== historyMutation.trigger) historyMutation.focusMoved = true;
   });
   function deleteHistory(trigger, id) {
     if (historyMutation || busyBlocked()) return;
+    historyReadRequest = null;
     var row = trigger.closest('.history-item');
     historyMutation = {
       requestId: 'history-' + historyRequestPage + '-' + (++historyRequestSequence), trigger: trigger, id: id,
@@ -3100,7 +3106,17 @@
     if (historyMutation && data.requestId === historyMutation.requestId) {
       historyMutation = null;
       $('historyList').setAttribute('aria-busy', 'false');
+      refreshHistoryIfPending();
     }
+  }
+  function refreshHistoryIfPending() {
+    if (!historyRefreshPending) return;
+    historyRefreshPending = false;
+    requestHistory(true);
+  }
+  function historyChanged() {
+    if (historyMutation) historyRefreshPending = true;
+    else requestHistory(true);
   }
   function historyControl(button, id, action) {
     button.dataset.historyId = id;
@@ -3108,8 +3124,13 @@
     return button;
   }
   function renderHistoryList(data) {
-    // An older read must not replace the list while a deletion is being committed.
-    if (data.requestId ? !historyMutation || data.requestId !== historyMutation.requestId : historyMutation) return;
+    // Reads and mutations have separate identities. A completion never revalidates an older read.
+    if (data.deleted) {
+      if (!historyMutation || data.requestId !== historyMutation.requestId) return;
+    } else {
+      if (historyMutation || !historyReadRequest || data.requestId !== historyReadRequest) return;
+      historyReadRequest = null;
+    }
     finishDrawerLoad('history');
     var list = $('historyList');
     var items = data.items || [];
@@ -3122,6 +3143,8 @@
     if (mutation) {
       historyMutation = null;
       announce((mutation.id == null ? 'Tutte le conversazioni eliminate.' : 'Conversazione eliminata.') + (data.error ? ' ' + data.error : ''));
+      // Render the committed outcome first; a deferred refresh uses a new request identity.
+      if (historyRefreshPending) setTimeout(refreshHistoryIfPending, 0);
     }
     list.setAttribute('aria-busy', 'false');
     function restoreFocus() {
@@ -3511,6 +3534,10 @@
 
       case 'history_list':
         renderHistoryList(data);
+        break;
+
+      case 'history_changed':
+        historyChanged();
         break;
 
       case 'history_delete_failed':

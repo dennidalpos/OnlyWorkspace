@@ -55,6 +55,7 @@ public sealed partial class DpapiHistoryStorageService : IHistoryStorageService,
             if (message.Timestamp > conversation.UpdatedAt) conversation.UpdatedAt = message.Timestamp;
         }
         var filePath = GetFilePath(conversation.Id) ?? throw new ArgumentException("Conversation ID is not a valid file name.", nameof(conversation));
+        var conversationId = conversation.Id;
         var sources = EmailSources(conversation);
         var plainBytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(conversation));
 
@@ -63,6 +64,8 @@ public sealed partial class DpapiHistoryStorageService : IHistoryStorageService,
         {
             var save = _saves.ContinueWith(_ => WithHistoryLock(() =>
             {
+                if (ReadConversationRevocations().Contains(conversationId))
+                    throw new InvalidOperationException("La conversazione è stata eliminata dallo storico.");
                 if (!IsValidCore(sources, ReadLedger())) throw new InvalidOperationException("La conversazione usa un'email eliminata dall'archivio.");
                 Directory.CreateDirectory(_storageDirectory);
                 var cipherBytes = ProtectedData.Protect(plainBytes, Entropy, DataProtectionScope.CurrentUser);
@@ -149,23 +152,26 @@ public sealed partial class DpapiHistoryStorageService : IHistoryStorageService,
     public Task<bool> DeleteConversationAsync(string id)
     {
         if (string.IsNullOrWhiteSpace(id)) return Task.FromResult(false);
-
         var filePath = GetFilePath(id);
-        if (filePath != null && File.Exists(filePath))
+        if (filePath == null) return Task.FromResult(false);
+        return Task.Run(() => WithHistoryLock(() =>
         {
+            if (!File.Exists(filePath)) return false;
+            RevokeConversations(new[] { id });
             File.Delete(filePath);
-            return Task.FromResult(true);
-        }
-
-        return Task.FromResult(false);
+            return true;
+        }));
     }
 
-    public Task DeleteAllConversationsAsync()
+    public Task DeleteAllConversationsAsync() => Task.Run(() => WithHistoryLock(() =>
     {
         var failures = new List<Exception>();
         if (Directory.Exists(_storageDirectory))
         {
             var files = Directory.GetFiles(_storageDirectory, "*.bin");
+            // Snapshot and revoke together: pending writers cannot recreate these identities.
+            // A new conversation not yet persisted is deliberately outside this deletion.
+            RevokeConversations(files.Select(file => Path.GetFileNameWithoutExtension(file)!));
             foreach (var file in files)
             {
                 try
@@ -181,8 +187,8 @@ public sealed partial class DpapiHistoryStorageService : IHistoryStorageService,
         }
 
         if (failures.Count != 0) throw new AggregateException("Some conversations could not be deleted.", failures);
-        return Task.CompletedTask;
-    }
+        return true;
+    }));
 
     public async Task<int> CleanupExpiredConversationsAsync(int retentionDays, int maxConversations)
     {

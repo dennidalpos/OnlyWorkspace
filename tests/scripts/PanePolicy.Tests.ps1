@@ -717,9 +717,11 @@ try {
     $deletedMessages = @($pending | Select-Object -Skip $beforeDelete | ForEach-Object {$_ | ConvertFrom-Json})
     Assert-Pass (@($deletedMessages | Where-Object {$_.type -eq 'history_delete_failed' -and $_.requestId -eq 'a194-failure'}).Count -eq 1) 'Missing history reported success'
     Assert-Pass (@($deletedMessages | Where-Object {$_.type -eq 'history_list' -and $_.deleted}).Count -eq 0) 'Failure announced a persisted deletion'
+    # A deleted ID is permanently revoked; a separate conversation exercises partial failure/retry.
+    $syntheticHistory.Id = 'a194-locked'
     [void](Wait-PaneTask ($historyFixtureStorage.SaveConversationAsync($syntheticHistory)))
     Set-Field '_currentConversation' $syntheticHistory
-    $historyPath = Join-Path (Join-Path $scratch 'a194-history') 'a194-current.bin'
+    $historyPath = Join-Path (Join-Path $scratch 'a194-history') 'a194-locked.bin'
     $heldHistory = [IO.File]::Open($historyPath, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::Read)
     try {
         $beforeDelete = $pending.Count
