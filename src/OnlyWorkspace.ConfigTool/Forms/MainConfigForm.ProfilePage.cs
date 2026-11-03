@@ -310,7 +310,7 @@ public sealed partial class MainConfigForm
             "Fa una vera ricerca di prova (senza dati di Outlook) per capire se il modello sa cercare sul web. Il fornitore può addebitarla.");
         _btnWebRetry.Click += async (s, e) => await CheckWebSupportAsync();
         _chkWebSearch = AddRow(net, "Abilitazione:", new ThemedCheckBox { Text = "Ricerca web attiva", AutoSize = true },
-            "Permette alle azioni spuntate sotto di cercare sul web, senza chiedere conferma. Le ricerche possono contenere parole prese dalle email; con Ollama vanno a ollama.com. Richiede l'informativa accettata.");
+            "Abilita la ricerca web per le azioni spuntate sotto. Oggi le ricerche durante le azioni sono bloccate: testo della richiesta, parole delle email e query generate dal modello non vengono inviati. Richiede l'informativa accettata.");
         _chkWebSearch.CheckedChanged += (s, e) => { OnProfileFieldChanged(); UpdateWebActionsEnabled(); };
         // Two columns as wide as their longest action: the boxes line up from row to row, and a third column
         // did not fit the field at the default window width (the last actions were cut off).

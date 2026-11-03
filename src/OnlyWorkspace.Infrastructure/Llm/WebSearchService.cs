@@ -133,12 +133,10 @@ public sealed class WebSearchService : IDisposable
         return hosts;
     }
 
-    /// <summary>What leaves the PC during one web search.</summary>
-    public static string Disclosure(LlmProfileConfig profile) => ProviderCatalog.Get(profile.Type).WebSearch == WebSearchMode.OllamaCom
-        ? "Il modello locale ricava una query (al massimo 240 caratteri) dalla richiesta, testo email incluso, e la invia a ollama.com."
-        // Italian text: the thousands separator must not follow the Windows display language.
-        : "Fino a " + MaxSearchInput.ToString("N0", System.Globalization.CultureInfo.GetCultureInfo("it-IT")) +
-          $" caratteri della richiesta, testo email incluso, vanno a {string.Join(", ", Destinations(profile))} per la ricerca web.";
+    /// <summary>What leaves the PC for web search: only the fixed capability probe, since <see cref="SearchAsync"/> blocks the rest.</summary>
+    public static string Disclosure(LlmProfileConfig profile) =>
+        $"La verifica invia a {string.Join(", ", Destinations(profile))} solo una richiesta sintetica fissa. " +
+        "Le ricerche web durante le azioni sono bloccate: né il testo della richiesta o delle email né le query generate dal modello vengono inviati.";
 
     private const int MaxSearchInput = 6000;
 

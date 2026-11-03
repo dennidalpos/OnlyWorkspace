@@ -37,7 +37,7 @@ OpenDocument, RTF e `.p7m` usano le API standard .NET/Windows. I provider cloud 
 | Servizio | Quando | Dati |
 | --- | --- | --- |
 | Provider IA del profilo | Azioni IA esplicite, test e rilevamento modelli | Quelli della funzione, secondo le autorizzazioni |
-| Web Search del provider | Solo sulle azioni scelte | Fino a 6.000 caratteri della richiesta |
-| ollama.com Web Search | Solo sulle azioni scelte, con Ollama | Query di massimo 240 caratteri |
+| Web Search del provider | Solo verifica di capacità del ConfigTool; le azioni sono bloccate | Richiesta sintetica fissa |
+| ollama.com Web Search | Solo verifica di capacità, con Ollama; le azioni sono bloccate | Richiesta sintetica fissa |
 | Browser | Clic su una fonte | Normale navigazione |
 | Download WebView2 | Setup, se manca il runtime | Nessun dato dell'utente |

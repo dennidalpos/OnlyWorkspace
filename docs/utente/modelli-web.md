@@ -43,8 +43,7 @@ L'amministratore la abilita per profilo e sceglie le azioni: Chat, Sintesi, Risp
 
 Le ricerche web con dati non verificabili sono bloccate, inclusi domini ricavati dalla posta e query generate da Ollama. Le verifiche di capacità del ConfigTool usano solo input sintetici fissi; la presenza di una capacità non autorizza l’invio di contenuti.
 
-- **Cloud**: per le azioni su un'email al provider vanno fino a 6.000 caratteri della richiesta, testo email incluso. Per una domanda sulla posta in chat e per Cerca e analizza vanno solo la domanda o l'obiettivo, senza il testo delle email: la ricerca parte subito, in parallelo alla ricerca e alla lettura della posta.
-- **Ollama**: il modello locale ricava una query di massimo 240 caratteri, inviata a ollama.com con una chiave dedicata.
+- **Cosa esce oggi**: durante le azioni nessuna ricerca web invia dati, né al provider né a ollama.com (con Ollama serve una chiave dedicata solo per la verifica). La sola richiesta possibile è la verifica di capacità del ConfigTool, con testo sintetico fisso. Il suggerimento «Ricerca web» del ConfigTool lo ripete. Le descrizioni seguenti valgono per una futura ricerca con input verificati.
 - **Verifica sicurezza** cerca solo il dominio del mittente (non quelli dei provider di posta e PEC) e i domini dei link, mai indirizzi o testo, e niente per le email inviate dall'utente. **Appuntamenti e scadenze** cerca solo i domini aziendali dei mittenti.
 - Se il modello giudica la ricerca inutile, l'azione usa i soli dati Outlook.
 - Se la ricerca fallisce o scade (almeno 180 s), l'azione prosegue: la risposta dichiara all'inizio che mancano i riscontri web; Verifica sicurezza e Appuntamenti e scadenze mostrano «Ricerca web non riuscita» con il motivo.

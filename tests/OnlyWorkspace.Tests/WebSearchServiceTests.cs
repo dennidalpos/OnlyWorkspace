@@ -54,7 +54,30 @@ public sealed class WebSearchServiceTests
 
         var cloud = new LlmProfileConfig { Type = "openai", BaseUrl = "https://api.openai.com" };
         Assert.Equal(new[] { "api.openai.com" }, WebSearchService.Destinations(cloud));
-        Assert.Contains("6.000", WebSearchService.Disclosure(cloud));
+        Assert.Contains("api.openai.com", WebSearchService.Disclosure(cloud));
+    }
+
+    [Theory]
+    [InlineData("ollama", "http://127.0.0.1:11434")]
+    [InlineData("openai", "https://api.openai.com")]
+    public void Disclosure_SaysOnlyTheProbeLeavesAndActionSearchesAreBlocked(string type, string baseUrl)
+    {
+        var text = WebSearchService.Disclosure(new LlmProfileConfig { Type = type, BaseUrl = baseUrl });
+        Assert.Contains("sintetica fissa", text);
+        Assert.Contains("bloccate", text);
+        Assert.DoesNotContain("6.000", text);
+        Assert.DoesNotContain("240", text);
+    }
+
+    [Fact]
+    public async Task SearchAsync_BlocksWithTheCloudFactsMessageBeforeAnyHttp()
+    {
+        int calls = 0;
+        using var http = new HttpClient(new Handler((_, _) => { calls++; return Task.FromResult(Json("{}")); }));
+        using var search = new WebSearchService(Profile("openai"), null, null, http);
+        var error = await Assert.ThrowsAsync<OnlyWorkspace.Core.Privacy.DataEgressBlockedException>(() => search.SearchAsync(new[] { ChatMessage.User("Synthetic") }));
+        Assert.Equal(OnlyWorkspace.Core.Privacy.CloudFactsRequest.BlockedMessage, error.Message);
+        Assert.Equal(0, calls);
     }
 
     [Fact]
@@ -90,13 +113,13 @@ public sealed class WebSearchServiceTests
     }
 
     [Fact]
-    public void Disclosure_KeepsItalianDigitsOnAnEnglishWindows()
+    public void ItalianNotices_KeepItalianDigitsOnAnEnglishWindows()
     {
         var previous = System.Globalization.CultureInfo.CurrentCulture;
         try
         {
             System.Globalization.CultureInfo.CurrentCulture = System.Globalization.CultureInfo.GetCultureInfo("en-US");
-            Assert.Contains("6.000", WebSearchService.Disclosure(new LlmProfileConfig { Type = "openai", BaseUrl = "https://api.openai.com" }));
+            Assert.Contains("6.000", WebSearchService.InputCutNotice);
             Assert.Contains("12.345 token", new OnlyWorkspace.Core.Context.ContextTooLongException(12345, 1000).Message);
         }
         finally { System.Globalization.CultureInfo.CurrentCulture = previous; }

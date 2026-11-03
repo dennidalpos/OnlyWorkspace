@@ -194,7 +194,7 @@ public sealed class ConfigToolUxTests
                     var row = button.Parent!;
                     var lead = row.Controls.OfType<Label>().SingleOrDefault();
                     Assert.True(lead != null && lead.Text.Length >= 20, $"step {i + 1}: «?» «{button.AccessibleName}» has no summary beside it");
-                    Assert.True(lead!.Text.Length < button.AccessibleDescription.Length, $"step {i + 1}: the summary is not shorter than the detail");
+                    Assert.True(lead!.Text.Length < (button.AccessibleDescription ?? string.Empty).Length, $"step {i + 1}: the summary is not shorter than the detail");
                     var page = steps[i];
                     int right = page.PointToClient(button.PointToScreen(new System.Drawing.Point(button.Width, 0))).X;
                     Assert.True(right <= page.ClientSize.Width, $"step {i + 1}: «?» ends at {right}, page is {page.ClientSize.Width} wide");

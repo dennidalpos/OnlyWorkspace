@@ -1787,7 +1787,8 @@ public partial class TaskPaneCoordinator : IDisposable
         EnsureProfileCurrent(profile);
         EnsurePromptFits(messages, profile);
         if (!WebForTurn(profile) || turn != _turn) return null;
-        // The action goes on from Outlook data, as after any failed search, and says why.
+        // The action goes on from Outlook data, as after any failed search, and says why. SearchAsync still blocks
+        // every query (no verified-facts web input yet); the notice is checked first so the reason names the host.
         if (!DataEgress.AllowsWeb(_config, profile, _configService.ResolveSecret))
             throw new DataEgressBlockedException("ricerca web verso " + string.Join(", ", DataEgress.WebHosts(profile)) + " non autorizzata dall'informativa sull'uscita dei dati (ConfigTool, Privacy e dati).");
         var secret = string.IsNullOrEmpty(profile.SecretRef) ? null : _configService.ResolveSecret(profile.SecretRef);
