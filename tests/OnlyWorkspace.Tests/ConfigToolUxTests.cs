@@ -145,6 +145,9 @@ public sealed class ConfigToolUxTests
             var read = (CheckBox)typeof(DataEgressConsentForm).GetField("_read", Flags)!.GetValue(notice)!;
             Assert.True(OwnVisible(hint));
             Assert.Contains("Ho letto", hint.Text);
+            // The owner-drawn checkbox paints its text with the palette: the window background must come from it too.
+            Assert.Equal(Theme.Colors.Window, notice.BackColor);
+            Assert.Equal(Theme.Colors.Text, notice.ForeColor);
             read.Checked = true; Assert.False(OwnVisible(hint));
             read.Checked = false; Assert.True(OwnVisible(hint));
             // Programmatic or button closes are explicit choices: no question, even with the box ticked.

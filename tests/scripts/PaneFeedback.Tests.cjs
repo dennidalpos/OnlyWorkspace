@@ -14,7 +14,7 @@ function section(start, end) {
 function element(tag, className, text) {
   const classes = new Set((className || '').split(' ').filter(Boolean));
   const node = {
-    tag, attrs: {}, children: [], listeners: {}, isConnected: true, innerHTML: text || '', textContent: text || '',
+    tag, attrs: {}, dataset: {}, children: [], listeners: {}, isConnected: true, innerHTML: text || '', textContent: text || '',
     classList: { add: c => classes.add(c), remove: c => classes.delete(c), contains: c => classes.has(c) },
     appendChild(child) { this.children.push(child); return child; },
     setAttribute(k, v) { this.attrs[k] = v; }, getAttribute(k) { return this.attrs[k] ?? null; },
@@ -55,8 +55,15 @@ button.listeners.keydown({ key: 'Escape', stopPropagation() { stopped = true; } 
 assert.ok(stopped && !button.classList.contains('confirming'));
 
 context.armConfirm(button, 'Conferma', () => confirmed++);
-context.armConfirm(button, 'Conferma', () => confirmed++);
+context.armConfirm(button, 'Conferma', () => { confirmed++; announced.push('Conversazione eliminata.'); });
 assert.equal(confirmed, 1);
+// Focus leaving the confirmed button (the list is redrawn) must not overwrite the outcome.
+button.listeners.blur();
+assert.equal(announced.at(-1), 'Conversazione eliminata.');
+assert.ok(!button.classList.contains('confirming'));
+context.armConfirm(button, 'Conferma', () => confirmed++);
+button.listeners.blur();
+assert.equal(announced.at(-1), 'Conferma annullata.', 'a new arming announces its own cancellation');
 
 // Choices belong to their turn: removed with the stale Riprova buttons.
 new vm.Script(section('  function addChoices(', '  function isFollowUp(')).runInContext(context);

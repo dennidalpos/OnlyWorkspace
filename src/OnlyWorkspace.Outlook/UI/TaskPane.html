@@ -653,7 +653,7 @@
   .field:focus, .field-area:focus { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
   .field:disabled { opacity: 0.5; }
   .context-help-source { display: none !important; }
-  .context-help-button { min-width: 28px; min-height: 28px; border-radius: 50%; }
+  .context-help-button { min-width: 28px; min-height: 28px; border-radius: 50%; align-self: flex-start; }
   .context-help-modal { max-width: min(560px, 90vw); max-height: 85vh; overflow: auto; background: var(--surface); color: var(--text); border: 1px solid var(--border-input); }
   .context-help-modal::backdrop { background: rgba(0,0,0,.35); }
   .context-help-modal p { white-space: pre-wrap; overflow-wrap: anywhere; }
@@ -712,6 +712,7 @@
   @media (max-width: 339px) {
     :root { --topbar-h: 108px; }
     .primary-nav { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; }
+    .picked-list { margin-left: 0; }
   }
   /* Zoom 200% or a short window: the conversation keeps a usable height and the pane scrolls instead of cutting off the composer. */
   @media (max-height: 560px) {
@@ -3087,6 +3088,8 @@
   // Two-step inline confirmation instead of the native confirm() dialog.
   function armConfirm(button, confirmLabel, onConfirm) {
     if (button.classList.contains('confirming')) {
+      // The outcome of the confirmed action is announced by its handler: the later blur must not say «annullata».
+      button.dataset.confirmed = 'true';
       onConfirm();
       return;
     }
@@ -3103,11 +3106,13 @@
       clearTimeout(timer);
       button.removeEventListener('blur', disarm);
       button.removeEventListener('keydown', onKey);
+      var confirmed = button.dataset.confirmed === 'true';
+      delete button.dataset.confirmed;
       if (button.isConnected && button.classList.contains('confirming')) {
         button.classList.remove('confirming');
         button.innerHTML = original;
         if (originalLabel != null) button.setAttribute('aria-label', originalLabel);
-        announce('Conferma annullata.');
+        if (!confirmed) announce('Conferma annullata.');
       }
     }
     function onKey(e) { if (e.key === 'Escape') { e.stopPropagation(); disarm(); } }

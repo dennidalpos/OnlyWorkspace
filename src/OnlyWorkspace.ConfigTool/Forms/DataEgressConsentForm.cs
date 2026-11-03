@@ -24,6 +24,9 @@ internal sealed class DataEgressConsentForm : Form
         ShowInTaskbar = false;
         MinimizeBox = MaximizeBox = false;
         Font = new Font("Segoe UI", 9F);
+        // Owner-drawn controls paint with the theme palette: the window must use it too, or the checkbox text vanishes.
+        BackColor = Theme.Colors.Window;
+        ForeColor = Theme.Colors.Text;
         Size = new Size(650, 560);
         MinimumSize = new Size(380, 360);
         var layout = new TableLayoutPanel { Dock = DockStyle.Top, AutoSize = true, ColumnCount = 1, Padding = new Padding(16) };
