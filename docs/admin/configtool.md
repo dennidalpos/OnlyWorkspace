@@ -96,11 +96,8 @@ Un `secrets.bin` presente di zero byte è danneggiato: il caricamento fallisce s
 | `test [config_path]` | Prova gli endpoint dei profili |
 | `backup [dest.owbak] [config_dir]` | Salva `config.json` e `secrets.bin` |
 | `restore <source.owbak> [config_dir]` | Valida e ripristina sullo stesso PC |
-| `inspect-ai-html <file.html>` | Ispeziona localmente i marcatori dichiarativi dei frammenti HTML generati, senza autenticare l'origine |
 
 `validate` legge il file indicato. `show` e `test` usano la directory indicata oppure quella che contiene il percorso passato, e vi cercano `config.json`; senza percorso usano la configurazione comune del PC. `test` contatta i provider configurati.
-
-`inspect-ai-html` non legge la configurazione e non contatta provider: accetta un file HTML locale fino a 4 MiB e produce JSON senza contenuto o percorso. Una dichiarazione assente non esclude origine IA; una presente non è autenticata. Formato, stati e limiti in [Marcatura dei frammenti HTML generati](../tecnico/marcatura-testi-ia.md).
 
 `import` accetta `profiles`, `auth` e `secret` senza distinguere maiuscole e minuscole; proprietà duplicate per questi nomi e strutture incompatibili sono rifiutate prima del salvataggio. Un `auth.secret` non vuoto viene trasferito al vault e prevale sul `secretRef` del profilo; `auth` assente/null o `secret` assente/null/vuoto conservano il riferimento esistente. Il JSON salvato non contiene il segreto inline. Con `--skip-test` non viene contattato alcun provider.
 

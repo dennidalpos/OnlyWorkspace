@@ -602,6 +602,13 @@
   /* break-word, not anywhere: at 125% (304 px) "anywhere" let the label column shrink to one letter per line. */
   .metrics th:first-child, .metrics td:first-child { min-width: 145px; text-align: left; white-space: normal; overflow-wrap: break-word; }
   .metrics td.pct { width: 64px; }
+  /* Standard pane width: compact columns and wrapping headers instead of a horizontal scroll; the viewport still scrolls if counts outgrow it. */
+  @container (max-width: 459px) {
+    .metrics { min-width: 0; }
+    .metrics th { white-space: normal; overflow-wrap: break-word; }
+    .metrics th, .metrics td { padding: 5px 3px; }
+    .metrics th:first-child, .metrics td:first-child { min-width: 96px; }
+  }
   /* Narrow pane: million-sized counts still fit beside whole-word labels. */
   @media (max-width: 340px) {
     .metrics { font-size: var(--text-size-11); }
@@ -1443,6 +1450,7 @@
 
   function setBusy(busy) {
     state.busy = busy;
+    state.stopping = false;
     conv.setAttribute('aria-busy', busy ? 'true' : 'false');
     if (busy) closeMenus();
     updateActions();
@@ -1514,6 +1522,9 @@
     $('jobShow').hidden = jobShown === 'other';
     $('jobShow').title = 'Torna all\'operazione in corso';
     $('jobStop').title = jobShown === 'other' ? 'Interrompi l\'operazione dell\'altra finestra' : 'Interrompi l\'operazione in corso (Esc)';
+    var stopping = jobShown === 'pane' && !!state.stopping;
+    $('jobStop').disabled = stopping;
+    $('jobStop').textContent = stopping ? 'Interruzione…' : 'Interrompi';
     var bar = $('jobProgress');
     bar.hidden = !(total > 0);
     if (!bar.hidden) {
@@ -1529,9 +1540,17 @@
     return true;
   }
   $('jobShow').addEventListener('click', showConversation);
+  // The host answers when the operation has actually stopped: say meanwhile that the request was received.
+  function requestStop() {
+    if (state.stopping) return;
+    state.stopping = true;
+    announce('Interruzione in corso…');
+    updateJobBar();
+    post({ type: 'cancel' });
+  }
   $('jobStop').addEventListener('click', function () {
     if (jobShown === 'other') post({ type: 'stop_other', id: otherJobs[0].id });
-    else post({ type: 'cancel' });
+    else requestStop();
   });
 
   // ---------- Conversation turns ----------
@@ -1775,6 +1794,8 @@
   // A question from the host answered with one click (e.g. the period of the mailbox scan).
   function addChoices(container, choices) {
     var row = el('div', 'msg-footer');
+    // Choices belong to the turn that offered them: the next turn removes them like a stale Riprova.
+    row.setAttribute('data-latest-only', '');
     choices.forEach(function (ch) {
       var b = el('button', 'btn btn-sm', ch.label);
       b.type = 'button';
@@ -2150,7 +2171,8 @@
       if (stick) scrollToBottom();
       // Finished behind a drawer: say so, with the way back.
       if (openDrawerId() && (result.status === 'ok' || result.status === 'error')) {
-        showToast(result.status === 'ok' ? (c.kind === 'chat' ? 'Risposta' : c.action || 'Operazione') + ': completata.' : 'Operazione non riuscita.',
+        showToast(result.status === 'ok' ? (c.kind === 'chat' ? 'Risposta' : c.action || 'Operazione') + ': completata.'
+          : 'Operazione non riuscita' + (result.message ? ': ' + result.message : '.'),
           result.status === 'ok' ? 'success' : 'error', { label: 'Mostra', run: showConversation });
       }
     }
@@ -2162,7 +2184,8 @@
   function showToast(message, kind, action) {
     var t = $('toast');
     $('toastText').textContent = message;
-    $('toastCopy').onclick = function () { copyText(message); };
+    $('toastCopy').textContent = 'Copia';
+    $('toastCopy').onclick = function () { copyText(message, $('toastCopy')); };
     t.className = 'toast ' + (kind || 'info');
     // action: 'open_diagnostics_folder' from the host, or { label, run } from the pane
     var act = action === 'open_diagnostics_folder'
@@ -2194,7 +2217,14 @@
   ['mouseenter', 'focusin'].forEach(function (e) { $('toast').addEventListener(e, function () { clearTimeout(toastTimer); }); });
   ['mouseleave', 'focusout'].forEach(function (e) { $('toast').addEventListener(e, function () { if (!$('toast').hidden && !$('toast').contains(document.activeElement)) armToast(); }); });
 
-  function copyText(text) {
+  // With btn (the toast's own Copia) the outcome shows on the button, so the message being copied stays on screen.
+  function copyText(text, btn) {
+    function done(ok) {
+      if (!btn) { showToast(ok ? 'Copiato negli appunti.' : 'Copia non riuscita.', ok ? 'success' : 'error'); return; }
+      btn.textContent = ok ? 'Copiato' : 'Copia non riuscita';
+      announce(ok ? 'Copiato negli appunti.' : 'Copia non riuscita.');
+      setTimeout(function () { btn.textContent = 'Copia'; }, 2000);
+    }
     function fallback() {
       var ta = el('textarea');
       ta.value = text;
@@ -2205,10 +2235,10 @@
       var ok = false;
       try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
       ta.remove();
-      showToast(ok ? 'Copiato negli appunti.' : 'Copia non riuscita.', ok ? 'success' : 'error');
+      done(ok);
     }
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text).then(function () { showToast('Copiato negli appunti.', 'success'); }, fallback);
+      navigator.clipboard.writeText(text).then(function () { done(true); }, fallback);
     } else {
       fallback();
     }
@@ -2238,7 +2268,7 @@
 
   function submitPrompt() {
     if (state.busy) {
-      post({ type: 'cancel' });
+      requestStop();
       return;
     }
     var text = prompt.value.trim();
@@ -2778,6 +2808,7 @@
     flow.loading = true;
     $('anReconstruction').hidden = false;
     $('flowStatus').textContent = 'Ricostruzione della pratica…';
+    announce('Ricostruzione della pratica…');
     beginDrawerLoad('flow', $('flowStatus'), function () { requestReconstruction(seed); });
     post({ type: 'mail_analysis', requestId: flow.requestId,
       scope: { kind: 'flow', id: seed.id || 0, entryId: seed.entryId, storeId: seed.storeId }, goal: { preset: 'reconstruct' } });
@@ -3066,13 +3097,23 @@
     // An icon button keeps its aria-label over the new text: screen readers must hear the armed state too.
     if (originalLabel != null) button.setAttribute('aria-label', confirmLabel);
     announce(confirmLabel + ': premi di nuovo per confermare.');
-    setTimeout(function () {
+    // Stays armed while the button has focus; focus leaving, Esc or 15 s without use disarm it.
+    var timer = null;
+    function disarm() {
+      clearTimeout(timer);
+      button.removeEventListener('blur', disarm);
+      button.removeEventListener('keydown', onKey);
       if (button.isConnected && button.classList.contains('confirming')) {
         button.classList.remove('confirming');
         button.innerHTML = original;
         if (originalLabel != null) button.setAttribute('aria-label', originalLabel);
+        announce('Conferma annullata.');
       }
-    }, 3500);
+    }
+    function onKey(e) { if (e.key === 'Escape') { e.stopPropagation(); disarm(); } }
+    button.addEventListener('blur', disarm);
+    button.addEventListener('keydown', onKey);
+    timer = setTimeout(disarm, 15000);
   }
 
   $('btnDeleteAll').addEventListener('click', function () {
@@ -3185,7 +3226,8 @@
         open.appendChild(mail);
       }
       open.appendChild(el('span', 'history-meta', (it.updatedAt || '') + ' · ' + plural(it.messageCount, 'messaggio', 'messaggi')));
-      open.title = 'Riprendi questa conversazione';
+      open.title = 'Riprendi: ' + (it.title || '(senza titolo)')
+        + (it.email ? ' · ' + (it.email.subject || '(senza oggetto)') : '');
       var resume = function () { if (!busyBlocked()) post({ type: 'load_history', id: it.id }); };
       open.addEventListener('click', resume);
       // The whole row resumes too: an icon is enough and leaves the width to the title and date.
@@ -3216,7 +3258,10 @@
   function renderLoadedConversation(data) {
     clearConversation();
     hideEmptyState();
-    conv.appendChild(el('div', 'divider', 'Conversazione ripresa: ' + (data.title || 'senza titolo')));
+    var resumedText = 'Conversazione ripresa: ' + (data.title || 'senza titolo');
+    var resumed = el('div', 'divider', resumedText);
+    resumed.title = resumedText;
+    conv.appendChild(resumed);
     var lastTurn = null;
     var lastUser = null;
     (data.messages || []).forEach(function (m) {
@@ -3282,7 +3327,7 @@
       if (openId) { closeMenus(); $(menuButtons[openId]).focus(); return; }
       if (openDrawerId()) { closeDrawers(); return; }
 
-      if (state.busy) { post({ type: 'cancel' }); return; }
+      if (state.busy) { requestStop(); return; }
       if (state.composerMode !== 'chat') { setComposerMode('chat'); }
       return;
     }
@@ -3460,8 +3505,9 @@
         // Results about one email: a divider with its subject where the email changes.
         if (state.current && data.entryId && !drafting && data.entryId !== state.turnEmail) {
           state.turnEmail = data.entryId;
-          var mark = el('div', 'divider', 'Email: ' + (data.subject || ''));
-          mark.title = data.subject || '';
+          var markText = 'Email: ' + (data.subject || '');
+          var mark = el('div', 'divider', markText);
+          mark.title = markText;
           conv.insertBefore(mark, state.current.turn);
         }
         break;

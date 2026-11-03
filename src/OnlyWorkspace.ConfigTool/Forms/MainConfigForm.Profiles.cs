@@ -378,6 +378,8 @@ public sealed partial class MainConfigForm
         bool usesSecret = !string.Equals(_cmbAuthType.SelectedItem as string, "none", StringComparison.OrdinalIgnoreCase);
         _txtToken.Enabled = usesSecret;
         _chkShowToken.Enabled = usesSecret;
+        // No key to type with «none»: the row goes away instead of showing a disabled field.
+        SetRowVisible(_tokenRow, usesSecret);
         bool remote = Uri.TryCreate(_txtEndpoint.Text.Trim(), UriKind.Absolute, out var endpoint) && !ConfigurationValidator.IsLoopback(endpoint);
         if (_lstProfiles.SelectedItem is ProfileItem selected)
         {

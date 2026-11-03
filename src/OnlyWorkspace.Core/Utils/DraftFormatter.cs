@@ -86,10 +86,6 @@ public static class DraftFormatter
         return sb.ToString();
     }
 
-    /// <summary>Generated fragment only: the surrounding email must remain outside the provenance markers.</summary>
-    public static string ToGeneratedHtml(string markdown) => string.IsNullOrWhiteSpace(markdown)
-        ? ToHtml(markdown) : GeneratedTextMarkup.WrapHtml(ToHtml(markdown));
-
     private static string[] SplitLines(string markdown) =>
         (markdown ?? string.Empty).Trim().Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
 

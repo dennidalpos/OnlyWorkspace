@@ -212,7 +212,7 @@ public sealed partial class MainConfigForm
         _chkShowToken = new ThemedCheckBox { Text = "Mostra", AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(6, 3, 3, 3) };
         _chkShowToken.CheckedChanged += (s, e) => _txtToken.UseSystemPasswordChar = !_chkShowToken.Checked;
         Tip(_chkShowToken, "Mostra la chiave in chiaro per controllarla; non viene salvato nulla.");
-        AddRow(conn, "Chiave di accesso:", FillRow(new InputFrame(_txtToken), _chkShowToken), "Token o API key del profilo.");
+        _tokenRow = AddRow(conn, "Chiave di accesso:", FillRow(new InputFrame(_txtToken), _chkShowToken), "Token o API key del profilo.");
 
 
         _numFirstTokenTimeout = AddRow(conn, "Timeout primo token (s):", Numeric(5, 3600, 120, 5),

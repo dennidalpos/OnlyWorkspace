@@ -53,6 +53,8 @@ public sealed class SetupWizardForm : Form
 
     public LlmProfileConfig Profile { get; }
     public string? Secret { get; private set; }
+    /// <summary>Chosen in the last step; the host applies it once the configuration is saved.</summary>
+    public bool RunAtStartup => _chkAutostart.Checked;
     public bool ArchiveEnabled => _chkArchive.Checked;
     public bool IndexAttachments => _chkAttachments.Checked;
 
@@ -400,8 +402,6 @@ public sealed class SetupWizardForm : Form
         Profile.AllowAttachmentUpload = edited.AllowAttachmentUpload;
         Profile.WebSearchEnabled = edited.WebSearchEnabled;
         Secret = TypedSecret;
-        if (!StartupManager.SetRunAtStartup(_chkAutostart.Checked))
-            CopyableMessageBox.Show(this, "Impossibile modificare l'avvio automatico di Windows.", "Avvio automatico", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         DialogResult = DialogResult.OK;
         Close();
     }

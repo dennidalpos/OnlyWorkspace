@@ -77,6 +77,9 @@ assert.ok(all(list).some(n => n.className === 'history-mail'));
 const resume = all(list).filter(n => n.tagName === 'BUTTON').find(b => b.attrs['aria-label'] === 'Riprendi Sintesi: Offerta');
 resume.click();
 assert.deepEqual(sent.pop(), { type: 'load_history', id: 'c1' });
+// The tooltip carries the full title and email subject, which the row truncates with an ellipsis.
+const open = all(list).find(n => n.className === 'history-open');
+assert.equal(open.title, 'Riprendi: Sintesi: Offerta · Offerta');
 
 assert.match(html, /writing: data\.writing/);
 assert.match(html, /id="composeGroup"/);

@@ -10,6 +10,7 @@ namespace OnlyWorkspace.ConfigTool.Services;
 public sealed class AdminPasswordService
 {
     private const int Iterations = 600000;
+    public const int MinLength = 8;
     private readonly string _path;
 
     private sealed class Verifier
@@ -37,7 +38,7 @@ public sealed class AdminPasswordService
 
     public static byte[] CreateRecord(string password)
     {
-        if (password.Length < 8) throw new ArgumentException("La password deve contenere almeno 8 caratteri.");
+        if (password.Length < MinLength) throw new ArgumentException("La password deve contenere almeno " + MinLength + " caratteri.");
         var salt = new byte[16];
         using (var random = RandomNumberGenerator.Create()) random.GetBytes(salt);
         return JsonSerializer.SerializeToUtf8Bytes(new Verifier

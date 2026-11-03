@@ -1270,7 +1270,7 @@ public sealed partial class OutlookDataService
         }
 
         var html = item.HTMLBody ?? string.Empty;
-        var fragment = DraftFormatter.ToGeneratedHtml(draftMarkdown);
+        var fragment = DraftFormatter.ToHtml(draftMarkdown);
         var body = BodyTagRegex.Match(html);
         item.HTMLBody = body.Success ? html.Insert(body.Index + body.Length, fragment) : fragment + html;
     }

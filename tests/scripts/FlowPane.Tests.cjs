@@ -116,9 +116,17 @@ assert.equal(JSON.stringify(messages.pop()), JSON.stringify({ type: 'archive_ope
 buttons[1].click();
 assert.equal(JSON.stringify(messages.pop()), JSON.stringify({ type: 'archive_open_email', entryId: 'copy', storeId: 'gmail' }));
 
-new vm.Script(section("  $('jobStop').addEventListener", '  // ---------- Conversation turns ----------')).runInContext(context);
+let jobBarUpdates = 0;
+context.updateJobBar = () => { jobBarUpdates++; };
+new vm.Script(section('  // The host answers when the operation has actually stopped', '  // ---------- Conversation turns ----------')).runInContext(context);
 node('jobStop').click();
 assert.equal(messages.pop().type, 'cancel');
+// A repeated request while stopping is acknowledged once: no second cancel, the bar shows the pending state.
+assert.equal(state.stopping, true);
+assert.equal(jobBarUpdates, 1);
+node('jobStop').click();
+assert.equal(messages.length, 0);
+state.stopping = false;
 // The bar showing another window's work stops that work, not this pane's.
 context.jobShown = 'other';
 context.otherJobs = [{ id: 7, window: 'finestra principale', action: 'Riepilogo', done: 1, total: 4 }];

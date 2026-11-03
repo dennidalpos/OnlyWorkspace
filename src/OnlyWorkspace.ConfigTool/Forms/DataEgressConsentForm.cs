@@ -13,6 +13,8 @@ internal sealed class DataEgressConsentForm : Form
 {
     private readonly CheckBox _read;
     private readonly FlatButton _accept;
+    private readonly Label _hint;
+    private bool _closeByKeyboardOrX;
     private readonly ToolTip _tips = new() { AutoPopDelay = 20000 };
     public DataEgressConsentForm(IReadOnlyList<DataEgressProvider> servers, DataEgressSigner? previous,
         IReadOnlyList<LlmProfileConfig>? profiles = null)
@@ -40,11 +42,14 @@ internal sealed class DataEgressConsentForm : Form
         _tips.SetToolTip(read, "Conferma l'autorizzazione tecnica. Non dichiara adempimenti aziendali o contratti.");
         _tips.SetToolTip(accept, "Salva l'autorizzazione per profilo, destinazione, permessi e chiavi attuali. Richiede diritti di amministratore.");
         _tips.SetToolTip(cancel, "Chiude senza autorizzare nuovi invii.");
-        read.CheckedChanged += (_, _) => accept.Enabled = read.Checked;
+        // The checkbox can be out of view in the scrolling text: the reason for the disabled button stays beside it.
+        var hint = _hint = new SelectableLabel { Text = "Per abilitare «Autorizza e salva» spunta «Ho letto…» in fondo al testo.",
+            AutoSize = true, MaximumSize = new Size(300, 0), Margin = new Padding(0, 6, 12, 0) };
+        read.CheckedChanged += (_, _) => { accept.Enabled = read.Checked; hint.Visible = !read.Checked; };
         accept.Click += (_, _) => { if (read.Checked) DialogResult = DialogResult.OK; };
         var actions = new FlowLayoutPanel { Dock = DockStyle.Bottom, AutoSize = true, Padding = new Padding(12),
             FlowDirection = FlowDirection.RightToLeft };
-        actions.Controls.AddRange(new Control[] { accept, cancel });
+        actions.Controls.AddRange(new Control[] { accept, cancel, hint });
         Controls.Add(scroll);
         Controls.Add(actions);
         AcceptButton = accept;
@@ -76,6 +81,36 @@ internal sealed class DataEgressConsentForm : Form
         int x = owner.X + (owner.Width - size.Width) / 2;
         int y = owner.Y + (owner.Height - size.Height) / 2;
         return new Point(Math.Max(area.X, Math.Min(x, area.Right - size.Width)), Math.Max(area.Y, Math.Min(y, area.Bottom - size.Height)));
+    }
+
+    private const int WM_SYSCOMMAND = 0x0112, SC_CLOSE = 0xF060;
+
+    protected override bool ProcessDialogKey(Keys keyData)
+    {
+        if (keyData == Keys.Escape) _closeByKeyboardOrX = true;
+        return base.ProcessDialogKey(keyData);
+    }
+
+    protected override void WndProc(ref Message m)
+    {
+        if (m.Msg == WM_SYSCOMMAND && ((int)m.WParam & 0xFFF0) == SC_CLOSE) _closeByKeyboardOrX = true;
+        base.WndProc(ref m);
+    }
+
+    /// <summary>Esc, X and Alt+F4 discard a ticked authorization: ask, while the Annulla button stays an explicit choice.</summary>
+    protected override void OnFormClosing(FormClosingEventArgs e)
+    {
+        bool implicitClose = _closeByKeyboardOrX;
+        _closeByKeyboardOrX = false;
+        if (implicitClose && _read.Checked && DialogResult != DialogResult.OK && CopyableMessageBox.Show(this,
+                "Hai spuntato «Ho letto…» ma non hai autorizzato.\n\nChiudere senza autorizzare nuovi invii?", "Privacy e dati",
+                MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+        {
+            e.Cancel = true;
+            DialogResult = DialogResult.None;
+            return;
+        }
+        base.OnFormClosing(e);
     }
 
     protected override void Dispose(bool disposing)

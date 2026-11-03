@@ -91,10 +91,6 @@ internal static class Program
 
         AttachConsole(ATTACH_PARENT_PROCESS);
 
-        // Read-only local detector: no configuration, credentials, providers or banner in its JSON output.
-        if (string.Equals(args[0], "inspect-ai-html", StringComparison.OrdinalIgnoreCase))
-            return GeneratedTextInspectionCommand.Run(args, Console.Out, Console.Error);
-
         Console.WriteLine("==================================================");
         Console.WriteLine(" OnlyWorkspace Administrative Configuration Tool  ");
         Console.WriteLine("==================================================");
@@ -156,7 +152,6 @@ internal static class Program
         Console.WriteLine("  OnlyWorkspace.ConfigTool test [config_path]");
         Console.WriteLine("  OnlyWorkspace.ConfigTool backup [dest.owbak] [config_dir]");
         Console.WriteLine("  OnlyWorkspace.ConfigTool restore <source.owbak> [config_dir]");
-        Console.WriteLine("  OnlyWorkspace.ConfigTool inspect-ai-html <file.html>");
     }
 
     private static int HandleBackup(string[] args)

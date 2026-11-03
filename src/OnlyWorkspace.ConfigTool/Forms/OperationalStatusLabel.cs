@@ -27,6 +27,7 @@ internal sealed class OperationalStatusLabel : SelectableLabel
             StatusLight.Ok => "Operazione riuscita",
             StatusLight.Error => "Errore: consultare il motivo",
             StatusLight.Waiting => "In attesa: nessuna operazione in corso",
+            StatusLight.Paused => "Avviso: leggere il motivo",
             _ => "Informazione"
         };
         RefreshAnimation();
@@ -44,7 +45,7 @@ internal sealed class OperationalStatusLabel : SelectableLabel
         {
             StatusLight.Ok => Theme.Colors.Success,
             StatusLight.Error => Theme.Colors.Danger,
-            StatusLight.Working => Theme.Colors.Warning,
+            StatusLight.Working or StatusLight.Paused => Theme.Colors.Warning,
             _ => Theme.Colors.Muted
         };
         using var pen = new Pen(color);
@@ -56,7 +57,7 @@ internal sealed class OperationalStatusLabel : SelectableLabel
             pen.Width = 2;
             e.Graphics.DrawArc(pen, area, _frame * 30, 270);
         }
-        else TextRenderer.DrawText(e.Graphics, State == StatusLight.Ok ? "✓" : State == StatusLight.Error ? "!" : State == StatusLight.Waiting ? "…" : "–",
+        else TextRenderer.DrawText(e.Graphics, State == StatusLight.Ok ? "✓" : State == StatusLight.Error ? "!" : State == StatusLight.Paused ? "▲" : State == StatusLight.Waiting ? "…" : "–",
             Font, area, color, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
     }
 

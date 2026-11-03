@@ -80,7 +80,111 @@ public sealed class ConfigToolUxTests
         });
     }
 
+    [Fact]
+    public void WarningStatus_IsAWarningNotAWait_AndOnlyTheUacPromptWaits()
+    {
+        OnSta(directory =>
+        {
+            using var form = Open(directory, new WorkspaceConfig { DefaultProfile = "a", Profiles = new() { Local("a") } });
+            Call(form, "SetStatus", "Salvataggio annullato", Tone.Warning, null!);
+            var status = Field<OperationalStatusLabel>(form, "_lblStatus");
+            Assert.Equal(OnlyWorkspace.Core.Archive.StatusLight.Paused, status.State);
+            Assert.Contains("Avviso", status.AccessibleDescription);
+            Call(form, "SetStatus", "In attesa", Tone.Warning, OnlyWorkspace.Core.Archive.StatusLight.Waiting);
+            Assert.Equal(OnlyWorkspace.Core.Archive.StatusLight.Waiting, status.State);
+        });
+    }
+
+    [Theory]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public void AccessKeyRow_IsHiddenWhenTheProfileUsesNoAuthentication(bool noAuth, bool expectedVisibleFlag)
+    {
+        OnSta(directory =>
+        {
+            var profile = noAuth ? Local("a") : Cloud("a");
+            profile.External = false; profile.Exposure = ExposureLevel.Minimal;
+            using var form = Open(directory, new WorkspaceConfig { DefaultProfile = "a", Profiles = new() { profile } });
+            Assert.Equal(expectedVisibleFlag, OwnVisible(Field<TableLayoutPanel>(form, "_tokenRow")));
+        });
+    }
+
+    [Fact]
+    public void PdfAndBackup_WarnOnlyWhenEditsArePending()
+    {
+        OnSta(directory =>
+        {
+            using var form = Open(directory, new WorkspaceConfig { DefaultProfile = "a", Profiles = new() { Local("a") } });
+            Assert.True((bool)Call(form, "ConfirmSavedFilesOnly", "Il backup")!);
+            typeof(MainConfigForm).GetField("_isDirty", Flags)!.SetValue(form, true);
+            foreach (var answer in new[] { DialogResult.No, DialogResult.Yes })
+            {
+                using var timer = new System.Windows.Forms.Timer { Interval = 30 };
+                string? text = null;
+                timer.Tick += (_, _) =>
+                {
+                    var box = Application.OpenForms.OfType<Form>().FirstOrDefault(f => f.Text == "Modifiche non salvate");
+                    if (box == null) return;
+                    text = box.Controls.Cast<Control>().SelectMany(c => c.Controls.Cast<Control>()).OfType<TextBox>().FirstOrDefault()?.Text;
+                    timer.Stop(); box.DialogResult = answer;
+                };
+                timer.Start();
+                Assert.Equal(answer == DialogResult.Yes, (bool)Call(form, "ConfirmSavedFilesOnly", "Il PDF")!);
+                Assert.Contains("non sono incluse", text ?? "");
+            }
+        });
+    }
+
+    [Fact]
+    public void Notice_EscAndCloseAskOnlyAfterTheBoxIsTicked_AndShowTheReasonBesideTheButton()
+    {
+        OnSta(_ =>
+        {
+            using var notice = new DataEgressConsentForm(Array.Empty<DataEgressProvider>(), null);
+            var hint = (Label)typeof(DataEgressConsentForm).GetField("_hint", Flags)!.GetValue(notice)!;
+            var read = (CheckBox)typeof(DataEgressConsentForm).GetField("_read", Flags)!.GetValue(notice)!;
+            Assert.True(OwnVisible(hint));
+            Assert.Contains("Ho letto", hint.Text);
+            read.Checked = true; Assert.False(OwnVisible(hint));
+            read.Checked = false; Assert.True(OwnVisible(hint));
+            // Programmatic or button closes are explicit choices: no question, even with the box ticked.
+            read.Checked = true;
+            var closing = typeof(DataEgressConsentForm).GetMethod("OnFormClosing", Flags)!;
+            var args = new System.Windows.Forms.FormClosingEventArgs(CloseReason.UserClosing, false);
+            closing.Invoke(notice, new object[] { args });
+            Assert.False(args.Cancel);
+        });
+    }
+
+    [Fact]
+    public void Wizard_ExposesTheAutostartChoiceInsteadOfApplyingItBeforeTheSave()
+    {
+        OnSta(_ =>
+        {
+            using var wizard = new SetupWizardForm(Local("a"), null, archiveEnabled: false, indexAttachments: false);
+            Assert.True(wizard.RunAtStartup);
+            ((CheckBox)typeof(SetupWizardForm).GetField("_chkAutostart", Flags)!.GetValue(wizard)!).Checked = false;
+            Assert.False(wizard.RunAtStartup);
+        });
+    }
+
+    [Fact]
+    public void AdminPassword_MinimumLengthIsSharedByThePromptAndTheRecord()
+    {
+        Assert.Equal(8, OnlyWorkspace.ConfigTool.Services.AdminPasswordService.MinLength);
+        Assert.Throws<ArgumentException>(() => OnlyWorkspace.ConfigTool.Services.AdminPasswordService.CreateRecord("breve"));
+    }
+
     private const BindingFlags Flags = BindingFlags.NonPublic | BindingFlags.Instance;
+
+    /// <summary>The control's own Visible flag, whatever the tab page or the unshown form above it.</summary>
+    private static bool OwnVisible(Control control)
+    {
+        // GetState takes an int on .NET Framework and a private enum on .NET.
+        var getState = typeof(Control).GetMethods(Flags).Single(m => m.Name == "GetState" && m.GetParameters().Length == 1);
+        var type = getState.GetParameters()[0].ParameterType;
+        return (bool)getState.Invoke(control, new[] { type.IsEnum ? Enum.ToObject(type, 0x2) : 0x2 })!;
+    }
 
     private static void OnSta(Action<string> action)
     {

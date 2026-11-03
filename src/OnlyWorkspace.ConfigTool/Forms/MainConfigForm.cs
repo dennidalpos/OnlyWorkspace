@@ -89,6 +89,7 @@ public sealed partial class MainConfigForm : Form
     private ComboBox _cmbAuthType = null!;
     private TextBox _txtToken = null!;
     private CheckBox _chkShowToken = null!;
+    private TableLayoutPanel _tokenRow = null!;
     private ComboBox _cmbPreset = null!;
     private NumericUpDown _numBudget = null!;
     private Label _lblBudgetHint = null!;
@@ -689,6 +690,8 @@ public sealed partial class MainConfigForm : Form
         var previous = _config.DataEgress?.Consent;
         int events = _config.DataEgress?.History.Count ?? 0;
         bool dirty = _isDirty;
+        if (dirty && CopyableMessageBox.Show(this, "«Leggi e autorizza» salva anche tutte le altre modifiche non ancora salvate.\n\nProseguire?",
+                "Modifiche non salvate", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return false;
         if (!AskDataEgress()) return false;
         if (await SaveActiveConfiguration())
         {
@@ -712,6 +715,7 @@ public sealed partial class MainConfigForm : Form
     /// <summary>The saved configuration (what is in force) as a printable PDF; edits not yet saved are not in it.</summary>
     private async Task ExportDataEgressAsync()
     {
+        if (!ConfirmSavedFilesOnly("Il PDF")) return;
         using var dialog = new SaveFileDialog
         {
             Title = "Esporta l'informativa sull'uscita dei dati", Filter = "Documento PDF (*.pdf)|*.pdf", DefaultExt = "pdf", AddExtension = true,
@@ -1217,7 +1221,14 @@ public sealed partial class MainConfigForm : Form
         PopulateUiFromConfig();
         MarkDirty();
         LogActivity("Procedura guidata completata: profilo '" + wizard.Profile.Id + "' su " + wizard.Profile.BaseUrl + ".");
-        if (!await SaveActiveConfiguration()) SetStatus("Procedura guidata applicata ma non salvata: premi Salva quando pronto.", Tone.Warning);
+        if (!await SaveActiveConfiguration())
+        {
+            SetStatus("Procedura guidata applicata ma non salvata: l'avvio automatico di Windows resta invariato. Premi Salva quando pronto.", Tone.Warning);
+            return;
+        }
+        if (!StartupManager.SetRunAtStartup(wizard.RunAtStartup))
+            CopyableMessageBox.Show(this, "Impossibile modificare l'avvio automatico di Windows.", "Avvio automatico", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        SyncAutostart();
     }
 
     /// <summary>Unreadable config or vault: the user chooses; nothing is overwritten silently.</summary>
@@ -1491,7 +1502,7 @@ public sealed partial class MainConfigForm : Form
         }
         Disable(this);
         UseWaitCursor = true;
-        SetStatus("In attesa dell'autorizzazione di amministratore…", Tone.Warning);
+        SetStatus("In attesa dell'autorizzazione di amministratore…", Tone.Warning, StatusLight.Waiting);
         try
         {
             var result = await _elevatedWriter(arguments, resultDir);
@@ -1595,6 +1606,11 @@ public sealed partial class MainConfigForm : Form
     {
         var next = AskPassword(this, "Password amministrativa", "Nuova password (vuota per disattivarla, minimo 8 caratteri):");
         if (next == null) return null;
+        if (next.Length > 0 && next.Length < AdminPasswordService.MinLength)
+        {
+            CopyableMessageBox.Show(this, "La password deve contenere almeno " + AdminPasswordService.MinLength + " caratteri.", "Password", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return null;
+        }
         var confirm = AskPassword(this, "Conferma password", "Ripeti la nuova password:");
         if (confirm == null) return null;
         if (next != confirm)
@@ -1646,6 +1662,12 @@ public sealed partial class MainConfigForm : Form
                 if (record != null) File.WriteAllBytes(Path.Combine(staging, "verifier.json"), record);
                 var applied = await RunElevatedAsync(
                     "admin-password-apply " + ElevatedConfigWriter.Quote(staging) + " " + ElevatedConfigWriter.Quote(_configDir), staging);
+                if (applied.Cancelled)
+                {
+                    SetStatus("Password non modificata: autorizzazione amministratore non concessa.", Tone.Warning);
+                    LogActivity("Password amministrativa non applicata: autorizzazione annullata dall'utente (UAC).");
+                    return;
+                }
                 if (!applied.Success) throw new InvalidOperationException(applied.Message);
             }
             SetLocked(false);
@@ -1753,8 +1775,14 @@ public sealed partial class MainConfigForm : Form
         }
     }
 
+    /// <summary>PDF and backup read the saved files: with edits pending, say they are left out.</summary>
+    private bool ConfirmSavedFilesOnly(string what) => !_isDirty || CopyableMessageBox.Show(this,
+        what + " usa i file salvati: le modifiche non ancora salvate non sono incluse.\n\nProseguire comunque?",
+        "Modifiche non salvate", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes;
+
     private void BtnExportBackup_Click(object? sender, EventArgs e)
     {
+        if (!ConfirmSavedFilesOnly("Il backup")) return;
         try
         {
             using var sfd = new SaveFileDialog
@@ -1831,10 +1859,10 @@ public sealed partial class MainConfigForm : Form
                         finally { ElevatedConfigWriter.DeleteStagingDirectory(staging); }
                         if (!result.Success)
                         {
-                            if (!result.Cancelled)
-                            {
+                            if (result.Cancelled)
+                                SetStatus("Ripristino annullato: autorizzazione amministratore non concessa.", Tone.Warning);
+                            else
                                 CopyableMessageBox.Show(this, "Ripristino non riuscito: " + result.Message, "Ripristino", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                            }
                             LogActivity("Ripristino non eseguito: " + result.Message);
                             return;
                         }
@@ -1852,7 +1880,7 @@ public sealed partial class MainConfigForm : Form
         }
     }
 
-    private static StatusLight StateForTone(Tone tone) => tone == Tone.Success ? StatusLight.Ok : tone == Tone.Danger ? StatusLight.Error : tone == Tone.Warning ? StatusLight.Waiting : StatusLight.Off;
+    private static StatusLight StateForTone(Tone tone) => tone == Tone.Success ? StatusLight.Ok : tone == Tone.Danger ? StatusLight.Error : tone == Tone.Warning ? StatusLight.Paused : StatusLight.Off;
 
     private void SetStatus(string msg, Tone tone = Tone.Muted, StatusLight? light = null)
     {
