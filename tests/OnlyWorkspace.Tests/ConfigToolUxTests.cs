@@ -171,6 +171,43 @@ public sealed class ConfigToolUxTests
         });
     }
 
+    /// <summary>#057: every wizard note shows its own summary beside the «?», inside the page, not a bare button.</summary>
+    [Fact]
+    public void Wizard_EveryNoteShowsATextBesideItsHelpButton()
+    {
+        OnSta(_ =>
+        {
+            using var wizard = new SetupWizardForm(Local("a"), null, archiveEnabled: true, indexAttachments: true)
+            {
+                StartPosition = FormStartPosition.Manual, Location = new System.Drawing.Point(-4000, -4000)
+            };
+            wizard.Show();
+            var steps = (List<Control>)typeof(SetupWizardForm).GetField("_steps", Flags)!.GetValue(wizard)!;
+            var show = typeof(SetupWizardForm).GetMethod("ShowStep", Flags)!;
+            int notes = 0;
+            for (int i = 0; i < steps.Count; i++)
+            {
+                show.Invoke(wizard, new object[] { i });
+                Application.DoEvents();
+                foreach (var button in Descendants(steps[i]).OfType<Button>().Where(b => b.Text == "?"))
+                {
+                    var row = button.Parent!;
+                    var lead = row.Controls.OfType<Label>().SingleOrDefault();
+                    Assert.True(lead != null && lead.Text.Length >= 20, $"step {i + 1}: «?» «{button.AccessibleName}» has no summary beside it");
+                    Assert.True(lead!.Text.Length < button.AccessibleDescription.Length, $"step {i + 1}: the summary is not shorter than the detail");
+                    var page = steps[i];
+                    int right = page.PointToClient(button.PointToScreen(new System.Drawing.Point(button.Width, 0))).X;
+                    Assert.True(right <= page.ClientSize.Width, $"step {i + 1}: «?» ends at {right}, page is {page.ClientSize.Width} wide");
+                    notes++;
+                }
+            }
+            Assert.Equal(8, notes);
+        });
+    }
+
+    private static IEnumerable<Control> Descendants(Control root) =>
+        root.Controls.Cast<Control>().SelectMany(c => new[] { c }.Concat(Descendants(c)));
+
     [Fact]
     public void AdminPassword_MinimumLengthIsSharedByThePromptAndTheRecord()
     {

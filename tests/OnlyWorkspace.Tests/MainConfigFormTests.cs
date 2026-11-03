@@ -560,6 +560,35 @@ public sealed class MainConfigFormTests
         });
     }
 
+    /// <summary>#058: at the default window size every «?» of the connection group ends inside the grid that holds it.</summary>
+    [Fact]
+    public void ConnectionHelpButtons_AreFullyInsideTheirGridAtTheDefaultSize()
+    {
+        OnSta(directory =>
+        {
+            Write(directory, new WorkspaceConfig { DefaultProfile = "a", Profiles = new() { Local("a") } }, new() { ["profile_a_token"] = "s" });
+            new FileConfigurationService(directory, directory).SetUserFlag("guidedSetupDone", true);
+            using var form = new MainConfigForm(directory, trayContext: null, preferencesDir: directory)
+            {
+                StartPosition = FormStartPosition.Manual, Location = new System.Drawing.Point(-4000, -4000)
+            };
+            form.Show();
+            Application.DoEvents();
+            var provider = Field<ComboBox>(form, "_cmbProvider");
+            Control cell = provider;
+            while (cell.Parent is not TableLayoutPanel && cell.Parent != null) cell = cell.Parent;
+            var grid = (TableLayoutPanel)cell.Parent!;
+            var helps = Descendants(grid).OfType<Button>().Where(b => b.Text == "?" && b.Visible).ToList();
+            Assert.NotEmpty(helps);
+            foreach (var help in helps)
+            {
+                int right = grid.PointToClient(help.PointToScreen(new System.Drawing.Point(help.Width, 0))).X;
+                Assert.True(right <= grid.ClientSize.Width, $"«{help.AccessibleName}» ends at {right}, grid is {grid.ClientSize.Width} wide");
+                Assert.True(help.Width >= 28 && help.Height >= 28, $"«{help.AccessibleName}» is {help.Width}x{help.Height}");
+            }
+        });
+    }
+
     /// <summary>The credits page is built when first shown, not at every ConfigTool start.</summary>
     [Fact]
     public void AboutPage_IsFilledWhenOpened()

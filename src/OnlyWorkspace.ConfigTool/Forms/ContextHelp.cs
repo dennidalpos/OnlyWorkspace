@@ -8,7 +8,7 @@ internal static class ContextHelp
     internal static Button Button(Control owner, string title, System.Func<string> text, ToolTip tips)
     {
         var button = new FlatButton { Text = "?", AccessibleName = "Informazioni: " + title,
-            AutoSize = true, MinimumSize = new Size(28, 28), Margin = new Padding(4, 2, 4, 2) };
+            AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, MinimumSize = new Size(28, 28), Margin = new Padding(4, 2, 4, 2) };
         tips.SetToolTip(button, "Apre la descrizione di «" + title + "».");
         button.Click += (_, _) =>
         {

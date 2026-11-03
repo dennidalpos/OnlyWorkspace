@@ -73,9 +73,12 @@ public sealed class SetupWizardForm : Form
         Icon = AppIconHelper.GetAppIcon();
 
         _steps.Add(Page(
-            Note("OnlyWorkspace aggiunge a Outlook classico la scheda OnlyWorkspace sulla barra multifunzione e un riquadro laterale: sintesi, bozze di risposta, verifica di sicurezza, attività e appuntamenti, estrazione di dati, ricerca e analisi della posta con un modello IA."),
-            Note("Le bozze si aprono in Outlook da rivedere: OnlyWorkspace non invia email automaticamente. I profili IA e Web Search determinano quali dati possono uscire dal PC; gli invii esterni richiedono l'informativa accettata in Privacy e dati."),
-            Note("Questa procedura imposta per tutti gli utenti del PC il modello IA e l'autorizzazione dell'archivio, salvati in %ProgramData%\\OnlyWorkspace\\config.json e secrets.bin (chiavi cifrate; il salvataggio può chiedere l'autorizzazione di amministratore). Per l'utente corrente imposta l'avvio automatico e controlla che Outlook carichi l'add-in. Ogni scelta si cambia poi nelle pagine della Configurazione.")));
+            Note("Aggiunge a Outlook classico la scheda OnlyWorkspace e un riquadro laterale con sintesi, bozze, verifica di sicurezza e ricerca.",
+                "OnlyWorkspace aggiunge a Outlook classico la scheda OnlyWorkspace sulla barra multifunzione e un riquadro laterale: sintesi, bozze di risposta, verifica di sicurezza, attività e appuntamenti, estrazione di dati, ricerca e analisi della posta con un modello IA."),
+            Note("Le bozze si aprono in Outlook da rivedere: non viene inviata nessuna email da sola.",
+                "Le bozze si aprono in Outlook da rivedere: OnlyWorkspace non invia email automaticamente. I profili IA e Web Search determinano quali dati possono uscire dal PC; gli invii esterni richiedono l'informativa accettata in Privacy e dati."),
+            Note("Imposta modello IA, archivio e avvio automatico; ogni scelta si cambia poi nella Configurazione.",
+                "Questa procedura imposta per tutti gli utenti del PC il modello IA e l'autorizzazione dell'archivio, salvati in %ProgramData%\\OnlyWorkspace\\config.json e secrets.bin (chiavi cifrate; il salvataggio può chiedere l'autorizzazione di amministratore). Per l'utente corrente imposta l'avvio automatico e controlla che Outlook carichi l'add-in. Ogni scelta si cambia poi nelle pagine della Configurazione.")));
 
         _cmbProvider.Items.AddRange(ProviderCatalog.All.Cast<object>().ToArray());
         if (ProviderCatalog.IsLegacy(Profile.Type)) _cmbProvider.Items.Add(ProviderCatalog.Get(Profile.Type));
@@ -106,17 +109,22 @@ public sealed class SetupWizardForm : Form
         _chkArchive.Checked = archiveEnabled;
         _chkAttachments.Checked = indexAttachments;
         _steps.Add(Page(
-            Note("L'archivio rende cercabile la posta delle cassette consentite, anche a Outlook chiuso, e alimenta Ricostruisci la pratica."),
+            Note("Rende cercabile la posta delle cassette consentite, anche a Outlook chiuso.",
+                "L'archivio rende cercabile la posta delle cassette consentite, anche a Outlook chiuso, e alimenta Ricostruisci la pratica."),
             _chkArchive, _chkAttachments,
-            Note("Il database cifrato in %LOCALAPPDATA%\\OnlyWorkspace\\archive conserva intestazioni, corpo integrale acquisito e, se abilitato, testo degli allegati leggibili. La ricerca usa tutto il testo conservato; l'anteprima mostra solo i primi 255 caratteri. I file allegati originali non vengono archiviati."),
-            Note("La raccolta e la ricerca sono locali e non usano modelli IA. Le azioni di analisi seguono il livello di esposizione del profilo e l'informativa accettata."),
-            Note("Si attiva per ogni utente su tutte le cassette aperte, comprese quelle aggiunte in seguito; ognuno può restringerlo o spegnerlo in Configurazione → Archivio email → Le mie cassette. La raccolta avviene solo con Outlook aperto e il PC inattivo.")));
+            Note("Il database è cifrato e resta su questo PC; i file allegati originali non vengono archiviati.",
+                "Il database cifrato in %LOCALAPPDATA%\\OnlyWorkspace\\archive conserva intestazioni, corpo integrale acquisito e, se abilitato, testo degli allegati leggibili. La ricerca usa tutto il testo conservato; l'anteprima mostra solo i primi 255 caratteri. I file allegati originali non vengono archiviati."),
+            Note("Raccolta e ricerca sono locali e non usano modelli IA.",
+                "La raccolta e la ricerca sono locali e non usano modelli IA. Le azioni di analisi seguono il livello di esposizione del profilo e l'informativa accettata."),
+            Note("Vale per ogni utente su tutte le cassette aperte; ognuno può restringerlo in Configurazione.",
+                "Si attiva per ogni utente su tutte le cassette aperte, comprese quelle aggiunte in seguito; ognuno può restringerlo o spegnerlo in Configurazione → Archivio email → Le mie cassette. La raccolta avviene solo con Outlook aperto e il PC inattivo.")));
 
         _chkAutostart.Checked = true;
         _btnRepair.Click += (_, _) => RepairAddin();
         _steps.Add(Page(
             _chkAutostart,
-            Note("All'accesso parte l'icona OnlyWorkspace nell'area di notifica: ospita il motore dell'archivio, la ricerca a Outlook chiuso e gli avvisi di spazio. Scrive la voce OnlyWorkspaceTray in HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run per il solo utente corrente."),
+            Note("All'accesso parte l'icona nell'area di notifica, che ospita l'archivio e gli avvisi di spazio.",
+                "All'accesso parte l'icona OnlyWorkspace nell'area di notifica: ospita il motore dell'archivio, la ricerca a Outlook chiuso e gli avvisi di spazio. Scrive la voce OnlyWorkspaceTray in HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run per il solo utente corrente."),
             Ui.SetFont(new SelectableLabel { Text = "Add-in in Outlook", AutoSize = true, Margin = new Padding(0, 12, 0, 2) }, 9F, family: "Segoe UI Semibold"),
             _lblAddin, _btnRepair, _lblOutlook));
 
@@ -171,12 +179,17 @@ public sealed class SetupWizardForm : Form
     private static LlmProfileConfig Copy(LlmProfileConfig p) =>
         System.Text.Json.JsonSerializer.Deserialize<LlmProfileConfig>(System.Text.Json.JsonSerializer.Serialize(p))!;
 
-    private Control Note(string text)
+    /// <summary>A visible one-line summary with a «?» that opens the full text.</summary>
+    private Control Note(string lead, string detail)
     {
-        string title = text.Length > 70 ? text.Substring(0, 70) + "…" : text;
-        var button = ContextHelp.Button(this, title, () => text, _tips);
-        button.AccessibleDescription = text;
-        return button;
+        string title = lead.TrimEnd('.');
+        var button = ContextHelp.Button(this, title, () => detail, _tips);
+        button.AccessibleDescription = detail;
+        var label = new SelectableLabel { Text = lead, AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(0, 0, 6, 0) };
+        var row = new FlowLayoutPanel { AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, WrapContents = false, Margin = new Padding(0, 0, 0, 6), Tag = label };
+        row.Controls.Add(label);
+        row.Controls.Add(button);
+        return row;
     }
 
     private static Control Row(string label, Control field) => Row(new SelectableLabel { Text = label, AutoSize = true }, field);
@@ -201,7 +214,15 @@ public sealed class SetupWizardForm : Form
             // Wrap informative text at the available width, including when a vertical scrollbar appears.
             int width = Math.Max(1, page.ClientSize.Width - SystemInformation.VerticalScrollBarWidth);
             foreach (Control control in page.Controls)
-                if (control is Label || control is CheckBox)
+                if (control.Tag is Label lead && control.Controls.Count == 2)
+                {
+                    // A note row: the summary wraps, the «?» keeps its place beside it.
+                    var button = control.Controls[1];
+                    int room = Math.Max(1, width - control.Margin.Horizontal - button.Width - button.Margin.Horizontal - lead.Margin.Horizontal);
+                    var maximum = new Size(room, 0);
+                    if (lead.MaximumSize != maximum) lead.MaximumSize = maximum;
+                }
+                else if (control is Label || control is CheckBox)
                 {
                     var maximum = new Size(Math.Max(1, width - control.Margin.Horizontal), 0);
                     if (control.MaximumSize != maximum) control.MaximumSize = maximum;

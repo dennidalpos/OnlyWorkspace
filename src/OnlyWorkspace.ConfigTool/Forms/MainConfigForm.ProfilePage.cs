@@ -158,7 +158,7 @@ public sealed partial class MainConfigForm
             if (!_isLoading) RefreshProfileNames();
         };
 
-        _cmbProvider = AddRow(conn, "Servizio IA:", Combo(260),
+        _cmbProvider = AddRow(conn, "Servizio IA:", Combo(240),
             "Sceglie tra sei servizi preimpostati. Compatibile OpenAI richiede un indirizzo e non offre ricerca web o lettura delle capacità specifiche. I servizi precedenti particolari restano disponibili solo nei rispettivi profili. La modifica si applica al salvataggio.");
         _cmbProvider.Items.AddRange(ProviderCatalog.All.Cast<object>().ToArray());
         _cmbProvider.SelectedIndexChanged += (s, e) => OnProviderChanged();
