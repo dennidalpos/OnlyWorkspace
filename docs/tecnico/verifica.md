@@ -20,6 +20,10 @@ Il candidato propone sei preset IA e converte in memoria dodici tipi ritirati al
 
 Il gate finale supera 1.817 test per ciascun runtime net48/net10, 22 script, analisi statica/build Release e smoke net48 x64/x86; NuGet non segnala vulnerabilità. Il timeout A234 del gate precedente resta una prova distinta e non è risolto dal verde successivo. Entrambi i template distribuiti superano `validate` offline.
 
+## Marcatore rimosso e feedback del riquadro — 3 novembre 2026
+
+Il candidato `3f375c1` toglie il marcatore dei testi generati e il comando `inspect-ai-html`, e migliora feedback del riquadro (A199) e del ConfigTool (A200). Il gate supera 1.790 test misurati per ciascun runtime net48/net10, tutti gli script di `test-scripts.ps1`, analisi statica/build Release senza avvisi e smoke net48 x64/x86; il conteggio non è stato riconciliato con il 1.817 del gate precedente. Le tabelle di Stato sono state misurate su una pagina statica (nessuno scorrimento a 400 px, 4 px a 340 px). Nessuna prova dal vivo in Outlook né sul ConfigTool installato: l'installato noto resta `18647c6`.
+
 Le regressioni usano configurazioni/vault sintetici, UI WinForms isolata e HTTP simulato. Non qualificano una nuova installazione, Outlook o servizi cloud reali. Ricevuta nel dossier: `history/2026-11-03-A234-A211/report.md`.
 
 ## Layout e Storico del riquadro — 3 novembre 2026
