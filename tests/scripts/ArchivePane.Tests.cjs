@@ -147,7 +147,7 @@ console.log('PASS Stato: essentials in view, diagnostics in a closed Avanzate se
 
 // A192: execute the actual WebView event boundary, toast and live-region path.
 const boundaryNodes = new Map(), diagnostics = [], spoken = [], consoleErrors = [];
-const boundary = vm.createContext({ setupContextHelp() {}, addDocumentReport() {},
+const boundary = vm.createContext({ setupContextHelp() {}, addDocumentReport() {}, measurePaneChrome() {},
   $: id => { if (!boundaryNodes.has(id)) boundaryNodes.set(id, node('div')); return boundaryNodes.get(id); },
   announce: text => spoken.push(text), clearTimeout: () => {}, setTimeout: () => 1,
   console: { error: error => consoleErrors.push(error) },

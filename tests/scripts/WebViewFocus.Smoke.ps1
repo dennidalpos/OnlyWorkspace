@@ -1,4 +1,4 @@
-param([int]$TimeoutSeconds = 30)
+param([int]$TimeoutSeconds = 30, [string]$EvidenceDirectory = '')
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot "../../scripts/build-paths.ps1")
 Set-OnlyWorkspaceVerificationEnvironment -RepositoryRoot (Resolve-Path "$PSScriptRoot/../..").Path
@@ -166,6 +166,112 @@ try {
     }
     $form.ClientSize = $savedSize
     'PASS A210 real WebView Stato: Avanzate closed by default, essentials fit at 380 and 190 px'
+    # A191/A194: real browser layout, keyboard focus and emulated contrast, without Outlook.
+    $view = Field $second '_webView'
+    $layoutEvidence = @()
+    foreach ($sample in @(@{width=380;height=800;zoom=1}, @{width=190;height=400;zoom=1}, @{width=190;height=400;zoom=2})) {
+        $view.ZoomFactor = $sample.zoom
+        $form.ClientSize = New-Object Drawing.Size(($sample.width*$sample.zoom), ($sample.height*$sample.zoom+$button.Height))
+        $second.PostMessage(@{type='toggle_analysis';preset='summary';toggle=$false})
+        Wait-Until {(Script $second 'document.body.dataset.page === "analysisDrawer"') -eq 'true'} 'A191 Posta'
+        [void](Script $second 'document.getElementById("anPerson").value="persona.sintetica@example.test"; document.getElementById("anSubject").value="Ordine sintetico"; document.getElementById("anDays").value="0"; document.getElementById("anRole").value="recipient";')
+        # Keep the last field active at the bottom: a long error toast must leave it reachable.
+        [void](Script $second 'document.getElementById("anDays").focus(); document.getElementById("anDays").scrollIntoView({block:"end"});')
+        $second.PostMessage(@{type='toast';kind='error';message=('Messaggio sintetico lungo da leggere. '*14)})
+        Wait-Until {(Script $second 'parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--toast-space")) > 0') -eq 'true'} 'A191 toast space'
+        [void](Script $second 'document.getElementById("anDays").scrollIntoView({block:"end"});')
+        $metrics = Script $second @'
+JSON.stringify((function(){
+ var drawer=document.getElementById('analysisDrawer'), toast=document.getElementById('toast');
+ var days=document.getElementById('anDays'), rect=days.getBoundingClientRect(), t=toast.getBoundingClientRect();
+ var body=drawer.querySelector('.drawer-body'), field=document.getElementById('anSubject'), label=field.previousElementSibling;
+ var canvas=document.createElement('canvas'), painter=canvas.getContext('2d');
+ var selectionsFit=['anDays','anRole'].every(function(id){var select=document.getElementById(id), style=getComputedStyle(select); painter.font=style.font; return painter.measureText(select.selectedOptions[0].textContent).width+parseFloat(style.paddingLeft)+parseFloat(style.paddingRight)+20<=select.clientWidth;});
+ return {viewport:innerWidth,height:innerHeight,page:document.body.getBoundingClientRect().width,
+  header:body.getBoundingClientRect().top,fieldWidth:field.getBoundingClientRect().width,
+  stacked:field.getBoundingClientRect().top>=label.getBoundingClientRect().bottom,
+  drawerBottom:drawer.getBoundingClientRect().bottom,toastTop:t.top,fieldBottom:rect.bottom,
+  active:document.activeElement.id,role:document.getElementById('anRole').value,period:days.value,selectionsFit:selectionsFit};
+})())
+'@ | ConvertFrom-Json | ConvertFrom-Json
+        $metrics | Add-Member -NotePropertyName zoom -NotePropertyValue $sample.zoom
+        $layoutEvidence += $metrics
+        "A191 layout: $($metrics | ConvertTo-Json -Compress)"
+        if ([Math]::Abs($metrics.viewport-$sample.width) -gt 1 -or [Math]::Abs($metrics.height-$sample.height) -gt 2) {throw "A191 unexpected viewport: $($metrics | ConvertTo-Json -Compress)"}
+        if (!$metrics.stacked -or !$metrics.selectionsFit -or $metrics.fieldWidth -lt $metrics.viewport-40 -or $metrics.page -lt 340 -or $metrics.role -ne 'recipient' -or $metrics.period -ne '0') {throw 'A191 filters collapsed or lost selected values'}
+        if ($metrics.header -gt $metrics.height/3) {throw "A191 header exceeds one third: $($metrics | ConvertTo-Json -Compress)"}
+        if ($metrics.drawerBottom -gt $metrics.toastTop -or $metrics.fieldBottom -gt $metrics.toastTop -or $metrics.active -ne 'anDays') {throw "A191 toast covers the active field: $($metrics | ConvertTo-Json -Compress)"}
+        # The job bar adds its own space below both the drawer and toast.
+        [void](Script $second 'document.body.classList.add("has-job"); document.getElementById("jobBar").hidden=false; document.getElementById("anDays").scrollIntoView({block:"end"});')
+        $jobFits = Script $second 'document.getElementById("analysisDrawer").getBoundingClientRect().bottom <= document.getElementById("toast").getBoundingClientRect().top && document.getElementById("anDays").getBoundingClientRect().bottom <= document.getElementById("toast").getBoundingClientRect().top'
+        if ($jobFits -ne 'true') {throw 'A191 job bar and toast cover the active field'}
+        if ($EvidenceDirectory -and $sample.zoom -eq 2) {
+            [void][IO.Directory]::CreateDirectory($EvidenceDirectory)
+            $capture = $view.CoreWebView2.CallDevToolsProtocolMethodAsync('Page.captureScreenshot','{"format":"png"}')
+            Wait-Until {$capture.IsCompleted} 'A191 synthetic screenshot'
+            $png = $capture.GetAwaiter().GetResult() | ConvertFrom-Json
+            [IO.File]::WriteAllBytes((Join-Path $EvidenceDirectory "posta-zoom200-$architecture.png"), [Convert]::FromBase64String($png.data))
+        }
+        [void](Script $second 'document.body.classList.remove("has-job"); document.getElementById("jobBar").hidden=true; document.getElementById("toastClose").click();')
+        $second.PostMessage(@{type='toggle_info';toggle=$false})
+        Wait-Until {(Script $second 'document.body.dataset.page === "infoDrawer"') -eq 'true'} 'A191 Stato'
+        if ((Script $second '(function(b){return b.scrollWidth<=b.clientWidth+1;})(document.querySelector("#infoDrawer .drawer-body"))') -ne 'true') {throw 'A191 Stato overflow'}
+    }
+    if ($EvidenceDirectory) {
+        [void][IO.Directory]::CreateDirectory($EvidenceDirectory)
+        $layoutEvidence | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $EvidenceDirectory "layout-$architecture.json") -Encoding UTF8
+    }
+    $view.ZoomFactor = 1; $form.ClientSize = $savedSize
+    # Browser forced-colors emulation qualifies CSS only, not a Windows contrast theme.
+    $contrast = $view.CoreWebView2.CallDevToolsProtocolMethodAsync('Emulation.setEmulatedMedia','{"features":[{"name":"forced-colors","value":"active"}]}')
+    Wait-Until {$contrast.IsCompleted} 'contrast emulation'; [void]$contrast.GetAwaiter().GetResult()
+    $second.PostMessage(@{type='toggle_analysis';preset='summary';toggle=$false})
+    Wait-Until {(Script $second 'document.body.dataset.page === "analysisDrawer"') -eq 'true'} 'A194 contrast Posta'
+    $contrastState = Script $second 'JSON.stringify((function(){var chip=document.querySelector(".chip[aria-checked=true]"), nav=document.querySelector(".section-nav [aria-current=page]"); return {active:matchMedia("(forced-colors: active)").matches,chip:chip ? getComputedStyle(chip).textDecorationLine : "missing",nav:getComputedStyle(nav).textDecorationLine,role:document.querySelector("nav.section-nav").getAttribute("aria-label")};})())' | ConvertFrom-Json | ConvertFrom-Json
+    if (!$contrastState.active -or $contrastState.chip -ne 'underline' -or $contrastState.nav -ne 'underline' -or $contrastState.role -ne 'Azioni di Posta') {throw "A194 contrast selection missing: $($contrastState | ConvertTo-Json -Compress)"}
+    $contrast = $view.CoreWebView2.CallDevToolsProtocolMethodAsync('Emulation.setEmulatedMedia','{"features":[]}')
+    Wait-Until {$contrast.IsCompleted} 'end contrast emulation'; [void]$contrast.GetAwaiter().GetResult()
+    # Drive the real DOM and host message handler; all history content is synthetic.
+    [void](Script $second 'window.historyPosts=[]; window.historyOriginalPost=chrome.webview.postMessage; chrome.webview.postMessage=function(m){window.historyPosts.push(m);};')
+    $second.PostMessage(@{type='toggle_history';toggle=$false})
+    Wait-Until {(Script $second 'document.body.dataset.page === "historyDrawer"') -eq 'true'} 'A194 history'
+    $historyItems = @(@{id='a194-a';title='Synthetic A';messageCount=1},@{id='a194-b';title='Synthetic B';messageCount=1},@{id='a194-c';title='Synthetic C';messageCount=1})
+    $second.PostMessage(@{type='history_list';items=$historyItems})
+    try {
+        Wait-Until {(Script $second 'document.querySelectorAll("#historyList .history-item").length===3') -eq 'true'} 'A194 history rows'
+    } catch {
+        Script $second 'JSON.stringify({rows:document.querySelectorAll("#historyList .history-item").length,posts:historyPosts,toast:document.getElementById("toastText").textContent})'
+        throw
+    }
+    [void](Script $second 'window.historyDelete=document.querySelector("[data-history-id=\"a194-b\"][data-history-action=delete]"); historyDelete.focus(); historyDelete.click(); historyDelete.click();')
+    $deleteRequest = Script $second 'JSON.stringify(historyPosts.filter(function(m){return m.type==="delete_history";}).pop())' | ConvertFrom-Json | ConvertFrom-Json
+    if (!$deleteRequest.requestId -or $deleteRequest.id -ne 'a194-b') {throw 'A194 delete lost identity'}
+    $second.PostMessage(@{type='new_chat_ready';preservePage=$true})
+    $second.PostMessage(@{type='history_list';items=@($historyItems[0],$historyItems[2]);deleted=$true;requestId=$deleteRequest.requestId})
+    Wait-Until {(Script $second 'document.body.dataset.page === "historyDrawer" && document.activeElement.dataset.historyId === "a194-c" && document.getElementById("srStatus").textContent === "Conversazione eliminata."') -eq 'true'} 'A194 next row and announcement'
+    # Browser keyboard input must advance from the restored row, not from body or Chat.
+    $tab = $view.CoreWebView2.CallDevToolsProtocolMethodAsync('Input.dispatchKeyEvent','{"type":"keyDown","key":"Tab","code":"Tab","windowsVirtualKeyCode":9,"nativeVirtualKeyCode":9}')
+    Wait-Until {$tab.IsCompleted} 'A194 keyboard Tab'; [void]$tab.GetAwaiter().GetResult()
+    $tab = $view.CoreWebView2.CallDevToolsProtocolMethodAsync('Input.dispatchKeyEvent','{"type":"keyUp","key":"Tab","code":"Tab","windowsVirtualKeyCode":9,"nativeVirtualKeyCode":9}')
+    Wait-Until {$tab.IsCompleted} 'A194 keyboard Tab up'; [void]$tab.GetAwaiter().GetResult()
+    Wait-Until {(Script $second 'document.activeElement.dataset.historyId === "a194-c" && document.activeElement.dataset.historyAction === "resume"') -eq 'true'} 'A194 keyboard resumes beside restored focus'
+    $second.PostMessage(@{type='history_list';items=@($historyItems[2],$historyItems[0])})
+    Wait-Until {(Script $second 'document.activeElement.dataset.historyId === "a194-c" && document.activeElement.dataset.historyAction === "resume" && document.querySelector("#historyList .history-open").dataset.historyId === "a194-c"') -eq 'true'} 'A194 refresh preserves focused identity'
+    [void](Script $second 'var b=document.getElementById("btnDeleteAll"); b.focus(); b.click(); b.click();')
+    $deleteAllRequest = Script $second 'JSON.stringify(historyPosts.filter(function(m){return m.type==="delete_all_history";}).pop())' | ConvertFrom-Json | ConvertFrom-Json
+    if (!$deleteAllRequest.requestId) {throw 'A194 delete all lost request identity'}
+    $second.PostMessage(@{type='new_chat_ready';preservePage=$true})
+    $second.PostMessage(@{type='history_list';items=@();deleted=$true;requestId=$deleteAllRequest.requestId})
+    Wait-Until {(Script $second 'document.body.dataset.page === "historyDrawer" && document.activeElement.id === "historyTitle" && document.getElementById("srStatus").textContent === "Tutte le conversazioni eliminate."') -eq 'true'} 'A194 delete all stays in empty history'
+    $second.PostMessage(@{type='history_list';items=$historyItems})
+    Wait-Until {(Script $second 'document.querySelectorAll("#historyList .history-item").length===3') -eq 'true'} 'A194 navigation fixture'
+    [void](Script $second 'var b=document.querySelector("[data-history-id=\"a194-b\"][data-history-action=delete]"); b.focus(); b.click(); b.click(); document.getElementById("btnChatPage").click(); document.getElementById("btnChatPage").focus();')
+    $deleteRequest = Script $second 'JSON.stringify(historyPosts.filter(function(m){return m.type==="delete_history";}).pop())' | ConvertFrom-Json | ConvertFrom-Json
+    $second.PostMessage(@{type='new_chat_ready';preservePage=$true})
+    $second.PostMessage(@{type='history_list';items=@($historyItems[0],$historyItems[2]);deleted=$true;requestId=$deleteRequest.requestId})
+    Wait-Until {(Script $second 'document.body.dataset.page === "chat" && document.activeElement.id === "btnChatPage"') -eq 'true'} 'A194 late completion does not reopen history or steal focus'
+    [void](Script $second 'chrome.webview.postMessage=window.historyOriginalPost;')
+    'PASS A191/A194 real WebView: 380x800/190x400 and zoom 200%, stacked filters, compact header, toast/job clearance, Stato, emulated contrast, history focus and keyboard'
     # Actual contextual help dialog: modal semantics, wrapping, Escape and focus restoration.
     $second.PostMessage(@{type='toggle_analysis';preset='summary';toggle=$false})
     Wait-Until {(Script $second '!document.getElementById("analysisDrawer").hidden') -eq 'true'} 'analysis help'

@@ -35,6 +35,26 @@ public class DpapiHistoryStorageServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task DeleteAll_ReportsLockedFiles_AndCanBeRetriedWithoutLosingSurvivors()
+    {
+        var locked = new ConversationHistory { Id = "locked", Title = "Keep until retry" };
+        var removable = new ConversationHistory { Id = "removable", Title = "Remove now" };
+        await _storageService.SaveConversationAsync(locked);
+        await _storageService.SaveConversationAsync(removable);
+        var files = Directory.GetFiles(_tempDir, "*.bin");
+        string lockedPath = Array.Find(files, file => Path.GetFileNameWithoutExtension(file) == locked.Id)!;
+        using (var held = new FileStream(lockedPath, FileMode.Open, FileAccess.Read, FileShare.Read))
+        {
+            await Assert.ThrowsAsync<AggregateException>(() => _storageService.DeleteAllConversationsAsync());
+            Assert.True(File.Exists(lockedPath));
+            Assert.Single(Directory.GetFiles(_tempDir, "*.bin"));
+        }
+        Assert.Equal(locked.Title, (await _storageService.LoadConversationAsync(locked.Id))!.Title);
+        await _storageService.DeleteAllConversationsAsync();
+        Assert.Empty(await _storageService.ListConversationsAsync());
+    }
+
+    [Fact]
     public async Task SaveAndLoad_Roundtrip_WorksAndCiphertextIsEncryptedOnDisk()
     {
         var conv = new ConversationHistory

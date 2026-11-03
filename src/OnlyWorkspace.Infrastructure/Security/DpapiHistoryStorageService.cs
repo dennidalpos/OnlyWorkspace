@@ -162,6 +162,7 @@ public sealed partial class DpapiHistoryStorageService : IHistoryStorageService,
 
     public Task DeleteAllConversationsAsync()
     {
+        var failures = new List<Exception>();
         if (Directory.Exists(_storageDirectory))
         {
             var files = Directory.GetFiles(_storageDirectory, "*.bin");
@@ -174,10 +175,12 @@ public sealed partial class DpapiHistoryStorageService : IHistoryStorageService,
                 catch (Exception ex)
                 {
                     OnlyWorkspaceLog.Logger.Warning(ex, "Failed to delete conversation file {FilePath}", file);
+                    failures.Add(ex);
                 }
             }
         }
 
+        if (failures.Count != 0) throw new AggregateException("Some conversations could not be deleted.", failures);
         return Task.CompletedTask;
     }
 

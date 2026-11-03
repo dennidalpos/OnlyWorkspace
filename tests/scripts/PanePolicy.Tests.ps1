@@ -699,6 +699,44 @@ try {
     [void](Wait-PaneTask (Call 'LoadHistoryAsync' @($conversation.Id)))
     Assert-Pass ($null -eq $evidenceField.GetValue($script:coordinator)) 'Opening another conversation kept the analysis emails'
 
+    # A194: persistence outcomes from the production coordinator, including a missing/locked file.
+    $historyFixtureStorage = New-Object OnlyWorkspace.Infrastructure.Security.DpapiHistoryStorageService((Join-Path $scratch 'a194-history'))
+    Set-Field '_historyStorage' $historyFixtureStorage
+    $historyBefore = $type.GetField('_currentConversation', $flags).GetValue($script:coordinator)
+    $syntheticHistory = New-Object OnlyWorkspace.Core.Models.ConversationHistory -Property @{Id='a194-current';Title='Synthetic history'}
+    [void](Wait-PaneTask ($historyFixtureStorage.SaveConversationAsync($syntheticHistory)))
+    Set-Field '_currentConversation' $syntheticHistory
+    $beforeDelete = $pending.Count
+    [void](Wait-PaneTask (Call 'DeleteHistoryAsync' @($syntheticHistory.Id, 'a194-single')))
+    $deletedMessages = @($pending | Select-Object -Skip $beforeDelete | ForEach-Object {$_ | ConvertFrom-Json})
+    Assert-Pass ($null -eq (Wait-PaneTask ($historyFixtureStorage.LoadConversationAsync($syntheticHistory.Id)))) 'History deletion did not persist'
+    Assert-Pass (@($deletedMessages | Where-Object {$_.type -eq 'new_chat_ready' -and $_.preservePage}).Count -eq 1) 'Deleting current history changed the page'
+    Assert-Pass (@($deletedMessages | Where-Object {$_.type -eq 'history_list' -and $_.deleted -and $_.requestId -eq 'a194-single'}).Count -eq 1) 'History completion lost its request identity'
+    $beforeDelete = $pending.Count
+    [void](Wait-PaneTask (Call 'DeleteHistoryAsync' @('a194-missing', 'a194-failure')))
+    $deletedMessages = @($pending | Select-Object -Skip $beforeDelete | ForEach-Object {$_ | ConvertFrom-Json})
+    Assert-Pass (@($deletedMessages | Where-Object {$_.type -eq 'history_delete_failed' -and $_.requestId -eq 'a194-failure'}).Count -eq 1) 'Missing history reported success'
+    Assert-Pass (@($deletedMessages | Where-Object {$_.type -eq 'history_list' -and $_.deleted}).Count -eq 0) 'Failure announced a persisted deletion'
+    [void](Wait-PaneTask ($historyFixtureStorage.SaveConversationAsync($syntheticHistory)))
+    Set-Field '_currentConversation' $syntheticHistory
+    $historyPath = Join-Path (Join-Path $scratch 'a194-history') 'a194-current.bin'
+    $heldHistory = [IO.File]::Open($historyPath, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::Read)
+    try {
+        $beforeDelete = $pending.Count
+        [void](Wait-PaneTask (Call 'DeleteAllHistoryAsync' @('a194-all-failed')))
+        $deletedMessages = @($pending | Select-Object -Skip $beforeDelete | ForEach-Object {$_ | ConvertFrom-Json})
+        Assert-Pass (@($deletedMessages | Where-Object type -eq 'history_delete_failed').Count -eq 1) 'Partial deletion reported success'
+        Assert-Pass (@($deletedMessages | Where-Object type -eq 'new_chat_ready').Count -eq 0) 'Failed deletion reset the current conversation'
+    } finally {$heldHistory.Dispose()}
+    $beforeDelete = $pending.Count
+    [void](Wait-PaneTask (Call 'DeleteAllHistoryAsync' @('a194-all-retry')))
+    $deletedMessages = @($pending | Select-Object -Skip $beforeDelete | ForEach-Object {$_ | ConvertFrom-Json})
+    Assert-Pass (@($deletedMessages | Where-Object {$_.type -eq 'history_list' -and $_.deleted -and $_.items.Count -eq 0}).Count -eq 1) 'Retry did not delete all history'
+    Assert-Pass (@($deletedMessages | Where-Object {$_.type -eq 'new_chat_ready' -and $_.preservePage}).Count -eq 1) 'Delete all changed the page'
+    Set-Field '_currentConversation' $historyBefore
+    Set-Field '_historyStorage' $storage
+    'PASS A194 history: persisted deletion, preserve page, request identity, missing file, partial failure and retry'
+
     # Actual pane render/export/history and calendar extraction, beyond the former 40/200/10 limits.
     $staticFlags = [Reflection.BindingFlags]'NonPublic,Static'
     $email = New-Object OnlyWorkspace.Outlook.Services.SelectedEmailInfo -Property @{Subject='Synthetic'; ReceivedTime=[DateTime]::Now}

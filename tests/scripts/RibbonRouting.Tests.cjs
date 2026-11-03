@@ -29,6 +29,8 @@ const context = vm.createContext({
   finishTurn: () => {},
   updateActions: () => {},
   hideEmailContext: () => calls.push('hide-context'),
+  setComposerMode: () => calls.push('reset-mode'),
+  prompt: { value: 'previous text' }, autoresize() {}, updateSendButton() {},
 });
 new vm.Script('function toggleDrawer(id) { if ($(id).hidden) openDrawer(id); else closeDrawers(); }').runInContext(context);
 new vm.Script(scriptBetween('  function openAnalysis(preset) {', '  function analysisScope() {')).runInContext(context);
@@ -72,6 +74,10 @@ send({ type: 'show_input', mode: 'chat' });
 send({ type: 'new_chat_ready' });
 send({ type: 'hide_email_context' });
 assert.deepEqual(calls, ['composer:reply:', 'composer:chat:', 'clear', 'composer:chat:', 'hide-context']);
+calls.length = 0;
+send({ type: 'new_chat_ready', preservePage: true });
+assert.deepEqual(calls, ['clear', 'reset-mode', 'hide-context'], 'History reset never focuses the composer or closes drawers');
+assert.equal(context.prompt.value, '');
 
 // Every message the ribbon path posts has a handler.
 const coordinator = ['TaskPaneCoordinator.cs', 'TaskPaneCoordinator.Archive.cs']

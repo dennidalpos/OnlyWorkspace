@@ -13,7 +13,7 @@ function section(start, end) {
 }
 
 class Node {
-  constructor(tag, cls, text) { this.tagName = tag.toUpperCase(); this.className = cls || ''; this.textContent = text || ''; this.children = []; this.attrs = {}; this.listeners = {}; this.innerHTML = ''; }
+  constructor(tag, cls, text) { this.tagName = tag.toUpperCase(); this.className = cls || ''; this.textContent = text || ''; this.children = []; this.attrs = {}; this.listeners = {}; this.innerHTML = ''; this.dataset = {}; }
   appendChild(n) { this.children.push(n); return n; }
   setAttribute(k, v) { this.attrs[k] = v; }
   addEventListener(type, fn) { this.listeners[type] = fn; }
@@ -38,9 +38,11 @@ const ctx = vm.createContext({
   armConfirm: () => {},
   busyBlocked: () => false,
   finishDrawerLoad: () => {},
+  historyMutation: null,
+  historyControl: (node, id, action) => { node.dataset.historyId = id; node.dataset.historyAction = action; return node; },
   $: id => ctx.nodes[id] || (ctx.nodes[id] = new Node('div')),
   nodes: {},
-  document: { createTextNode: t => Object.assign(new Node('#text'), { textContent: t }) },
+  document: { body: { dataset: { page: 'chat' } }, activeElement: {}, createTextNode: t => Object.assign(new Node('#text'), { textContent: t }) },
 });
 new vm.Script(section('  function actionButton(iconName, label, onClick, tip) {', '  function addSources(')).runInContext(ctx);
 

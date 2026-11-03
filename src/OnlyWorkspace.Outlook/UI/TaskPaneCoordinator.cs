@@ -452,8 +452,8 @@ public partial class TaskPaneCoordinator : IDisposable
             // History.
             case "list_history": _ = SendHistoryListAsync(); break;
             case "load_history": _ = LoadHistoryAsync(GetString(message, "id")); break;
-            case "delete_history": _ = DeleteHistoryAsync(GetString(message, "id")); break;
-            case "delete_all_history": _ = DeleteAllHistoryAsync(); break;
+            case "delete_history": _ = DeleteHistoryAsync(GetString(message, "id"), GetString(message, "requestId")); break;
+            case "delete_all_history": _ = DeleteAllHistoryAsync(GetString(message, "requestId")); break;
             case "new_chat": ClearChat(); break;
 
             // Archive and flow.
@@ -1969,7 +1969,7 @@ public partial class TaskPaneCoordinator : IDisposable
         catch { }
     }
 
-    private async Task SendHistoryListAsync()
+    private async Task SendHistoryListAsync(string? requestId = null, bool deleted = false)
     {
         try
         {
@@ -1983,12 +1983,12 @@ public partial class TaskPaneCoordinator : IDisposable
                 email = MailRefForPane(l.Email)
             }).ToList();
 
-            _control.PostMessage(new { type = "history_list", items, enabled = _config?.History?.Enabled == true });
+            _control.PostMessage(new { type = "history_list", items, enabled = _config?.History?.Enabled == true, requestId, deleted });
         }
         catch (Exception ex)
         {
             OnlyWorkspaceLog.Logger.Warning(ex, "Failed to list conversation history");
-            _control.PostMessage(new { type = "history_list", items = Array.Empty<object>(), enabled = _config?.History?.Enabled == true, error = "Impossibile leggere lo storico." });
+            _control.PostMessage(new { type = "history_list", items = Array.Empty<object>(), enabled = _config?.History?.Enabled == true, error = "Impossibile leggere lo storico.", requestId, deleted });
         }
     }
 
@@ -2045,36 +2045,39 @@ public partial class TaskPaneCoordinator : IDisposable
         }
     }
 
-    private async Task DeleteHistoryAsync(string? id)
+    private async Task DeleteHistoryAsync(string? id, string? requestId)
     {
         if (string.IsNullOrWhiteSpace(id)) return;
         try
         {
-            await _historyStorage.DeleteConversationAsync(id!);
+            if (!await _historyStorage.DeleteConversationAsync(id!))
+                throw new InvalidOperationException("The requested conversation was not deleted.");
             if (_currentConversation.Id == id)
             {
-                StartNewChat();
+                ResetConversation(preservePage: true);
             }
-            await SendHistoryListAsync();
+            await SendHistoryListAsync(requestId, deleted: true);
         }
         catch (Exception ex)
         {
             OnlyWorkspaceLog.Logger.Warning(ex, "Failed to delete conversation {Id}", id);
+            _control.PostMessage(new { type = "history_delete_failed", requestId });
             Toast("Eliminazione non riuscita.", "error");
         }
     }
 
-    private async Task DeleteAllHistoryAsync()
+    private async Task DeleteAllHistoryAsync(string? requestId)
     {
         try
         {
             await _historyStorage.DeleteAllConversationsAsync();
-            StartNewChat();
-            await SendHistoryListAsync();
+            ResetConversation(preservePage: true);
+            await SendHistoryListAsync(requestId, deleted: true);
         }
         catch (Exception ex)
         {
             OnlyWorkspaceLog.Logger.Warning(ex, "Failed to delete all history");
+            _control.PostMessage(new { type = "history_delete_failed", requestId });
             Toast("Eliminazione non riuscita.", "error");
         }
     }
@@ -2088,13 +2091,18 @@ public partial class TaskPaneCoordinator : IDisposable
 
     public void StartNewChat()
     {
+        ResetConversation(preservePage: false);
+    }
+
+    private void ResetConversation(bool preservePage)
+    {
         _turn++;
         CancelActiveTask();
         _replay.ClearTurn();
         _analysisEvidence = null;
         var profile = GetActiveProfile();
         _currentConversation = profile == null ? new ConversationHistory() : ConversationPolicy.Create(profile);
-        _control.PostMessage(new { type = "new_chat_ready" });
+        _control.PostMessage(new { type = "new_chat_ready", preservePage });
     }
 
     private DateTime _sourceReadUtc = DateTime.UtcNow;

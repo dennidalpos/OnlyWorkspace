@@ -477,7 +477,7 @@
   }
   .job-text { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .job-bar .phase-bar { position: absolute; left: 0; right: 0; top: -1px; height: 2px; border-radius: var(--corner-0); }
-  .has-job .drawer { bottom: 43px; }
+  .has-job .drawer { bottom: calc(43px + var(--toast-space, 0px)); }
   /* Over the chat page the bar shows work of another window: the composer stays above it. */
   body.has-job { padding-bottom: 43px; box-sizing: border-box; }
   /* 24 px high at least: a usable target for touch and pointer (WCAG 2.2, 2.5.8). */
@@ -512,7 +512,7 @@
   /* ---------- Drawers ---------- */
   .drawer {
     position: fixed; z-index: 50;
-    top: var(--topbar-bottom, var(--topbar-h)); left: 0; right: 0; bottom: 0;
+    top: var(--topbar-bottom, var(--topbar-h)); left: 0; right: 0; bottom: var(--toast-space, 0px);
     display: flex; flex-direction: column;
     background: var(--bg);
     animation: rise 0.15s ease-out;
@@ -634,6 +634,8 @@
   .opt span { min-width: 0; overflow-wrap: anywhere; }
   .field-row { display: flex; align-items: center; gap: 8px; font-size: var(--text-size-12-5); }
   .field-row label { width: 76px; flex: none; color: var(--text-2); }
+  #anRole { flex: 0 0 112px; }
+  #anSenderFill { align-self: flex-start; margin-left: 84px; }
   .field, .field-area {
     flex: 1; min-width: 0; height: 28px; padding: 0 8px;
     font: inherit; color: var(--text);
@@ -671,6 +673,7 @@
     :focus-visible { outline: 2px solid Highlight !important; outline-offset: 1px; }
     /* The current section loses its tint and underline: a Highlight frame marks it. */
     .primary-nav button[aria-current='page'] { border: 2px solid Highlight; color: Highlight; }
+    .section-nav [aria-current='page'], .chip[aria-checked='true'] { border: 2px solid Highlight; text-decoration: underline; }
     svg.i { fill: currentColor; }
     .data-table th, .data-table td { border-color: CanvasText; }
     .ind-badge, [data-light] > .ind-badge { forced-color-adjust: none; background: Canvas; color: CanvasText; border-color: CanvasText; }
@@ -682,10 +685,13 @@
   @media (max-width: 419px) {
     .brand > span { display: none; }
   }
-  /* Narrow pane: the role selector goes under the person field. */
-  @media (max-width: 340px) {
-    .field-row.wrap { flex-wrap: wrap; }
-    .field-row.wrap #anRole { flex-basis: calc(100% - 84px) !important; margin-left: 84px; }
+  /* Filters keep the full available width, including at high browser zoom. */
+  @media (max-width: 419px) {
+    .field-row { flex-direction: column; align-items: stretch; gap: 4px; }
+    .field-row label { width: auto; }
+    .field-row .field { flex: none; width: 100%; box-sizing: border-box; }
+    #anRole { flex: none; }
+    #anSenderFill { margin-left: 0; }
   }
   /* Narrower than the standard pane (zoom 110% and more): the pages take a second row of their own, the brand keeps the first. */
   @media (max-width: 379px) {
@@ -702,6 +708,13 @@
   }
   /* Zoom 200% or a short window: the conversation keeps a usable height and the pane scrolls instead of cutting off the composer. */
   @media (max-height: 560px) {
+    :root { --topbar-h: 64px; }
+    .topbar { min-height: 0; padding-top: 0; padding-bottom: 0; }
+    .primary-nav { display: flex; }
+    .primary-nav button { min-height: 26px; }
+    .drawer-header { padding-top: 2px; padding-bottom: 2px; }
+    .section-nav { display: grid; grid-template-columns: 1fr 1fr; padding: 2px 8px; gap: 4px; }
+    .section-nav .btn { min-width: 0; min-height: 24px; padding: 2px 4px; white-space: normal; font-size: var(--text-size-11); line-height: 1.25; }
     body { overflow-y: auto; }
     /* The drawers are fixed under the bar: the bar stays with them while the page scrolls. */
     .topbar { position: sticky; top: 0; z-index: 56; }
@@ -948,7 +961,7 @@
       <h2 id="analysisTitle" tabindex="-1">Posta</h2>
       <button class="icon-btn" type="button" data-close-drawer title="Chiudi (Esc)" aria-label="Chiudi"><svg class="i"><use href="#i-dismiss"/></svg></button>
     </div>
-    <div class="section-nav" aria-label="Azioni di Posta"><span class="btn btn-sm" aria-current="page">Cerca e analizza</span><button id="btnBriefing" class="btn btn-sm" type="button" title="Agenda di oggi e triage delle email non lette">Briefing di oggi</button></div>
+    <nav class="section-nav" aria-label="Azioni di Posta"><span class="btn btn-sm" aria-current="page">Cerca e analizza</span><button id="btnBriefing" class="btn btn-sm" type="button" title="Agenda di oggi e triage delle email non lette">Briefing di oggi</button></nav>
     <div class="drawer-body">
       <div class="drawer-section-title">Cosa cercare</div>
       <div id="anPresets" class="chips" role="radiogroup" aria-label="Tipo di ricerca">
@@ -988,13 +1001,13 @@
       <div class="field-row wrap">
         <label for="anPerson">Persona</label>
         <input id="anPerson" class="field" type="text" placeholder="Tutte le persone" autocomplete="off" title="Restringe la ricerca a una persona. Lascia vuoto per non applicare altri filtri agli indirizzi. Jolly: * qualsiasi testo, ? un carattere (es. *@acme.it)">
-        <select id="anRole" class="field" style="flex:0 0 112px" aria-label="Ruolo della persona" title="Dove deve comparire la persona. Il destinatario è confrontato con il nome mostrato nei campi A e Cc">
+        <select id="anRole" class="field" aria-label="Ruolo della persona" title="Dove deve comparire la persona. Il destinatario è confrontato con il nome mostrato nei campi A e Cc">
           <option value="sender" selected>Mittente</option>
           <option value="recipient">Destinatario</option>
           <option value="any">Entrambi</option>
         </select>
       </div>
-      <button id="anSenderFill" class="link-btn" type="button" style="align-self:flex-start;margin-left:84px" hidden></button>
+      <button id="anSenderFill" class="link-btn" type="button" hidden></button>
       <div class="field-row">
         <label for="anSubject">Oggetto</label>
         <input id="anSubject" class="field" type="text" placeholder="testo nell'oggetto" autocomplete="off" title="Testo contenuto nell'oggetto. Jolly: * qualsiasi testo, ? un carattere (es. fattur*)">
@@ -1178,9 +1191,16 @@
 
   // The bar grows when its rows wrap (narrow pane at high zoom): the drawers start under its real height.
   var topbar = document.querySelector('.topbar');
-  if (typeof ResizeObserver !== 'undefined') new ResizeObserver(function () {
+  function measurePaneChrome() {
     document.documentElement.style.setProperty('--topbar-bottom', topbar.offsetHeight + 'px');
-  }).observe(topbar);
+    var toast = document.getElementById('toast');
+    document.documentElement.style.setProperty('--toast-space', (toast.hidden ? 0 : toast.offsetHeight + 16) + 'px');
+  }
+  if (typeof ResizeObserver !== 'undefined') {
+    var chromeObserver = new ResizeObserver(measurePaneChrome);
+    chromeObserver.observe(topbar);
+    chromeObserver.observe(document.getElementById('toast'));
+  }
 
   var webview = window.chrome && window.chrome.webview;
   function post(msg) {
@@ -2155,6 +2175,7 @@
     btn.textContent = act ? act.label : '';
     btn.onclick = act ? function () { hideToast(); act.run(); } : null;
     t.hidden = false;
+    measurePaneChrome();
     // Read out through the live region that is always in the page: a region that appears with its text is often not announced.
     announce((kind === 'error' ? 'Errore: ' : '') + message);
     toastKind = kind;
@@ -2167,7 +2188,7 @@
     clearTimeout(toastTimer);
     if (toastKind !== 'error') toastTimer = setTimeout(hideToast, toastDelay);
   }
-  function hideToast() { clearTimeout(toastTimer); $('toast').hidden = true; }
+  function hideToast() { clearTimeout(toastTimer); $('toast').hidden = true; measurePaneChrome(); }
   $('toastClose').addEventListener('click', hideToast);
   // A toast being read or used (its Copia, its action) does not vanish meanwhile.
   ['mouseenter', 'focusin'].forEach(function (e) { $('toast').addEventListener(e, function () { clearTimeout(toastTimer); }); });
@@ -2663,7 +2684,9 @@
   // Drawer → button that gets the focus back (and aria-expanded when it is a toggle).
   var drawerToggles = { historyDrawer: 'btnHistory', infoDrawer: 'btnAiState', analysisDrawer: 'btnSearchPage', helpDrawer: 'btnHelp' };
   var navButtons = { chat: 'btnChatPage', analysisDrawer: 'btnSearchPage', historyDrawer: 'btnHistory' };
+  var historyPageVersion = 0;
   function showPage(id) {
+    if (document.body.dataset.page !== id) historyPageVersion++;
     document.body.dataset.page = id;
     var selected = navButtons[id];
     ['btnChatPage', 'btnSearchPage', 'btnHistory'].forEach(function (button) { $(button).setAttribute('aria-current', button === selected ? 'page' : 'false'); });
@@ -3053,29 +3076,83 @@
     armConfirm(b, 'Conferma eliminazione', function () {
       b.classList.remove('confirming');
       b.textContent = 'Elimina tutto';
-      if (!busyBlocked()) post({ type: 'delete_all_history' });
+      deleteHistory(b, null);
     });
   });
 
+  var historyMutation = null, historyRequestSequence = 0;
+  var historyRequestPage = Date.now().toString(36) + '-' + Math.random().toString(36).slice(2);
+  document.addEventListener('focusin', function (event) {
+    if (historyMutation && event.target !== historyMutation.trigger) historyMutation.focusMoved = true;
+  });
+  function deleteHistory(trigger, id) {
+    if (historyMutation || busyBlocked()) return;
+    var row = trigger.closest('.history-item');
+    historyMutation = {
+      requestId: 'history-' + historyRequestPage + '-' + (++historyRequestSequence), trigger: trigger, id: id,
+      index: row ? Array.prototype.indexOf.call($('historyList').children, row) : 0,
+      pageVersion: historyPageVersion, focusMoved: false
+    };
+    $('historyList').setAttribute('aria-busy', 'true');
+    post({ type: id == null ? 'delete_all_history' : 'delete_history', id: id, requestId: historyMutation.requestId });
+  }
+  function failHistoryDelete(data) {
+    if (historyMutation && data.requestId === historyMutation.requestId) {
+      historyMutation = null;
+      $('historyList').setAttribute('aria-busy', 'false');
+    }
+  }
+  function historyControl(button, id, action) {
+    button.dataset.historyId = id;
+    button.dataset.historyAction = action;
+    return button;
+  }
   function renderHistoryList(data) {
+    // An older read must not replace the list while a deletion is being committed.
+    if (data.requestId ? !historyMutation || data.requestId !== historyMutation.requestId : historyMutation) return;
     finishDrawerLoad('history');
     var list = $('historyList');
     var items = data.items || [];
+    var active = document.activeElement;
+    var mutation = data.deleted ? historyMutation : null;
+    var followDeletion = mutation && !mutation.focusMoved && mutation.pageVersion === historyPageVersion && active === mutation.trigger;
+    var restore = document.body.dataset.page === 'historyDrawer' && (followDeletion || list.contains(active) || active === $('btnDeleteAll'));
+    var savedId = active && active.dataset && active.dataset.historyId;
+    var savedAction = active && active.dataset && active.dataset.historyAction;
+    if (mutation) {
+      historyMutation = null;
+      announce((mutation.id == null ? 'Tutte le conversazioni eliminate.' : 'Conversazione eliminata.') + (data.error ? ' ' + data.error : ''));
+    }
+    list.setAttribute('aria-busy', 'false');
+    function restoreFocus() {
+      if (!restore) return;
+      var buttons = Array.prototype.slice.call(list.querySelectorAll('[data-history-action]'));
+      var target = followDeletion ? buttons.filter(function (b) { return b.dataset.historyAction === 'open'; })[Math.min(mutation.index, items.length - 1)]
+        : buttons.filter(function (b) { return b.dataset.historyId === savedId && b.dataset.historyAction === savedAction; })[0];
+      if (!followDeletion && active === $('btnDeleteAll') && items.length && !data.error) target = active;
+      (target || $('historyTitle')).focus();
+    }
     list.innerHTML = '';
     $('btnDeleteAll').hidden = items.length === 0;
     if (data.error) {
       list.appendChild(el('div', 'muted', data.error));
+      var retry = el('button', 'btn btn-sm', 'Riprova');
+      retry.type = 'button';
+      retry.addEventListener('click', function () { requestHistory(); $('historyTitle').focus(); });
+      list.appendChild(retry);
+      restoreFocus();
       return;
     }
     if (!items.length) {
       list.appendChild(el('div', 'muted', data.enabled === false
         ? 'Lo storico è disattivato dall\'amministratore.'
         : 'Nessuna conversazione salvata. Chat e risultati delle azioni (sintesi, bozze, verifiche, analisi) vengono salvati cifrati su questo PC.'));
+      restoreFocus();
       return;
     }
     items.forEach(function (it) {
       var row = el('div', 'history-item');
-      var open = el('button', 'history-open');
+      var open = historyControl(el('button', 'history-open'), it.id, 'open');
       open.type = 'button';
       open.appendChild(el('span', 'history-title', it.title || '(senza titolo)'));
       if (it.email) {
@@ -3089,19 +3166,19 @@
       var resume = function () { if (!busyBlocked()) post({ type: 'load_history', id: it.id }); };
       open.addEventListener('click', resume);
       // The whole row resumes too: an icon is enough and leaves the width to the title and date.
-      var again = el('button', 'icon-btn');
+      var again = historyControl(el('button', 'icon-btn'), it.id, 'resume');
       again.type = 'button';
       again.title = 'Riprendi: riapri la conversazione e continua a scrivere da dove eri rimasto';
       again.setAttribute('aria-label', 'Riprendi ' + (it.title || 'conversazione'));
       again.innerHTML = icon('refresh');
       again.addEventListener('click', resume);
-      var del = el('button', 'icon-btn');
+      var del = historyControl(el('button', 'icon-btn'), it.id, 'delete');
       del.type = 'button';
       del.title = 'Elimina conversazione';
       del.setAttribute('aria-label', 'Elimina conversazione ' + (it.title || ''));
       del.innerHTML = icon('delete');
       del.addEventListener('click', function () {
-        armConfirm(del, 'Elimina', function () { if (!busyBlocked()) post({ type: 'delete_history', id: it.id }); });
+        armConfirm(del, 'Elimina', function () { deleteHistory(del, it.id); });
       });
       var actions = el('div', 'history-actions');
       actions.appendChild(again);
@@ -3110,6 +3187,7 @@
       row.appendChild(actions);
       list.appendChild(row);
     });
+    restoreFocus();
   }
 
   function renderLoadedConversation(data) {
@@ -3435,6 +3513,10 @@
         renderHistoryList(data);
         break;
 
+      case 'history_delete_failed':
+        failHistoryDelete(data);
+        break;
+
       case 'history_loaded':
         closeDrawers();
         setComposerMode('chat');
@@ -3444,7 +3526,13 @@
       case 'new_chat_ready':
         if (state.current) finishTurn({ status: 'silent' });
         clearConversation();
-        focusComposer('chat', '');
+        if (data.preservePage) {
+          setComposerMode('chat');
+          prompt.value = '';
+          hideEmailContext();
+          autoresize();
+          updateSendButton();
+        } else focusComposer('chat', '');
         updateActions();
         break;
 
