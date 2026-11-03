@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/check-pane-js.cjs\"",
+            "timeout": 30,
+            "statusMessage": "Controllo sintassi JavaScript"
+          }
+        ]
+      }
+    ]
+  }
+}
