@@ -12,7 +12,6 @@ param(
     [string[]]$Files,
 
     [string]$PfxPath = "",
-    [string]$PasswordPlain = $env:ONLYAPPS_PFX_PASSWORD,
     [string]$TimestampServer = "http://timestamp.digicert.com",
 
     # Solo per prove locali: senza marca temporale la firma smette di valere alla scadenza del certificato.
@@ -21,8 +20,9 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-if ([string]::IsNullOrWhiteSpace($PasswordPlain)) {
-    throw "Password del PFX mancante: impostare la variabile d'ambiente ONLYAPPS_PFX_PASSWORD (o passare -PasswordPlain)."
+$pfxPassword = $env:ONLYAPPS_PFX_PASSWORD
+if ([string]::IsNullOrWhiteSpace($pfxPassword)) {
+    throw "Password del PFX mancante: impostare la variabile d'ambiente ONLYAPPS_PFX_PASSWORD."
 }
 
 if ([string]::IsNullOrWhiteSpace($PfxPath)) {
@@ -74,13 +74,13 @@ foreach ($file in $Files) {
 foreach ($file in $Files) {
     Write-Host "--> Firma file: $file ..." -ForegroundColor Cyan
     
-    & $signtool sign /fd SHA256 /tr $TimestampServer /td SHA256 /f $PfxPath /p $PasswordPlain $file 2>&1 | Out-Null
+    & $signtool sign /fd SHA256 /tr $TimestampServer /td SHA256 /f $PfxPath /p $pfxPassword $file 2>&1 | Out-Null
     if ($LASTEXITCODE -ne 0) {
         if (!$AllowNoTimestamp) {
             throw "Firma con marca temporale fallita per file: $file (ExitCode: $LASTEXITCODE). Verificare la connessione a $TimestampServer; -AllowNoTimestamp firma senza marca solo per prove locali."
         }
         Write-Warning "Firma con marca temporale fallita per ${file}: firma senza marca (-AllowNoTimestamp)."
-        & $signtool sign /fd SHA256 /f $PfxPath /p $PasswordPlain $file 2>&1 | Out-Null
+        & $signtool sign /fd SHA256 /f $PfxPath /p $pfxPassword $file 2>&1 | Out-Null
         if ($LASTEXITCODE -ne 0) {
             throw "Firma fallita per file: $file (ExitCode: $LASTEXITCODE)"
         }

@@ -134,6 +134,23 @@ try {
         Write-Output "PASS signing: $global:packagingscenario"
     }
 
+    # The PFX password comes only from the environment: no parameter, and a missing variable stops both scripts before any work.
+    foreach ($name in @('sign-binaries.ps1', 'create-code-signing-cert.ps1')) {
+        $scriptPath = Join-Path $repoRoot "scripts\$name"
+        $ast = [Management.Automation.Language.Parser]::ParseFile($scriptPath, [ref]$null, [ref]$null)
+        $parameterNames = @($ast.ParamBlock.Parameters | ForEach-Object { $_.Name.VariablePath.UserPath })
+        if ($parameterNames -match 'Password') { throw "$name still accepts the PFX password as a parameter." }
+        $env:ONLYAPPS_PFX_PASSWORD = ''
+        $failure = $null
+        $arguments = if ($name -eq 'sign-binaries.ps1') { @{ Files = @((Join-Path $scratchRoot 'absent.exe')) } } else { @{ OutputDir = (Join-Path $scratchRoot 'no-password-certs') } }
+        try { & $scriptPath @arguments }
+        catch { $failure = $_ }
+        $env:ONLYAPPS_PFX_PASSWORD = 'test-placeholder'
+        if (!$failure -or $failure.ToString() -notlike '*ONLYAPPS_PFX_PASSWORD*') { throw "$name did not report the missing PFX password: $failure" }
+        if (Test-Path -LiteralPath (Join-Path $scratchRoot 'no-password-certs')) { throw "$name worked before checking the PFX password." }
+        Write-Output "PASS password: $name"
+    }
+
     # Compile the production uninstaller hook with an actual failing child process.
     $nsis = 'C:\Program Files (x86)\NSIS\makensis.exe'
     $hook = Get-Content (Join-Path $repoRoot 'installer\OnlyWorkspaceSetup.nsi') | Where-Object { $_ -like '!uninstfinalize *' }

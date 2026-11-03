@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Carica l'add-in in un host .NET Framework senza binding redirect, come avviene dentro Outlook.
 .DESCRIPTION

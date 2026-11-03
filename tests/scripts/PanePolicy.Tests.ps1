@@ -1,4 +1,4 @@
-param([string]$Dir = '', [string]$EvidenceDirectory = '')
+﻿param([string]$Dir = '', [string]$EvidenceDirectory = '')
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot "../../scripts/build-paths.ps1")
 Set-OnlyWorkspaceVerificationEnvironment -RepositoryRoot (Resolve-Path "$PSScriptRoot/../..").Path

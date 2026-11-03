@@ -15,15 +15,15 @@ param(
     [string]$Subject = "CN=OnlyApps Code Signing",
     [string]$OutputDir = "$PSScriptRoot\..\certs",
     [string]$CertName = "OnlyApps",
-    [string]$PasswordPlain = $env:ONLYAPPS_PFX_PASSWORD,
     [int]$ValidYears = 3,
     [switch]$InstallToMachineStores
 )
 
 $ErrorActionPreference = "Stop"
 
-if ([string]::IsNullOrWhiteSpace($PasswordPlain)) {
-    throw "Password del PFX mancante: impostare la variabile d'ambiente ONLYAPPS_PFX_PASSWORD (o passare -PasswordPlain)."
+$pfxPassword = $env:ONLYAPPS_PFX_PASSWORD
+if ([string]::IsNullOrWhiteSpace($pfxPassword)) {
+    throw "Password del PFX mancante: impostare la variabile d'ambiente ONLYAPPS_PFX_PASSWORD."
 }
 
 if (!(Test-Path $OutputDir)) {
@@ -35,7 +35,7 @@ $pfxPath = Join-Path $OutputDir "$CertName.pfx"
 
 Write-Host "==> Generazione certificato Code Signing: $Subject (RSA 3072 bit, $ValidYears anni)..." -ForegroundColor Cyan
 
-$securePwd = ConvertTo-SecureString -String $PasswordPlain -AsPlainText -Force
+$securePwd = ConvertTo-SecureString -String $pfxPassword -AsPlainText -Force
 
 $cert = New-SelfSignedCertificate `
     -Type CodeSigningCert `

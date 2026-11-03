@@ -6,6 +6,14 @@ Test di codice, prova sulla build installata e qualifica su cassette e provider 
 
 Contenuto datato trasferito nel dossier SecondBrain: `02-areas/products/OnlyWorkspace/history/imported/docs/tecnico/verifica.md`. Originale e SHA-256 nel rapporto di migrazione; questa voce conserva i riferimenti esistenti e non autorizza nuovi interventi.
 
+## Automazione Claude Code e script di firma — 3 novembre 2026
+
+`sign-binaries.ps1` e `create-code-signing-cert.ps1` leggono la password del PFX solo da `ONLYAPPS_PFX_PASSWORD` (parametro `-PasswordPlain` rimosso); `Packaging.Tests.ps1` verifica l'assenza del parametro e l'errore con variabile mancante. Senza BOM, Windows PowerShell 5.1 legge male gli accenti: provato con `Parser.ParseFile` su `smoke-net48.ps1`, `WebViewBoundary.Smoke.ps1` e `PanePolicy.Tests.ps1`, che ora hanno il BOM UTF-8 (`WebViewFocus.Smoke.ps1` lo aveva già).
+
+Per Claude Code: l'hook `.claude/hooks/protect-paths.cjs` rifiuta le scritture su `.local-secrets/`, `dist/`, `publish/`, `*.pfx` e `*.owbak` (14 casi via pipe, rifiuto confermato dal vivo su `dist/`); la skill `gate` (solo invocazione esplicita) elenca i comandi del gate in sequenza; il subagente `egress-reviewer` (Read/Grep/Glob) controlla il confine dei dati verso il cloud. Provato su due diff noti: ha rilevato il testo di `WebSearchService.Disclosure`, che descrive un invio che `SearchAsync` blocca (residuo tracciato).
+
+Gate: 1.794 test per runtime net48/net10, 23 script, analisi statica/build Release, smoke net48 x64/x86, NuGet senza vulnerabilità. Nelle esecuzioni con la macchina carica sono comparsi `ConcurrentProcesses_PreserveEveryFlag` (A234, net48 e net10), `CancellationAfterParentExited_KillsTheIdentifiedDescendant` e `HttpErrorCancellationTests` (net10), più un errore CS8602 transitorio di `check-code.ps1` su codice invariato; tutti verdi alla ripetizione, nessuna causa dimostrata. Non eseguiti: smoke WebView manuali, build installata, Outlook, cloud reale.
+
 ## Stato del candidato — 3 novembre 2026
 
 Il candidato del lotto preferenze/provider deriva da `80572a2` e comprende la semplificazione del catalogo IA e la diagnostica delle preferenze concorrenti. Dal 3 novembre 2026 l'installato su WS-DP01 è la build firmata del commit che chiude le prove dal vivo descritte sotto. Nel candidato il prodotto è 1.0.0, l'archivio è in formato 13, la pipe è v15, l'informativa è v5, la policy conversazione è revisione 7 e il catalogo di pseudonimizzazione è revisione 2. Il contratto cloud corrente usa concessioni per profilo e fatti tipizzati; vedere [Pseudonimizzazione](pseudonimizzazione.md). Le prove datate sotto qualificano soltanto i rispettivi candidati.
