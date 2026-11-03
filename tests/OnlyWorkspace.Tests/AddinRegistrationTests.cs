@@ -85,7 +85,9 @@ public sealed class AddinRegistrationTests
                 using var wizard = new SetupWizardForm(profile, cloud ? "synthetic-key" : null, archive, attachments);
                 var pages = (List<Control>)typeof(SetupWizardForm).GetField("_steps", flags)!.GetValue(wizard)!;
                 var next = typeof(SetupWizardForm).GetMethod("Next", flags)!;
-                var text = string.Join("\n", pages.SelectMany(p => p.Controls.Cast<Control>()).Select(c => c.Text + "\n" + c.AccessibleDescription));
+                // Notes are a visible summary plus a «?» whose AccessibleDescription holds the full text, one level down.
+                static IEnumerable<Control> All(Control parent) => parent.Controls.Cast<Control>().SelectMany(c => new[] { c }.Concat(All(c)));
+                var text = string.Join("\n", pages.SelectMany(All).Select(c => c.Text + "\n" + c.AccessibleDescription));
                 Assert.Contains("corpo integrale acquisito", text);
                 Assert.Contains("testo degli allegati leggibili", text);
                 Assert.Contains("file allegati originali non vengono archiviati", text);

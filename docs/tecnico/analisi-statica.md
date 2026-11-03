@@ -18,6 +18,15 @@ con null, operatori sospetti, backtick, switch con valore predefinito e hash deb
 Errori di parsing e rilievi delle regole selezionate fanno fallire il comando.
 Le regole stilistiche del preset predefinito non fanno parte di questo gate.
 
+Eseguirlo in sequenza, non mentre `dotnet test` o un altro build usano lo stesso
+albero: il 3 novembre 2026 una prova in parallelo ha riprodotto il fallimento del
+build con MSB3026 (copia di `xunit.abstractions.dll` bloccata), mentre le esecuzioni
+subito dopo la fine di `dotnet test`, ripetute due volte per runtime, sono passate.
+
+Il comando controlla anche che le intestazioni `name` e `description` dei ponti in
+`.claude/skills` coincidano con i testi canonici in `.agents/skills`; una cartella
+presente da un solo lato o un'intestazione divergente fanno fallire il gate.
+
 Node verifica la sintassi dei file JavaScript e dello script incorporato in
 TaskPane.html. Python compila in memoria i generatori senza importarli, eseguirli o
 scrivere bytecode. Sono controlli di sintassi, non analisi del flusso o regole di

@@ -562,7 +562,15 @@ public sealed class MainConfigFormTests
 
     /// <summary>#058: at the default window size every «?» of the connection group ends inside the grid that holds it.</summary>
     [Fact]
-    public void ConnectionHelpButtons_AreFullyInsideTheirGridAtTheDefaultSize()
+    public void ConnectionHelpButtons_AreFullyInsideTheirGridAtTheDefaultSize() => AssertConnectionHelpInsideGrid(1f);
+
+    /// <summary>#058: the same holds when the window is scaled to 150% and 200%, as on a high-DPI monitor.</summary>
+    [Theory]
+    [InlineData(1.5f)]
+    [InlineData(2f)]
+    public void ConnectionHelpButtons_AreFullyInsideTheirGridAtLargerScales(float scale) => AssertConnectionHelpInsideGrid(scale);
+
+    private void AssertConnectionHelpInsideGrid(float scale)
     {
         OnSta(directory =>
         {
@@ -574,6 +582,13 @@ public sealed class MainConfigFormTests
             };
             form.Show();
             Application.DoEvents();
+            if (scale > 1f)
+            {
+                // Stand-in for a monitor at this scale: the form font and the design-pixel sizes grow together.
+                form.Font = new System.Drawing.Font(form.Font.FontFamily, form.Font.SizeInPoints * scale);
+                form.Scale(new System.Drawing.SizeF(scale, scale));
+                Application.DoEvents();
+            }
             var provider = Field<ComboBox>(form, "_cmbProvider");
             Control cell = provider;
             while (cell.Parent is not TableLayoutPanel && cell.Parent != null) cell = cell.Parent;
