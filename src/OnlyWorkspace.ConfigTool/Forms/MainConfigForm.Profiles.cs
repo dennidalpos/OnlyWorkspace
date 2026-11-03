@@ -225,6 +225,9 @@ public sealed partial class MainConfigForm
             var caps = ProviderCatalog.Get(p.Type);
             _txtProfileId.Text = p.Id;
             _txtDisplayName.Text = p.DisplayName;
+            _cmbProvider.Items.Clear();
+            _cmbProvider.Items.AddRange(ProviderCatalog.All.Cast<object>().ToArray());
+            if (ProviderCatalog.IsLegacy(p.Type)) _cmbProvider.Items.Add(caps);
             _cmbProvider.SelectedItem = caps;
             _txtEndpoint.Text = p.BaseUrl;
             _txtModel.Text = p.Model;
@@ -299,6 +302,8 @@ public sealed partial class MainConfigForm
                 _txtModel.Text = caps.DefaultModel;
             }
 
+            foreach (var legacy in _cmbProvider.Items.Cast<ProviderCapabilities>().Where(p => ProviderCatalog.IsLegacy(p.Type)).ToArray())
+                _cmbProvider.Items.Remove(legacy);
             var auth = _cmbAuthType.SelectedItem as string;
             FillProviderLists(caps);
             _cmbAuthType.SelectedItem = auth != null && caps.AuthTypes.Contains(auth) ? auth : caps.AuthTypes[0];
@@ -333,7 +338,9 @@ public sealed partial class MainConfigForm
         _cmbAuthType.Items.AddRange(caps.AuthTypes.Cast<object>().ToArray());
 
         RefillPresets(caps);
-        Tip(_cmbProvider, caps.DisplayName + (caps.IsExternal ? " (cloud)" : " (locale)") + "\nDocumentazione: " + caps.DocsUrl);
+        Tip(_cmbProvider, caps.DisplayName + (caps.IsExternal ? " (cloud)" : caps.Type == ProviderCatalog.OpenAICompatible ? " (destinazione dall'indirizzo)" : " (locale)") +
+            (caps.Type == ProviderCatalog.OpenAICompatible ? "\nInserisci l'indirizzo. Lettura delle capacità specifiche e ricerca web non disponibili." : "") +
+            "\nDocumentazione: " + caps.DocsUrl);
     }
 
     /// <summary>Presets only for a fixed client-side window, and only those within the model's declared maximum.</summary>

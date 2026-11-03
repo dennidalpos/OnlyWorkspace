@@ -159,7 +159,7 @@ public sealed partial class MainConfigForm
         };
 
         _cmbProvider = AddRow(conn, "Servizio IA:", Combo(260),
-            "Il servizio che esegue il modello: locale (Ollama, LM Studio… sul PC o in rete) o cloud (il testo esce verso il fornitore). Cambiandolo vengono proposti indirizzo e impostazioni adatti.");
+            "Sceglie tra sei servizi preimpostati. Compatibile OpenAI richiede un indirizzo e non offre ricerca web o lettura delle capacità specifiche. I servizi precedenti particolari restano disponibili solo nei rispettivi profili. La modifica si applica al salvataggio.");
         _cmbProvider.Items.AddRange(ProviderCatalog.All.Cast<object>().ToArray());
         _cmbProvider.SelectedIndexChanged += (s, e) => OnProviderChanged();
 

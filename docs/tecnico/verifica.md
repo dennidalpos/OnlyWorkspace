@@ -8,9 +8,19 @@ Contenuto datato trasferito nel dossier SecondBrain: `02-areas/products/OnlyWork
 
 ## Stato del candidato — 3 novembre 2026
 
-Il checkout locale deriva da `3f763e7` con le correzioni successive del lotto runtime/Storico. L'installato noto è `18647c6`: questo lotto non esegue installazioni. Nel candidato il prodotto è 1.0.0, l'archivio è in formato 13, la pipe è v15, l'informativa è v5, la policy conversazione è revisione 7 e il catalogo di pseudonimizzazione è revisione 2. Il contratto cloud corrente usa concessioni per profilo e fatti tipizzati; vedere [Pseudonimizzazione](pseudonimizzazione.md). Le prove datate sotto qualificano soltanto i rispettivi candidati.
+Il candidato del lotto preferenze/provider deriva da `80572a2` e comprende la semplificazione del catalogo IA e la diagnostica delle preferenze concorrenti. L'installato noto è `18647c6`: questo lotto non esegue installazioni. Nel candidato il prodotto è 1.0.0, l'archivio è in formato 13, la pipe è v15, l'informativa è v5, la policy conversazione è revisione 7 e il catalogo di pseudonimizzazione è revisione 2. Il contratto cloud corrente usa concessioni per profilo e fatti tipizzati; vedere [Pseudonimizzazione](pseudonimizzazione.md). Le prove datate sotto qualificano soltanto i rispettivi candidati.
 
 Il lotto runtime/Storico supera 1.790 test per ciascun runtime net48/net10, 22 script, analisi statica/build Release, smoke net48 e WebViewFocus x64/x86; NuGet non segnala vulnerabilità. La regressione storage è verificata anche con writer in processi indipendenti x64/x86. Nel primo gate è ricomparso il timeout delle preferenze concorrenti su net48: A234 resta aperta e la ripetizione verde non ne dimostra la causa. Ricevuta nel dossier: `history/2026-11-03-runtime-history/report.md`.
+
+## Preferenze concorrenti e catalogo IA — 3 novembre 2026
+
+Il test delle preferenze attende che entrambi i writer indipendenti siano pronti prima di liberarli e conserva tempi di avvio e delle singole operazioni. Le prove net48/net10 a riposo, con carico CPU e con I/O controllato preservano tutte le flag. Un titolare indipendente del mutex verifica il timeout senza sostituire il file e il successivo recupero; l'abbandono del mutex conserva le flag. Il writer produttivo mantiene mutex, attesa di due secondi e flush atomico. Nel gate completo il timeout è ricomparso su net10: un writer fallisce la prima operazione mentre l’altro prosegue. La fixture ora attende entrambi prima di riportare un errore, per conservarne le tracce. La causa resta indimostrata: A234 rimane parziale, senza attribuzioni a starvation, scheduling o corruzione.
+
+Il candidato propone sei preset IA e converte in memoria dodici tipi ritirati al generico `openai-compatible`, senza scrivere durante il caricamento. Salvataggio, importazione offline e ripristino conservano endpoint, modello e riferimenti alle chiavi; le capacità specifiche vengono invalidate e il cambio di tipo invalida autorizzazione e riuso della conversazione. Il generico usa chat completions, autenticazione none/bearer e nessuna ricerca web specifica. Azure, Perplexity e Ollama Cloud conservano i rispettivi protocolli soltanto per profili esistenti. Dettagli e limiti in [Provider IA](../admin/provider-ia.md#preset-disponibili).
+
+Il gate finale supera 1.817 test per ciascun runtime net48/net10, 22 script, analisi statica/build Release e smoke net48 x64/x86; NuGet non segnala vulnerabilità. Il timeout A234 del gate precedente resta una prova distinta e non è risolto dal verde successivo. Entrambi i template distribuiti superano `validate` offline.
+
+Le regressioni usano configurazioni/vault sintetici, UI WinForms isolata e HTTP simulato. Non qualificano una nuova installazione, Outlook o servizi cloud reali. Ricevuta nel dossier: `history/2026-11-03-A234-A211/report.md`.
 
 ## Layout e Storico del riquadro — 3 novembre 2026
 

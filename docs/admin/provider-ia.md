@@ -13,22 +13,26 @@ Riferimenti principali ricontrollati il **21 ottobre 2026**; tariffe, crediti e 
 
 Nel listino Gemini verificato, il grounding con Google Search per i modelli Gemini 3 e successivi consultati non è disponibile nel livello gratuito. Le condizioni sull'uso dei dati differiscono tra livelli: controllare il piano esatto prima di inviare posta reale, senza dedurre la disponibilità dalla sola risposta a Test connessione.
 
-## Altri connettori
+## Preset disponibili
 
-| Connettore | Endpoint proposto | Note |
+Il ConfigTool e la procedura guidata propongono sei preset, sulle quattro famiglie di protocollo Ollama, compatibile OpenAI, Anthropic e Gemini:
+
+| Preset | Tipo | Collegamento |
 | --- | --- | --- |
-| Azure OpenAI / Foundry | `https://<risorsa>.openai.azure.com/openai/v1` | Header `api-key`; il modello è il nome del deployment ([API v1](https://learn.microsoft.com/en-us/azure/foundry/openai/api-version-lifecycle)) |
-| Mistral | `https://api.mistral.ai/v1` | Il connettore dell'app non espone Web Search |
-| xAI | `https://api.x.ai/v1` | Web Search via Responses |
-| DeepSeek | `https://api.deepseek.com` | Il connettore dell'app non espone Web Search |
-| OpenRouter, Groq, Together, Fireworks | `https://openrouter.ai/api/v1`, `https://api.groq.com/openai/v1`, `https://api.together.ai/v1`, `https://api.fireworks.ai/inference/v1` | Compatibili OpenAI |
-| Perplexity Sonar | `https://api.perplexity.ai` | Contratto Sonar `/v1/sonar`, `messages`/`choices`; compatibilità transitoria descritta sotto. Cerca sul web da sé |
-| Ollama Cloud | `https://ollama.com` | Token bearer |
-| Server locali | LM Studio `:1234/v1`, llama.cpp `:9931/v1`, vLLM `:8000/v1`, LocalAI `:8080/v1`, Jan `:1337/v1` su `127.0.0.1` | Solo infrastruttura |
+| Ollama | `ollama` | Server Ollama locale su loopback |
+| Gemini | `gemini` | Gemini API |
+| Anthropic | `anthropic` | Anthropic Messages |
+| OpenAI | `openai` | OpenAI, con ricerca web specifica quando autorizzata |
+| QwenCloud | `qwen` | Endpoint compatibile OpenAI e ricerca web specifica quando autorizzata |
+| Compatibile OpenAI | `openai-compatible` | Indirizzo e modello da compilare; nessuna autenticazione oppure token bearer |
 
-La tabella riporta i default del [catalogo applicativo](../../src/OnlyWorkspace.Core/Models/ProviderCatalog.cs), non una prova di funzionamento di ogni servizio; la [qualifica](../tecnico/verifica.md#non-qualificato) elenca quelli non provati. OpenAI offre integrazioni separate per l'uso di piani ChatGPT, ma «Sign in with ChatGPT» non è implementato qui.
+Il generico usa chat completions e non offre lettura delle capacità proprietarie né ricerca web specifica. «Scegli modello…» può comunque interrogare l'elenco standard dei modelli. Il servizio può essere locale su loopback oppure esterno: vale sempre l'indirizzo effettivo, oltre al flag esterno del profilo. Un [template dedicato](../../deployment/config.compatible.template.json) mostra i campi da adattare, senza una chiave reale.
 
-Per Qwen il catalogo propone un endpoint Token Plan: questo valore tecnico non autorizza usi esclusi dal contratto. Acquisire dal portale la coppia endpoint/chiave del piano consentito. Le prove già registrate su WS-DP01 attestano il funzionamento, non l'idoneità contrattuale del piano.
+I profili precedenti LM Studio, llama.cpp, vLLM, LocalAI, Jan, Mistral, xAI, DeepSeek, OpenRouter, Groq, Together e Fireworks vengono convertiti in memoria al generico. Indirizzo, modello, autenticazione, riferimenti alle chiavi e impostazioni restano conservati; la lettura non riscrive la configurazione. La conversione viene persistita al successivo salvataggio, importazione o ripristino. I profili prima classificati cloud restano esterni. Le capacità specifiche memorizzate vengono invalidate; eventuali scelte web conservate non abilitano una funzione assente nel generico. Il cambio di tipo richiede una nuova autorizzazione per gli invii e impedisce il riuso automatico della conversazione precedente.
+
+Azure OpenAI, Perplexity Sonar e Ollama Cloud restano disponibili soltanto nei rispettivi profili già esistenti. Conservano header, percorsi e protocollo precedenti; la voce di compatibilità appare solo mentre si modifica quel profilo. Non sono proposti per crearne altri. Questa eccezione evita di trasformare automaticamente richieste incompatibili in chat completions generiche.
+
+Il [catalogo applicativo](../../src/OnlyWorkspace.Core/Models/ProviderCatalog.cs) definisce i comportamenti del candidato; la [qualifica](../tecnico/verifica.md#non-qualificato) distingue le fixture dai servizi realmente provati. Per Qwen il default tecnico Token Plan non autorizza usi esclusi dal contratto: acquisire dal portale endpoint e chiave del piano consentito. Le prove precedenti non attestano l'idoneità contrattuale del piano.
 
 ### Perplexity: contratto verificato e limiti
 

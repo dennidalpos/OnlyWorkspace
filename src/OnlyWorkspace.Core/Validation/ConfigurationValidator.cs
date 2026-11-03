@@ -155,6 +155,8 @@ public static class ConfigurationValidator
     private static void AddCoherenceWarnings(LlmProfileConfig profile, ValidationResult result)
     {
         var caps = ProviderCatalog.Get(profile.Type);
+        if (caps.Type == ProviderCatalog.OpenAICompatible && profile.WebSearchEnabled)
+            result.AddWarning($"Profilo '{profile.Id}': collegamento Compatibile OpenAI; lettura delle capacità specifiche e ricerca web non disponibili. Indirizzo, modello e autenticazione restano quelli configurati.");
 
         // A remote Ollama may legitimately be external; a loopback one cannot.
         if (!caps.IsExternal && profile.External

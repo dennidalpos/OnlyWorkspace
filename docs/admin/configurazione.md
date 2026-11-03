@@ -32,7 +32,7 @@ L'archivio non ha un tetto di dimensione: la tray avvisa sotto 5 GiB liberi e so
 
 ## Profili IA
 
-`type` è il connettore. Locali: `ollama`, `lmstudio`, `llamacpp`, `vllm`, `localai`, `jan`. Cloud: `openai`, `anthropic`, `gemini`, `azure-openai`, `mistral`, `xai`, `deepseek`, `openrouter`, `qwen`, `groq`, `together`, `fireworks`, `perplexity`, `ollama-cloud`. Ognuno usa una delle quattro famiglie di protocollo (Ollama, OpenAI chat completions, Anthropic Messages, Gemini) con URL e autenticazione proposti dal [catalogo](../../src/OnlyWorkspace.Core/Models/ProviderCatalog.cs).
+`type` identifica il servizio. I sei preset per nuovi profili sono `ollama`, `gemini`, `anthropic`, `openai`, `qwen` e `openai-compatible`, sulle quattro famiglie di protocollo del [catalogo](../../src/OnlyWorkspace.Core/Models/ProviderCatalog.cs). Il generico richiede `baseUrl` e modello scelti dall'amministratore; ammette `none` o `bearer` e non espone ricerca web o lettura delle capacità proprietarie. Vedere [preset e migrazione](provider-ia.md#preset-disponibili) per i tipi ritirati e le tre eccezioni legacy. La lettura migra in memoria senza scrivere config o vault; salvataggio, importazione e ripristino applicano la conversione, conservando indirizzo, modello e riferimenti alle chiavi.
 
 | Campo | Significato |
 | --- | --- |

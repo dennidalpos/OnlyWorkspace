@@ -28,7 +28,8 @@ public class ProviderCatalogTests
         Assert.Equal(ProviderCatalog.All.Count, ProviderCatalog.All.Select(p => p.Type).Distinct(StringComparer.OrdinalIgnoreCase).Count());
         foreach (var p in ProviderCatalog.All)
         {
-            Assert.True(Uri.TryCreate(p.DefaultBaseUrl, UriKind.Absolute, out var url), p.Type);
+            string endpoint = p.Type == ProviderCatalog.OpenAICompatible ? "http://127.0.0.1:1234/v1" : p.DefaultBaseUrl;
+            Assert.True(Uri.TryCreate(endpoint, UriKind.Absolute, out var url), p.Type);
             // Local connectors stay on loopback over HTTP; every remote one uses HTTPS.
             Assert.True(p.IsExternal ? url!.Scheme == Uri.UriSchemeHttps : ConfigurationValidator.IsLoopback(url!), p.Type);
             Assert.StartsWith("https://", p.DocsUrl);
@@ -40,16 +41,47 @@ public class ProviderCatalogTests
                 ApiFamily.Anthropic => typeof(AnthropicClient),
                 ApiFamily.Gemini => typeof(GeminiClient),
                 _ => typeof(OpenAIClient)
-            }, LlmClientFactory.CreateClient(new LlmProfileConfig { Type = p.Type, BaseUrl = p.DefaultBaseUrl, External = p.IsExternal }));
+            }, LlmClientFactory.CreateClient(new LlmProfileConfig { Type = p.Type, BaseUrl = endpoint, External = p.IsExternal }));
         }
     }
 
     [Fact]
     public void ValidatorAcceptsCatalogTypesOnly()
     {
-        Assert.True(ProviderCatalog.IsKnown("openrouter"));
+        Assert.False(ProviderCatalog.IsKnown("openrouter"));
+        Assert.True(ProviderCatalog.IsKnown(ProviderCatalog.OpenAICompatible));
         Assert.False(ProviderCatalog.IsKnown("unknown"));
         Assert.Throws<NotSupportedException>(() => LlmClientFactory.CreateClient(new LlmProfileConfig { Type = "unknown", BaseUrl = "https://example.com" }));
+    }
+
+    [Fact]
+    public async Task OllamaCloud_RetainsOllamaProtocolAndBearer()
+    {
+        HttpRequestMessage? sent = null;
+        using var http = new HttpClient(new Handler(req => { sent = req; return "{\"message\":{\"content\":\"ok\"},\"done\":true}\n"; }))
+            { BaseAddress = new Uri("https://ollama.com/") };
+        var profile = new LlmProfileConfig { Type = "ollama-cloud", BaseUrl = "https://ollama.com", Model = "synthetic", AuthType = "bearer" };
+        using var client = LlmClientFactory.CreateClient(profile, "synthetic-key", http) as OllamaClient;
+        Assert.NotNull(client);
+        await foreach (var _ in client!.StreamChatAsync(OnlyWorkspace.Core.Privacy.CloudRequestGuard.Probe(false))) { }
+        Assert.Equal("/api/chat", sent!.RequestUri!.AbsolutePath);
+        Assert.Equal("synthetic-key", sent.Headers.Authorization!.Parameter);
+    }
+
+    [Theory]
+    [InlineData("none")]
+    [InlineData("bearer")]
+    public async Task Generic_UsesChatCompletionsAndTheConfiguredAuthentication(string authentication)
+    {
+        HttpRequestMessage? sent = null;
+        using var http = new HttpClient(new Handler(req => { sent = req; return "data: {\"choices\":[{\"delta\":{\"content\":\"ok\"},\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n"; }))
+            { BaseAddress = new Uri("http://127.0.0.1:1234/v1/") };
+        var profile = new LlmProfileConfig { Type = ProviderCatalog.OpenAICompatible, BaseUrl = "http://127.0.0.1:1234/v1", Model = "synthetic", AuthType = authentication };
+        using var client = new OpenAIClient(profile, "synthetic-key", http);
+        await foreach (var _ in client.StreamProtocolAsync(new[] { ChatMessage.User("synthetic") })) { }
+        Assert.Equal("/v1/chat/completions", sent!.RequestUri!.AbsolutePath);
+        if (authentication == "none") Assert.Null(sent.Headers.Authorization);
+        else Assert.Equal("synthetic-key", sent.Headers.Authorization!.Parameter);
     }
 
     [Fact]

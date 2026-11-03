@@ -9,7 +9,7 @@ namespace OnlyWorkspace.Core.Models;
 public enum ApiFamily { Ollama, OpenAI, Anthropic, Gemini }
 
 /// <summary>Where model capabilities can be read without generating text.</summary>
-public enum CapabilitySource { None, Anthropic, Gemini, Ollama, OpenRouter, Mistral, LmStudio, LlamaCpp, Vllm }
+public enum CapabilitySource { None, Anthropic, Gemini, Ollama }
 
 /// <summary>How a connector runs a web search, see WebSearchService.</summary>
 public enum WebSearchMode { None, OpenAIResponses, BasicResponses, AnthropicTool, GeminiGrounding, OllamaCom }
@@ -91,6 +91,7 @@ public static class ProviderCatalog
 {
     public const string Ollama = "ollama";
     public const string OpenAI = "openai";
+    public const string OpenAICompatible = "openai-compatible";
     public const string Anthropic = "anthropic";
     public const string Gemini = "gemini";
 
@@ -98,56 +99,38 @@ public static class ProviderCatalog
     private static readonly string[] Bearer = { "bearer" };
     private static readonly string[] Key = { "apiKey" };
 
-    // Base URLs from each provider's official API reference (DocsUrl), checked 2026-10-15.
+    // Selectable presets. Legacy protocols below are available only to existing profiles.
     public static IReadOnlyList<ProviderCapabilities> All { get; } = new[]
     {
-        // Local
         new ProviderCapabilities(Ollama, "Ollama", ApiFamily.Ollama, "http://127.0.0.1:11434", false, None,
             "https://docs.ollama.com/api", model: "qwen3.5:9b", capabilities: CapabilitySource.Ollama, webSearch: WebSearchMode.OllamaCom,
             numCtx: true, keepAlive: true, thinkToggle: true),
-        new ProviderCapabilities("lmstudio", "LM Studio", ApiFamily.OpenAI, "http://127.0.0.1:1234/v1", false, None,
-            "https://lmstudio.ai/docs/developer/rest/list", capabilities: CapabilitySource.LmStudio),
-        new ProviderCapabilities("llamacpp", "llama.cpp server", ApiFamily.OpenAI, "http://127.0.0.1:9931/v1", false, None,
-            "https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md", capabilities: CapabilitySource.LlamaCpp),
-        new ProviderCapabilities("vllm", "vLLM", ApiFamily.OpenAI, "http://127.0.0.1:8000/v1", false, None,
-            "https://docs.vllm.ai/en/latest/serving/online_serving/", capabilities: CapabilitySource.Vllm),
-        new ProviderCapabilities("localai", "LocalAI", ApiFamily.OpenAI, "http://127.0.0.1:8080/v1", false, None,
-            "https://localai.io/"),
-        new ProviderCapabilities("jan", "Jan", ApiFamily.OpenAI, "http://127.0.0.1:1337/v1", false, None,
-            "https://jan.ai/docs"),
-        // Cloud
-        new ProviderCapabilities(OpenAI, "OpenAI", ApiFamily.OpenAI, "https://api.openai.com", true, Bearer,
-            "https://developers.openai.com/api/reference", webSearch: WebSearchMode.OpenAIResponses),
-        new ProviderCapabilities(Anthropic, "Anthropic Claude", ApiFamily.Anthropic, "https://api.anthropic.com", true, Key,
-            "https://platform.claude.com/docs/en/api/models", apiKeyHeader: "x-api-key",
-            capabilities: CapabilitySource.Anthropic, webSearch: WebSearchMode.AnthropicTool),
         new ProviderCapabilities(Gemini, "Google Gemini", ApiFamily.Gemini, "https://generativelanguage.googleapis.com", true, Key,
             "https://ai.google.dev/api/models", apiKeyHeader: "x-goog-api-key",
             capabilities: CapabilitySource.Gemini, webSearch: WebSearchMode.GeminiGrounding),
-        new ProviderCapabilities("azure-openai", "Azure OpenAI / Microsoft Foundry", ApiFamily.OpenAI, "https://risorsa.openai.azure.com/openai/v1", true,
-            new[] { "apiKey", "bearer" }, "https://learn.microsoft.com/en-us/azure/foundry/openai/api-version-lifecycle", apiKeyHeader: "api-key"),
-        new ProviderCapabilities("mistral", "Mistral AI", ApiFamily.OpenAI, "https://api.mistral.ai/v1", true, Bearer,
-            "https://docs.mistral.ai/api/endpoint/models", capabilities: CapabilitySource.Mistral),
-        new ProviderCapabilities("xai", "xAI Grok", ApiFamily.OpenAI, "https://api.x.ai/v1", true, Bearer,
-            "https://docs.x.ai/docs/guides/tools/search-tools", webSearch: WebSearchMode.BasicResponses),
-        new ProviderCapabilities("deepseek", "DeepSeek", ApiFamily.OpenAI, "https://api.deepseek.com", true, Bearer,
-            "https://api-docs.deepseek.com/"),
-        new ProviderCapabilities("openrouter", "OpenRouter", ApiFamily.OpenAI, "https://openrouter.ai/api/v1", true, Bearer,
-            "https://openrouter.ai/docs/api/api-reference/models/get-models", capabilities: CapabilitySource.OpenRouter),
-        new ProviderCapabilities("qwen", "Qwen (Alibaba Cloud)", ApiFamily.OpenAI, "https://token-plan.maas.qwencloudapi.com/compatible-mode/v1", true, Bearer,
+        new ProviderCapabilities(Anthropic, "Anthropic Claude", ApiFamily.Anthropic, "https://api.anthropic.com", true, Key,
+            "https://platform.claude.com/docs/en/api/models", apiKeyHeader: "x-api-key",
+            capabilities: CapabilitySource.Anthropic, webSearch: WebSearchMode.AnthropicTool),
+        new ProviderCapabilities(OpenAI, "OpenAI", ApiFamily.OpenAI, "https://api.openai.com", true, Bearer,
+            "https://developers.openai.com/api/reference", webSearch: WebSearchMode.OpenAIResponses),
+        new ProviderCapabilities("qwen", "QwenCloud", ApiFamily.OpenAI, "https://token-plan.maas.qwencloudapi.com/compatible-mode/v1", true, Bearer,
             "https://www.alibabacloud.com/help/en/model-studio/compatibility-of-openai-with-dashscope", webSearch: WebSearchMode.BasicResponses,
             thinkToggle: true),
-        new ProviderCapabilities("groq", "Groq", ApiFamily.OpenAI, "https://api.groq.com/openai/v1", true, Bearer,
-            "https://console.groq.com/docs/openai"),
-        new ProviderCapabilities("together", "Together AI", ApiFamily.OpenAI, "https://api.together.ai/v1", true, Bearer,
-            "https://docs.together.ai/docs/openai-api-compatibility"),
-        new ProviderCapabilities("fireworks", "Fireworks AI", ApiFamily.OpenAI, "https://api.fireworks.ai/inference/v1", true, Bearer,
-            "https://docs.fireworks.ai/tools-sdks/openai-compatibility"),
-        new ProviderCapabilities("perplexity", "Perplexity Sonar", ApiFamily.OpenAI, "https://api.perplexity.ai", true, Bearer,
+        new ProviderCapabilities(OpenAICompatible, "Compatibile OpenAI", ApiFamily.OpenAI, "", false, None,
+            "https://developers.openai.com/api/reference")
+    };
+
+    private static readonly ProviderCapabilities[] Legacy =
+    {
+        new ProviderCapabilities("azure-openai", "Azure OpenAI (profilo esistente)", ApiFamily.OpenAI, "https://risorsa.openai.azure.com/openai/v1", true,
+            new[] { "apiKey", "bearer" }, "https://learn.microsoft.com/en-us/azure/foundry/openai/api-version-lifecycle", apiKeyHeader: "api-key"),
+        new ProviderCapabilities("perplexity", "Perplexity Sonar (profilo esistente)", ApiFamily.OpenAI, "https://api.perplexity.ai", true, Bearer,
             "https://docs.perplexity.ai/guides/chat-completions-guide", model: "sonar", chatPath: "sonar"),
-        new ProviderCapabilities("ollama-cloud", "Ollama Cloud", ApiFamily.Ollama, "https://ollama.com", true, Bearer,
+        new ProviderCapabilities("ollama-cloud", "Ollama Cloud (profilo esistente)", ApiFamily.Ollama, "https://ollama.com", true, Bearer,
             "https://docs.ollama.com/api", capabilities: CapabilitySource.Ollama, webSearch: WebSearchMode.OllamaCom, thinkToggle: true)
     };
+
+    public static bool IsLegacy(string? type) => Legacy.Any(p => string.Equals(p.Type, type?.Trim(), StringComparison.OrdinalIgnoreCase));
 
     /// <summary>Context presets for connectors with a fixed client-side window (Ollama num_ctx).</summary>
     public static IReadOnlyList<ContextPreset> Presets { get; } = BuildPresets();
@@ -186,15 +169,16 @@ public static class ProviderCatalog
         return profile.ContextBudgetTokens;
     }
 
-    public static bool IsKnown(string? type) => All.Any(p => string.Equals(p.Type, type?.Trim(), StringComparison.OrdinalIgnoreCase));
+    public static bool IsKnown(string? type) => All.Any(p => string.Equals(p.Type, type?.Trim(), StringComparison.OrdinalIgnoreCase)) || IsLegacy(type);
 
     /// <summary>Unknown types fall back to Ollama (validator rejects them anyway).</summary>
     public static ProviderCapabilities Get(string? type)
     {
-        foreach (var p in All)
+        foreach (var p in All.Concat(Legacy))
         {
             if (string.Equals(p.Type, type?.Trim(), StringComparison.OrdinalIgnoreCase)) return p;
         }
+        if (ProviderCompatibility.IsRetired(type)) return All.First(p => p.Type == OpenAICompatible);
         return All[0];
     }
 

@@ -8,7 +8,7 @@ using Xunit;
 
 namespace OnlyWorkspace.Tests;
 
-public class FileConfigurationServiceTests : IDisposable
+public partial class FileConfigurationServiceTests : IDisposable
 {
     private readonly string _tempDir;
 
@@ -335,15 +335,36 @@ public class FileConfigurationServiceTests : IDisposable
         File.WriteAllText(script, @"
 param($assembly, $directory, $worker, $start)
 $ErrorActionPreference = 'Stop'
+$cold = [Diagnostics.Stopwatch]::StartNew()
 Add-Type -Path $assembly
 $service = [OnlyWorkspace.Infrastructure.Configuration.FileConfigurationService]::new($directory, $directory, $null)
 $gate = [Threading.EventWaitHandle]::OpenExisting($start)
-if (-not $gate.WaitOne(20000)) { throw 'start timeout' }
-for ($i = 0; $i -lt 30; $i++) {
-    $service.SetUserFlag(('worker' + $worker + '_' + $i), $true)
-    $service.SetUserFlag('shared', ($i % 2 -eq 0))
+$ready = [Threading.EventWaitHandle]::OpenExisting($start + '-ready-' + $worker)
+$samples = [Collections.Generic.List[object]]::new()
+$cold.Stop()
+try {
+    [void]$ready.Set()
+    if (-not $gate.WaitOne(30000)) { throw 'start timeout' }
+    for ($i = 0; $i -lt 30; $i++) {
+        foreach ($kind in @('unique', 'shared')) {
+            $began = [Diagnostics.Stopwatch]::GetTimestamp()
+            $errorKind = ''
+            try {
+                if ($kind -eq 'unique') { $service.SetUserFlag(('worker' + $worker + '_' + $i), $true) }
+                else { $service.SetUserFlag('shared', ($i % 2 -eq 0)) }
+            } catch { $errorKind = $_.Exception.GetBaseException().GetType().FullName; throw }
+            finally {
+                $ended = [Diagnostics.Stopwatch]::GetTimestamp()
+                $samples.Add(@{iteration=$i;kind=$kind;began=$began;ended=$ended;error=$errorKind})
+            }
+        }
+    }
+} finally {
+    @{pid=$PID;coldMs=$cold.Elapsed.TotalMilliseconds;frequency=[Diagnostics.Stopwatch]::Frequency;samples=@($samples.ToArray())} |
+        ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $directory ('worker-' + $worker + '-timings.json'))
+    $ready.Dispose()
+    $gate.Dispose()
 }
-$gate.Dispose()
 ");
         string eventName = "Local\\ow-preferences-test-" + Guid.NewGuid().ToString("N");
         using var start = new System.Threading.EventWaitHandle(false, System.Threading.EventResetMode.ManualReset, eventName);
@@ -353,17 +374,26 @@ $gate.Dispose()
         string shell = "pwsh.exe";
 #endif
         var workers = new List<System.Diagnostics.Process>();
+        var ready = new List<System.Threading.EventWaitHandle>();
         try
         {
             for (int i = 0; i < 2; i++)
+            {
+                ready.Add(new System.Threading.EventWaitHandle(false, System.Threading.EventResetMode.ManualReset, eventName + "-ready-" + i));
                 workers.Add(System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(shell,
                     "-NoProfile -ExecutionPolicy Bypass -File \"" + script + "\" \"" + typeof(FileConfigurationService).Assembly.Location +
                     "\" \"" + _tempDir + "\" " + i + " \"" + eventName + "\"")
                 { UseShellExecute = false, CreateNoWindow = true, RedirectStandardError = true })!);
+            }
+            foreach (var signal in ready) Assert.True(signal.WaitOne(30000), "Preference writer was not ready");
             start.Set();
             foreach (var worker in workers)
             {
                 Assert.True(worker.WaitForExit(30000), "Preference writer timeout");
+            }
+            // Let both processes finish their timing records before reporting either failure.
+            foreach (var worker in workers)
+            {
                 Assert.True(worker.ExitCode == 0, worker.StandardError.ReadToEnd());
             }
             Assert.True(service.GetUserFlag("archiveOff"));
@@ -378,6 +408,7 @@ $gate.Dispose()
                 if (!worker.HasExited) { worker.Kill(); worker.WaitForExit(); }
                 worker.Dispose();
             }
+            foreach (var signal in ready) signal.Dispose();
         }
     }
 

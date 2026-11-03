@@ -11,6 +11,7 @@ public static class LlmClientFactory
     {
         if (profile == null) throw new ArgumentNullException(nameof(profile));
 
+        ProviderCompatibility.Normalize(profile);
         if (!ProviderCatalog.IsKnown(profile.Type))
             throw new NotSupportedException($"tipo di profilo non supportato in questa versione ({profile.Type})");
 

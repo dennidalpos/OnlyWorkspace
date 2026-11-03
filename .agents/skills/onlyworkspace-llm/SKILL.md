@@ -5,6 +5,8 @@ description: Change OnlyWorkspace model transport, prompts, context budgets, Web
 
 # LLM workflow
 
+- A211: ProviderCatalog.All contains only the six selectable presets; Get/IsKnown also recognize three hidden legacy protocols (azure-openai, perplexity, ollama-cloud). Retired OpenAI-compatible types normalize through ProviderCompatibility before validation/persistence; the factory also normalizes direct callers. OpenAIClient has no proprietary capability reader. The generic openai-compatible connection uses chat/completions, none/bearer and no provider web search; none must not send a retained vault token. Preserve Azure api-key, Perplexity sonar and Ollama Cloud api/chat when editing legacy profiles. ProviderCompatibilityTests, ProviderCatalogTests and ConfigToolImportTests exercise migration, credentials and offline transport fixtures.
+
 - For archive search, local facts and persisted reader revisions use the [archive skill](../onlyworkspace-archive/SKILL.md). The archive card generator is removed; encrypted conversation/AI-response history remains active when enabled. Historical acceptance records do not authorize new provider calls.
 
 - Current cloud boundary: DataEgressNotice5, ConversationPolicy7 and catalog2. CloudFactsRequest keeps original values and restoration on the PC; CloudRequestGuard and LlmRequestDispatcher accept only the embedded cloud.facts template and verified opaque fact references. Free text, mail-derived domains and unverified web queries are blocked before HTTP; synthetic probes stay separate. The evidence packs below describe local preparation, not permission to send originals. See docs/tecnico/pseudonimizzazione.md.

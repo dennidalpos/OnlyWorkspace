@@ -26,6 +26,26 @@ public sealed class ConfigToolImportTests : IDisposable
     }
 
     [Fact]
+    public void ImportRetiredPreset_NormalizesWithoutNetwork_AndPreservesCredential()
+    {
+        Seed();
+        string source = Profile("first", ",\"authType\":\"bearer\",\"secretRef\":\"existing\"")
+            .Replace("\"type\":\"ollama\"", "\"type\":\"OpenRouter\"");
+        var result = Run("{\"profiles\":[" + source + "]}");
+        Assert.True(result.Exit == 0, result.Output);
+        var profile = Assert.Single(LoadConfig().Profiles);
+        Assert.Equal(ProviderCatalog.OpenAICompatible, profile.Type);
+        Assert.Equal(Endpoint, profile.BaseUrl);
+        Assert.Equal("fixture", profile.Model);
+        Assert.True(profile.External);
+        Assert.Equal("bearer", profile.AuthType);
+        Assert.Equal("existing", profile.SecretRef);
+        Assert.Equal(OldSecret, LoadVault().GetSecret("existing"));
+        Assert.False(_listener.Pending());
+        AssertNoSecrets(result.Output);
+    }
+
+    [Fact]
     public void ImportPreservesPseudonymizationOptionsAndOlderProfilesDefaultOff()
     {
         Seed();

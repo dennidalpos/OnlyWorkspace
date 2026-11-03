@@ -93,6 +93,7 @@ public sealed class FileConfigurationService : IConfigurationService
         var config = JsonSerializer.Deserialize<WorkspaceConfig>(json, options)
                      ?? throw new InvalidOperationException("config.json vuoto o non leggibile.");
 
+        ProviderCompatibility.Normalize(config);
         foreach (var profile in config.Profiles)
         {
             if (ProviderCatalog.Get(profile.Type).IsExternal)
@@ -137,6 +138,7 @@ public sealed class FileConfigurationService : IConfigurationService
 
     public void SaveConfiguration(WorkspaceConfig config)
     {
+        ProviderCompatibility.Normalize(config);
         var validation = ConfigurationValidator.Validate(config);
         if (!validation.IsValid)
         {

@@ -33,7 +33,9 @@ public sealed class OpenAIClient : ILlmClient, IReasoningObserver, IDisposable
 
         _httpClient = httpClient ?? LlmHttp.CreateClient(_profile, "OpenAI");
 
-        if (!string.IsNullOrWhiteSpace(secretToken))
+        if (!string.IsNullOrWhiteSpace(secretToken) &&
+            (!string.Equals(_profile.Type.Trim(), ProviderCatalog.OpenAICompatible, StringComparison.OrdinalIgnoreCase) ||
+             !string.Equals(profile.AuthType, "none", StringComparison.OrdinalIgnoreCase)))
         {
             // Azure OpenAI takes a key in "api-key"; every other OpenAI-compatible service a bearer token.
             if (string.Equals(profile.AuthType, "apiKey", StringComparison.OrdinalIgnoreCase) && Caps.ApiKeyHeader.Length > 0)
@@ -106,127 +108,9 @@ public sealed class OpenAIClient : ILlmClient, IReasoningObserver, IDisposable
         return list;
     }
 
-    /// <summary>
-    /// OpenAI's own models endpoint declares no limits or capabilities; some compatible servers publish them
-    /// on their own endpoints (see ProviderCatalog.DocsUrl of each connector).
-    /// </summary>
-    public async Task<ModelInfo?> GetModelInfoAsync(string model, CancellationToken cancellationToken = default)
-    {
-        var source = Caps.Capabilities;
-        string? url = source switch
-        {
-            CapabilitySource.OpenRouter or CapabilitySource.Vllm => GetEndpoint("models"),
-            CapabilitySource.Mistral => GetEndpoint("models/" + Uri.EscapeDataString(model)),
-            CapabilitySource.LmStudio => "/api/v1/models",
-            CapabilitySource.LlamaCpp => "/props",
-            _ => null
-        };
-        if (url == null) return null;
-
-        using var response = await _httpClient.GetAsync(url, cancellationToken).ConfigureAwait(false);
-        if (!response.IsSuccessStatusCode) return null;
-        using var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
-        using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken).ConfigureAwait(false);
-        return ParseModelInfo(source, doc.RootElement, model);
-    }
-
-    internal static ModelInfo? ParseModelInfo(CapabilitySource source, JsonElement root, string model)
-    {
-        var info = new ModelInfo();
-        var c = info.Capabilities;
-        switch (source)
-        {
-            case CapabilitySource.OpenRouter:
-            {
-                // https://openrouter.ai/docs/api/api-reference/models/get-models
-                var item = FindModel(root, "data", "id", model);
-                if (item == null) return null;
-                var m = item.Value;
-                info.ContextWindow = m.Int("context_length");
-                if (m.TryGetProperty("top_provider", out var top)) info.MaxOutputTokens = top.Int("max_completion_tokens");
-                var parameters = Strings(m, "supported_parameters");
-                c.Source = "OpenRouter models";
-                c.Tools = Has(parameters, "tools");
-                c.Reasoning = Has(parameters, "reasoning", "include_reasoning", "reasoning_effort");
-                c.StructuredOutput = Has(parameters, "structured_outputs", "response_format");
-                if (m.TryGetProperty("reasoning", out var reasoning)) c.ReasoningLevels.AddRange(Strings(reasoning, "supported_efforts"));
-                if (m.TryGetProperty("architecture", out var arch)) c.Vision = Has(Strings(arch, "input_modalities"), "image");
-                return info;
-            }
-            case CapabilitySource.Mistral:
-            {
-                // https://docs.mistral.ai/api/endpoint/models
-                info.ContextWindow = root.Int("max_context_length");
-                if (!root.TryGetProperty("capabilities", out var caps) || caps.ValueKind != JsonValueKind.Object) return info;
-                c.Source = "Mistral models";
-                c.Tools = Flag(caps, "function_calling");
-                c.Vision = Flag(caps, "vision");
-                return info;
-            }
-            case CapabilitySource.LmStudio:
-            {
-                // https://lmstudio.ai/docs/developer/rest/list ("key" identifies the model)
-                var item = FindModel(root, "models", "key", model);
-                if (item == null) return null;
-                var m = item.Value;
-                info.ContextWindow = m.Int("max_context_length");
-                if (!m.TryGetProperty("capabilities", out var caps) || caps.ValueKind != JsonValueKind.Object) return info;
-                c.Source = "LM Studio api/v1/models";
-                c.Tools = Flag(caps, "trained_for_tool_use");
-                c.Vision = Flag(caps, "vision");
-                if (caps.TryGetProperty("reasoning", out var reasoning) && reasoning.ValueKind == JsonValueKind.Object)
-                {
-                    c.Reasoning = CapabilityState.Supported;
-                    c.ReasoningLevels.AddRange(Strings(reasoning, "allowed_options").Where(o => o != "off" && o != "on"));
-                }
-                else c.Reasoning = CapabilityState.Unsupported;
-                return info;
-            }
-            case CapabilitySource.LlamaCpp:
-            {
-                // https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md (GET /props)
-                if (root.TryGetProperty("default_generation_settings", out var settings)) info.ContextWindow = settings.Int("n_ctx");
-                c.Source = "llama.cpp /props";
-                if (root.TryGetProperty("chat_template_caps", out var caps)) c.Tools = Flag(caps, "supports_tools");
-                if (root.TryGetProperty("modalities", out var modalities)) c.Vision = Flag(modalities, "vision");
-                return info;
-            }
-            case CapabilitySource.Vllm:
-            {
-                var item = FindModel(root, "data", "id", model);
-                if (item == null) return null;
-                info.ContextWindow = item.Value.Int("max_model_len");
-                return info;
-            }
-            default:
-                return null;
-        }
-    }
-
-    private static JsonElement? FindModel(JsonElement root, string array, string key, string model)
-    {
-        if (!root.TryGetProperty(array, out var list) || list.ValueKind != JsonValueKind.Array) return null;
-        foreach (var item in list.EnumerateArray())
-            if (string.Equals(item.Str(key), model, StringComparison.OrdinalIgnoreCase)) return item;
-        return null;
-    }
-
-    private static List<string> Strings(JsonElement parent, string name)
-    {
-        var list = new List<string>();
-        if (parent.ValueKind == JsonValueKind.Object && parent.TryGetProperty(name, out var array) && array.ValueKind == JsonValueKind.Array)
-            foreach (var item in array.EnumerateArray())
-                if (item.ValueKind == JsonValueKind.String) list.Add(item.GetString()!);
-        return list;
-    }
-
-    private static CapabilityState Has(List<string> values, params string[] any) =>
-        any.Any(a => values.Contains(a, StringComparer.OrdinalIgnoreCase)) ? CapabilityState.Supported : CapabilityState.Unsupported;
-
-    private static CapabilityState Flag(JsonElement parent, string name) =>
-        parent.ValueKind == JsonValueKind.Object && parent.TryGetProperty(name, out var value) && value.ValueKind is JsonValueKind.True or JsonValueKind.False
-            ? (value.GetBoolean() ? CapabilityState.Supported : CapabilityState.Unsupported)
-            : CapabilityState.Unknown;
+    /// <summary>No provider-specific capability reader for OpenAI-compatible connections.</summary>
+    public Task<ModelInfo?> GetModelInfoAsync(string model, CancellationToken cancellationToken = default) =>
+        Task.FromResult<ModelInfo?>(null);
 
     public async IAsyncEnumerable<string> StreamChatAsync(
         IEnumerable<ChatMessage> messages,

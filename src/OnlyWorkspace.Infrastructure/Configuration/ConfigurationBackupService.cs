@@ -18,6 +18,7 @@ public static class ConfigurationBackupService
     /// <summary>Prepare both files before replacing the active pair; recover the old vault on a handled config write failure.</summary>
     public static void SaveConfiguration(string targetConfigDir, WorkspaceConfig config, DpapiSecretVault vault)
     {
+        ProviderCompatibility.Normalize(config);
         byte[] json = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(config, ConfigJson.Write));
         byte[] secrets = vault.ExportEncrypted();
         ValidateContents(json, secrets, "da salvare");
@@ -64,7 +65,7 @@ public static class ConfigurationBackupService
         if (!File.Exists(stagedConfig)) throw new FileNotFoundException("La configurazione da applicare non è presente.", stagedConfig);
         byte[] config = ReadFile(stagedConfig, MaxConfigBytes);
         byte[]? secrets = File.Exists(stagedSecrets) ? ReadFile(stagedSecrets, MaxSecretsBytes) : null;
-        ValidateContents(config, secrets, "della configurazione da applicare");
+        config = ValidateContents(config, secrets, "della configurazione da applicare");
         ReplacePair(targetConfigDir, config, secrets, File.Replace);
     }
 
@@ -162,12 +163,12 @@ public static class ConfigurationBackupService
         if (configBytes == null)
             throw new InvalidOperationException("L'archivio di backup non contiene un file 'config.json' valido.");
 
-        ValidateContents(configBytes, secretsBytes, "del backup");
+        configBytes = ValidateContents(configBytes, secretsBytes, "del backup");
         return (configBytes, secretsBytes);
     }
 
     /// <param name="source">Italian genitive naming the origin in messages, e.g. "del backup".</param>
-    private static void ValidateContents(byte[] configBytes, byte[]? secretsBytes, string source)
+    private static byte[] ValidateContents(byte[] configBytes, byte[]? secretsBytes, string source)
     {
         WorkspaceConfig? config;
         try
@@ -182,6 +183,7 @@ public static class ConfigurationBackupService
         if (config == null)
             throw new InvalidOperationException($"Impossibile deserializzare il file 'config.json' {source}.");
 
+        bool upgraded = ProviderCompatibility.Normalize(config);
         var validation = ConfigurationValidator.Validate(config);
         if (!validation.IsValid)
             throw new InvalidOperationException($"Validazione {source} fallita: " + string.Join(", ", validation.Errors));
@@ -194,6 +196,7 @@ public static class ConfigurationBackupService
                 throw new InvalidOperationException($"Le credenziali {source} non sono leggibili su questo PC: sono state create su un altro computer oppure sono danneggiate. Nessuna modifica eseguita.");
             }
         }
+        return upgraded ? Encoding.UTF8.GetBytes(JsonSerializer.Serialize(config, ConfigJson.Write)) : configBytes;
     }
 
     private static byte[] ReadFile(string path, int limit)

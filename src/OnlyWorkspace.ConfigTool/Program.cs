@@ -339,6 +339,7 @@ internal static class Program
             return 1;
         }
 
+        ProviderCompatibility.Normalize(config);
         var result = ConfigurationValidator.Validate(config);
         if (!result.IsValid)
         {
@@ -397,6 +398,7 @@ internal static class Program
             return 1;
         }
 
+        ProviderCompatibility.Normalize(config);
         var validation = ConfigurationValidator.Validate(config);
         if (!validation.IsValid)
         {

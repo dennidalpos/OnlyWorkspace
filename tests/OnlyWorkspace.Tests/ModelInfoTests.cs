@@ -112,55 +112,20 @@ public class ModelInfoTests
         Assert.Equal(0, calls);
     }
 
-    [Fact]
-    public async Task LmStudio_ReadsRootModelsEndpoint()
+    [Theory]
+    [InlineData("openai-compatible")]
+    [InlineData("lmstudio")]
+    [InlineData("openrouter")]
+    [InlineData("mistral")]
+    [InlineData("llamacpp")]
+    [InlineData("vllm")]
+    public async Task CompatibleConnections_DoNotReadProprietaryCapabilities(string type)
     {
-        var http = new HttpClient(new Handler(req =>
-        {
-            Assert.Equal("/api/v1/models", req.RequestUri!.AbsolutePath);
-            return "{\"models\":[{\"key\":\"other\"},{\"key\":\"qwen/qwen3-8b\",\"max_context_length\":32768,\"capabilities\":{\"vision\":false,\"trained_for_tool_use\":true,\"reasoning\":{\"allowed_options\":[\"off\",\"low\",\"high\"],\"default\":\"low\"}}}]}";
-        })) { BaseAddress = new Uri("http://127.0.0.1:1234/v1/") };
-        using var client = new OpenAIClient(new LlmProfileConfig { Type = "lmstudio", BaseUrl = "http://127.0.0.1:1234/v1", Model = "qwen/qwen3-8b" }, null, http);
-
-        var info = await client.GetModelInfoAsync("qwen/qwen3-8b");
-
-        Assert.Equal(32768, info!.ContextWindow);
-        Assert.Equal(CapabilityState.Supported, info.Capabilities.Tools);
-        Assert.Equal(CapabilityState.Supported, info.Capabilities.Reasoning);
-        Assert.Equal(new[] { "low", "high" }, info.Capabilities.ReasoningLevels);
-        Assert.Equal(CapabilityState.Unsupported, info.Capabilities.Vision);
-    }
-
-    [Fact]
-    public void OpenRouter_ReadsSupportedParameters()
-    {
-        using var doc = JsonDocument.Parse("{\"data\":[{\"id\":\"vendor/model\",\"context_length\":131072,\"top_provider\":{\"max_completion_tokens\":8192}," +
-            "\"supported_parameters\":[\"tools\",\"reasoning\",\"response_format\"],\"architecture\":{\"input_modalities\":[\"text\",\"image\"]},\"reasoning\":{\"supported_efforts\":[\"low\",\"high\"]}}]}");
-        var info = OpenAIClient.ParseModelInfo(CapabilitySource.OpenRouter, doc.RootElement, "vendor/model")!;
-        Assert.Equal(131072, info.ContextWindow);
-        Assert.Equal(8192, info.MaxOutputTokens);
-        Assert.Equal(CapabilityState.Supported, info.Capabilities.Tools);
-        Assert.Equal(CapabilityState.Supported, info.Capabilities.Reasoning);
-        Assert.Equal(CapabilityState.Supported, info.Capabilities.StructuredOutput);
-        Assert.Equal(CapabilityState.Supported, info.Capabilities.Vision);
-        Assert.Equal(new[] { "low", "high" }, info.Capabilities.ReasoningLevels);
-        Assert.Null(OpenAIClient.ParseModelInfo(CapabilitySource.OpenRouter, doc.RootElement, "missing"));
-    }
-
-    [Fact]
-    public void Mistral_AndLlamaCpp_ReadTheirOwnFields()
-    {
-        using var mistral = JsonDocument.Parse("{\"id\":\"mistral-small\",\"max_context_length\":32768,\"capabilities\":{\"completion_chat\":true,\"function_calling\":true,\"vision\":false}}");
-        var m = OpenAIClient.ParseModelInfo(CapabilitySource.Mistral, mistral.RootElement, "mistral-small")!;
-        Assert.Equal(32768, m.ContextWindow);
-        Assert.Equal(CapabilityState.Supported, m.Capabilities.Tools);
-        Assert.Equal(CapabilityState.Unsupported, m.Capabilities.Vision);
-
-        using var props = JsonDocument.Parse("{\"default_generation_settings\":{\"n_ctx\":65536},\"chat_template_caps\":{\"supports_tools\":true},\"modalities\":{\"vision\":true}}");
-        var l = OpenAIClient.ParseModelInfo(CapabilitySource.LlamaCpp, props.RootElement, "any")!;
-        Assert.Equal(65536, l.ContextWindow);
-        Assert.Equal(CapabilityState.Supported, l.Capabilities.Tools);
-        Assert.Equal(CapabilityState.Supported, l.Capabilities.Vision);
+        int calls = 0;
+        var http = new HttpClient(new Handler(_ => { calls++; return "{}"; })) { BaseAddress = new Uri("http://127.0.0.1:1234/v1/") };
+        using var client = new OpenAIClient(new LlmProfileConfig { Type = type, BaseUrl = "http://127.0.0.1:1234/v1", Model = "synthetic" }, null, http);
+        Assert.Null(await client.GetModelInfoAsync("synthetic"));
+        Assert.Equal(0, calls);
     }
 
     [Fact]

@@ -55,7 +55,7 @@ public sealed class P1DispatchPolicyTests
             profile.AllowAttachmentUpload = true;
             Assert.False(SecurityContentAnalysis.AttachmentContentAllowed(profile, new AttachmentFacts("fixture.txt", 10)));
             profile.AllowAttachmentUpload = false;
-            profile.BaseUrl = ProviderCatalog.Get(type).DefaultBaseUrl;
+            profile.BaseUrl = type == ProviderCatalog.OpenAICompatible ? "http://127.0.0.1:1234/v1" : ProviderCatalog.Get(type).DefaultBaseUrl;
             Assert.False(profile.IsExternal);
             Assert.True(DataEgress.AllowsModel(Config(profile), profile));
         }

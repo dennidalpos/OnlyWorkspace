@@ -59,6 +59,7 @@ public sealed class SetupWizardForm : Form
     public SetupWizardForm(LlmProfileConfig profile, string? secret, bool archiveEnabled, bool indexAttachments)
     {
         Profile = Copy(profile);
+        ProviderCompatibility.Normalize(Profile);
         Secret = secret;
         Text = "Configurazione guidata di OnlyWorkspace";
         Font = new Font("Segoe UI", 9F);
@@ -75,6 +76,7 @@ public sealed class SetupWizardForm : Form
             Note("Questa procedura imposta per tutti gli utenti del PC il modello IA e l'autorizzazione dell'archivio, salvati in %ProgramData%\\OnlyWorkspace\\config.json e secrets.bin (chiavi cifrate; il salvataggio può chiedere l'autorizzazione di amministratore). Per l'utente corrente imposta l'avvio automatico e controlla che Outlook carichi l'add-in. Ogni scelta si cambia poi nelle pagine della Configurazione.")));
 
         _cmbProvider.Items.AddRange(ProviderCatalog.All.Cast<object>().ToArray());
+        if (ProviderCatalog.IsLegacy(Profile.Type)) _cmbProvider.Items.Add(ProviderCatalog.Get(Profile.Type));
         _cmbProvider.SelectedItem = ProviderCatalog.Get(Profile.Type);
         _cmbProvider.SelectedIndexChanged += (_, _) => { _connectionCheck?.Cancel(); OnProviderChanged(); };
         foreach (var field in new Control[] { _txtEndpoint, _txtModel, _txtKey })
@@ -213,6 +215,8 @@ public sealed class SetupWizardForm : Form
         var caps = Caps;
         if (!keepValues)
         {
+            foreach (var legacy in _cmbProvider.Items.Cast<ProviderCapabilities>().Where(p => ProviderCatalog.IsLegacy(p.Type)).ToArray())
+                _cmbProvider.Items.Remove(legacy);
             _txtEndpoint.Text = caps.DefaultBaseUrl;
             _txtModel.Text = caps.DefaultModel;
             _lblTest.Text = string.Empty;
@@ -222,6 +226,8 @@ public sealed class SetupWizardForm : Form
         _lblModelNote.Text = caps.IsExternal
             ? "Cloud: le azioni IA inviano dati al servizio configurato, entro il livello di esposizione del profilo (parte da «1 · Minimo»: fatti locali con segnaposto). Puoi salvare il profilo cloud come predefinito; gli invii restano bloccati fino all'autorizzazione in Privacy e dati. La chiave è salvata cifrata in secrets.bin."
             : "Il modello usa il server indicato. Su loopback (questo PC), senza Web Search, il testo resta sul PC. Un indirizzo esterno o Web Search possono inviare dati fuori dal PC e richiedono l'informativa accettata in Privacy e dati. Il servizio locale e il modello vanno installati a parte.";
+        if (caps.Type == ProviderCatalog.OpenAICompatible)
+            _lblModelNote.Text = "Inserisci indirizzo e modello del servizio compatibile OpenAI. Ricerca web e lettura delle capacità specifiche non sono disponibili. " + _lblModelNote.Text;
     }
 
     private LlmProfileConfig Edited()
@@ -232,9 +238,9 @@ public sealed class SetupWizardForm : Form
         p.Type = caps.Type;
         p.BaseUrl = _txtEndpoint.Text.Trim();
         p.Model = _txtModel.Text.Trim();
-        p.External = caps.IsExternal;
+        p.External = caps.IsExternal || (!switched && p.External);
         if (!caps.AuthTypes.Contains(p.AuthType)) p.AuthType = caps.AuthTypes[0];
-        if (caps.Type == ProviderCatalog.Ollama && !string.IsNullOrWhiteSpace(_txtKey.Text)) p.AuthType = "bearer";
+        if (caps.AuthTypes.Contains("bearer") && p.AuthType == "none" && !string.IsNullOrWhiteSpace(_txtKey.Text)) p.AuthType = "bearer";
         if (switched)
         {
             p.DisplayName = caps.DisplayName;
