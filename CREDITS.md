@@ -1,6 +1,6 @@
 # CREDITS: OnlyWorkspace
 
-Third-party components used by OnlyWorkspace, with the license each one declares. Generated on 2026-11-03 from the dependency manifests tracked in this repository and the license metadata published on nuget.org and Maven Central (or found in the local NuGet and Gradle caches). Project license: proprietary, all rights reserved, see [LICENSE](LICENSE).
+Third-party components used by OnlyWorkspace, with the license each one declares. Generated on 2026-11-03 from the dependency manifests tracked in this repository and the license metadata published on nuget.org (or found in the local NuGet cache). Project license: proprietary, all rights reserved, see [LICENSE](LICENSE).
 
 ## License summary
 
@@ -56,5 +56,5 @@ Components with a copyleft or weak-copyleft license that need an owner decision 
 
 - The license shown is the one declared in the package metadata; it was not compared with the license text shipped inside each package.
 - "unverified" means the package metadata could not be fetched or declares no license; check the source link before redistributing.
-- Transitive NuGet components are listed only when a local build left a `project.assets.json`; Gradle transitive dependencies are not listed.
+- Transitive NuGet components are not listed here. Shipped transitive and embedded components (SQLitePCLRaw.core, Microsoft.Bcl.HashCode, the SQLite3MC provider, the Public Suffix List and NSIS) are covered in [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt).
 - Legal compatibility with the project license is a decision for the owner; this file is an inventory, not legal advice.

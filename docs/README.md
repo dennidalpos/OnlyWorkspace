@@ -1,6 +1,6 @@
 # Documentazione di OnlyWorkspace
 
-Guide del comportamento disponibile, organizzate per destinatario. Per i primi passi vedi [Iniziare su un PC Windows](../README.md#iniziare-su-un-pc-windows); [Verifica e qualifica](tecnico/verifica.md) distingue codice, prove isolate e comportamento osservato sulla build installata.
+Guide del comportamento disponibile, organizzate per destinatario. Per i primi passi vedi [Iniziare su un PC Windows](OVERVIEW.it.md#iniziare-su-un-pc-windows); [Verifica e qualifica](tecnico/verifica.md) distingue codice, prove isolate e comportamento osservato sulla build installata.
 
 ## Utente
 

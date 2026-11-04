@@ -44,7 +44,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 --------------------------------------------------------------------------------
 2. System.Text.Json, System.Text.Encodings.Web, System.IO.Pipelines, Microsoft.Bcl.AsyncInterfaces,
    System.Diagnostics.DiagnosticSource, System.Threading.Channels, System.Security.Cryptography.ProtectedData,
-   System.Memory, System.Buffers,
+   System.Memory, System.Buffers, Microsoft.Bcl.HashCode,
    System.Numerics.Vectors, System.Runtime.CompilerServices.Unsafe, System.Threading.Tasks.Extensions
 --------------------------------------------------------------------------------
 Copyright (c) .NET Foundation and Contributors.
@@ -147,7 +147,7 @@ License: MIT (https://licenses.nuget.org/MIT)
 Used by the mail archive (encrypted local index).
 
 --------------------------------------------------------------------------------
-11. SQLite3 Multiple Ciphers (SQLite3MC.PCLRaw.bundle, SQLite3MC.PCLRaw.lib, sqlite3mc.dll)
+11. SQLite3 Multiple Ciphers (SQLite3MC.PCLRaw.bundle, SQLite3MC.PCLRaw.lib, SQLite3MC.PCLRaw.provider, sqlite3mc.dll)
 --------------------------------------------------------------------------------
 Copyright (c) 2023-2026 Ulrich Telle, et al.
 License: MIT (https://licenses.nuget.org/MIT)
