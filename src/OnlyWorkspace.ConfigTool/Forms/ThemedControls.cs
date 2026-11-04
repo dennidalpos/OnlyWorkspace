@@ -513,10 +513,19 @@ internal sealed class ThemedCheckBox : CheckBox, IThemed
 
     private int Box => Ui.Px(this, 16);
 
+    private int TextLeft => Box + Ui.Px(this, 7);
+
+    private const TextFormatFlags WrapFlags = TextFormatFlags.Left | TextFormatFlags.Top | TextFormatFlags.WordBreak | TextFormatFlags.NoPadding;
+
     public override Size GetPreferredSize(Size proposedSize)
     {
         var text = TextRenderer.MeasureText(Text, Font);
-        return new Size(text.Width + Box + Ui.Px(this, 10), Math.Max(text.Height, Box) + Ui.Px(this, 6));
+        var natural = new Size(text.Width + Box + Ui.Px(this, 10), Math.Max(text.Height, Box) + Ui.Px(this, 6));
+        // A long label wraps only where the page limits the width (MaximumSize); without a limit it stays on one line.
+        int limit = MaximumSize.Width;
+        if (limit <= 0 || natural.Width <= limit) return natural;
+        var wrapped = TextRenderer.MeasureText(Text, Font, new Size(Math.Max(1, limit - TextLeft), int.MaxValue), WrapFlags);
+        return new Size(limit, Math.Max(wrapped.Height, Box) + Ui.Px(this, 6));
     }
 
     protected override void OnPaint(PaintEventArgs e)
@@ -526,7 +535,12 @@ internal sealed class ThemedCheckBox : CheckBox, IThemed
         g.Clear(Parent?.BackColor ?? c.Card);
         g.SmoothingMode = SmoothingMode.AntiAlias;
 
-        var box = new Rectangle(1, (Height - Box) / 2, Box - 1, Box - 1);
+        int left = TextLeft;
+        int lineHeight = Math.Max(TextRenderer.MeasureText(Text, Font).Height, Box);
+        var textArea = new Size(Math.Max(1, Width - left), int.MaxValue);
+        bool wrapped = TextRenderer.MeasureText(Text, Font, textArea, WrapFlags).Height > Font.Height + 2;
+        // Wrapped label: the box stays beside the first line instead of the middle of the block.
+        var box = new Rectangle(1, wrapped ? Ui.Px(this, 3) + (lineHeight - Box) / 2 : (Height - Box) / 2, Box - 1, Box - 1);
         // Checked is also true for Indeterminate: an unknown state gets a dash, never the tick of a real choice.
         if (Checked)
         {
@@ -548,9 +562,11 @@ internal sealed class ThemedCheckBox : CheckBox, IThemed
             Ui.FillRounded(g, box, Ui.Px(this, 3), Enabled ? c.Input : c.InputDisabled, Enabled ? c.Muted : c.Disabled);
         }
 
-        int left = Box + Ui.Px(this, 7);
-        TextRenderer.DrawText(g, Text, Font, new Rectangle(left, 0, Width - left, Height), Enabled ? c.Text : c.Disabled,
-            TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine | TextFormatFlags.NoPadding);
+        if (wrapped)
+            TextRenderer.DrawText(g, Text, Font, new Rectangle(left, Ui.Px(this, 3), Width - left, Height - Ui.Px(this, 3)), Enabled ? c.Text : c.Disabled, WrapFlags);
+        else
+            TextRenderer.DrawText(g, Text, Font, new Rectangle(left, 0, Width - left, Height), Enabled ? c.Text : c.Disabled,
+                TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine | TextFormatFlags.NoPadding);
         if (Focused && ShowFocusCues) ControlPaint.DrawFocusRectangle(g, new Rectangle(left - 2, 1, Width - left + 1, Height - 2));
     }
 }
@@ -810,13 +826,18 @@ internal sealed class ProfileListBox : ListBox, IThemed
         var g = e.Graphics;
         object item = Items[e.Index];
         bool selected = (e.State & DrawItemState.Selected) != 0;
+        // The selection bar alone does not say whether the list has the keyboard: an accent outline marks the focused row.
+        bool focused = (e.State & DrawItemState.Focus) != 0 && (e.State & DrawItemState.NoFocusRect) == 0;
 
         using (var back = new SolidBrush(BackColor)) g.FillRectangle(back, e.Bounds);
-        if (selected)
+        if (selected || focused)
         {
             g.SmoothingMode = SmoothingMode.AntiAlias;
             var row = new Rectangle(e.Bounds.X, e.Bounds.Y + 1, e.Bounds.Width - 1, e.Bounds.Height - 3);
-            Ui.FillRounded(g, row, Ui.Px(this, 4), Ui.Blend(BackColor, c.Text, 0.09f));
+            Ui.FillRounded(g, row, Ui.Px(this, 4), selected ? Ui.Blend(BackColor, c.Text, 0.09f) : BackColor, focused ? c.Accent : null);
+        }
+        if (selected)
+        {
             int bar = Ui.Px(this, 3), barHeight = Ui.Px(this, 14);
             using var accent = new SolidBrush(c.Accent);
             g.FillRectangle(accent, e.Bounds.X, e.Bounds.Y + (e.Bounds.Height - barHeight) / 2, bar, barHeight);

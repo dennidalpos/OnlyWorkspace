@@ -9,7 +9,7 @@ Commands match the table in `docs/tecnico/verifica.md` and `.github/workflows/ci
 
 1. Output location: if `ONLYWORKSPACE_RUNTIME_ROOT` is unset in the user environment, say so and use the repository default; never invent a root (see `docs/tecnico/output-locali.md`).
 2. `pwsh -NoProfile -File scripts/check-code.ps1` — analyzers, PSScriptAnalyzer, JavaScript/skill-bridge syntax, Release build.
-3. `dotnet test tests/OnlyWorkspace.Tests -c Release --no-build -f net48`, then `-f net10.0-windows`. Record the passed/failed/skipped totals of each runtime.
+3. `dotnet test tests/OnlyWorkspace.Tests -c Release --no-build -f net48`, then `-f net10.0-windows`. Record the passed/failed/skipped totals of each runtime. If a test fails right after a build on a loaded machine (A234, `ProcessRunnerTests`, `HttpErrorCancellationTests`; task #065), run `dotnet build-server shutdown`, wait about 15 s and repeat once; report both outcomes, never only the green one.
 4. `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\smoke-net48.ps1`, then the same script with `%WINDIR%\SysWOW64\WindowsPowerShell\v1.0\powershell.exe`.
 5. `pwsh -NoProfile -File scripts\test-scripts.ps1` — record the number of scripts run.
 6. `dotnet package list --project OnlyWorkspace.sln --vulnerable --include-transitive --format json`: the command exits 0 either way, so fail if the report contains `"vulnerabilities"`.

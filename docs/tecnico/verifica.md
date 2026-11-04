@@ -99,7 +99,7 @@ Da PowerShell nella radice del repository, con gli output configurati come in [O
 | Controllo | Comando | Copre |
 | --- | --- | --- |
 | Build | `dotnet build OnlyWorkspace.sln -c Release --nologo` | Tutti i target |
-| Test | `dotnet test OnlyWorkspace.sln -c Release --nologo` | xUnit su `net48` e `net10.0-windows`, senza Outlook né provider reali |
+| Test | `dotnet test OnlyWorkspace.sln -c Release --nologo` | xUnit su `net48` e `net10.0-windows`, senza Outlook né provider reali. Con la macchina carica un errore subito dopo la build (A234, `ProcessRunnerTests`, `HttpErrorCancellationTests`) si ripete una volta dopo `dotnet build-server shutdown` e circa 15 s di pausa, riportando entrambi gli esiti (causa non dimostrata, #065) |
 | Script | `pwsh -NoProfile -File scripts\test-scripts.ps1` | JavaScript del riquadro (`tests\scripts\*.cjs`), pipeline di firma e NSIS, crash e capacità dell'archivio, politiche del riquadro net48 (`PanePolicy`) |
 | Smoke .NET 4.8 | `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\smoke-net48.ps1`, anche con PowerShell x86; output Release risolto da MSBuild | Caricamento dell'add-in e del ribbon senza binding redirect |
 | Vulnerabilità | `dotnet package list --project OnlyWorkspace.sln --vulnerable --include-transitive --format json` | Produce il rapporto JSON; il comando può uscire 0 anche con vulnerabilità. Il gate deve verificare separatamente il contenuto `"vulnerabilities"` |

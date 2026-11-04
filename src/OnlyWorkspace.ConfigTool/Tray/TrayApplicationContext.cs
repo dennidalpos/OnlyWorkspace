@@ -126,6 +126,7 @@ public sealed class TrayApplicationContext : ApplicationContext
         };
 
         _statusAnimation.Tick += (_, _) => { _statusFrame = (_statusFrame + 1) % 12; UpdateStatusImages(); };
+        Theme.Changed += OnThemeChanged;
         UpdateProfileStatus();
         _archiveTimer.Tick += async (_, _) => await RefreshArchiveStatusAsync();
 
@@ -487,10 +488,26 @@ public sealed class TrayApplicationContext : ApplicationContext
         base.Dispose(disposing);
     }
 
+    // The cached bitmaps and icons are drawn with the theme colours of the moment: rebuild them when the theme changes
+    // (the event can arrive off the UI thread). New images are assigned before the old ones are disposed.
+    private void OnThemeChanged(object? sender, EventArgs e) => _syncContext.Post(_ => RebuildStatusImages(), null);
+
+    private void RebuildStatusImages()
+    {
+        if (_isExiting || _statusImagesDisposed) return;
+        var oldImages = _statusImages.Values.ToList();
+        var oldIcons = _archiveIcons.Values.ToList();
+        _statusImages.Clear(); _archiveIcons.Clear();
+        UpdateStatusImages();
+        foreach (var image in oldImages) image.Dispose();
+        foreach (var icon in oldIcons) icon.Dispose();
+    }
+
     private void DisposeStatusImages()
     {
         if (_statusImagesDisposed) return;
         _statusImagesDisposed = true;
+        Theme.Changed -= OnThemeChanged;
         _statusAnimation.Stop(); _statusAnimation.Dispose();
         foreach (var image in _statusImages.Values) image.Dispose();
         foreach (var icon in _archiveIcons.Values) icon.Dispose();
