@@ -18,7 +18,7 @@
     <PackageReference Include="coverlet.collector" Version="10.1.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.11.0" />
     <!-- Same version as the extractor: writes the .msg given to it by AttachmentExtractionTests. -->
-    <PackageReference Include="OpenMcdf" Version="3.3.0" />
+    <PackageReference Include="OpenMcdf" Version="3.4.0" />
     <PackageReference Include="xunit" Version="2.9.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="4.0.1" />
   </ItemGroup>
