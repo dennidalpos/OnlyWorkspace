@@ -19,7 +19,7 @@ public sealed class ArchiveSearchFormTests
         {
             try
             {
-                using var form = new ArchiveSearchForm(refreshOnShow: false) { Size = new Size(1000, 650), Font = new Font("Segoe UI", 9 * scale) };
+                using var form = new ArchiveSearchForm(false, IsolatedArchive.NewPath()) { Size = new Size(1000, 650), Font = new Font("Segoe UI", 9 * scale) };
                 form.Show();
                 Application.DoEvents();
                 var tabs = Assert.Single(Descendants(form).OfType<TabControl>());
@@ -86,7 +86,7 @@ public sealed class ArchiveSearchFormTests
         {
             try
             {
-                using var form = new ArchiveSearchForm(refreshOnShow: false) { StartPosition = FormStartPosition.Manual, Location = new Point(-4000, -4000) };
+                using var form = new ArchiveSearchForm(false, IsolatedArchive.NewPath()) { StartPosition = FormStartPosition.Manual, Location = new Point(-4000, -4000) };
                 form.Show();
                 Application.DoEvents();
                 var factBar = Descendants(form).Single(c => c.Name == "FactFilters");

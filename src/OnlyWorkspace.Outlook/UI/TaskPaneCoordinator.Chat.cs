@@ -226,7 +226,7 @@ public partial class TaskPaneCoordinator
                 }
             }
 
-            if (messages == null && selectedEmail != null && activeProfile.IsExternal && CloudFactsRequest.IsFactRequest(userInstruction))
+            if (messages == null && selectedEmail != null && ExposurePolicy.SendsFactsOnly(activeProfile) && CloudFactsRequest.IsFactRequest(userInstruction))
             {
                 var source = new ChatMailItem { EntryId = selectedEmail.EntryId, StoreId = selectedEmail.StoreId,
                     Subject = selectedEmail.Subject, Received = selectedEmail.ReceivedTime, Facts = ArchiveFactExtractor.Extract(selectedEmail.Body ?? "") };

@@ -259,7 +259,7 @@ Consente la ricerca offline e il recupero del testo integrale anche a Outlook ch
 flowchart TD
     subgraph INGRESSO_ARCH["Punti di ingresso Archivio e Flusso"]
         direction TB
-        AR1["Indicatore «Archivio» nella barra del riquadro"]
+        AR1["Pallino di stato nella barra del riquadro"]
         AR2["Scheda OnlyWorkspace: pulsante «Stato»"]
         AR3["Menu «⋯» dell'email: «Ricostruisci la pratica»"]
         AR4["Icona tray Windows: «Ricerca e stato archivio»"]

@@ -88,21 +88,67 @@ public sealed class ExposureMinimizationTests
     }
 
     [Fact]
-    public async Task Dispatcher_MasksOnlyAtLevelsOneAndTwo()
+    public async Task Dispatcher_MasksEveryProfile_AndCloudFreeTextOnlyAtStandardOrExtended()
     {
         var recorder = new RecordingClient("Risposta per [PERSONA_1]");
-        var profile = new LlmProfileConfig { Id = "c", Type = "qwen", BaseUrl = "https://cloud.example/v1", Model = "m", External = true, Exposure = ExposureLevel.Standard };
+        var profile = new LlmProfileConfig { Id = "c", Type = "qwen", BaseUrl = "https://cloud.example/v1", Model = "m", External = true, Exposure = ExposureLevel.Minimal };
         var dispatcher = new LlmRequestDispatcher(recorder, profile, audit: TestPrivacyAudit.Store);
         var messages = new[] { ChatMessage.User("Da Anna Bianchi <anna@esempio.it>: conferma") };
 
+        // Minimo: only typed facts leave, free text is refused before any byte.
         await Assert.ThrowsAsync<DataEgressBlockedException>(async () => await ToListAsync(dispatcher.StreamChatAsync(messages)));
         Assert.True(string.IsNullOrEmpty(recorder.Sent));
 
+        // Standard: the text leaves masked.
+        profile.Exposure = ExposureLevel.Standard;
+        await ToListAsync(dispatcher.StreamChatAsync(messages));
+        Assert.DoesNotContain("anna@esempio.it", recorder.Sent);
+        Assert.DoesNotContain("Anna Bianchi", recorder.Sent);
+
+        // Local: nothing leaves the PC but the identifiers are masked all the same.
         profile.External = false;
         profile.Type = "ollama";
         profile.BaseUrl = "http://127.0.0.1:11434";
+        recorder = new RecordingClient("Risposta per [PERSONA_1]");
+        dispatcher = new LlmRequestDispatcher(recorder, profile, audit: TestPrivacyAudit.Store);
         await ToListAsync(dispatcher.StreamChatAsync(messages));
-        Assert.Contains("anna@esempio.it", recorder.Sent);
+        Assert.DoesNotContain("anna@esempio.it", recorder.Sent);
+    }
+
+    [Fact]
+    public async Task Dispatcher_SendsNothing_WhenTheMaskerFails()
+    {
+        var recorder = new RecordingClient("ok ok ok ok ok ok ok");
+        var profile = new LlmProfileConfig { Id = "c", Type = "qwen", BaseUrl = "https://cloud.example/v1", Model = "m", External = true, Exposure = ExposureLevel.Extended };
+        var dispatcher = new LlmRequestDispatcher(recorder, profile, null, null, null,
+            (mask, input) => throw new InvalidOperationException("masker down"), null, TestPrivacyAudit.Store);
+        await Assert.ThrowsAnyAsync<Exception>(async () => await ToListAsync(dispatcher.StreamChatAsync(new[] { ChatMessage.User("Da Anna Bianchi <anna@esempio.it>") })));
+        Assert.True(string.IsNullOrEmpty(recorder.Sent));
+    }
+
+    [Fact]
+    public void ClientGuard_RefusesUnmaskedFreeText_AndAcceptsOnlySealedMaskedText()
+    {
+        var profile = new LlmProfileConfig { Id = "c", Type = "qwen", BaseUrl = "https://cloud.example/v1", Model = "m", External = true, Exposure = ExposureLevel.Standard };
+        var raw = new[] { ChatMessage.User("testo libero") };
+        Assert.Throws<DataEgressBlockedException>(() => CloudRequestGuard.Validate(profile, raw, null));
+        Assert.Single(CloudRequestGuard.Validate(profile, raw, null, beforeMasking: true));
+        var map = new Pseudonymizer();
+        // Raw text, or text masked by another map, cannot be sealed.
+        Assert.Throws<DataEgressBlockedException>(() => CloudRequestGuard.SealMasked(profile, raw, null, map));
+        Assert.Throws<DataEgressBlockedException>(() => CloudRequestGuard.SealMasked(profile, new Pseudonymizer().Mask(raw), null, map));
+        var sealedMessages = CloudRequestGuard.SealMasked(profile, map.Mask(raw), null, map);
+        Assert.Single(CloudRequestGuard.Validate(profile, sealedMessages, null));
+        // A client may re-serialize the schema (Ollama sends it compact): same structure passes, another schema does not.
+        var prettySchema = "{ \"type\": \"object\",\n  \"properties\": { \"a\": { \"type\": \"string\" } } }";
+        var schemaMap = new Pseudonymizer();
+        var schemaSealed = CloudRequestGuard.SealMasked(profile, schemaMap.Mask(raw), prettySchema, schemaMap);
+        Assert.Single(CloudRequestGuard.Validate(profile, schemaSealed, "{\"type\":\"object\",\"properties\":{\"a\":{\"type\":\"string\"}}}"));
+        Assert.Throws<DataEgressBlockedException>(() => CloudRequestGuard.Validate(profile, schemaSealed, "{\"type\":\"array\"}"));
+        Assert.Throws<DataEgressBlockedException>(() => CloudRequestGuard.Validate(profile, schemaSealed, null));
+        profile.Exposure = ExposureLevel.Minimal; // a masking proof is worthless below Standard
+        Assert.Throws<DataEgressBlockedException>(() => CloudRequestGuard.Validate(profile, sealedMessages, null));
+        Assert.Throws<DataEgressBlockedException>(() => CloudRequestGuard.Validate(profile, raw, null, beforeMasking: true));
     }
 
     [Fact]

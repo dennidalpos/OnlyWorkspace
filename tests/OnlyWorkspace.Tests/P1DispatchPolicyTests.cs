@@ -48,7 +48,8 @@ public sealed class P1DispatchPolicyTests
             }, audit: TestPrivacyAudit.Store);
             await Assert.ThrowsAsync<DataEgressBlockedException>(() => dispatch.CompleteStructuredAsync(new[] { ChatMessage.User("BODY") }, "{}"));
             Assert.Equal(0, recorder.Calls);
-            Accept(config);
+            // At Minimo only typed facts leave: free text stays blocked even after the authorization.
+            TestEgress.Accepted(config, fullExposure: false);
             await Assert.ThrowsAsync<DataEgressBlockedException>(() => dispatch.CompleteStructuredAsync(new[] { ChatMessage.User("BODY") }, "{}"));
             Assert.Equal(0, recorder.Calls);
             Assert.False(SecurityContentAnalysis.AttachmentContentAllowed(profile, new AttachmentFacts("fixture.txt", 10)));
@@ -185,7 +186,8 @@ public sealed class P1DispatchPolicyTests
         var valid = new[] { ChatMessage.System("Rules"), ChatMessage.Assistant("HISTORY"), ChatMessage.User("WHOLE-BODY-END"), ChatMessage.System("WEB-END") };
         await dispatch.CompleteStructuredAsync(valid, "{}");
         Assert.Equal(1, recorder.Calls);
-        Assert.Equal(valid, recorder.Messages);
+        // Local requests are masked too, so the messages are copies with the same text.
+        Assert.Equal(valid.Select(m => (m.Role, m.Content)), recorder.Messages.Select(m => (m.Role, m.Content)));
     }
 
     [Theory]

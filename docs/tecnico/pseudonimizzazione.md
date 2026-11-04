@@ -1,23 +1,34 @@
 # Pseudonimizzazione delle richieste IA
 
-## Confine cloud rigoroso
+## Confine per livello
 
-Il cloud riceve soltanto categorie fisse e riferimenti opachi a fatti strutturati risolti sul PC. `CloudFactsRequest` mantiene una copia locale dei valori e della provenienza; i messaggi contengono solo il template `cloud.facts` incorporato nell’assembly (indipendente da eventuali file di prompt modificati), e righe con numero della fonte, categoria e segnaposto. Non includono `Raw`, contesto, oggetto, nomi dei file, StoreId/EntryId, corpi, nomi, recapiti, importi o date originali.
+Ogni richiesta al modello passa dal dispatcher (`LlmRequestDispatcher`) e da una pseudonimizzazione meccanica prima del trasporto, anche per i profili locali. In locale sono sostituiti solo gli identificativi riconosciuti (nomi, indirizzi, recapiti, IBAN, codici); importi e date solo con le opzioni del profilo. Nel cloud importi e date sono sempre sostituiti. Le risposte vengono ripristinate sul PC (`Restore`, `RestoreJson`, `StreamRestorer`).
 
-Il contratto è immutabile e non serializzabile come autorizzazione: la prova interna dei messaggi non viene ricostruita da storico o JSON. Dispatcher e singoli client HTTP rifiutano messaggi privi della preparazione, messaggi aggiunti e schemi diversi. Le sonde usano esclusivamente input sintetici fissi. Prima del trasporto il riquadro ricontrolla autorizzazione, chiavi e configurazione.
+| Livello del profilo cloud | Cosa esce |
+| --- | --- |
+| 0 · Solo locale | Nulla |
+| 1 · Minimo | Solo fatti strutturati: categorie fisse e riferimenti opachi (`CloudFactsRequest`) |
+| 2 · Standard | Email e testo libero, già mascherati; ricerca web solo per la verifica di sicurezza |
+| 3 · Esteso | Come Standard; con il permesso del profilo anche il testo degli allegati estratto in locale, mascherato |
 
-Le risposte ammesse elencano tutti i riferimenti una sola volta. Riferimenti sconosciuti, duplicati, mancanti o output troncato rifiutano la risposta. Valori, date, importi, citazioni e voci agenda sono ricostruiti sul PC; il modello non calcola sui segnaposto. La classificazione generale, sintesi e riscrittura di testo libero richiedono un profilo locale. Non esiste cambio automatico di provider o invio di ripiego.
+Nessun file binario, nome di file, StoreId o EntryId esce. Se il masker, il dizionario o il registro di audit non sono disponibili, nulla viene inviato (`DataEgressBlockedException`).
 
-Le richieste esplicite «elenca i fatti», «mostra le scadenze» e «elenca gli importi», anche con «delle email» o «di questa email», hanno una rappresentazione predefinita. Le domande sui fatti già risolvibili localmente continuano a non contattare alcun provider. Le query web libere, i domini ricavati dalla posta e le query generate da Ollama non soddisfano il contratto e restano bloccati. Le verifiche sintetiche della capacità web restano disponibili.
+## Prova interna dei messaggi
+
+Il contratto non è serializzabile come autorizzazione: la prova (`CloudRequestProof`) non viene ricostruita da storico o JSON. Il dispatcher accetta testo libero prima della maschera solo a Standard ed Esteso (`CloudRequestGuard.Validate(..., beforeMasking: true)`), lo maschera e lo sigilla (`SealMasked`). Ogni client HTTP rivalida senza quel permesso: testo non mascherato, messaggi aggiunti o schemi diversi sono rifiutati a ogni livello, e una prova di maschera non vale sotto Standard. A Minimo restano valide solo le richieste di fatti, il cui testo la maschera non può modificare. Le sonde usano input sintetici fissi.
+
+## Fatti (Minimo)
+
+`CloudFactsRequest` mantiene una copia locale dei valori e della provenienza; i messaggi contengono solo il template `cloud.facts` incorporato e righe con numero della fonte, categoria e segnaposto. Le risposte elencano ogni riferimento una sola volta: riferimenti sconosciuti, duplicati, mancanti o output troncato rifiutano la risposta. Le richieste «elenca i fatti», «mostra le scadenze» e «elenca gli importi» hanno una rappresentazione predefinita; le domande risolvibili in locale non contattano alcun provider. Sintesi, riscritture e Briefing richiedono Standard o un profilo locale. Non esiste cambio automatico di provider o invio di ripiego.
 
 ## Strategie e audit locali
 
-Il catalogo incorporato è alla revisione 2. La pipeline locale mantiene sostituzioni reversibili, priorità fra pattern, budget di dieci secondi, timeout delle regex e annullamento. Le identità vengono raccolte dagli store autorizzati e cercate con un indice letterale compilato una volta per richiesta, senza una regex per contatto. I valori dei fatti cloud vengono sempre sostituiti integralmente, anche se sconosciuti al dizionario; importi e date non hanno un interruttore di esclusione nel cloud.
+Il catalogo incorporato è alla revisione 2. La pipeline mantiene sostituzioni reversibili, priorità fra pattern, budget di dieci secondi, timeout delle regex e annullamento. Le identità vengono raccolte dagli store autorizzati e cercate con un indice letterale compilato una volta per richiesta. Query web libere, domini ricavati dalla posta e query generate da Ollama restano bloccati.
 
 Il registro DPAPI conserva identificativo casuale, data, esito, revisioni e conteggi per categoria; non contiene originali o mappa. Il mutex protegge gli aggiornamenti. Scadono dopo trenta giorni solo i metadati di questo registro. Un errore precedente al trasporto impedisce l'invio; un errore successivo non ritira richieste già ricevute. `dispatching` indica un tentativo, non una ricevuta. Il PDF di Privacy e dati include i metadati disponibili.
 
 ## Autorizzazione e limiti
 
-L'informativa 5 registra una conferma tecnica con utente Windows, postazione, data e testo accettato, distinta per profilo, destinazione, permessi e credenziali effettive. Non registra nuove dichiarazioni aziendali o contrattuali. I record precedenti restano conservati e richiedono rinnovo. La policy conversazionale 7 separa i nuovi contesti dallo storico precedente.
+L'informativa 6 registra una conferma tecnica con utente Windows, postazione, data e testo accettato, distinta per profilo, destinazione, area del servizio, permessi e credenziali effettive. L'area (UE, non UE, non specificata) è dichiarata dall'amministratore per profilo; se non specificata serve una conferma separata. Non registra dichiarazioni aziendali o contrattuali. I record precedenti restano conservati e richiedono rinnovo. La policy conversazionale 8 separa i nuovi contesti dallo storico precedente.
 
-È pseudonimizzazione reversibile, non anonimizzazione né attestazione di conformità. La copertura dipende dai fatti risolti localmente: contenuti non rappresentabili vengono rifiutati, anziché essere dichiarati privi di dati sensibili. I profili locali elaborano il testo completo sul PC. Prove sintetiche, runtime isolato e Outlook installato restano qualifiche distinte: [Verifica](verifica.md).
+È pseudonimizzazione reversibile, non anonimizzazione né attestazione di conformità. I dati sensibili che la procedura non riconosce, comprese le categorie particolari, restano nel testo e non sono anonimizzati. Prove sintetiche, runtime isolato e Outlook installato restano qualifiche distinte: [Verifica](verifica.md).

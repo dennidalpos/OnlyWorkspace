@@ -68,7 +68,7 @@ public sealed class ConfigToolTooltipTests
             {
                 Theme.Force(true);
                 Theme.ForceHighContrast(false);
-                using var form = new MainConfigForm(directory);
+                using var form = new MainConfigForm(directory, null, directory);
                 Assert.NotEqual(System.Drawing.SystemColors.Window, form.BackColor);
                 changes = 0;
                 // Only the contrast theme changes: the open window still takes the system colours.
@@ -188,7 +188,7 @@ public sealed class ConfigToolTooltipTests
         {
             var profile = new LlmProfileConfig { Id = "a", Type = "ollama", BaseUrl = "http://127.0.0.1:11434", Model = "m" };
             using (var wizard = new SetupWizardForm(profile, null, archiveEnabled: true, indexAttachments: true)) AssertEveryControlHasATip(wizard, Tips(wizard));
-            using (var archive = new ArchiveSearchForm(refreshOnShow: false)) AssertEveryControlHasATip(archive, Tips(archive));
+            using (var archive = new ArchiveSearchForm(false, IsolatedArchive.NewPath())) AssertEveryControlHasATip(archive, Tips(archive));
             using var notice = new DataEgressConsentForm(new[] { new OnlyWorkspace.Core.Privacy.DataEgressProvider { Host = "cloud.example" } }, null);
             AssertEveryControlHasATip(notice, Tips(notice));
         });

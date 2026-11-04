@@ -60,7 +60,7 @@ public sealed class LlmRequestDispatcher : ILlmClient, IDisposable
     {
         cancellationToken.ThrowIfCancellationRequested();
         _validatePolicy?.Invoke();
-        var prepared = ModelRequestContext.Prepare(_profile, CloudRequestGuard.Validate(_profile, messages, null));
+        var prepared = ModelRequestContext.Prepare(_profile, CloudRequestGuard.Validate(_profile, messages, null, beforeMasking: true));
         Pseudonymizer? mask = null;
         Pseudonymizer.StreamRestorer? restorer = null;
         var request = _status?.Begin();
@@ -118,7 +118,7 @@ public sealed class LlmRequestDispatcher : ILlmClient, IDisposable
     {
         cancellationToken.ThrowIfCancellationRequested();
         _validatePolicy?.Invoke();
-        var prepared = ModelRequestContext.Prepare(_profile, CloudRequestGuard.Validate(_profile, messages, jsonSchema), jsonSchema);
+        var prepared = ModelRequestContext.Prepare(_profile, CloudRequestGuard.Validate(_profile, messages, jsonSchema, beforeMasking: true), jsonSchema);
         Pseudonymizer? mask = null;
         var request = _status?.Begin();
         string result;
@@ -173,12 +173,21 @@ public sealed class LlmRequestDispatcher : ILlmClient, IDisposable
         IReadOnlyList<ChatMessage> outgoing = schema == null ? masked : new List<ChatMessage>(System.Linq.Enumerable.Take(masked, prepared.Count));
         if (_profile.IsExternal)
         {
-            // Only exactly the approved immutable text retains its proof. Never approve a masked arbitrary prompt.
-            if (!System.Linq.Enumerable.SequenceEqual(outgoing.Select(m => m.Content), prepared.Select(m => m.Content)))
-                throw new DataEgressBlockedException(CloudFactsRequest.BlockedMessage);
-            outgoing = prepared;
-            foreach (var count in CloudRequestGuard.Counts(prepared)) mask.Audit.Counts[count.Key] = count.Value;
-            mask.Audit.Revisions["cloud-contract"] = "1";
+            if (CloudRequestGuard.HasProof(prepared))
+            {
+                // Typed facts: exactly the approved immutable text keeps its proof; masking must not change it.
+                if (!System.Linq.Enumerable.SequenceEqual(outgoing.Select(m => m.Content), prepared.Select(m => m.Content)))
+                    throw new DataEgressBlockedException(CloudFactsRequest.BlockedMessage);
+                outgoing = prepared;
+                foreach (var count in CloudRequestGuard.Counts(prepared)) mask.Audit.Counts[count.Key] = count.Value;
+                mask.Audit.Revisions["cloud-contract"] = "1";
+            }
+            else
+            {
+                // Free text (Standard, Extended): only the masked text leaves, sealed so every client can tell it was masked.
+                outgoing = CloudRequestGuard.SealMasked(_profile, outgoing, schema, mask);
+                mask.Audit.Revisions["cloud-contract"] = "2";
+            }
         }
         ModelRequestContext.Prepare(_profile, outgoing, schema);
         ct.ThrowIfCancellationRequested(); _validatePolicy?.Invoke();

@@ -486,7 +486,8 @@ try {
                 $localDisplay = New-Object Text.StringBuilder
                 [void]$localDisplay.Append("**Agenda**`n" + $fixtureAgenda + "`nLOCALNOTICEPRIVATE`n")
                 $before = @($pending).Count
-                if ($mode -ne 'Local') {
+                # Minimo sends typed facts only, so the Briefing is refused; Standard and Extended send masked text.
+                if ($mode -eq 'Minimal') {
                     $refused = $false
                     try { [void](Wait-PaneTask (Call 'CompleteBriefingAsync' @($briefingProfile,$fixtureAgenda,$localDisplay,$fixtureEmails,$briefingUnread,$fixtureCategories,$turn,[Diagnostics.Stopwatch]::StartNew(),$cts.Token))) }
                     catch { $refused = $_.Exception.ToString().Contains('DataEgressBlockedException') }
@@ -504,7 +505,9 @@ try {
                 Assert-Pass ($payload.Contains('LOCATIONSENTINELPRIVATE') -eq $includesAgenda) "Briefing $mode location payload violated policy"
                 Assert-Pass (!$payload.Contains('APPOINTMENTBODYPRIVATE') -and !$payload.Contains('LOCALNOTICEPRIVATE')) "Briefing $mode included unprepared local data"
                 Assert-Pass (!$payload.Contains('LOCALUNREADPRIVATE') -and !$payload.Contains('LOCALSENDERPRIVATE')) "Briefing $mode included email metadata absent from permitted facts"
-                Assert-Pass ($payload.Contains('15/11/2026')) "Briefing $mode lost its permitted local fact"
+                # Towards the cloud dates are always masked; the local profile keeps them.
+                Assert-Pass ($payload.Contains('15/11/2026') -eq ($mode -eq 'Local')) "Briefing $mode date masking violated policy"
+                Assert-Pass ($mode -eq 'Local' -or !$payload.Contains('fixture@example.invalid')) "Briefing $mode sent an unmasked address"
                 $shown = @($pending | Select-Object -Skip $before | ForEach-Object {$_ | ConvertFrom-Json} | Where-Object type -eq 'stream_chunk')
                 Assert-Pass ($shown.Count -eq 1 -and $shown[0].chunk.Contains('CALENDARSENTINELPRIVATE') -and $shown[0].chunk.Contains('TRIAGESUMMARY')) "Briefing $mode lost local agenda or triage on screen: $($shown | ConvertTo-Json -Depth 5 -Compress)"
                 $saved = Wait-PaneTask ($storage.LoadConversationAsync($briefingConversation.Id))
@@ -821,10 +824,12 @@ try {
         $attachmentClient = Call 'CreateLlmClient' @($attachmentProfile, $false)
         $attachmentMessages = New-Object 'Collections.Generic.List[OnlyWorkspace.Core.Models.ChatMessage]'
         $attachmentMessages.Add([OnlyWorkspace.Core.Models.ChatMessage]::User($attachmentRead.Text))
-        $refused = $false
-        try { [void](Wait-PaneTask ($attachmentClient.CompleteStructuredAsync($attachmentMessages, '{}', [Threading.CancellationToken]::None))) }
-        catch { $refused = $_.Exception.ToString().Contains('DataEgressBlockedException') }
-        Assert-Pass ($refused -and !$attachmentCapture.Pending) 'Unverified attachment text reached HTTP'
+        # Extended with the upload permission: the extracted text leaves, but only masked (identifiers replaced).
+        $attachmentRequest = $attachmentCapture.ServeAsync('{"message":{"content":"{}"},"done":true}')
+        [void](Wait-PaneTask ($attachmentClient.CompleteStructuredAsync($attachmentMessages, '{}', [Threading.CancellationToken]::None)))
+        $attachmentWire = Wait-PaneTask $attachmentRequest
+        Assert-Pass ($attachmentWire.Contains('ATTACHMENT-WHOLE-SYNTHETIC')) 'Extended attachment text was not sent'
+        Assert-Pass (!$attachmentWire.Contains('@example') -and !$attachmentWire.Contains('BLOCKED-CONTENT-MUST-STAY-LOCAL')) 'Unmasked identifiers or refused content reached HTTP'
         # A224: an already-created real client must recheck a revoked grant before any loopback connection.
         $attachmentClient.Dispose()
         $attachmentClient = Call 'CreateLlmClient' @($attachmentProfile, $false)
@@ -1073,7 +1078,7 @@ try {
                 Set-Field '_dataService' $calendarData
                 # Whole-email modes use just the preloaded source; Minimal must also skip unavailable/out-of-scope copies.
                 $modeHeaders = [Activator]::CreateInstance([Collections.Generic.List``1].MakeGenericType($calendarHeaderType))
-                if ($mode -ne 'Local') { foreach ($header in $calendarHeaders) { $modeHeaders.Add($header) } }
+                if ($mode -eq 'Minimal') { foreach ($header in $calendarHeaders) { $modeHeaders.Add($header) } }
                 else { $modeHeaders.Add($calendarHeaders[0]) }
                 $resolver = [CalendarFixtureResolver]::Create($calendarMethod.GetParameters()[4].ParameterType, $modeHeaders)
                 $before = @($pending).Count
@@ -1093,10 +1098,11 @@ try {
                 $payload = Wait-PaneTask $capturedRequest
                 if ($EvidenceDirectory) { [IO.File]::WriteAllText((Join-Path $EvidenceDirectory "calendar-$mode.json"),$payload) }
                 Assert-Pass (($payload.Contains($calendarDate) -eq ($mode -eq 'Local')) -and !$payload.Contains($otherDate)) "Calendar $mode lost its date or included a different mailbox"
-                Assert-Pass ($payload.Contains('BODYPRIVATE') -eq ($mode -eq 'Local')) "Calendar $mode violated whole-body policy"
-                Assert-Pass ($payload.Contains('SUBJECTPRIVATE') -eq ($mode -eq 'Local')) "Calendar $mode violated subject policy"
-                Assert-Pass ($payload.Contains('SENDERPRIVATE') -eq ($mode -eq 'Local')) "Calendar $mode violated sender policy"
-                Assert-Pass ($payload.Contains('LINKPRIVATE') -eq ($mode -eq 'Local')) "Calendar $mode violated link-reason policy"
+                # Minimo sends typed facts only; Standard and Extended send the originals after masking (dates masked above).
+                Assert-Pass ($payload.Contains('BODYPRIVATE') -eq ($mode -ne 'Minimal')) "Calendar $mode violated whole-body policy"
+                Assert-Pass ($payload.Contains('SUBJECTPRIVATE') -eq ($mode -ne 'Minimal')) "Calendar $mode violated subject policy"
+                Assert-Pass ($payload.Contains('SENDERPRIVATE') -eq ($mode -ne 'Minimal')) "Calendar $mode violated sender policy"
+                Assert-Pass ($payload.Contains('LINKPRIVATE') -eq ($mode -ne 'Minimal')) "Calendar $mode violated link-reason policy"
                 Assert-Pass (!$payload.Contains('ARCHIVEDBODYPRIVATE')) 'Calendar retrieved unrequested archived body text'
                 $inputs = $type.GetField('_inputSourcesForTurn',$flags).GetValue($script:coordinator)
                 Assert-Pass ($inputs.Count -eq 1 -and $inputs[0].EntryId -eq 'a' -and $inputs[0].StoreId -eq 'a') "Calendar $mode lost exact source tracking"

@@ -105,25 +105,72 @@ internal sealed class CloudRequestProof
 {
     internal string? Schema { get; }
     internal IReadOnlyDictionary<string, int> Counts { get; }
-    internal CloudRequestProof(string? schema, PseudonymizationAudit? audit = null)
+    /// <summary>The text went through the mechanical masking; valid only for levels that send masked free text.</summary>
+    internal bool Masked { get; }
+    internal CloudRequestProof(string? schema, PseudonymizationAudit? audit = null, bool masked = false)
     {
         Schema = schema;
+        Masked = masked;
         Counts = new Dictionary<string, int>(audit?.Counts ?? new Dictionary<string, int>(), StringComparer.Ordinal);
     }
 }
 
 public static class CloudRequestGuard
 {
+    public const string MaskedBlockedMessage = "Invio cloud bloccato: il testo non ha superato la pseudonimizzazione meccanica. Nessun dato è stato inviato.";
+
+    /// <summary>True when the messages are an approved typed-facts request (they must reach the transport unchanged).</summary>
+    public static bool HasProof(IEnumerable<ChatMessage> messages) => messages.Any(m => m.CloudProof != null);
+
     public static IReadOnlyDictionary<string, int> Counts(IEnumerable<ChatMessage> messages) =>
         messages.FirstOrDefault()?.CloudProof?.Counts ?? new Dictionary<string, int>();
-    public static List<ChatMessage> Validate(LlmProfileConfig profile, IEnumerable<ChatMessage> messages, string? schema)
+
+    /// <summary>Transport check: a cloud request carries the typed-facts proof, or the masking proof at a level that sends masked text.</summary>
+    public static List<ChatMessage> Validate(LlmProfileConfig profile, IEnumerable<ChatMessage> messages, string? schema) =>
+        Validate(profile, messages, schema, beforeMasking: false);
+
+    /// <summary>
+    /// With beforeMasking the dispatcher, which masks next, also accepts free text at Standard or Extended;
+    /// every client revalidates without it, so unmasked text can never reach a transport.
+    /// </summary>
+    public static List<ChatMessage> Validate(LlmProfileConfig profile, IEnumerable<ChatMessage> messages, string? schema, bool beforeMasking)
     {
         var list = messages.ToList();
         if (!profile.IsExternal) return list;
+        bool maskedText = ExposurePolicy.Of(profile).MaskedText;
         var proof = list.FirstOrDefault()?.CloudProof;
-        if (proof == null || proof.Schema != schema || list.Any(m => !ReferenceEquals(m.CloudProof, proof)))
+        if (proof == null)
+        {
+            if (beforeMasking && maskedText && list.All(m => m.CloudProof == null)) return list;
+            throw new DataEgressBlockedException(CloudFactsRequest.BlockedMessage);
+        }
+        if (!SameSchema(proof.Schema, schema) || list.Any(m => !ReferenceEquals(m.CloudProof, proof)) || (proof.Masked && !maskedText))
             throw new DataEgressBlockedException(CloudFactsRequest.BlockedMessage);
         return list;
+    }
+
+    // A client may re-serialize the schema (spacing, escaping); the structure and key order must stay the same.
+    private static bool SameSchema(string? sealedSchema, string? sent)
+    {
+        if (string.Equals(sealedSchema, sent, StringComparison.Ordinal)) return true;
+        if (sealedSchema == null || sent == null) return false;
+        try
+        {
+            using var a = JsonDocument.Parse(sealedSchema);
+            using var b = JsonDocument.Parse(sent);
+            return JsonSerializer.Serialize(a.RootElement) == JsonSerializer.Serialize(b.RootElement);
+        }
+        catch (JsonException) { return false; }
+    }
+
+    /// <summary>Called by the dispatcher with the output of Pseudonymizer.Mask: marks exactly those messages as sendable.</summary>
+    public static IReadOnlyList<ChatMessage> SealMasked(LlmProfileConfig profile, IReadOnlyList<ChatMessage> masked, string? schema, Pseudonymizer mask)
+    {
+        if (!profile.IsExternal || !ExposurePolicy.Of(profile).MaskedText) throw new DataEgressBlockedException(CloudFactsRequest.BlockedMessage);
+        // Only the output of this very map counts as masked: raw or foreign messages cannot be sealed.
+        if (mask == null || masked.Count == 0 || masked.Any(m => !mask.Produced(m))) throw new DataEgressBlockedException(MaskedBlockedMessage);
+        var proof = new CloudRequestProof(schema, mask.Audit, masked: true);
+        return Array.AsReadOnly(masked.Select(m => new ChatMessage(m.Role, m.Content, proof)).ToArray());
     }
 
     /// <summary>Fixed synthetic inputs only. No caller-provided text can become a probe.</summary>

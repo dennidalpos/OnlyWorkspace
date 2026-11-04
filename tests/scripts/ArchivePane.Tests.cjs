@@ -19,8 +19,6 @@ function node(tag) {
     set innerHTML(value) { this.children = []; },
   };
   n.tBodies = [n];
-  // The indicator's destination in words: <span class="ind-dest">PC|Cloud</span>.
-  n.querySelector = () => n.dest || (n.dest = node('span'));
   return n;
 }
 const announced = [];
@@ -57,8 +55,8 @@ assert.deepEqual(nodes.get('arMetrics').children[0].children.map(c => c.textCont
 context.renderArchive({ available: true, active: true, light: 'Working', phase: 'testi', error: '', metrics, stores, cards: { state: 'off' } });
 assert.equal(nodes.get('arPhase').textContent, 'testi');
 assert.equal(nodes.get('arErrorRow').hidden, true);
-// The top bar keeps its indicator; the Stato section has none.
-assert.equal(nodes.get('btnArchiveState').dataset.light, 'Working');
+// The top bar keeps one status dot for both services; the Stato section has none.
+assert.equal(nodes.get('btnState').dataset.light, 'Working');
 assert.ok(!nodes.has('arLight'));
 // Each mailbox: its name on a row of its own, then the figures.
 const storeRows = nodes.get('arStores').children;
@@ -83,7 +81,7 @@ assert.equal(nodes.get('arPhase').dataset.light, 'Waiting');
 assert.equal(nodes.get('arErrorRow').hidden, false);
 assert.equal(nodes.get('arError').textContent, '1 cartella non leggibile');
 assert.equal(nodes.get('arErrorMore').hidden, true, 'No failing mailbox in the list: nothing to point at.');
-assert.equal(nodes.get('btnArchiveState').attrs['aria-label'], 'Archivio: errori · fase attesa inattività. 1 cartella non leggibile');
+assert.equal(nodes.get('btnState').attrs['aria-label'], 'Stato: Archivio: errori · fase attesa inattività. 1 cartella non leggibile. IA: non verificato.');
 // The count names the mailboxes that failed and points at the Cassette table.
 context.renderArchive({ available: true, active: true, light: 'Error', label: 'errori', phase: 'attesa inattività', phaseLight: 'Waiting',
   error: null, reason: '1 cartella non leggibile', metrics: [], stores: [{ ...stores[0], Name: 'a@example.test', State: 'errore', Error: 'Cartella «a@example.test/Posta» non disponibile.' }, stores[0]], cards: { state: 'off' } });
@@ -94,24 +92,49 @@ context.renderArchive({ available: true, active: true, light: 'Ok', phase: 'aggi
 assert.equal(nodes.get('arErrorRow').hidden, true, 'Back to green: no stale reason.');
 announced.length = 0;
 
-// Indicator: light, label, phase and destination from the host; an unavailable archive never keeps the previous light.
-const indicator = nodes.get('btnArchiveState');
+// Status dot: light, label and phase from the host; an unavailable archive never keeps the previous light.
+const indicator = nodes.get('btnState');
 context.renderArchive({ available: true, active: true, light: 'Error', label: 'errori', phase: 'errore', error: 'Cassetta non raggiungibile', metrics: [], stores: [], cards: { state: 'running', external: true } });
 assert.equal(indicator.dataset.light, 'Error');
-assert.equal(indicator.attrs['aria-label'], 'Archivio: errori · fase errore. Cassetta non raggiungibile');
-assert.equal(indicator.dest.textContent, 'PC');
-assert.deepEqual(announced, ['Archivio: errori · fase errore. Cassetta non raggiungibile']);
+assert.equal(indicator.attrs['aria-label'], 'Stato: Archivio: errori · fase errore. Cassetta non raggiungibile. IA: non verificato.');
+assert.deepEqual(announced, ['Stato: Archivio: errori · fase errore. Cassetta non raggiungibile']);
 context.renderArchive({ available: false, light: 'Off', label: 'non disponibile' });
 assert.equal(indicator.dataset.light, 'Off');
-assert.equal(indicator.attrs['aria-label'], 'Archivio: non disponibile');
-assert.equal(indicator.dest.textContent, 'PC');
+assert.equal(indicator.attrs['aria-label'], 'Stato: Archivio: non disponibile. IA: non verificato.');
 assert.equal(nodes.get('archiveSection').hidden, true);
 assert.equal(announced.length, 2, 'Leaving an error is announced too.');
 // Paused and waiting are grey with their own symbol, not the yellow of real work.
 context.setArchiveIndicator({ light: 'Waiting', label: 'in attesa', phase: 'attesa inattività', external: false });
 assert.equal(indicator.dataset.light, 'Waiting');
-assert.equal(indicator.attrs['aria-label'], 'Archivio: in attesa · fase attesa inattività');
+assert.equal(indicator.attrs['aria-label'], 'Stato: Archivio: in attesa · fase attesa inattività. IA: non verificato.');
 assert.equal(announced.length, 2, 'Only errors are announced.');
+
+// One dot for two services: the worse light wins, an archive that is off does not count, an IA not verified is never green.
+function dot(archive, ai) {
+  context.setArchiveIndicator({ light: archive, label: archive });
+  context.setIndicator('ai', 'IA', { light: ai, label: ai });
+  return indicator.dataset.light;
+}
+assert.equal(dot('Ok', 'Ok'), 'Ok', 'Green only when both are verified.');
+assert.equal(dot('Ok', 'Off'), 'Off', 'IA not verified: grey.');
+assert.equal(dot('Off', 'Ok'), 'Ok', 'Archive off: nothing to verify.');
+assert.equal(dot('Ok', 'Error'), 'Error');
+assert.equal(dot('Error', 'Ok'), 'Error');
+assert.equal(dot('Paused', 'Ok'), 'Paused');
+assert.equal(dot('Ok', 'Working'), 'Working');
+assert.equal(dot('Waiting', 'Paused'), 'Waiting');
+// The tooltip names both services, then the model, the server and the area.
+context.bar.info = { name: 'OpenAI', model: 'gpt-x', host: 'api.openai.com', region: 'UE', cloud: true };
+dot('Ok', 'Ok');
+context.renderStateDot();
+assert.equal(indicator.title, 'Archivio: Ok\nIA: Ok\nOpenAI · gpt-x · api.openai.com\nDestinazione: cloud esterno · area UE');
+context.bar.info = { name: '', model: 'qwen', host: '127.0.0.1', region: '', cloud: false };
+context.renderStateDot();
+assert.match(indicator.title, /\nqwen · 127\.0\.0\.1\nDestinazione: questo PC o la rete locale$/);
+context.bar.info = null;
+context.setArchiveIndicator({ light: 'Off', label: 'non disponibile' });
+context.setIndicator('ai', 'IA', { light: 'Off', label: 'non verificato' });
+announced.length = 0;
 
 context.data = { message: 'Engine unavailable' };
 const errorCase = html.match(/case 'archive_status_error':([\s\S]*?)case 'archive_status':/)[1];
@@ -122,8 +145,8 @@ assert.equal(indicator.dataset.light, 'Error', 'A status read failure paints the
 const lightCase = html.match(/case 'archive_light':([\s\S]*?)case 'ai_status':/)[1];
 context.data = { light: 'Ok', label: 'sincronizzato', phase: 'aggiornato', external: false };
 new vm.Script("switch ('archive_light') { case 'archive_light':" + lightCase + "}").runInContext(context);
-assert.equal(indicator.dataset.light, 'Ok');
-assert.equal(indicator.attrs['aria-label'], 'Archivio: sincronizzato · fase aggiornato');
+assert.equal(indicator.dataset.light, 'Off', 'Archive green but the IA not verified: the dot stays grey.');
+assert.equal(indicator.attrs['aria-label'], 'Stato: Archivio: sincronizzato · fase aggiornato. IA: non verificato.');
 // The light summary is polled while the pane is visible, not only with Stato open.
 assert.match(html, /visibilityState === 'hidden'\) return;\s*post\(\{ type: !\$\('infoDrawer'\)\.hidden && archive\.active \? 'archive_get' : 'archive_light_get' \}\);/);
 assert.doesNotMatch(html, /archive_activate|archive_consent|welcomeCard/);

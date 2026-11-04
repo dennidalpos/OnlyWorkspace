@@ -10,7 +10,8 @@ public sealed class WholeActionInputTests
     [Theory]
     [InlineData(true, ExposureLevel.Minimal, false)]
     [InlineData(true, ExposureLevel.LocalOnly, false)]
-    [InlineData(true, ExposureLevel.Standard, false)]
+    [InlineData(true, ExposureLevel.Standard, true)] // masked by the dispatcher before transport
+    [InlineData(true, ExposureLevel.Extended, true)]
     [InlineData(false, ExposureLevel.Minimal, true)]
     public void Briefing_AgendaReachesTheModelOnlyWhenWholeOutlookItemsArePermitted(bool external, ExposureLevel exposure, bool permitted)
     {

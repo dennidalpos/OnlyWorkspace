@@ -6,6 +6,25 @@ using OnlyWorkspace.Core.Validation;
 
 namespace OnlyWorkspace.Core.Models;
 
+/// <summary>Where the provider processes the data, as the administrator declares it; never inferred from the URL.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum ServiceRegion
+{
+    Unspecified = 0,
+    Eu = 1,
+    NonEu = 2
+}
+
+public static class ServiceRegions
+{
+    public static string Label(ServiceRegion region) => region switch
+    {
+        ServiceRegion.Eu => "UE",
+        ServiceRegion.NonEu => "Non UE",
+        _ => "Non specificata"
+    };
+}
+
 public sealed class LlmProfileConfig
 {
     public string Id { get; set; } = string.Empty;
@@ -39,7 +58,9 @@ public sealed class LlmProfileConfig
         (Uri.TryCreate(BaseUrl, UriKind.Absolute, out var endpoint) && !ConfigurationValidator.IsLoopback(endpoint));
     /// <summary>External profiles only: how much Outlook data the profile may send (ExposurePolicy).</summary>
     public ExposureLevel Exposure { get; set; } = ExposureLevel.Minimal;
-    /// <summary>Optional reversible substitutions on external requests; both default to false.</summary>
+    /// <summary>Cloud profiles: where the service processes the data, declared by the administrator.</summary>
+    public ServiceRegion ServiceRegion { get; set; } = ServiceRegion.Unspecified;
+    /// <summary>Optional reversible substitutions on local requests; external requests always replace amounts and dates.</summary>
     public bool PseudonymizeAmounts { get; set; }
     public bool PseudonymizeDates { get; set; }
     /// <summary>External profiles only: attachment text (extracted locally) may be sent to the provider.</summary>

@@ -157,7 +157,11 @@ public sealed class DataEgressTests
         Assert.False(qwen.SendsAttachmentText);
         Assert.True(WebSearchAction.Uses(qwen, WebSearchAction.Security));
         Assert.False(WebSearchAction.Uses(qwen, WebSearchAction.Chat));
+        Assert.Equal(EvidenceMode.Original, ExposurePolicy.Of(qwen).Evidence);
+        Assert.True(ExposurePolicy.Of(qwen).MaskedText);
+        qwen.Exposure = ExposureLevel.Minimal;
         Assert.Equal(EvidenceMode.FactsOnly, ExposurePolicy.Of(qwen).Evidence);
+        Assert.True(ExposurePolicy.SendsFactsOnly(qwen));
 
         qwen.Exposure = (ExposureLevel)3;
         Assert.False(qwen.SendsAttachmentText);

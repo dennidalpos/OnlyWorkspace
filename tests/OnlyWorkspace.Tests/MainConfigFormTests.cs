@@ -97,7 +97,7 @@ public sealed class MainConfigFormTests
             legacy.AuthType = type == "azure-openai" ? "apiKey" : "bearer";
             var local = Local("local");
             Write(directory, new WorkspaceConfig { DefaultProfile = legacy.Id, Profiles = new() { legacy, local } }, new() { [legacy.SecretRef] = "synthetic-token" });
-            using var form = new MainConfigForm(directory);
+            using var form = new MainConfigForm(directory, null, directory);
             var providers = Field<ComboBox>(form, "_cmbProvider");
             Assert.Equal(7, providers.Items.Count);
             Assert.Equal(type, ((ProviderCapabilities)providers.SelectedItem!).Type);
@@ -124,7 +124,7 @@ public sealed class MainConfigFormTests
             var cloud = Local("a"); cloud.Type = "qwen"; cloud.BaseUrl = ProviderCatalog.Get("qwen").DefaultBaseUrl;
             cloud.PseudonymizeAmounts = true;
             Write(directory, new WorkspaceConfig { DefaultProfile = "a", Profiles = new() { cloud } }, new());
-            using var form = new MainConfigForm(directory);
+            using var form = new MainConfigForm(directory, null, directory);
             Assert.True(Field<CheckBox>(form, "_chkPseudonymizeAmounts").Checked);
             Assert.True(Field<CheckBox>(form, "_chkPseudonymizeDates").Checked);
             Assert.False(Field<CheckBox>(form, "_chkPseudonymizeDates").Visible);
@@ -146,7 +146,7 @@ public sealed class MainConfigFormTests
             cloud.BaseUrl = ProviderCatalog.Get("qwen").DefaultBaseUrl;
             cloud.External = true;
             Write(directory, new WorkspaceConfig { DefaultProfile = "a", Profiles = new() { cloud } }, new());
-            using var form = new MainConfigForm(directory);
+            using var form = new MainConfigForm(directory, null, directory);
             Field<ComboBox>(form, "_cmbProvider").SelectedItem = ProviderCatalog.Get("ollama");
             var edited = Field<WorkspaceConfig>(form, "_config").Profiles.Single();
             Assert.False(edited.External);
@@ -162,7 +162,7 @@ public sealed class MainConfigFormTests
         {
             Write(directory, new WorkspaceConfig { DefaultProfile = "a", Profiles = new() { Local("a") } },
                 new() { ["profile_a_token"] = "synthetic" });
-            using var form = new MainConfigForm(directory);
+            using var form = new MainConfigForm(directory, null, directory);
             var endpoint = Field<TextBox>(form, "_txtEndpoint");
             var external = Field<CheckBox>(form, "_chkExternal");
             var attachments = Field<CheckBox>(form, "_chkAllowAttachments");
@@ -195,7 +195,7 @@ public sealed class MainConfigFormTests
         {
             Write(directory, new WorkspaceConfig { DefaultProfile = "a", Profiles = new() { Local("a", web: true) } },
                 new() { ["profile_a_token"] = "secret" });
-            using var form = new MainConfigForm(directory);
+            using var form = new MainConfigForm(directory, null, directory);
             var check = typeof(MainConfigForm).GetField("_webSupportCheck", Flags)!;
             var web = Field<CheckBox>(form, "_chkWebSearch");
             Assert.Null(check.GetValue(form));
@@ -224,7 +224,7 @@ public sealed class MainConfigFormTests
             };
             Write(directory, new WorkspaceConfig { DefaultProfile = "a", Profiles = new() { Local("a"), qwen } },
                 new() { ["profile_a_token"] = "s1", ["profile_q_token"] = "s2" });
-            using var form = new MainConfigForm(directory);
+            using var form = new MainConfigForm(directory, null, directory);
             var key = Field<TextBox>(form, "_txtWebSearchKey");
             var row = RowOf(key);
             var profiles = Field<ListBox>(form, "_lstProfiles");
@@ -265,7 +265,7 @@ public sealed class MainConfigFormTests
         {
             Write(directory, new WorkspaceConfig { DefaultProfile = "a", Profiles = new() { Local("a"), Local("b") } },
                 new() { ["profile_a_token"] = "s1", ["profile_b_token"] = "s2", ["profile_removed_token"] = "old" });
-            using var form = new MainConfigForm(directory);
+            using var form = new MainConfigForm(directory, null, directory);
             Field<TextBox>(form, "_txtToken").Text = string.Empty;
 
             Assert.Equal(true, Call(form, "SaveActiveConfiguration"));
@@ -286,7 +286,7 @@ public sealed class MainConfigFormTests
         {
             var config = new WorkspaceConfig { DefaultProfile = "a", Profiles = new() { Local("a") } };
             Write(directory, config, new() { ["profile_a_token"] = "s1" });
-            using var form = new MainConfigForm(directory);
+            using var form = new MainConfigForm(directory, null, directory);
             Field<TextBox>(form, "_txtProfileId").Text = "renamed";
             Call(form, "ApplyProfileIdChange");
 
@@ -308,7 +308,7 @@ public sealed class MainConfigFormTests
             Directory.CreateDirectory(directory);
             string path = Path.Combine(directory, "config.json");
             File.WriteAllText(path, "{ not json");
-            using var form = new MainConfigForm(directory);
+            using var form = new MainConfigForm(directory, null, directory);
 
             Assert.Equal(false, Call(form, "SaveActiveConfiguration"));
             Assert.False(Field<Button>(form, "_btnSave").Enabled);
@@ -327,7 +327,7 @@ public sealed class MainConfigFormTests
             string vaultPath = Path.Combine(directory, "secrets.bin");
             var garbage = empty ? Array.Empty<byte>() : new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 };
             File.WriteAllBytes(vaultPath, garbage);
-            using var form = new MainConfigForm(directory);
+            using var form = new MainConfigForm(directory, null, directory);
 
             Assert.Equal(false, Call(form, "SaveActiveConfiguration"));
             Assert.False(Field<Button>(form, "_btnSave").Enabled);
@@ -345,7 +345,7 @@ public sealed class MainConfigFormTests
         {
             Write(directory, new WorkspaceConfig { DefaultProfile = "a", Profiles = new() { Local("a"), Local("b") } }, new());
             File.WriteAllBytes(Path.Combine(directory, "secrets.bin"), empty ? Array.Empty<byte>() : new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 });
-            using var form = new MainConfigForm(directory);
+            using var form = new MainConfigForm(directory, null, directory);
 
             var names = Field<ListBox>(form, "_lstProfiles").Items.Cast<object>().Select(o => o.ToString()).ToList();
             Assert.Equal(2, names.Count);
@@ -361,7 +361,7 @@ public sealed class MainConfigFormTests
         {
             Directory.CreateDirectory(directory);
             File.WriteAllText(Path.Combine(directory, "config.json"), "{ not json");
-            using var form = new MainConfigForm(directory);
+            using var form = new MainConfigForm(directory, null, directory);
 
             Assert.False(Field<bool>(form, "_fileShown"));
             Assert.Contains(Descendants(form).OfType<Control>(), c => c.Text.Contains("quelli mostrati sono predefiniti"));
@@ -375,7 +375,7 @@ public sealed class MainConfigFormTests
         OnSta(directory =>
         {
             Write(directory, new WorkspaceConfig { DefaultProfile = "a", Profiles = new() { Local("a"), Local("b") } }, new());
-            using var form = new MainConfigForm(directory);
+            using var form = new MainConfigForm(directory, null, directory);
             typeof(MainConfigForm).GetMethod("SetLocked", Flags)!.Invoke(form, new object[] { true });
 
             var list = Field<ListBox>(form, "_lstProfiles");
@@ -438,7 +438,7 @@ public sealed class MainConfigFormTests
                 var profile = Local("a");
                 profile.BaseUrl = "http://127.0.0.1:" + port;
                 Write(directory, new WorkspaceConfig { DefaultProfile = "a", Profiles = new() { profile } }, new() { ["profile_a_token"] = "secret" });
-                var form = new MainConfigForm(directory);
+                var form = new MainConfigForm(directory, null, directory);
                 var selected = Field<ListBox>(form, "_lstProfiles").SelectedItem!;
                 var loaded = (LlmProfileConfig)selected.GetType().GetProperty("Profile")!.GetValue(selected)!;
                 var load = (Task)typeof(MainConfigForm).GetMethod("LoadModelLimitsAsync", Flags)!.Invoke(form, new object[] { loaded })!;
@@ -553,7 +553,7 @@ public sealed class MainConfigFormTests
             grid.PerformLayout();
             Application.DoEvents();
 
-            Assert.StartsWith("Solo fatti strutturati protetti", note.Text);
+            Assert.StartsWith("Escono email e testo libero", note.Text);
             Assert.False(note.Visible);
             int right = grid.PointToClient(note.PointToScreen(new System.Drawing.Point(note.Width, 0))).X;
             Assert.True(right <= grid.ClientSize.Width, $"note ends at {right}, grid is {grid.ClientSize.Width} wide");

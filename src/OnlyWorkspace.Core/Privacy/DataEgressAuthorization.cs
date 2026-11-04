@@ -32,8 +32,9 @@ public static partial class DataEgress
     /// <summary>Only privacy-relevant permissions; display name, model and generation settings do not renew consent.</summary>
     public static string AuthorizationPolicyKey(LlmProfileConfig profile) => Digest(new
     {
-        Version = 2, profile.Id, Type = profile.Type.ToLowerInvariant(), Endpoint = Endpoint(profile.BaseUrl),
+        Version = 3, profile.Id, Type = profile.Type.ToLowerInvariant(), Endpoint = Endpoint(profile.BaseUrl),
         External = profile.IsExternal, Exposure = profile.IsExternal ? profile.Exposure : ExposureLevel.LocalOnly,
+        Region = profile.IsExternal ? profile.ServiceRegion : ServiceRegion.Unspecified,
         Attachments = profile.IsExternal && profile.SendsAttachmentText,
         profile.UseSystemProxy, Auth = profile.AuthType.ToLowerInvariant(), profile.SecretRef, profile.WebSearchSecretRef,
         Amounts = profile.IsExternal || profile.PseudonymizeAmounts, Dates = profile.IsExternal || profile.PseudonymizeDates, Revision = PseudonymizationCatalog.CurrentRevision,
@@ -95,8 +96,11 @@ public static partial class DataEgress
 
     public static string ProfileSummary(LlmProfileConfig profile)
     {
-        string data = profile.IsExternal ? "Solo fatti strutturati protetti; importi e date sempre sostituiti. Testo libero non verificabile bloccato."
-            : "Elaborazione locale. Le query web non verificabili non vengono inviate.";
-        return $"{(profile.DisplayName.Length == 0 ? profile.Id : profile.DisplayName)} — {Endpoint(profile.BaseUrl)}\r\n" + data;
+        string data = !profile.IsExternal ? "Elaborazione locale con pseudonimizzazione. Le query web non verificabili non vengono inviate."
+            : ExposurePolicy.Of(profile).MaskedText
+                ? "Email e testo libero mascherati con segnaposto; importi e date sempre sostituiti. Dati sensibili non riconosciuti non anonimizzati."
+                : "Solo fatti strutturati protetti; importi e date sempre sostituiti. Testo libero bloccato.";
+        string region = profile.IsExternal ? $"\r\nArea del servizio: {ServiceRegions.Label(profile.ServiceRegion)}" : string.Empty;
+        return $"{(profile.DisplayName.Length == 0 ? profile.Id : profile.DisplayName)} — {Endpoint(profile.BaseUrl)}\r\n" + data + region;
     }
 }

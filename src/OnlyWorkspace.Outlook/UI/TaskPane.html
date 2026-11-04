@@ -65,8 +65,8 @@
     --corner-9: 50%;
     --corner-10: 8px;
     --radius-lg: 10px;
-    /* Compact labelled navigation below the brand and the two operational indicators. */
-    --topbar-h: 76px;
+    /* One row: labelled navigation, the status dot and the icons; two rows below 380 px (see the media rules). */
+    --topbar-h: 44px;
   }
   @media (prefers-color-scheme: dark) {
     :root {
@@ -142,19 +142,14 @@
     background: var(--surface);
     border-bottom: 1px solid var(--border);
   }
-  /* Brand as a label, not a button: icon beside the name, then a divider before the page icons (Danny, 26/10/2026). */
-  .brand { flex: none; display: flex; align-items: center; gap: 5px; padding-right: 5px; margin-right: 4px; border-right: 1px solid var(--border); font-size: var(--text-size-11-5); font-weight: 600; color: var(--text-2); white-space: nowrap; cursor: default; user-select: none; }
-  .brand-logo { width: 18px; height: 18px; flex: none; }
-  .topbar-spacer { flex: 1 1 0; min-width: 2px; }
+  .topbar-spacer { flex: 0 0 0; }
   /* Four labelled sections share a compact navigation row. */
   /* Vertical padding keeps the focus ring inside the scrolling box, which would clip it. */
-  .primary-nav { flex: 0 1 auto; min-width: 0; display: flex; gap: 1px; padding: 3px 2px; overflow-x: auto; scrollbar-width: none; }
+  .primary-nav { flex: 1 1 0; min-width: 0; display: flex; gap: 1px; padding: 3px 2px; overflow-x: auto; scrollbar-width: none; }
   .primary-nav button { flex: 1; min-width: 0; min-height: 30px; display: flex; gap: 4px; justify-content: center; align-items: center; border: 0; border-radius: var(--radius); background: transparent; color: var(--text-2); font-size: var(--text-size-12); }
   .primary-nav button[aria-current='page'] { color: var(--accent); background: var(--accent-soft); box-shadow: inset 0 -2px 0 var(--accent); }
   .primary-nav button:hover { background: var(--surface-2); }
   .topbar { flex-wrap: wrap; align-content: center; row-gap: 2px; }
-  .brand { border-right: 0; }
-  .primary-nav { order: 2; flex: 1 0 100%; }
   .section-nav { display: flex; flex-wrap: wrap; gap: 6px; padding: 6px 12px; border-bottom: 1px solid var(--border); }
   .section-nav .btn[aria-current='page'] { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
   #btnClearChat { color: var(--danger); background: var(--danger-soft); }
@@ -176,21 +171,12 @@
   /* ---------- Cloud marker ---------- */
   /* Yellow cloud = data leaves the local network for a cloud model (active profile, confirmation, answer). */
   svg.i.cloud-y { fill: var(--work-fill); stroke: var(--work-edge); stroke-width: 0.9; }
-  /* Archivio and IA indicators: a pill with status badge, name and destination in words (PC or Cloud).
+  /* One status dot for Archivio and IA (the worse of the two); the tooltip names both, the model, the server and the area.
      Badge as in the tray, never colour alone: tick verified, spinner only while work runs, ! error,
      bars paused, dots waiting, dash off or not verified. Details in Stato, not only in the tooltip. */
-  .indicators { flex: none; display: flex; gap: 4px; }
-  .indicator { flex: none; display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 8px 0 6px; border: 1px solid var(--border); border-radius: var(--corner-2); background: var(--surface); color: var(--text-2); font-size: var(--text-size-11-5); line-height: 1; white-space: nowrap; }
+  .indicator { flex: none; display: inline-grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: var(--radius); background: transparent; color: var(--text-2); }
   .indicator:hover { background: var(--surface-2); color: var(--text); }
-  .indicator[data-light='Error'] { border-color: var(--danger); }
-  .ind-label { font-weight: 600; color: var(--text); }
-  .ind-dest::before { content: '· '; }
-  /* Narrow pane: name on top, badge and destination under it. */
-  @media (max-width: 339px) {
-    .indicator { display: grid; grid-template-columns: auto auto; justify-content: center; gap: 2px 4px; height: 30px; padding: 0 5px; font-size: var(--text-size-10-5); }
-    .ind-label { grid-column: 1 / -1; grid-row: 1; text-align: center; }
-    .ind-dest::before { content: none; }
-  }
+  .indicator[data-light='Error'] { box-shadow: inset 0 0 0 1px var(--danger); }
   .ind-badge { position: relative; display: inline-grid; place-items: center; width: 12px; height: 12px; border-radius: var(--corner-9); border: 1px solid var(--text-2); background: var(--surface-3); color: var(--text-2); font-size: 9px; font-weight: 700; }
   /* One glyph per StatusLight state, inherited by .ind-badge, .state-symbol and .status-text (docs/tecnico/interfaccia-vocabolario.md). */
   [data-light] { --glyph: '–'; }
@@ -692,10 +678,6 @@
   }
 
   #btnCheckHealth { margin-top: 4px; }
-  /* Standard pane and narrower: logo only, the indicator pills and the icons keep one row (name in the tooltip). */
-  @media (max-width: 419px) {
-    .brand > span { display: none; }
-  }
   /* Filters keep the full available width, including at high browser zoom. */
   @media (max-width: 419px) {
     .field-row { flex-direction: column; align-items: stretch; gap: 4px; }
@@ -704,15 +686,15 @@
     #anRole { flex: none; }
     #anSenderFill { margin-left: 0; }
   }
-  /* Narrower than the standard pane (zoom 110% and more): the pages take a second row of their own, the brand keeps the first. */
+  /* Narrower than the standard pane (zoom 110% and more): the pages take a second row, the status dot and the icons keep the first. */
   @media (max-width: 379px) {
     :root { --topbar-h: 76px; }
     .topbar { flex-wrap: wrap; align-content: center; row-gap: 2px; }
+    .topbar-spacer { flex: 1 1 0; min-width: 2px; }
     .primary-nav { order: 2; flex: 1 0 100%; justify-content: space-between; }
-    .brand { border-right: 0; }
     .topbar .icon-btn { width: 26px; }
   }
-  /* Narrow pane or zoom 125% and more: four labels in one row get cramped, the pages go two by two. */
+  /* Narrow pane or zoom 125% and more: labels in one row get cramped, the pages go two by two. */
   @media (max-width: 339px) {
     :root { --topbar-h: 108px; }
     .primary-nav { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; }
@@ -720,7 +702,7 @@
   }
   /* Zoom 200% or a short window: the conversation keeps a usable height and the pane scrolls instead of cutting off the composer. */
   @media (max-height: 560px) {
-    :root { --topbar-h: 64px; }
+    :root { --topbar-h: 44px; }
     .topbar { min-height: 0; padding-top: 0; padding-bottom: 0; }
     .primary-nav { display: flex; }
     .primary-nav button { min-height: 26px; }
@@ -816,17 +798,13 @@
   </svg>
 
   <header class="topbar">
-    <div id="brand" class="brand" title="OnlyWorkspace"><svg class="brand-logo" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#1A5FB4"/><rect x="11" y="21" width="36" height="25" rx="3.5" fill="#fff"/><path d="M12 23 L29 35 L46 23" fill="none" stroke="#1A5FB4" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M48 7 Q49.6 16.4 59 18 Q49.6 19.6 48 29 Q46.4 19.6 37 18 Q46.4 16.4 48 7Z" fill="#FFC83D" stroke="#1A5FB4" stroke-width="2.5" paint-order="stroke"/></svg><span>OnlyWorkspace</span></div>
     <nav class="primary-nav" aria-label="Schermate OnlyWorkspace">
       <button id="btnChatPage" type="button" aria-current="page" aria-label="Chat" title="Chat"><svg class="i" aria-hidden="true"><use href="#i-chat"/></svg><span>Chat</span></button>
       <button id="btnSearchPage" type="button" aria-controls="analysisDrawer" aria-label="Posta" title="Posta: ricerca, analisi e Briefing"><svg class="i" aria-hidden="true"><use href="#i-search"/></svg><span>Posta</span></button>
       <button id="btnHistory" type="button" aria-controls="historyDrawer" aria-label="Storico" title="Storico: conversazioni salvate, da riprendere"><svg class="i" aria-hidden="true"><use href="#i-history"/></svg><span>Storico</span></button>
     </nav>
     <div class="topbar-spacer"></div>
-    <div class="indicators" role="group" aria-label="Stato di archivio e IA">
-      <button id="btnArchiveState" class="indicator" type="button" data-light="Off" title="Archivio: non disponibile" aria-label="Archivio: non disponibile"><span class="ind-badge" aria-hidden="true"></span><span class="ind-label" aria-hidden="true">Archivio</span><span class="ind-dest" aria-hidden="true">PC</span></button>
-      <button id="btnAiState" class="indicator" type="button" data-light="Off" title="IA: non verificato" aria-label="IA: non verificato"><span class="ind-badge" aria-hidden="true"></span><span class="ind-label" aria-hidden="true">IA</span><span class="ind-dest" aria-hidden="true">PC</span></button>
-    </div>
+    <button id="btnState" class="indicator" type="button" aria-controls="infoDrawer" data-light="Off" title="Archivio: non disponibile&#10;IA: non verificato" aria-label="Stato: Archivio: non disponibile. IA: non verificato"><span class="ind-badge" aria-hidden="true"></span></button>
     <span id="webFlag" class="web-flag" role="img" hidden><svg class="i" aria-hidden="true"><use href="#i-globe"/></svg></span>
     <button id="btnHelp" class="icon-btn" type="button" aria-controls="helpDrawer" title="Guida" aria-label="Guida"><svg class="i"><use href="#i-help"/></svg></button>
   </header>
@@ -1134,7 +1112,7 @@
       <div class="drawer-section-title">Per iniziare</div>
       <ul class="help-list">
         <li>Seleziona un'email: compaiono i pulsanti per lavorarci. Senza email puoi comunque scrivere in basso.</li>
-        <li>Chat, Posta e Storico sono in alto; gli indicatori Archivio e IA aprono i dettagli.</li>
+        <li>Chat, Posta e Storico sono in alto; il pallino di stato apre i dettagli di Archivio e IA.</li>
         <li>L'app non spedisce email: testi e bozze si inseriscono in Outlook da rivedere; attività e appuntamenti richiedono un tuo clic.</li>
       </ul>
       <div class="drawer-section-title">Sull'email selezionata</div>
@@ -1170,7 +1148,7 @@
       <ul class="help-list">
         <li>Le azioni inviano email, bozza, domanda e contesto trovato al profilo IA predefinito, secondo le autorizzazioni; il nome OnlyWorkspace in alto mostra modello e server.</li>
         <li>«Cloud» indica un servizio su internet, «PC» uno locale; il globo, ricerca web. Controlla che le fonti sostengano ciò che leggi.</li>
-        <li><b>Archivio</b> e <b>IA</b> in alto: un clic apre Stato. <span data-light="Ok"><span class="ind-badge"></span></span> regolare, <span data-light="Working"><span class="ind-badge"></span></span> lavoro in corso, <span data-light="Error"><span class="ind-badge"></span></span> errore, <span data-light="Paused"><span class="ind-badge"></span></span> in pausa o bloccato, <span data-light="Waiting"><span class="ind-badge"></span></span> in attesa, <span data-light="Off"><span class="ind-badge"></span></span> spento o non ancora verificato.</li>
+        <li>Il pallino in alto riassume <b>Archivio</b> e <b>IA</b>; il clic apre Stato. <span data-light="Ok"><span class="ind-badge"></span></span> ok, <span data-light="Working"><span class="ind-badge"></span></span> lavoro in corso, <span data-light="Error"><span class="ind-badge"></span></span> errore, <span data-light="Paused"><span class="ind-badge"></span></span> in pausa o bloccato, <span data-light="Waiting"><span class="ind-badge"></span></span> in attesa, <span data-light="Off"><span class="ind-badge"></span></span> spento o non ancora verificato.</li>
       </ul>
       <div class="drawer-section-title">Tasti rapidi</div>
       <div class="help-keys">
@@ -2718,7 +2696,7 @@
 
   // ---------- Drawers ----------
   // Drawer → button that gets the focus back (and aria-expanded when it is a toggle).
-  var drawerToggles = { historyDrawer: 'btnHistory', infoDrawer: 'btnAiState', analysisDrawer: 'btnSearchPage', helpDrawer: 'btnHelp' };
+  var drawerToggles = { historyDrawer: 'btnHistory', infoDrawer: 'btnState', analysisDrawer: 'btnSearchPage', helpDrawer: 'btnHelp' };
   var navButtons = { chat: 'btnChatPage', analysisDrawer: 'btnSearchPage', historyDrawer: 'btnHistory' };
   var historyPageVersion = 0;
   function showPage(id) {
@@ -2950,25 +2928,49 @@
   function formatCount(n) { return (n || 0).toLocaleString('it-IT'); }
   // «1 indirizzo», «3 indirizzi»: counts in sentences agree with their noun.
   function plural(n, one, many) { return formatCount(n) + ' ' + (n === 1 ? one : many); }
-  // Top-bar indicator: light, label and reason as the host computed them; the pane reads no Italian text to decide a state.
-  // s = { light, label, reason, phase, at, external }. Announce a new error/reason or recovery, without repeating polling updates.
-  function setIndicator(id, name, s) {
-    var b = $(id);
-    var light = s.light || 'Off';
+  // Top-bar status dot: one light for Archivio and IA, as the host computed them; the pane reads no Italian text to decide a state.
+  // Worst of the two (Error, Working, Waiting, Paused, Ok); an archive that is off does not count, an IA that is not verified is never green.
+  var bar = { info: null, archive: { light: 'Off', text: 'Archivio: non disponibile', reason: '', failing: false }, ai: { light: 'Off', text: 'IA: non verificato', reason: '', failing: false, external: false } };
+  var lightRank = ['Error', 'Working', 'Waiting', 'Paused', 'Ok', 'Off'];
+  function combinedLight() {
+    var lights = [bar.ai.light];
+    if (bar.archive.light !== 'Off') lights.push(bar.archive.light);
+    var worst = 'Off';
+    lights.forEach(function (l) { if (lightRank.indexOf(l) >= 0 && lightRank.indexOf(l) < lightRank.indexOf(worst)) worst = l; });
+    return bar.ai.light === 'Off' && worst === 'Ok' ? 'Off' : worst;
+  }
+  function renderStateDot() {
+    var b = $('btnState');
+    var light = combinedLight();
     var was = b.dataset.light;
-    var previousReason = b.dataset.reason;
-    var reason = s.reason || '';
+    var previous = b.dataset.problem || '';
+    // Compared by reason: a polling update that only changes the phase is not announced again.
+    var key = (bar.archive.light === 'Error' ? 'a:' + bar.archive.reason : '') + (bar.ai.light === 'Error' ? 'i:' + bar.ai.reason : '');
+    var problem = [bar.archive.light === 'Error' ? bar.archive.text : '', bar.ai.light === 'Error' ? bar.ai.text : ''].filter(Boolean).join(' ');
     b.dataset.light = light;
-    b.dataset.reason = reason;
-    var text = name + ': ' + (s.label || '–') + (s.phase ? ' · fase ' + s.phase : '') + (s.at ? ' · alle ' + s.at : '') + (s.reason ? '. ' + s.reason : '');
-    b.title = text + (s.external ? '\nDestinazione: cloud esterno' : '\nDestinazione: questo PC o la rete locale');
-    b.setAttribute('aria-label', text);
-    b.querySelector('.ind-dest').textContent = s.external ? 'Cloud' : 'PC';
-    if (light === 'Error' ? was !== light || previousReason !== reason : was === 'Error') announce(text);
+    b.dataset.problem = key;
+    var info = bar.info;
+    var lines = [bar.archive.text, bar.ai.text];
+    if (info && info.model) {
+      lines.push((info.name ? info.name + ' · ' : '') + info.model + (info.host ? ' · ' + info.host : ''));
+      lines.push(info.cloud ? 'Destinazione: cloud esterno' + (info.region ? ' · area ' + info.region : '') : 'Destinazione: questo PC o la rete locale');
+    } else lines.push(bar.ai.external ? 'Destinazione: cloud esterno' : 'Destinazione: questo PC o la rete locale');
+    b.title = lines.join('\n');
+    b.setAttribute('aria-label', 'Stato: ' + bar.archive.text + '. ' + bar.ai.text + '.');
+    if (light === 'Error' ? was !== light || previous !== key : was === 'Error') announce('Stato: ' + (problem || lines.slice(0, 2).join('. ')));
+  }
+  // s = { light, label, reason, phase, at, external } for one source ('archive' or 'ai').
+  function setIndicator(source, name, s) {
+    var target = bar[source];
+    target.light = s.light || 'Off';
+    target.failing = target.light === 'Error';
+    target.reason = s.reason || '';
+    target.text = name + ': ' + (s.label || '–') + (s.phase ? ' · fase ' + s.phase : '') + (s.at ? ' · alle ' + s.at : '') + (s.reason ? '. ' + s.reason : '');
+    if (source === 'ai') target.external = !!s.external;
+    renderStateDot();
   }
   function setArchiveIndicator(d) {
-    setIndicator('btnArchiveState', 'Archivio', { light: d.light, label: d.label, reason: d.error || d.reason, phase: d.phase,
-      external: false });
+    setIndicator('archive', 'Archivio', { light: d.light, label: d.label, reason: d.error || d.reason, phase: d.phase, external: false });
   }
   function formatMetric(unit, n) { return unit === 'bytes' ? formatBytes(n) : unit === 'tokens' ? formatTokens(n) : formatCount(n); }
   function pctCell(p) {
@@ -3087,12 +3089,8 @@
   }
   $('btnHistory').addEventListener('click', function () { toggleDrawer('historyDrawer'); });
   $('btnHelp').addEventListener('click', function () { toggleDrawer('helpDrawer'); });
-  // Each indicator opens Stato on its own section.
-  $('btnArchiveState').addEventListener('click', function () {
-    if ($('infoDrawer').hidden) openDrawer('infoDrawer');
-    if (!$('archiveSection').hidden) $('archiveSection').scrollIntoView({ block: 'start' });
-  });
-  $('btnAiState').addEventListener('click', function () {
+  // The status dot opens Stato, which details Archivio and IA.
+  $('btnState').addEventListener('click', function () {
     if ($('infoDrawer').hidden) openDrawer('infoDrawer');
     $('infoTitle').scrollIntoView({ block: 'start' });
   });
@@ -3364,19 +3362,18 @@
 
   // ---------- Host messages ----------
   var cloudIcon = '<svg class="i cloud-y" aria-hidden="true"><use href="#i-cloud-fill"/></svg>';
-  // Which model receives the data: in the brand's tooltip, with a globe beside it when some actions search the web.
+  // Which model receives the data: in the status dot's tooltip, with a globe beside it when some actions search the web.
   function updateModelBadge(badge, isCloud, name) {
-    state.badge = { model: (badge && badge.model) || '', host: (badge && badge.host) || '', web: (badge && badge.webHosts) || '', webActions: (badge && badge.webActions) || [], cloud: !!isCloud, name: name || '' };
+    state.badge = { model: (badge && badge.model) || '', host: (badge && badge.host) || '', region: (badge && badge.region) || '', web: (badge && badge.webHosts) || '', webActions: (badge && badge.webActions) || [], cloud: !!isCloud, name: name || '' };
     renderModelBadge();
   }
   function renderModelBadge() {
     var b = state.badge;
-    var node = $('brand');
     var web = $('webFlag');
-    if (!b || !b.model) { node.title = 'OnlyWorkspace'; web.hidden = true; return; }
-    var where = b.cloud ? 'Modello cloud: i dati delle azioni IA vanno a ' + b.host + '.' : 'Modello locale: i dati delle azioni IA restano su ' + b.host + '.';
+    bar.info = b;
+    renderStateDot();
+    if (!b || !b.model) { web.hidden = true; return; }
     var webLine = b.webActions.length ? 'Ricerca web (' + b.web + ') per: ' + b.webActions.join(', ') + '.' : '';
-    node.title = (b.name ? b.name + ' · ' : '') + b.model + '\n' + where + (webLine ? '\n' + webLine : '');
     web.hidden = !webLine;
     web.title = webLine;
     web.setAttribute('aria-label', webLine);
@@ -3680,7 +3677,7 @@
         setArchiveIndicator(data);
         break;
       case 'ai_status':
-        setIndicator('btnAiState', 'IA', data);
+        setIndicator('ai', 'IA', data);
         break;
 
       case 'analysis_reconstruction':

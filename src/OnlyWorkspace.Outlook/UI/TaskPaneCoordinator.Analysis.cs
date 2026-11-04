@@ -298,7 +298,7 @@ public partial class TaskPaneCoordinator
     {
         PrepareDocuments(pack);
         var watch = Stopwatch.StartNew();
-        if (GetActiveProfile() is { IsExternal: true } external)
+        if (GetActiveProfile() is { } external && ExposurePolicy.SendsFactsOnly(external))
         {
             if (instruction == null || !CloudFactsRequest.IsFactRequest(instruction)) throw new DataEgressBlockedException(CloudFactsRequest.BlockedMessage);
             var safe = new CloudFactsRequest(pack, external.SendsAttachmentText, CloudFactsRequest.RequestedKind(instruction));

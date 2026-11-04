@@ -123,7 +123,7 @@ Gate prima di un commit: test, build e script con codice 0. La [CI](../../.githu
 
 ## Archivio e prove dei candidati precedenti
 
-Le descrizioni storiche di Standard e degli originali preparati non definiscono il payload cloud corrente: oggi il trasporto esterno accetta soltanto fatti tipizzati verificati, anche a Standard ed Esteso. Il contratto corrente è descritto in [Pseudonimizzazione](pseudonimizzazione.md).
+Le descrizioni storiche di Standard e degli originali preparati non definiscono il payload cloud corrente: dal 4/11 (informativa 6, policy 8) il trasporto esterno accetta fatti tipizzati a Minimo e testo mascherato a Standard ed Esteso. Il contratto corrente è descritto in [Pseudonimizzazione](pseudonimizzazione.md).
 
 Formato **13**, pipe **v15**. Le migrazioni dai formati 11/12 sono coperte da fixture cifrate per confronto dei dati conservati, backup e chiave DPAPI, ripristino, idempotenza, WAL, spazio insufficiente, annullamento e rollback DDL. Gli indici mancanti sono recuperati dai testi acquisiti; le vecchie identità da verificare restano separate in `archive_source_checks`. Le operazioni e i template del generatore ritirato e le chiusure delle pratiche sono assenti; i dati pregressi restano nei backup verificati. Il banco `measure-fidelity.ps1` misura soltanto i fatti locali.
 

@@ -15,8 +15,12 @@ assert.match(html, /\.conversation \{[^}]*background: var\(--bg\);/);
 assert.match(html, /@media \(forced-colors: active\) \{[\s\S]*?\.primary-nav button\[aria-current='page'\] \{ border: 2px solid Highlight;/);
 // Narrow pane or zoom 125%: the pages go two by two and the drawers start under the taller bar.
 assert.match(html, /@media \(max-width: 339px\) \{\s*:root \{ --topbar-h: 108px; \}\s*\.primary-nav \{ display: grid; grid-template-columns: 1fr 1fr;/);
-// Brand as a label beside its name, before the page icons; the profile is chosen only in the ConfigTool (Danny, 26/10/2026).
-assert.match(html, /<header class="topbar">\s*<div id="brand" class="brand"[^>]*><svg class="brand-logo"[^>]*aria-hidden="true">[\s\S]*?<\/svg><span>OnlyWorkspace<\/span><\/div>\s*<nav class="primary-nav"/);
+// No brand in the bar: the pages come first, then one status dot; the profile is chosen only in the ConfigTool (Danny, 26/10/2026).
+assert.match(html, /<header class="topbar">\s*<nav class="primary-nav"/);
+assert.doesNotMatch(html, /id="brand"|class="brand|brand-logo/);
+assert.equal((html.match(/class="indicator"/g) || []).length, 1, 'One status dot, not one per service.');
+assert.match(html, /id="btnState" class="indicator"[^>]*title="[^"]+"[^>]*aria-label="Stato: [^"]+"/);
+assert.doesNotMatch(html, /btnArchiveState|btnAiState|ind-dest|ind-label/);
 assert.doesNotMatch(html, /profileSelect|set_profile|profile_changed|userCanSwitchProfile/);
 // Riprova marks the operation as a retry: the host may reuse the emails and web results already read (A150).
 assert.match(html, /post\(Object\.assign\(\{\}, op, \{ retry: true \}\)\);/);
@@ -64,22 +68,24 @@ assert.equal(nodes.get('btnSearchPage')['aria-current'], 'page');
 ctx.showPage('chat');
 assert.equal(nodes.get('btnHistory')['aria-current'], 'false');
 
-// The brand's tooltip names the model and where the data goes; «web» shows when some actions search the web.
-const badgeNodes = { brand: { title: '' }, webFlag: { hidden: true, title: '', setAttribute(k, v) { this[k] = v; } } };
-const badgeCtx = vm.createContext({ state: {}, $: id => badgeNodes[id] });
+// The model, the server and the area reach the status dot's tooltip; «web» shows when some actions search the web.
+const badgeNodes = { webFlag: { hidden: true, title: '', setAttribute(k, v) { this[k] = v; } } };
+const badgeBar = { info: null }; let dotRenders = 0;
+const badgeCtx = vm.createContext({ state: {}, bar: badgeBar, renderStateDot: () => { dotRenders++; }, $: id => badgeNodes[id] });
 new vm.Script(section('  // Which model receives the data', '  // A cloud profile not covered')).runInContext(badgeCtx);
 badgeCtx.updateModelBadge({ model: 'qwen3.5:9b', host: '127.0.0.1', webHosts: '', webActions: [] }, false, 'Ollama locale');
-assert.equal(badgeNodes.brand.title, 'Ollama locale · qwen3.5:9b\nModello locale: i dati delle azioni IA restano su 127.0.0.1.');
+assert.deepEqual({ ...badgeBar.info }, { model: 'qwen3.5:9b', host: '127.0.0.1', region: '', web: '', webActions: [], cloud: false, name: 'Ollama locale' });
 assert.equal(badgeNodes.webFlag.hidden, true);
-badgeCtx.updateModelBadge({ model: 'gpt-x', host: 'api.openai.com', webHosts: 'api.openai.com', webActions: ['Chat', 'Follow-up'] }, true, 'OpenAI');
-assert.match(badgeNodes.brand.title, /^OpenAI · gpt-x\nModello cloud: i dati delle azioni IA vanno a api\.openai\.com\./);
-assert.match(badgeNodes.brand.title, /Ricerca web \(api\.openai\.com\) per: Chat, Follow-up/);
+badgeCtx.updateModelBadge({ model: 'gpt-x', host: 'api.openai.com', region: 'UE', webHosts: 'api.openai.com', webActions: ['Chat', 'Follow-up'] }, true, 'OpenAI');
+assert.equal(badgeBar.info.region, 'UE');
+assert.equal(badgeBar.info.cloud, true);
+assert.match(badgeNodes.webFlag.title, /Ricerca web \(api\.openai\.com\) per: Chat, Follow-up/);
 assert.equal(badgeNodes.webFlag.hidden, false);
-assert.doesNotMatch(badgeNodes.brand.title, /conferma/);
 badgeCtx.updateModelBadge(null, false, '');
-assert.equal(badgeNodes.brand.title, 'OnlyWorkspace');
+assert.equal(badgeNodes.webFlag.hidden, true);
+assert.equal(dotRenders, 3, 'Every badge update repaints the status dot.');
 
-console.log('PASS no per-action web choice, fixed page navigation, brand and model label');
+console.log('PASS no per-action web choice, fixed page navigation, status dot without brand, model label');
 
 // Clear is a fresh conversation request, never a history deletion, and is refused while the job works.
 const clearNodes = new Map(); let hasContent = false;

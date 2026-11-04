@@ -151,6 +151,9 @@ try {
         if ($metrics.cssWidth -ne $layout.viewport -or $metrics.pageWidth -ne $layout.page -or $metrics.devicePixelRatio -le 0) {throw 'A201 numeric layout diagnostics disagree with the real viewport'}
         if ($layout.page -lt 340 -or $layout.overflow -ne 'auto') { throw "Page collapsed at width $width" }
         if ($width -lt 340 -and $layout.scroll -le $layout.viewport) { throw "Narrow viewport is not horizontally scrollable at $width" }
+        # #082: one status dot, at least 24 CSS px, inside the page and clear of the page buttons.
+        $dot = Script $second 'JSON.stringify((function(){var d=document.getElementById("btnState"),r=d.getBoundingClientRect(),n=document.querySelectorAll(".topbar .indicator").length,over=Array.prototype.some.call(document.querySelectorAll(".primary-nav button"),function(b){var q=b.getBoundingClientRect();return b.offsetParent&&q.width>0&&q.left<r.right&&q.right>r.left&&q.top<r.bottom&&q.bottom>r.top;});return {n:n,w:r.width,h:r.height,left:r.left,top:r.top,right:r.right,over:over};})())' | ConvertFrom-Json | ConvertFrom-Json
+        if ($dot.n -ne 1 -or $dot.w -lt 24 -or $dot.h -lt 24 -or $dot.left -lt 0 -or $dot.top -lt 0 -or $dot.over) { throw "#082 status dot misplaced at width ${width}: $($dot | ConvertTo-Json -Compress)" }
     }
     $form.ClientSize = $savedSize
     'PASS A201 real WebView layout: minimum 340 CSS pixels and horizontal reachability at 380/190/120 px'

@@ -26,6 +26,9 @@ public sealed class Pseudonymizer
     private readonly bool _amounts, _dates;
     private readonly TimeSpan? _budget;
     private bool _used;
+    // Messages this map produced: CloudRequestGuard.SealMasked accepts nothing else (reference equality).
+    private readonly HashSet<ChatMessage> _produced = new();
+    internal bool Produced(ChatMessage message) => _produced.Contains(message);
     public int Count => _byPlaceholder.Count;
     public PseudonymizationAudit Audit { get; } = new();
 
@@ -69,7 +72,9 @@ public sealed class Pseudonymizer
             var detected = new PseudonymizationContext(entities.GroupBy(e => e.Category + "\0" + e.Value, StringComparer.OrdinalIgnoreCase).Select(g => g.First()), _amounts, _dates, token, _budget);
             var output = new List<ChatMessage>();
             foreach (var message in list) { context.Check(); output.Add(new ChatMessage(message.Role, MaskText(message.Content, detected, context))); }
-            context.Check(); return output;
+            context.Check();
+            foreach (var message in output) _produced.Add(message);
+            return output;
         }
         catch (OperationCanceledException) { Audit.Outcome = "cancelled"; throw; }
         catch (Exception ex) when (ex is not OutOfMemoryException)

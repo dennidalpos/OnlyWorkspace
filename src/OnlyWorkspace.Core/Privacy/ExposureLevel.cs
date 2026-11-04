@@ -66,6 +66,10 @@ public sealed class ExposurePolicy
     /// <summary>Whole emails, appointments or contacts may be sent; otherwise only local facts.</summary>
     public bool WholeEmails { get; private set; }
     public bool Attachments { get; private set; }
+    /// <summary>Free text may leave after the mechanical masking; otherwise only typed local facts.</summary>
+    public bool MaskedText => ModelAllowed && Level >= ExposureLevel.Standard;
+    /// <summary>A cloud profile that sends typed local facts only (Minimo).</summary>
+    public static bool SendsFactsOnly(LlmProfileConfig profile) => profile.IsExternal && !Of(profile).MaskedText;
     /// <summary>Estimated tokens of email evidence in one request; 0 = only the model's own limit.</summary>
     public int PackTokens { get; private set; }
     /// <summary>Web search actions the level permits; null = every action the profile enables.</summary>
@@ -74,7 +78,7 @@ public sealed class ExposurePolicy
     /// <summary>A local profile: nothing leaves the PC, so the level does not restrict it.</summary>
     public static ExposurePolicy Local { get; } = new()
     {
-        Level = ExposureLevel.Standard, ModelAllowed = true, Evidence = EvidenceMode.Original, Attachments = true, WholeEmails = true
+        Level = ExposureLevel.Standard, ModelAllowed = true, Evidence = EvidenceMode.Original, Attachments = true, WholeEmails = true, Pseudonymize = true
     };
 
     private static readonly ExposurePolicy[] Levels =
@@ -87,12 +91,12 @@ public sealed class ExposurePolicy
         },
         new()
         {
-            Level = ExposureLevel.Standard, ModelAllowed = true, Evidence = EvidenceMode.FactsOnly, Pseudonymize = true,
+            Level = ExposureLevel.Standard, ModelAllowed = true, Evidence = EvidenceMode.Original, Pseudonymize = true, WholeEmails = true,
             PackTokens = 48_000, WebActions = new[] { WebSearchAction.Security }
         },
         new()
         {
-            Level = ExposureLevel.Extended, ModelAllowed = true, Evidence = EvidenceMode.FactsOnly, Pseudonymize = true,
+            Level = ExposureLevel.Extended, ModelAllowed = true, Evidence = EvidenceMode.Original, Pseudonymize = true, WholeEmails = true,
             Attachments = true, PackTokens = 48_000, WebActions = new[] { WebSearchAction.Security }
         }
     };
@@ -123,8 +127,8 @@ public sealed class ExposurePolicy
     {
         ExposureLevel.LocalOnly => "Il profilo non invia nulla: restano attivi solo i profili locali.",
         ExposureLevel.Minimal => "Escono solo dati estratti in locale, con nomi, indirizzi, telefoni, IBAN e codici sostituiti da segnaposto. Niente testo integrale, allegati o ricerca web.",
-        ExposureLevel.Standard => "Solo fatti strutturati protetti. Testo libero, corpi delle email e query web non verificabili sono bloccati.",
-        ExposureLevel.Extended => "Come Standard; con il permesso allegati sono ammessi solo i loro fatti strutturati protetti. Nessun testo libero o file binario viene inviato.",
+        ExposureLevel.Standard => "Escono email e testo libero con nomi, indirizzi, recapiti, IBAN, codici, importi e date sostituiti da segnaposto. Niente allegati né file binari; query web non verificabili bloccate.",
+        ExposureLevel.Extended => "Come Standard; con il permesso allegati escono anche i testi estratti in locale, mascherati allo stesso modo. Nessun file binario viene inviato.",
         _ => "Livello non valido: nessun dato viene inviato."
     };
 }

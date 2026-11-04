@@ -13,8 +13,8 @@ Riferimento per riquadro, ConfigTool e tray. Fonte degli stati: `StatusLight` (`
 | Waiting | in attesa | … | anello con punto grigio | … |
 | Off | spento | – | anello vuoto | – |
 
-- Il colore giallo «in corso» del riquadro è definito una volta (`--work-fill`, `--work-edge`, con bordo più chiaro nel tema scuro) e vale per l'indicatore, il badge di stato e la nuvola cloud.
-- Il glifo di ogni stato è definito una sola volta nel CSS del riquadro (`--glyph` su `[data-light]`) ed è ereditato da `.ind-badge` (indicatori in alto), `.state-symbol` (badge `.state-badge` nelle schede e nel risultato) e `.status-text` (fase e cassette dell'archivio); JavaScript imposta solo `data-light`.
+- Il colore giallo «in corso» del riquadro è definito una volta (`--work-fill`, `--work-edge`, con bordo più chiaro nel tema scuro) e vale per il pallino di stato, il badge di stato e la nuvola cloud.
+- Il glifo di ogni stato è definito una sola volta nel CSS del riquadro (`--glyph` su `[data-light]`) ed è ereditato da `.ind-badge` (pallino in alto), `.state-symbol` (badge `.state-badge` nelle schede e nel risultato) e `.status-text` (fase e cassette dell'archivio); JavaScript imposta solo `data-light`.
 - Un avviso (`Tone.Warning`) del ConfigTool è mappato da `MainConfigForm.StateForTone` su `Paused` e quindi mostra ‖ come in pausa (scelta A200 confermata il 4 novembre): le due situazioni condividono il simbolo, la parola esatta sta nel testo accanto. Il rapporto di sicurezza ha un proprio vocabolario (✓ ! ✕ ?, `SecurityOutcome`) perché descrive l'esito di un controllo, non lo stato di un'operazione.
 - Contrasto elevato di Windows è escluso dal perimetro (scelta del manutentore).
 

@@ -34,7 +34,7 @@ public sealed class SelectableUiTests
                     DefaultProfile = "test",
                     Profiles = new() { new() { Id = "test", Type = "openai", BaseUrl = "https://example.invalid", Model = "" } }
                 });
-                using var form = new MainConfigForm(directory);
+                using var form = new MainConfigForm(directory, null, directory);
                 var flags = BindingFlags.NonPublic | BindingFlags.Instance;
                 var type = typeof(MainConfigForm);
                 var status = (Label)type.GetField("_lblWebSupport", flags)!.GetValue(form)!;

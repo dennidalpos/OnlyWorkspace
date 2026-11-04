@@ -107,6 +107,7 @@ public sealed partial class MainConfigForm : Form
     private CheckBox _chkPseudonymizeAmounts = null!;
     private CheckBox _chkPseudonymizeDates = null!;
     private ComboBox _cmbExposure = null!;
+    private ComboBox _cmbRegion = null!;
     private SelectableLabel _lblExposure = null!;
     private CheckBox _chkWebSearch = null!;
     private TextBox _txtWebSearchKey = null!;
@@ -454,6 +455,15 @@ public sealed partial class MainConfigForm : Form
     }
 
     private ExposureLevel SelectedExposure => _cmbExposure.SelectedItem is ExposureItem item ? item.Level : ExposureLevel.Minimal;
+
+    private sealed class RegionItem
+    {
+        public RegionItem(ServiceRegion region) => Region = region;
+        public ServiceRegion Region { get; }
+        public override string ToString() => ServiceRegions.Label(Region);
+    }
+
+    private ServiceRegion SelectedRegion => _cmbRegion.SelectedItem is RegionItem item ? item.Region : ServiceRegion.Unspecified;
 
     private static readonly Dictionary<string, string> WebActionTips = new()
     {

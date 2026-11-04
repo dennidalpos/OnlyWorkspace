@@ -87,7 +87,7 @@ public sealed class AdminPasswordServiceTests
             {
                 try
                 {
-                    using var form = new MainConfigForm(directory);
+                    using var form = new MainConfigForm(directory, null, directory);
                     var type = typeof(MainConfigForm);
                     Assert.True((bool)type.GetField("_isLocked", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(form)!);
                     Assert.False(((Button)type.GetField("_btnSave", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(form)!).Enabled);

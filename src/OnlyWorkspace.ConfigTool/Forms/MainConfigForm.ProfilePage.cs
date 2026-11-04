@@ -57,7 +57,7 @@ public sealed partial class MainConfigForm
         {
             "Servizio, indirizzo, modello, chiave e tempi di attesa del profilo selezionato.",
             "Quanto testo il modello legge e scrive (solo per i modelli locali) e quanto è creativo nelle risposte.",
-            "Cosa può uscire dal PC: solo fatti strutturati protetti; testo libero e query web non verificabili sono bloccati.",
+            "Cosa può uscire dal PC: con Minimo solo fatti protetti; con Standard ed Esteso anche testo mascherato. Query web non verificabili bloccate.",
             "Diagnostica del modello: capacità con esito, provenienza e data; Aggiorna capacità e Prova funzioni."
         };
         for (int i = 0; i < sections.Controls.Count && i < sectionTips.Length; i++) Tip(sections.Controls[i], sectionTips[i]);
@@ -270,7 +270,7 @@ public sealed partial class MainConfigForm
     private void BuildPermissionRows(TableLayoutPanel net)
     {
         _chkExternal = AddWide(net, new ThemedCheckBox { Text = "Servizio esterno: invii soggetti alla protezione dei dati", AutoSize = true },
-            "Il servizio è fuori da questo PC. Solo fatti strutturati protetti possono essere inviati, dopo l'autorizzazione in Privacy e dati. Testo libero non verificabile bloccato. Sempre attivo per servizi cloud e indirizzi esterni.");
+            "Il servizio è fuori da questo PC. Gli invii, già mascherati, richiedono l'autorizzazione in Privacy e dati. Sempre attivo per servizi cloud e indirizzi esterni.");
         _chkExternal.CheckedChanged += (s, e) =>
         {
             if (!_isLoading && _chkExternal.Enabled && _lstProfiles.SelectedItem is ProfileItem item)
@@ -279,7 +279,7 @@ public sealed partial class MainConfigForm
         };
 
         _cmbExposure = AddRow(net, "Esposizione dati:", new ThemedComboBox { Width = 200, Anchor = AnchorStyles.Left },
-            "0 blocca ogni invio. Minimo e Standard consentono solo fatti strutturati protetti; Esteso permette anche quelli degli allegati con permesso distinto. Testo libero, importi e date originali non escono. Si applica con Salva.");
+            "0 blocca ogni invio. Minimo invia solo fatti estratti in locale; Standard anche email e testo libero mascherati; Esteso aggiunge gli allegati con permesso distinto. Si applica con Salva.");
         foreach (var level in ExposurePolicy.All) _cmbExposure.Items.Add(new ExposureItem(level));
         _cmbExposure.SelectedIndexChanged += (s, e) => { ShowExposure(); OnProfileFieldChanged(); ApplyCapabilities(); UpdateWebActionsEnabled(); };
         _lblExposure = AddRow(net, "", new SelectableLabel { AutoSize = true, MaximumSize = new Size(440, 0), Margin = new Padding(3, 0, 3, 6) },
@@ -294,8 +294,13 @@ public sealed partial class MainConfigForm
             if (_lblExposure.MaximumSize.Width != width) _lblExposure.MaximumSize = new Size(width, 0);
         };
 
-        _chkAllowAttachments = AddWide(net, new ThemedCheckBox { Text = "Fatti protetti dagli allegati", AutoSize = true },
-            "Con Esteso autorizza solo fatti strutturati protetti dagli allegati. Testo libero e nomi dei file restano sul PC. Si applica con Salva.");
+        _cmbRegion = AddRow(net, "Area del servizio:", new ThemedComboBox { Width = 200, Anchor = AnchorStyles.Left },
+            "Dove il servizio elabora i dati, secondo il contratto: UE, non UE o non specificata. Non è dedotta dall'indirizzo; se non specificata, l'informativa chiede una conferma. Si applica con Salva.");
+        foreach (var region in new[] { ServiceRegion.Unspecified, ServiceRegion.Eu, ServiceRegion.NonEu }) _cmbRegion.Items.Add(new RegionItem(region));
+        _cmbRegion.SelectedIndexChanged += (s, e) => OnProfileFieldChanged();
+
+        _chkAllowAttachments = AddWide(net, new ThemedCheckBox { Text = "Testo degli allegati", AutoSize = true },
+            "Con Esteso autorizza l'invio del testo estratto in locale dagli allegati, mascherato. I nomi dei file e i file restano sul PC. Si applica con Salva.");
         _chkAllowAttachments.CheckedChanged += (s, e) => OnProfileFieldChanged();
         _chkPseudonymizeAmounts = AddWide(net, new ThemedCheckBox { Text = "Sostituisci gli importi con segnaposto", AutoSize = true },
             "Negli invii esterni sostituisce gli importi riconosciuti; li ripristina nella risposta su questo PC. Si applica con Salva.");

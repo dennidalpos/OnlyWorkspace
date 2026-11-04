@@ -197,7 +197,7 @@ public sealed class TrayApplicationContext : ApplicationContext
     public void ShowArchiveForm()
     {
         if (_isExiting) return;
-        if (_archiveForm == null || _archiveForm.IsDisposed) _archiveForm = new ArchiveSearchForm();
+        if (_archiveForm == null || _archiveForm.IsDisposed) _archiveForm = new ArchiveSearchForm(true, _archiveDir);
         if (_archiveForm.WindowState == FormWindowState.Minimized) _archiveForm.WindowState = FormWindowState.Normal;
         _archiveForm.Show();
         _archiveForm.Activate();
@@ -216,7 +216,7 @@ public sealed class TrayApplicationContext : ApplicationContext
                 _lastDiskState = null;
                 return;
             }
-            var states = await new ArchiveClient(string.Empty, lifetime: _archiveLifetime.Token).ProfilesAsync();
+            var states = await new ArchiveClient(string.Empty, _archiveDir, _archiveLifetime.Token).ProfilesAsync();
             if (_isExiting) return;
             var diskState = states.Count == 0 ? ArchiveCapacityState.Available : states.Max(s => s.Stats.DiskState);
             if (_lastDiskState != diskState && diskState != ArchiveCapacityState.Available)

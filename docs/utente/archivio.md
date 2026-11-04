@@ -19,7 +19,7 @@ La raccolta parte 60 secondi dopo l'avvio di Outlook e lavora dopo 10 secondi se
 
 ## Stato
 
-**Archivio** nella barra del riquadro apre Stato, che mostra fase ed errore e tiene le tabelle in **Avanzate** (chiusa all'apertura); la finestra archivio della tray mostra le stesse tabelle: metriche (testi, allegati, cartelle, database, disco) e, per cassetta, stato, email, testi %, cartelle.
+Il pallino di stato nella barra del riquadro (Archivio e IA) apre Stato, che mostra fase ed errore e tiene le tabelle in **Avanzate** (chiusa all'apertura); la finestra archivio della tray mostra le stesse tabelle: metriche (testi, allegati, cartelle, database, disco) e, per cassetta, stato, email, testi %, cartelle.
 
 | Stato cassetta | Significato |
 | --- | --- |

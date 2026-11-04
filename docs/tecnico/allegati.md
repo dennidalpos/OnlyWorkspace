@@ -4,7 +4,7 @@ Un documento entra solo come allegato di un'email Outlook. Outlook ne salva una 
 
 ## Invio con un profilo esterno
 
-Per i profili esterni sono ammessi solo fatti strutturati protetti dagli allegati, con **Esteso**, permesso distinto e informativa 5 valida. Testo, nomi e file binari restano sul PC. Estrazione e OCR sono locali; le analisi di testo libero richiedono un profilo locale. Gli esiti documentali sotto la risposta distinguono lettura locale e inclusione nella richiesta e sono conservati nello storico cifrato.
+Per i profili esterni il testo degli allegati, estratto in locale e mascherato, è ammesso con **Esteso**, permesso distinto e informativa 6 valida; a Minimo solo i fatti. Nomi dei file e file binari restano sul PC. Estrazione e OCR sono locali. Gli esiti documentali sotto la risposta distinguono lettura locale e inclusione nella richiesta e sono conservati nello storico cifrato.
 
 Restano i limiti esistenti: copia massima 30 MiB e 4.000.000 di caratteri per documento intero, con i limiti di espansione e profondità dei contenitori. Un documento incompleto, protetto, bloccato o con minaccia nota non contribuisce testo; il riquadro ne dichiara il motivo. Non si inviano estratti troncati per adattarli al contesto. Queste esclusioni non attestano l’assenza di minacce nei documenti non sottoposti a controllo antivirus.
 

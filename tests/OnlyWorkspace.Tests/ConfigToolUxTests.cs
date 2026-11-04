@@ -250,7 +250,7 @@ public sealed class ConfigToolUxTests
     private static LlmProfileConfig Cloud(string id) => new()
     {
         Id = id, DisplayName = id, Type = "qwen", BaseUrl = "https://remote.example.test/v1", Model = "synthetic", AuthType = "bearer",
-        External = true, Exposure = ExposureLevel.Standard
+        External = true, Exposure = ExposureLevel.Standard, ServiceRegion = ServiceRegion.Eu
     };
 
     private static MainConfigForm Open(string directory, WorkspaceConfig config)

@@ -361,6 +361,7 @@ public partial class TaskPaneCoordinator : IDisposable
     {
         model = profile.Model,
         host = HostOf(profile.BaseUrl),
+        region = profile.IsExternal ? ServiceRegions.Label(profile.ServiceRegion) : string.Empty,
         webHosts = WebActionLabels(profile).Count > 0 ? string.Join(", ", WebSearchService.Destinations(profile)) : string.Empty,
         webActions = WebActionLabels(profile)
     };
@@ -1004,7 +1005,7 @@ public partial class TaskPaneCoordinator : IDisposable
             }
             string json;
             string attachmentNotice = string.Empty;
-            if (activeProfile.IsExternal)
+            if (ExposurePolicy.SendsFactsOnly(activeProfile))
             {
                 if (opType != "action_items") throw new DataEgressBlockedException(FactsOnlyMessage);
                 var mail = new ChatMailItem { EntryId = email.EntryId, StoreId = email.StoreId, Subject = email.Subject,
@@ -1140,7 +1141,7 @@ public partial class TaskPaneCoordinator : IDisposable
     {
         var watch = Stopwatch.StartNew();
         bool includeDetails = pack.Whole > 0;
-        var external = GetActiveProfile() is { IsExternal: true };
+        var external = GetActiveProfile() is { } active && ExposurePolicy.SendsFactsOnly(active);
         var safe = external ? new CloudFactsRequest(pack, GetActiveProfile()!.SendsAttachmentText) : null;
         var json = await client.CompleteStructuredAsync(safe?.Messages ?? PromptCatalog.CreateCalendarScanPrompt(pack.Render(includeDetails)),
             external ? CloudFactsRequest.Schema : PromptCatalog.CalendarScanJsonSchema, ct);
@@ -2322,10 +2323,10 @@ public partial class TaskPaneCoordinator : IDisposable
             throw new OperationCanceledException("La policy del profilo è cambiata.");
     }
 
-    // No cloud level sends whole items, so raising the level or the grant would not unlock the action.
+    // Only Minimo sends typed facts alone; Standard and Esteso send masked text, so raising the level unlocks the action.
     public const string FactsOnlyMessage =
-        "Questa azione richiede il testo dell'email, che un profilo cloud non invia mai: all'estero vanno solo fatti estratti in locale, " +
-        "qualunque sia il livello di esposizione o l'autorizzazione concessa. Selezionare un profilo locale per questa azione.";
+        "Questa azione richiede il testo dell'email, che il livello «1 · Minimo» non invia: escono solo fatti estratti in locale. " +
+        "Alzare il livello a «2 · Standard» o usare un profilo locale.";
 
     /// <summary>The action sends whole emails, appointments or contacts: refused at a cards-only exposure level, before any request.</summary>
     private static void EnsureWholeEmails(LlmProfileConfig profile)

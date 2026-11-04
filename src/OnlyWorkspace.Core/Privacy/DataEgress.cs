@@ -104,15 +104,16 @@ public sealed class WorkspaceDataEgressConfig
 /// <summary>Text the responsible person accepts. A new version voids every earlier acceptance.</summary>
 public static class DataEgressNotice
 {
-    public const int Version = 5;
+    public const int Version = 6;
 
     public const string Title = "Informativa sull'uscita dei dati verso servizi di intelligenza artificiale esterni";
 
     public static readonly string Text = string.Join("\r\n\r\n", new[]
     {
         "OnlyWorkspace conserva posta e storico cifrati sul PC. Un profilo locale elabora i contenuti sul PC.",
-        "Per i servizi cloud sono ammessi solo fatti strutturati protetti: valori, identità, recapiti, riferimenti, importi e date sono sostituiti con segnaposto. Corpo delle mail, nomi dei file e testo libero non verificabile non vengono inviati. Alcune azioni richiedono un profilo locale.",
-        "I valori originali vengono ripristinati solo sul PC. La pseudonimizzazione è reversibile e non rende anonimi i dati. Nessun file binario viene caricato. La ricerca web con contenuti non verificabili è bloccata, anche quando la query nasce da un modello locale.",
+        "Prima di ogni invio il testo passa da una pseudonimizzazione meccanica, anche per i modelli locali: nomi, indirizzi, recapiti, IBAN e codici riconosciuti sono sostituiti con segnaposto; importi e date sempre verso il cloud, in locale solo se il profilo lo prevede. Con il livello Minimo escono solo fatti strutturati estratti in locale. Con Standard ed Esteso escono anche email e testo libero, già mascherati; gli allegati solo con Esteso e con il permesso del profilo. Se la pseudonimizzazione non riesce, nulla viene inviato.",
+        "I valori originali vengono ripristinati solo sul PC. La pseudonimizzazione è reversibile e non rende anonimi i dati. Identificativi, importi e date sono sostituiti da riferimenti, ma ciò che la procedura non riconosce, comprese le categorie particolari di dati (art. 9 GDPR, per esempio la salute), resta nel testo e viene inviato al servizio. Nessun file binario viene caricato. La ricerca web con contenuti non verificabili è bloccata, anche quando la query nasce da un modello locale.",
+        "Per ogni profilo cloud l'amministratore dichiara dove il servizio elabora i dati (UE, non UE o non specificata); un'area non specificata richiede una conferma esplicita.",
         "Le prove di connessione e capacità usano richieste sintetiche fisse, senza contenuti di Outlook. Le credenziali necessarie all'autenticazione sono trasmesse al servizio configurato.",
         "Autorizzi esclusivamente i profili e le destinazioni riepilogati, con i permessi e le chiavi attuali. L'autorizzazione si può revocare; le richieste già ricevute dal servizio non si possono ritirare.",
         "L'autorizzazione tecnica non certifica adempimenti, contratti o conformità normativa. L'organizzazione verifica le condizioni del fornitore e gli obblighi applicabili al proprio utilizzo. Rileggi sempre i risultati dell'IA."

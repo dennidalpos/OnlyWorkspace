@@ -111,7 +111,7 @@ public sealed class NavigationAccessibilityTests
 
             if (archiveWindow)
             {
-                using var form = new ArchiveSearchForm(refreshOnShow: false);
+                using var form = new ArchiveSearchForm(false, IsolatedArchive.NewPath());
                 form.Show();
                 Application.DoEvents();
                 Check(form);

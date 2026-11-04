@@ -71,7 +71,7 @@ public static class DataEgressReport
                 Row("Registrata il", When(consent.AcceptedUtc)), Row("Utente Windows", consent.WindowsUser), Row("Computer", consent.Machine),
                 Row("Testo accettato", $"versione {consent.NoticeVersion}, SHA-256 {consent.NoticeHash}")
             }));
-            if (consent.NoticeVersion < 5)
+            if (consent.NoticeVersion < 6)
             {
                 Section(html, "Dichiarazioni precedenti (storiche)", Table(new[]
                 {
@@ -91,7 +91,7 @@ public static class DataEgressReport
         }
 
         html.Append("<section><h2>Profili IA (modelli coinvolti)</h2><table class=\"grid\"><thead><tr><th>Profilo</th><th>Servizio e modello</th><th>Server</th>")
-            .Append("<th>Destinazione</th><th>Livello</th><th>Allegati</th><th>Ricerca web</th><th>Uso</th><th>Stato</th></tr></thead><tbody>");
+            .Append("<th>Destinazione</th><th>Area</th><th>Livello</th><th>Allegati</th><th>Ricerca web</th><th>Uso</th><th>Stato</th></tr></thead><tbody>");
         foreach (var p in config.Profiles ?? new List<LlmProfileConfig>())
         {
             var uses = new List<string>();
@@ -101,7 +101,8 @@ public static class DataEgressReport
             string server = Uri.TryCreate(p.BaseUrl, UriKind.Absolute, out var url) ? url.Host : p.BaseUrl;
             html.Append("<tr><td>").Append(E(p.DisplayName.Length == 0 ? p.Id : p.DisplayName)).Append("</td><td>")
                 .Append(E(ProviderCatalog.Get(p.Type).DisplayName)).Append("<br>").Append(E(p.Model)).Append("</td><td>").Append(E(server))
-                .Append("</td><td>").Append(p.IsExternal ? "cloud" : "locale").Append("</td><td>").Append(E(p.IsExternal ? ExposurePolicy.Label(p.Exposure) : "—"))
+                .Append("</td><td>").Append(p.IsExternal ? "cloud" : "locale").Append("</td><td>").Append(E(p.IsExternal ? ServiceRegions.Label(p.ServiceRegion) : "—"))
+                .Append("</td><td>").Append(E(p.IsExternal ? ExposurePolicy.Label(p.Exposure) : "—"))
                 .Append("</td><td>").Append(p.IsExternal ? YesNo(p.SendsAttachmentText) : "in locale").Append("</td><td>")
                 .Append(E(web.Count == 0 ? "no" : string.Join(", ", web) + (DataEgress.WebHosts(p).Count > 0 ? " (" + string.Join(", ", DataEgress.WebHosts(p)) + ")" : "")))
                 .Append("</td><td>").Append(E(uses.Count == 0 ? "—" : string.Join(", ", uses))).Append("</td><td>")

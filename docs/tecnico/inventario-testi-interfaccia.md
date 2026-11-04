@@ -8,7 +8,7 @@ Esito per schermata del passaggio di riduzione del 4 novembre 2026 (vedi [vocabo
 |---|---|
 | Guida: primi passi, Posta, Scrittura, Chat, Cerca, Storico | Accorciata a una riga per voce; rimosso il riferimento alla rubrica (nessuna scrittura contatti dopo A207/A209) |
 | Guida: dati inviati al profilo IA, Cloud/PC/globo | Mantenuta e asciugata: sono avvisi su uscita dei dati |
-| Guida: legenda degli indicatori | Accorciata; i glifi vengono dal CSS (`--glyph`) |
+| Guida: legenda del pallino di stato | Accorciata; i glifi vengono dal CSS (`--glyph`); un solo pallino per Archivio e IA, senza marchio nella barra |
 | Tooltip Follow-up, Scrivi, filtro persona | Accorciati; «Elimina archivio» mantenuto (dice che le email non vengono toccate) |
 | Tooltip «Invio del testo degli allegati» | Invariato; i messaggi di rifiuto per livello (`TaskPaneCoordinator`) ora citano «2 · Standard» e «3 · Esteso» allo stesso modo |
 
@@ -21,7 +21,7 @@ Esito per schermata del passaggio di riduzione del 4 novembre 2026 (vedi [vocabo
 | Profilo IA | Accorciati Servizio IA e Budget token; livelli di esposizione, ricerca web e servizio esterno invariati; gli altri tooltip di campo restano come aiuto contestuale |
 | Capacità e verifiche | Accorciati introduzione e legenda; invariata l'avvertenza su dati inventati, token a pagamento e ricerca web |
 | Ricerca archivio, Cassette | Accorciati compattazione, Message-ID e scelta delle cassette |
-| `DataEgressNotice` | Non toccato: testo, titolo e hash fanno parte delle autorizzazioni salvate (versione 5) |
+| `DataEgressNotice` | Versione 6 (4/11): testo, titolo e hash fanno parte delle autorizzazioni salvate; ogni modifica del testo richiede una nuova versione |
 
 ## Non fatto
 

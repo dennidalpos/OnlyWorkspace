@@ -40,6 +40,16 @@ internal sealed class DataEgressConsentForm : Form
         var read = _read = new ThemedCheckBox { Text = "Ho letto e autorizzo gli invii protetti per i profili indicati", AutoSize = true,
             MaximumSize = new Size(560, 0) };
         layout.Controls.Add(read);
+        // A cloud profile without a declared area needs its own explicit confirmation.
+        var unspecified = (profiles ?? Array.Empty<LlmProfileConfig>()).Where(p => p.IsExternal && p.ServiceRegion == ServiceRegion.Unspecified)
+            .Select(p => p.DisplayName.Length == 0 ? p.Id : p.DisplayName).ToList();
+        CheckBox? region = null;
+        if (unspecified.Count > 0)
+        {
+            region = new ThemedCheckBox { Text = "Confermo di autorizzare anche l'area non specificata: " + string.Join(", ", unspecified), AutoSize = true,
+                MaximumSize = new Size(560, 0) };
+            layout.Controls.Add(region);
+        }
         var accept = _accept = new FlatButton { Text = "Autorizza e salva", Kind = ButtonKind.Primary, Enabled = false, AutoSize = true };
         var cancel = new FlatButton { Text = "Annulla", DialogResult = DialogResult.Cancel, AutoSize = true };
         _tips.SetToolTip(read, "Conferma l'autorizzazione tecnica. Non dichiara adempimenti aziendali o contratti.");
@@ -48,8 +58,16 @@ internal sealed class DataEgressConsentForm : Form
         // The checkbox can be out of view in the scrolling text: the reason for the disabled button stays beside it.
         var hint = _hint = new SelectableLabel { Text = "Per abilitare «Autorizza e salva» spunta «Ho letto…» in fondo al testo.",
             AutoSize = true, MaximumSize = new Size(300, 0), Margin = new Padding(0, 6, 12, 0) };
-        read.CheckedChanged += (_, _) => { accept.Enabled = read.Checked; hint.Visible = !read.Checked; };
-        accept.Click += (_, _) => { if (read.Checked) DialogResult = DialogResult.OK; };
+        bool Ready() => read.Checked && (region == null || region.Checked);
+        void SyncButton() { accept.Enabled = Ready(); hint.Visible = !Ready(); }
+        read.CheckedChanged += (_, _) => SyncButton();
+        if (region != null)
+        {
+            _tips.SetToolTip(region, "Il profilo cloud non dichiara dove il servizio elabora i dati: indicare l'area nel profilo oppure confermare qui.");
+            region.CheckedChanged += (_, _) => SyncButton();
+            hint.Text = "Per abilitare «Autorizza e salva» spunta «Ho letto…» e la conferma dell'area in fondo al testo.";
+        }
+        accept.Click += (_, _) => { if (Ready()) DialogResult = DialogResult.OK; };
         var actions = new FlowLayoutPanel { Dock = DockStyle.Bottom, AutoSize = true, Padding = new Padding(12),
             FlowDirection = FlowDirection.RightToLeft };
         actions.Controls.AddRange(new Control[] { accept, cancel, hint });
