@@ -6,6 +6,10 @@ Test di codice, prova sulla build installata e qualifica su cassette e provider 
 
 Contenuto datato trasferito nel dossier SecondBrain: `02-areas/products/OnlyWorkspace/history/imported/docs/tecnico/verifica.md`. Originale e SHA-256 nel rapporto di migrazione; questa voce conserva i riferimenti esistenti e non autorizza nuovi interventi.
 
+## Gate a riposo e prova a schermo di `a877abd` — 4 novembre 2026
+
+Gate in una sola passata dopo `dotnet build-server shutdown` e 15 s, a riposo (nessun processo dotnet residuo né Outlook): 1.800 test per runtime net48/net10, 23 script, `check-code.ps1` (0 avvisi, 0 errori, 8 ponti skill), smoke net48 x64/x86, NuGet senza vulnerabilità; nessun fallimento né ripetizione. Installata su WS-DP01 la build firmata di `a877abd` (92 file identici alla cartella publish, `config.json` invariato). Sullo schermo principale (4K, 150%) con tema scuro: la lista profili del ConfigTool mostra il contorno di focus con le frecce; i passi 1–4 della procedura guidata hanno il testo accanto a ogni «?» e le caselle senza tagli. Non provati: 200% di scala, cambio tema con le icone della tray, nomi accessibili con l'Assistente vocale, caselle con etichetta lunga (a larghezza predefinita non vanno a capo).
+
 ## Automazione Claude Code e script di firma — 3 novembre 2026
 
 `sign-binaries.ps1` e `create-code-signing-cert.ps1` leggono la password del PFX solo da `ONLYAPPS_PFX_PASSWORD` (parametro `-PasswordPlain` rimosso); `Packaging.Tests.ps1` verifica l'assenza del parametro e l'errore con variabile mancante. Senza BOM, Windows PowerShell 5.1 legge male gli accenti: provato con `Parser.ParseFile` su `smoke-net48.ps1`, `WebViewBoundary.Smoke.ps1` e `PanePolicy.Tests.ps1`, che ora hanno il BOM UTF-8 (`WebViewFocus.Smoke.ps1` lo aveva già).
