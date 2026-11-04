@@ -74,11 +74,11 @@ public sealed class SetupWizardForm : Form
 
         _steps.Add(Page(
             Note("Aggiunge a Outlook classico la scheda OnlyWorkspace e un riquadro laterale con sintesi, bozze, verifica di sicurezza e ricerca.",
-                "OnlyWorkspace aggiunge a Outlook classico la scheda OnlyWorkspace sulla barra multifunzione e un riquadro laterale: sintesi, bozze di risposta, verifica di sicurezza, attività e appuntamenti, estrazione di dati, ricerca e analisi della posta con un modello IA."),
+                "OnlyWorkspace aggiunge a Outlook classico una scheda e un riquadro laterale: sintesi, bozze di risposta, verifica di sicurezza, attività e appuntamenti, estrazione di dati, ricerca e analisi della posta con un modello IA."),
             Note("Le bozze si aprono in Outlook da rivedere: non viene inviata nessuna email da sola.",
-                "Le bozze si aprono in Outlook da rivedere: OnlyWorkspace non invia email automaticamente. I profili IA e Web Search determinano quali dati possono uscire dal PC; gli invii esterni richiedono l'informativa accettata in Privacy e dati."),
+                "Le bozze si aprono in Outlook da rivedere: OnlyWorkspace non invia email. I profili IA e Web Search determinano quali dati possono uscire dal PC; gli invii esterni richiedono l'informativa accettata in Privacy e dati."),
             Note("Imposta modello IA, archivio e avvio automatico; ogni scelta si cambia poi nella Configurazione.",
-                "Questa procedura imposta per tutti gli utenti del PC il modello IA e l'autorizzazione dell'archivio, salvati in %ProgramData%\\OnlyWorkspace\\config.json e secrets.bin (chiavi cifrate; il salvataggio può chiedere l'autorizzazione di amministratore). Per l'utente corrente imposta l'avvio automatico e controlla che Outlook carichi l'add-in. Ogni scelta si cambia poi nelle pagine della Configurazione.")));
+                "Imposta per tutti gli utenti del PC il modello IA e l'autorizzazione dell'archivio (%ProgramData%\\OnlyWorkspace\\config.json e secrets.bin, chiavi cifrate; il salvataggio può chiedere l'autorizzazione di amministratore) e, per l'utente corrente, avvio automatico e caricamento dell'add-in. Ogni scelta si cambia poi nella Configurazione.")));
 
         _cmbProvider.Items.AddRange(ProviderCatalog.All.Cast<object>().ToArray());
         if (ProviderCatalog.IsLegacy(Profile.Type)) _cmbProvider.Items.Add(ProviderCatalog.Get(Profile.Type));
@@ -113,18 +113,18 @@ public sealed class SetupWizardForm : Form
                 "L'archivio rende cercabile la posta delle cassette consentite, anche a Outlook chiuso, e alimenta Ricostruisci la pratica."),
             _chkArchive, _chkAttachments,
             Note("Il database è cifrato e resta su questo PC; i file allegati originali non vengono archiviati.",
-                "Il database cifrato in %LOCALAPPDATA%\\OnlyWorkspace\\archive conserva intestazioni, corpo integrale acquisito e, se abilitato, testo degli allegati leggibili. La ricerca usa tutto il testo conservato; l'anteprima mostra solo i primi 255 caratteri. I file allegati originali non vengono archiviati."),
+                "Il database cifrato in %LOCALAPPDATA%\\OnlyWorkspace\\archive conserva intestazioni, corpo integrale acquisito e, se abilitato, testo degli allegati leggibili; la ricerca usa tutto il testo, l'anteprima i primi 255 caratteri. I file allegati originali non vengono archiviati."),
             Note("Raccolta e ricerca sono locali e non usano modelli IA.",
                 "La raccolta e la ricerca sono locali e non usano modelli IA. Le azioni di analisi seguono il livello di esposizione del profilo e l'informativa accettata."),
             Note("Vale per ogni utente su tutte le cassette aperte; ognuno può restringerlo in Configurazione.",
-                "Si attiva per ogni utente su tutte le cassette aperte, comprese quelle aggiunte in seguito; ognuno può restringerlo o spegnerlo in Configurazione → Archivio email → Le mie cassette. La raccolta avviene solo con Outlook aperto e il PC inattivo.")));
+                "Si attiva per ogni utente su tutte le cassette aperte, anche quelle aggiunte dopo; si restringe o si spegne in Configurazione → Archivio email → Le mie cassette. La raccolta richiede Outlook aperto e PC inattivo.")));
 
         _chkAutostart.Checked = true;
         _btnRepair.Click += (_, _) => RepairAddin();
         _steps.Add(Page(
             _chkAutostart,
             Note("All'accesso parte l'icona nell'area di notifica, che ospita l'archivio e gli avvisi di spazio.",
-                "All'accesso parte l'icona OnlyWorkspace nell'area di notifica: ospita il motore dell'archivio, la ricerca a Outlook chiuso e gli avvisi di spazio. Scrive la voce OnlyWorkspaceTray in HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run per il solo utente corrente."),
+                "All'accesso parte l'icona nell'area di notifica: ospita il motore dell'archivio, la ricerca a Outlook chiuso e gli avvisi di spazio. Scrive OnlyWorkspaceTray in HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run (solo utente corrente)."),
             Ui.SetFont(new SelectableLabel { Text = "Add-in in Outlook", AutoSize = true, Margin = new Padding(0, 12, 0, 2) }, 9F, family: "Segoe UI Semibold"),
             _lblAddin, _btnRepair, _lblOutlook));
 
@@ -139,7 +139,7 @@ public sealed class SetupWizardForm : Form
             (_txtKey, "Chiave fornita dal servizio cloud. Viene salvata cifrata su questo PC (secrets.bin), mai in chiaro."),
             (test, "Prova indirizzo, chiave e modello con una richiesta di prova, senza dati di Outlook. Senza modello mostra l'elenco da cui sceglierlo."),
             (_chkArchive, "Consente a ogni utente di conservare intestazioni e corpo integrale acquisito nel proprio archivio cifrato, cercabile anche a Outlook chiuso. Richiede Applica e salva, con eventuale UAC."),
-            (_chkAttachments, "Conserva nell'archivio cifrato il testo degli allegati leggibili (PDF, Office, testo), per cercarlo e recuperarlo. I file originali non vengono archiviati. Non autorizza da solo invii cloud. Richiede Applica e salva, con eventuale UAC."),
+            (_chkAttachments, "Conserva nell'archivio cifrato il testo degli allegati leggibili (PDF, Office, testo) per cercarlo; i file originali non vengono archiviati. Non autorizza da solo invii cloud. Richiede Applica e salva, con eventuale UAC."),
             (_chkAutostart, "All'accesso a Windows parte l'icona OnlyWorkspace nell'area di notifica, necessaria all'archivio. Vale solo per il tuo utente."),
             (_btnRepair, "Se Outlook ha disattivato l'add-in, lo riattiva per il tuo utente e chiede a Outlook di non disattivarlo più. Poi riavvia Outlook."),
             (_btnBack, "Torna al passo precedente senza perdere le scelte."),

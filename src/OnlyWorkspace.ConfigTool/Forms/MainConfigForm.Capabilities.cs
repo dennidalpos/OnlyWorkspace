@@ -38,22 +38,25 @@ public sealed partial class MainConfigForm
         "e ragionamento, una alla volta, al massimo 60 secondi ciascuna e senza ripetizioni. Con un servizio a pagamento consuma pochi token; " +
         "la Ricerca web, se selezionata, esegue una vera ricerca che il fornitore può addebitare.";
 
+    private const string ProbeIdle = "Prove non ancora eseguite per questo profilo.";
+
     private void BuildCapabilityRows(TableLayoutPanel grid)
     {
         var intro = new SelectableLabel
         {
             AutoSize = true, MaximumSize = new Size(440, 0), Margin = new Padding(3, 6, 3, 8),
-            Text = "«Scegli modello…» (in Connessione) elenca i modelli e non prova nulla. «Verifica connessione» controlla indirizzo, chiave e modello. " +
-                   "«Aggiorna capacità» rilegge ciò che il servizio dichiara, senza generare testo e senza costi. «Prova funzioni» verifica davvero le funzioni usate dall'app."
+            Text = "«Scegli modello…» elenca i modelli senza provare nulla. «Verifica connessione» controlla indirizzo, chiave e modello. " +
+                   "«Aggiorna capacità» rilegge ciò che il servizio dichiara, senza costi. «Prova funzioni» verifica davvero le funzioni usate dall'app."
         };
         Theme.SetTone(intro, Tone.Muted);
-        AddWide(grid, intro, "Differenza fra i comandi del profilo.");
+        AddWide(grid, intro, "Differenza fra i comandi del profilo.",
+            lead: "Cosa fanno Scegli modello, Verifica connessione, Aggiorna capacità e Prova funzioni.");
 
         _capabilityTable = new TableLayoutPanel { AutoSize = true, ColumnCount = 3, Margin = new Padding(3, 0, 3, 6) };
         for (int i = 0; i < 3; i++) _capabilityTable.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         AddWide(grid, _capabilityTable,
-            "Per ogni funzione: esito (sì, no, non dichiarata, non verificabile) e da dove viene: dichiarata dal servizio, verificata dall'app con una prova o prova inconcludente. " +
-            "Visione e Strumenti sono solo dichiarati: l'app non li usa e non li prova.");
+            "Per ogni funzione: esito (sì, no, non dichiarata, non verificabile) e origine (dichiarata dal servizio, verificata con una prova o prova inconcludente). " +
+            "Visione e Strumenti sono solo dichiarati: l'app non li usa né li prova.");
 
         _btnRefreshCapabilities = SecondaryButton("Aggiorna capacità");
         _btnRefreshCapabilities.Click += async (s, e) => await RefreshDeclaredCapabilitiesAsync();
@@ -71,9 +74,15 @@ public sealed partial class MainConfigForm
         commands.Anchor = AnchorStyles.Left | AnchorStyles.Right;
         AddWide(grid, commands, "Aggiorna capacità, Prova funzioni e Annulla.");
 
-        _chkProbeWeb = AddWide(grid, new ThemedCheckBox { Text = "Prova anche la Ricerca web", AutoSize = true },
-            "Aggiunge alle prove una vera ricerca web di prova, la stessa di «Verifica Ricerca web» in Autorizzazioni. Spento per impostazione predefinita.");
-        _lblProbeStatus = AddWide(grid, new OperationalStatusLabel { AutoSize = true, MaximumSize = new Size(440, 0), Margin = new Padding(3, 4, 3, 6), Text = ProbeCost },
+        // The cost note sits behind a «?» beside the checkbox; the status label below stays visible, short, and shows progress.
+        _chkProbeWeb = new ThemedCheckBox { Text = "Prova anche la Ricerca web", AutoSize = true };
+        Tip(_chkProbeWeb, "Aggiunge alle prove una vera ricerca web di prova, la stessa di «Verifica Ricerca web» in Autorizzazioni. Spento per impostazione predefinita.");
+        var probeWebRow = Inline(_chkProbeWeb, ContextHelp.Button(this, "Costo delle prove", () => ProbeCost, _tips));
+        int probeWebIndex = grid.RowCount++;
+        grid.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        grid.Controls.Add(probeWebRow, 0, probeWebIndex);
+        grid.SetColumnSpan(probeWebRow, grid.ColumnCount);
+        _lblProbeStatus = AddWide(grid, new OperationalStatusLabel { AutoSize = true, MaximumSize = new Size(440, 0), Margin = new Padding(3, 4, 3, 6), Text = ProbeIdle },
             "Avanzamento ed esito delle prove; i risultati si salvano con Salva.");
         Theme.SetTone(_lblProbeStatus, Tone.Muted);
         // Wrapped at the visible width of the section, like the exposure note: a fixed width was cut off at 100%.

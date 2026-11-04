@@ -60,10 +60,10 @@ public sealed class ConfigToolImportTests : IDisposable
 
     public static IEnumerable<object[]> Casing()
     {
-        foreach (string profiles in new[] { "profiles", "Profiles", "PROFILES" })
-        foreach (string auth in new[] { "auth", "Auth", "AUTH" })
-        foreach (string secret in new[] { "secret", "Secret", "SECRET" })
-            yield return new object[] { profiles, auth, secret };
+        // Each key is matched independently: lower, mixed and upper on all three are enough.
+        yield return new object[] { "profiles", "auth", "secret" };
+        yield return new object[] { "Profiles", "Auth", "Secret" };
+        yield return new object[] { "PROFILES", "AUTH", "SECRET" };
     }
 
     [Theory]

@@ -77,6 +77,43 @@ public sealed class ArchiveSearchFormTests
         if (error != null) ExceptionDispatchInfo.Capture(error).Throw();
     }
 
+    /// <summary>INT01: invoice filters are folded away, a hint tells when one is set, results get the height, compacting is not red.</summary>
+    [Fact]
+    public void ArchiveWindow_FoldsInvoiceFilters_GivesResultsTheHeight_AndKeepsCompactNeutral()
+    {
+        Exception? error = null;
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                using var form = new ArchiveSearchForm(refreshOnShow: false) { StartPosition = FormStartPosition.Manual, Location = new Point(-4000, -4000) };
+                form.Show();
+                Application.DoEvents();
+                var factBar = Descendants(form).Single(c => c.Name == "FactFilters");
+                var toggle = Descendants(form).OfType<Button>().Single(b => b.Name == "FactFiltersToggle");
+                Assert.False(factBar.Visible, "Filters on amounts and due dates start folded.");
+                Assert.EndsWith("▸", toggle.Text);
+                toggle.PerformClick();
+                Assert.True(factBar.Visible);
+                Assert.EndsWith("▾", toggle.Text);
+                Assert.Equal("Espanso", toggle.AccessibleDescription);
+                toggle.PerformClick();
+                Descendants(form).Single(c => c.Name == "FactCurrency").Text = "EUR";
+                Assert.Contains("(attivi)", toggle.Text);
+
+                var split = Assert.Single(Descendants(form).OfType<SplitContainer>());
+                Assert.True(split.Panel1.Height > split.Panel2.Height, $"Results {split.Panel1.Height} px vs preview {split.Panel2.Height} px.");
+                var compact = Descendants(form).OfType<FlatButton>().Single(b => b.Text == "Compatta database");
+                Assert.NotEqual(ButtonKind.Danger, compact.Kind);
+            }
+            catch (Exception ex) { error = ex; }
+        });
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        Assert.True(thread.Join(TimeSpan.FromSeconds(10)));
+        if (error != null) ExceptionDispatchInfo.Capture(error).Throw();
+    }
+
     private static IEnumerable<Control> Descendants(Control root)
     {
         foreach (Control child in root.Controls)

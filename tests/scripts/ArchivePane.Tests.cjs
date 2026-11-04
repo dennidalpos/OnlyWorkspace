@@ -82,7 +82,14 @@ context.renderArchive({ available: true, active: true, light: 'Error', label: 'e
 assert.equal(nodes.get('arPhase').dataset.light, 'Waiting');
 assert.equal(nodes.get('arErrorRow').hidden, false);
 assert.equal(nodes.get('arError').textContent, '1 cartella non leggibile');
+assert.equal(nodes.get('arErrorMore').hidden, true, 'No failing mailbox in the list: nothing to point at.');
 assert.equal(nodes.get('btnArchiveState').attrs['aria-label'], 'Archivio: errori · fase attesa inattività. 1 cartella non leggibile');
+// The count names the mailboxes that failed and points at the Cassette table.
+context.renderArchive({ available: true, active: true, light: 'Error', label: 'errori', phase: 'attesa inattività', phaseLight: 'Waiting',
+  error: null, reason: '1 cartella non leggibile', metrics: [], stores: [{ ...stores[0], Name: 'a@example.test', State: 'errore', Error: 'Cartella «a@example.test/Posta» non disponibile.' }, stores[0]], cards: { state: 'off' } });
+assert.equal(nodes.get('arError').textContent, '1 cartella non leggibile · a@example.test');
+assert.equal(nodes.get('arErrorMore').hidden, false);
+assert.match(html, /\$\('arErrorMore'\)\.addEventListener\('click'[\s\S]{0,120}statusAdvanced'\)\.open = true/);
 context.renderArchive({ available: true, active: true, light: 'Ok', phase: 'aggiornato', metrics: [], stores: [], cards: { state: 'off' } });
 assert.equal(nodes.get('arErrorRow').hidden, true, 'Back to green: no stale reason.');
 announced.length = 0;

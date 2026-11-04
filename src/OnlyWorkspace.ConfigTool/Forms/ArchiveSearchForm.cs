@@ -70,7 +70,7 @@ public sealed class ArchiveSearchForm : Form
         Text = "OnlyWorkspace – Ricerca e sincronizzazione archivio";
         Icon = Services.AppIconHelper.GetAppIcon();
         Font = new Font("Segoe UI", 9F);
-        Size = new Size(1000, 650);
+        Size = new Size(1000, 720);
         MinimumSize = new Size(680, 480);
         _sync.AccessibleDescription = "Avvia un nuovo controllo delle cassette quando Outlook è aperto";
         _cancel.Enabled = false;
@@ -79,8 +79,8 @@ public sealed class ArchiveSearchForm : Form
         search.MinimumSize = new Size(96, 28);
         var refresh = Command("Aggiorna stato");
         var optimize = Command("Ottimizza indice");
+        // Not destructive (nothing is deleted, the archive only pauses): red is kept for actions that lose data.
         var compact = Command("Compatta database");
-        compact.Kind = ButtonKind.Danger;
         _commands.AddRange(new Control[] { _profiles, _query, search, _previous, _next, refresh, _sync, optimize, compact, _pause, _original, _flow, _cancel });
         foreach (var (control, tip) in new (Control, string)[]
         {
@@ -100,7 +100,7 @@ public sealed class ArchiveSearchForm : Form
             (_metrics, "Numeri dell'archivio: email lette, testi indicizzati, spazio su disco. Gli stessi del pannello Stato del riquadro."),
             (_stores, "Una riga per cassetta di Outlook: quante email sono archiviate, quanto testo è indicizzato e l'ultimo controllo completo."),
             (optimize, "Riorganizza l'indice di ricerca per renderlo più rapido. Non cambia nulla in Outlook; durante l'operazione l'archivio è in pausa."),
-            (compact, "Recupera lo spazio lasciato libero nel database (per esempio dopo aver tolto una cassetta). Richiede spazio temporaneo su disco circa doppio del database e può durare minuti; nel frattempo l'archivio è in pausa."),
+            (compact, "Recupera lo spazio libero nel database (per esempio dopo aver tolto una cassetta). Richiede su disco circa il doppio del database e può durare minuti; l'archivio resta in pausa."),
             (_sections, "Ricerca nell'archivio, stato della raccolta delle email e operazioni di manutenzione.")
         })
             _tips.SetToolTip(control, tip);
@@ -149,8 +149,24 @@ public sealed class ArchiveSearchForm : Form
         _tips.SetToolTip(_dueTo, "Ultimo giorno di scadenza incluso; attiva la casella per applicarlo.");
         _tips.SetToolTip(resetFacts, "Toglie i filtri su importi e scadenze e ripete la ricerca locale. Non cambia dati o configurazione.");
         _commands.Add(factBar);
-        var searchControls = Rows(SizeType.AutoSize, SizeType.AutoSize);
-        searchControls.Controls.Add(searchBar, 0, 0); searchControls.Controls.Add(factBar, 0, 1);
+        // Amount and due-date filters only matter for invoices: folded away until asked for, with a hint when one is set.
+        var factToggle = Command("Filtri su importi e scadenze ▸");
+        factToggle.Name = "FactFiltersToggle";
+        factToggle.AccessibleName = "Filtri su importi e scadenze";
+        _tips.SetToolTip(factToggle, "Mostra o nasconde i filtri su importi, valuta e scadenze trovati nel testo delle email.");
+        factBar.Visible = false;
+        void UpdateFactToggle()
+        {
+            bool active = _amountMin.Text.Length > 0 || _amountMax.Text.Length > 0 || _currency.Text.Length > 0 || _dueFrom.Checked || _dueTo.Checked;
+            factToggle.Text = "Filtri su importi e scadenze" + (active ? " (attivi)" : string.Empty) + (factBar.Visible ? " ▾" : " ▸");
+            factToggle.AccessibleDescription = factBar.Visible ? "Espanso" : "Compresso";
+        }
+        factToggle.Click += (_, _) => { factBar.Visible = !factBar.Visible; UpdateFactToggle(); };
+        foreach (var box in new[] { _amountMin, _amountMax, _currency }) box.TextChanged += (_, _) => UpdateFactToggle();
+        foreach (var picker in new[] { _dueFrom, _dueTo }) picker.ValueChanged += (_, _) => UpdateFactToggle();
+        _commands.Add(factToggle);
+        var searchControls = Rows(SizeType.AutoSize, SizeType.AutoSize, SizeType.AutoSize);
+        searchControls.Controls.Add(searchBar, 0, 0); searchControls.Controls.Add(factToggle, 0, 1); searchControls.Controls.Add(factBar, 0, 2);
         searchLayout.Controls.Add(searchControls, 0, 0);
         var searchNote = Note("Cerca nell'indice anche a Outlook chiuso. Seleziona un risultato per l'anteprima; il testo acquisito è disponibile anche a Outlook chiuso.");
         searchLayout.Controls.Add(searchNote, 0, 1);
@@ -171,6 +187,15 @@ public sealed class ArchiveSearchForm : Form
         resultActions.Controls.AddRange(new Control[] { _original, _flow, _cancel });
         previewCard.Controls.Add(_preview);
         previewCard.Controls.Add(resultActions);
+        // The results list is what is read first: it gets most of the height once, then the user's own splitter position stays.
+        bool splitPlaced = false;
+        _searchSplit.SizeChanged += (_, _) =>
+        {
+            int room = _searchSplit.Height - _searchSplit.SplitterWidth;
+            if (splitPlaced || room < Ui.Px(this, 260)) return;
+            splitPlaced = true;
+            _searchSplit.SplitterDistance = Math.Min((int)(room * 0.62), room - Ui.Px(this, 110));
+        };
         _searchSplit.Panel1.Controls.Add(resultsCard);
         _searchSplit.Panel2.Controls.Add(previewCard);
         searchLayout.Controls.Add(_searchSplit, 0, 3);
@@ -213,8 +238,10 @@ public sealed class ArchiveSearchForm : Form
         _results.Columns[3].FillWeight = 55;
         Columns(_metrics, ("Voce", 70, false), ("Fatti", 35, true), ("Totale", 35, true), ("%", 25, true), ("Restano", 35, true), ("Non letti", 45, true));
         _metrics.Columns[3].HeaderCell.ToolTipText = "Percentuale sugli elementi leggibili; non include la colonna Non letti.";
-        Columns(_stores, ("Cassetta", 80, false), ("Stato", 45, false), ("Email", 35, true), ("Testi %", 30, true), ("Restano", 35, true), ("Allegati", 35, true),
-            ("Cartelle", 35, true), ("Ultimo inventario", 55, true), ("Errore", 60, false));
+        Columns(_stores, ("Cassetta", 70, false), ("Stato", 40, false), ("Email", 30, true), ("Testi %", 28, true), ("Restano", 30, true), ("Allegati", 32, true),
+            ("Cartelle", 30, true), ("Ultimo inventario", 50, true), ("Errore", 110, false));
+        // The reason of a failed mailbox is the point of the column: it wraps (rows grow) and the full text is in the tooltip.
+        _stores.Columns[8].DefaultCellStyle.WrapMode = DataGridViewTriState.True;
         Ui.ScaleFromDesignDpi(this);
         void MatchMinimumSize() => MinimumSize = new Size(Ui.Px(this, 680), Ui.Px(this, 480));
         Load += (_, _) => MatchMinimumSize();
@@ -415,9 +442,10 @@ public sealed class ArchiveSearchForm : Form
         foreach (var c in coverage)
         {
             var s = ArchiveMetrics.Store(StoreLabel(c), !c.Closed, true, c);
-            _stores.Rows.Add(s.Name, s.State, s.Emails.ToString("N0"), Pct(s.BodiesPercent), s.BodiesRemaining.ToString("N0"),
+            int index = _stores.Rows.Add(s.Name, s.State, s.Emails.ToString("N0"), Pct(s.BodiesPercent), s.BodiesRemaining.ToString("N0"),
                 s.AttachmentsDone.ToString("N0") + "/" + s.AttachmentsTotal.ToString("N0"), s.FoldersDone.ToString("N0") + "/" + s.Folders.ToString("N0"),
                 s.LastInventoryUtc.HasValue ? s.LastInventoryUtc.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm") : "mai", s.Error);
+            if (!string.IsNullOrEmpty(s.Error)) _stores.Rows[index].Cells[8].ToolTipText = s.Error;
         }
         // Read-only figures: no row looks selected.
         _metrics.ClearSelection();
@@ -474,7 +502,7 @@ public sealed class ArchiveSearchForm : Form
         {
             $"Cronologia: {flow.Timeline.Count} email" + (flow.LimitReached ? " · limite di 20.000 raggiunto: restringi l'ambito" : string.Empty),
             "Con Outlook chiuso sono disponibili anche i testi integrali già acquisiti.",
-            "Una voce per Message-ID, con tutte le posizioni delle copie. Nelle cassette IMAP/OST le assenze si verificano con Outlook al controllo completo.", string.Empty
+            "Una voce per Message-ID, con tutte le posizioni delle copie. Nelle cassette IMAP/OST le assenze si verificano al controllo completo, con Outlook aperto.", string.Empty
         };
         if (flow.MetadataIncomplete) lines.Add("Intestazioni della catena incomplete.");
         if (flow.FactsIncomplete) lines.Add("Estrazione dei fatti incompleta.");
@@ -596,6 +624,16 @@ public sealed class ArchiveSearchForm : Form
             grid.DefaultCellStyle.SelectionForeColor = c.OnAccent;
             grid.DefaultCellStyle.Padding = grid.ColumnHeadersDefaultCellStyle.Padding = new Padding(4, 3, 4, 3);
             Theme.ApplyScrollBars(grid);
+        }
+        // Native date pickers: only the drop-down calendar takes the theme; the edit box of the native control stays light
+        // (BackColor is ignored with visual styles), which is why the filters are folded away until asked for.
+        foreach (var picker in new[] { _dueFrom, _dueTo })
+        {
+            picker.CalendarMonthBackground = c.Card;
+            picker.CalendarForeColor = c.Text;
+            picker.CalendarTitleBackColor = c.Border;
+            picker.CalendarTitleForeColor = c.Text;
+            picker.CalendarTrailingForeColor = c.Muted;
         }
         _searchSplit.BackColor = c.Window;
         foreach (TabPage page in _tabs.TabPages) page.BackColor = c.Window;

@@ -33,6 +33,7 @@ Guide del comportamento disponibile, organizzate per destinatario. Per i primi p
 | Lettura degli allegati, formati e limiti | [Allegati](tecnico/allegati.md) |
 | Programmi, librerie e servizi usati | [Dipendenze](tecnico/dipendenze.md) |
 | Comandi di verifica, CI e stato della qualifica | [Verifica e qualifica](tecnico/verifica.md) |
+| Stati, termini e testi dell'interfaccia | [Vocabolario](tecnico/interfaccia-vocabolario.md), [Inventario dei testi](tecnico/inventario-testi-interfaccia.md) |
 | Corpus sintetico, misure dei fatti e revisione della fedeltà | [Banco di fedeltà](../tests/fixtures/fidelity/README.md) |
 
 ## Fonti e manutenzione

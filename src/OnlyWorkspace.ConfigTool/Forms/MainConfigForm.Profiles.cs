@@ -215,7 +215,7 @@ public sealed partial class MainConfigForm
         _probeRun?.Cancel();
         _connectionCheck?.Cancel();
         _capabilityRefresh?.Cancel();
-        SetProbeStatus(ProbeCost, Tone.Muted);
+        SetProbeStatus(ProbeIdle, Tone.Muted);
 
         bool wasLoading = _isLoading;
         _isLoading = true;

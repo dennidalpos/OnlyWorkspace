@@ -604,6 +604,114 @@ public sealed class MainConfigFormTests
         });
     }
 
+    /// <summary>INT01: a long description kept behind a «?» shows its first sentence beside it, and nothing runs past the card.</summary>
+    [Fact]
+    public void ExposureNote_ShowsALeadBesideItsHelpButton()
+    {
+        OnSta(directory =>
+        {
+            var cloud = new LlmProfileConfig
+            {
+                Id = "c", DisplayName = "c", Type = "openai", BaseUrl = "https://api.example.com", Model = "m", External = true,
+                Exposure = OnlyWorkspace.Core.Privacy.ExposureLevel.Standard
+            };
+            Write(directory, new WorkspaceConfig { DefaultProfile = "a", Profiles = new() { Local("a"), cloud } }, new() { ["profile_a_token"] = "s" });
+            new FileConfigurationService(directory, directory).SetUserFlag("guidedSetupDone", true);
+            using var form = new MainConfigForm(directory, trayContext: null, preferencesDir: directory)
+            {
+                StartPosition = FormStartPosition.Manual, Location = new System.Drawing.Point(-4000, -4000)
+            };
+            form.Show();
+            var list = Field<ListBox>(form, "_lstProfiles");
+            var note = Field<Label>(form, "_lblExposure");
+            var row = (FlowLayoutPanel)note.Parent!;
+            var grid = (TableLayoutPanel)row.Parent!;
+
+            list.SelectedIndex = 0;
+            Application.DoEvents();
+            var lead = row.Controls.OfType<Label>().Single(l => l != note);
+            // The tab is not on screen: the control's own flag, not the effective visibility.
+            Assert.True(OwnVisible(lead));
+            Assert.StartsWith("Profilo locale", lead.Text);
+            Assert.DoesNotContain(row.Controls.OfType<Button>(), b => OwnVisible(b) && b.Text == "?");
+
+            list.SelectedIndex = 1;
+            grid.Visible = true;
+            grid.PerformLayout();
+            Application.DoEvents();
+            Assert.True(OwnVisible(lead) && lead.Text.Length > 0 && lead.Text.Length <= 91, lead.Text);
+            var help = Assert.Single(row.Controls.OfType<Button>());
+            Assert.True(OwnVisible(help));
+            Assert.True(note.Text.Length > lead.Text.Length, "The «?» opens more than what is already visible.");
+            int right = grid.PointToClient(help.PointToScreen(new System.Drawing.Point(help.Width, 0))).X;
+            Assert.True(right <= grid.ClientSize.Width, $"«?» ends at {right}, grid is {grid.ClientSize.Width} wide");
+        });
+    }
+
+    /// <summary>INT01: the budget warning appears only when it applies, with no standing «?», and the probe status stays visible.</summary>
+    [Fact]
+    public void ContextAndCapabilities_HaveNoOrphanHelpAndKeepTheProbeStatusVisible()
+    {
+        OnSta(directory =>
+        {
+            Write(directory, new WorkspaceConfig { DefaultProfile = "a", Profiles = new() { Local("a") } }, new() { ["profile_a_token"] = "s" });
+            new FileConfigurationService(directory, directory).SetUserFlag("guidedSetupDone", true);
+            using var form = new MainConfigForm(directory, trayContext: null, preferencesDir: directory)
+            {
+                StartPosition = FormStartPosition.Manual, Location = new System.Drawing.Point(-4000, -4000)
+            };
+            form.Show();
+            Application.DoEvents();
+            var hint = Field<Label>(form, "_lblBudgetHint");
+            Assert.DoesNotContain(hint.Parent!.Controls.OfType<Button>(), b => b.Text == "?");
+
+            var status = Field<OperationalStatusLabel>(form, "_lblProbeStatus");
+            Assert.True(status.Visible || !status.Parent!.Visible, "The probe status is a label of the section, not hidden behind a «?».");
+            Assert.NotEqual(OnlyWorkspace.Core.Archive.StatusLight.Working, status.State);
+            var probeWeb = Field<CheckBox>(form, "_chkProbeWeb");
+            Assert.Contains(probeWeb.Parent!.Controls.OfType<Button>(), b => b.AccessibleName == "Informazioni: Costo delle prove");
+            Assert.True(status.Text.Length <= 100, "A short status: the cost note lives behind the «?».");
+        });
+    }
+
+    /// <summary>INT01: «Livello di log» used to run past the card edge with its «?» (Generale, any scale).</summary>
+    [Theory]
+    [InlineData(1f)]
+    [InlineData(1.5f)]
+    [InlineData(2f)]
+    public void GeneralPage_HelpButtonsStayInsideTheirGrid(float scale)
+    {
+        OnSta(directory =>
+        {
+            Write(directory, new WorkspaceConfig { DefaultProfile = "a", Profiles = new() { Local("a") } }, new() { ["profile_a_token"] = "s" });
+            new FileConfigurationService(directory, directory).SetUserFlag("guidedSetupDone", true);
+            using var form = new MainConfigForm(directory, trayContext: null, preferencesDir: directory)
+            {
+                StartPosition = FormStartPosition.Manual, Location = new System.Drawing.Point(-4000, -4000)
+            };
+            form.Show();
+            Application.DoEvents();
+            if (scale > 1f)
+            {
+                form.Font = new System.Drawing.Font(form.Font.FontFamily, form.Font.SizeInPoints * scale);
+                form.Scale(new System.Drawing.SizeF(scale, scale));
+            }
+            typeof(MainConfigForm).GetMethod("ShowPage", Flags)!.Invoke(form, new object[] { 1 });
+            Application.DoEvents();
+            Control cell = Field<ComboBox>(form, "_cmbLogLevel");
+            while (cell.Parent is not TableLayoutPanel && cell.Parent != null) cell = cell.Parent;
+            var grid = (TableLayoutPanel)cell.Parent!;
+            grid.PerformLayout();
+            var helps = Descendants(grid).OfType<Button>().Where(b => b.Text == "?" && b.Visible).ToList();
+            Assert.NotEmpty(helps);
+            foreach (var help in helps)
+            {
+                int right = grid.PointToClient(help.PointToScreen(new System.Drawing.Point(help.Width, 0))).X;
+                Assert.True(right <= grid.ClientSize.Width, $"«{help.AccessibleName}» ends at {right}, grid is {grid.ClientSize.Width} wide");
+            }
+        });
+    }
+
     /// <summary>The credits page is built when first shown, not at every ConfigTool start.</summary>
     [Fact]
     public void AboutPage_IsFilledWhenOpened()

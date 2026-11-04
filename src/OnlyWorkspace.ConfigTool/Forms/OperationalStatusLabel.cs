@@ -57,7 +57,7 @@ internal sealed class OperationalStatusLabel : SelectableLabel
             pen.Width = 2;
             e.Graphics.DrawArc(pen, area, _frame * 30, 270);
         }
-        else TextRenderer.DrawText(e.Graphics, State == StatusLight.Ok ? "✓" : State == StatusLight.Error ? "!" : State == StatusLight.Paused ? "▲" : State == StatusLight.Waiting ? "…" : "–",
+        else TextRenderer.DrawText(e.Graphics, State == StatusLight.Ok ? "✓" : State == StatusLight.Error ? "!" : State == StatusLight.Paused ? "‖" : State == StatusLight.Waiting ? "…" : "–",
             Font, area, color, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
     }
 

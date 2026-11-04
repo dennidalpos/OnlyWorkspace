@@ -159,7 +159,7 @@ public sealed partial class MainConfigForm
         };
 
         _cmbProvider = AddRow(conn, "Servizio IA:", Combo(240),
-            "Sceglie tra sei servizi preimpostati. Compatibile OpenAI richiede un indirizzo e non offre ricerca web o lettura delle capacità specifiche. I servizi precedenti particolari restano disponibili solo nei rispettivi profili. La modifica si applica al salvataggio.");
+            "Sceglie tra sei servizi preimpostati. Compatibile OpenAI richiede un indirizzo e non offre ricerca web né lettura delle capacità. I servizi precedenti restano solo nei loro profili. La modifica si applica al salvataggio.");
         _cmbProvider.Items.AddRange(ProviderCatalog.All.Cast<object>().ToArray());
         _cmbProvider.SelectedIndexChanged += (s, e) => OnProviderChanged();
 
@@ -245,12 +245,13 @@ public sealed partial class MainConfigForm
 
         _numBudget = Numeric(1000, 1000000, 12698, 500);
         _numBudget.ValueChanged += (s, e) => OnContextValueChanged(recomputeBudget: false);
-        Tip(_numBudget, "Solo modelli locali: quanto testo di email e allegati può entrare in una richiesta (in token, circa 3,5 caratteri l'uno). Un'email o un allegato più lungo non viene letto a pezzi: il riquadro avvisa.");
+        Tip(_numBudget, "Solo modelli locali: quanto testo di email e allegati può entrare in una richiesta (token da circa 3,5 caratteri). Un testo più lungo non viene letto a pezzi: il riquadro avvisa.");
         AddRow(ctx, "Budget token (prompt):", _numBudget, "Solo modelli locali: quanto testo di email e allegati può entrare in una richiesta.");
         _lblBudgetHint = AddRow(ctx, "", new SelectableLabel { AutoSize = true, Margin = new Padding(3, 0, 3, 6) },
             "Valore consigliato per le impostazioni scelte sopra.");
         Theme.SetTone(_lblBudgetHint, Tone.Muted);
-        DescriptionHelp(_lblBudgetHint, "Budget del contesto");
+        // A warning shown only when budget + output overflow NumCtx (UpdateBudgetHint): no standing «?» for a hidden label.
+        _lblBudgetHint.Visible = false;
 
         _numTemp = AddRow(ctx, "Temperatura:", new ThemedNumeric { Width = 100, Minimum = 0M, Maximum = 2M, DecimalPlaces = 2, Increment = 0.05M, Value = 0.3M, Anchor = AnchorStyles.Left },
             "Quanto il modello varia le risposte: 0 = sempre uguali e prudenti, valori alti = più creative ma meno precise. 0,3 va bene per sintesi e bozze.");
@@ -337,7 +338,7 @@ public sealed partial class MainConfigForm
     }
 
     private void ShowExposure() =>
-        _lblExposure.Text = _chkExternal.Checked ? ExposurePolicy.Describe(SelectedExposure) : "Profilo locale: nessun dato lascia il PC.";
+        _lblExposure.Text = _chkExternal.Checked ? ExposurePolicy.Describe(SelectedExposure) : "Profilo locale: nessun dato lascia il PC; le opzioni qui sotto non si applicano.";
 
     /// <summary>Verifica connessione with its result, always visible under the sections.</summary>
     private TableLayoutPanel BuildProfileTestRow()

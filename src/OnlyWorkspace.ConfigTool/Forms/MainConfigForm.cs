@@ -206,7 +206,7 @@ public sealed partial class MainConfigForm : Form
             await SaveActiveConfiguration();
         };
         Tip(_btnSave, "Controlla e salva le impostazioni per tutti gli utenti di questo PC (config.json e chiavi cifrate in %ProgramData%\\OnlyWorkspace). " +
-            "Serve un amministratore di Windows: altrimenti compare la richiesta UAC. Il riquadro di Outlook applica le modifiche da solo entro pochi secondi.");
+            "Serve un amministratore (richiesta UAC). Il riquadro di Outlook applica le modifiche entro pochi secondi.");
 
         _btnUnlock = SecondaryButton("Sblocca");
         _btnUnlock.Click += (s, e) => UnlockConfiguration();
@@ -487,7 +487,7 @@ public sealed partial class MainConfigForm : Form
         };
 
         _chkIndexAttachments = AddWide(behavior, new ThemedCheckBox { Text = "Testo degli allegati nell'indice dell'archivio", AutoSize = true },
-            "Rende cercabile nell'archivio anche il testo degli allegati (PDF, Office, testo); i file non vengono copiati. Spegnendola, quelle parole e i fatti derivati dagli allegati si cancellano (i nomi dei file restano); riaccendendola vengono rilette da Outlook.");
+            "Rende cercabile anche il testo degli allegati (PDF, Office, testo); i file non vengono copiati. Spegnendola si cancellano quelle parole e i fatti derivati (i nomi dei file restano); riaccendendola Outlook le rilegge.");
         _chkIndexAttachments.CheckedChanged += (s, e) =>
         {
             _config.Archive.IndexAttachmentText = _chkIndexAttachments.Checked;
@@ -495,7 +495,7 @@ public sealed partial class MainConfigForm : Form
         };
 
         _chkAttachmentOcr = AddWide(behavior, new ThemedCheckBox { Text = "OCR di scansioni e immagini allegate", AutoSize = true },
-            "Legge sul PC, con l'OCR di Windows, i PDF scansionati e le immagini allegate, nell'archivio e nel riquadro. Spenta: restano non letti; i testi già riconosciuti restano. Riaccendendola vengono riletti da Outlook.");
+            "Legge sul PC, con l'OCR di Windows, PDF scansionati e immagini allegate. Spenta: restano non letti e i testi già riconosciuti restano; riaccendendola vengono riletti.");
         _chkAttachmentOcr.CheckedChanged += (s, e) => { _config.AttachmentOcr = _chkAttachmentOcr.Checked; MarkDirty(); };
 
         _btnManagePassword = AddRow(behavior, "Password amministrativa:", SecondaryButton("Imposta / cambia / disattiva…"),
@@ -525,9 +525,11 @@ public sealed partial class MainConfigForm : Form
                 MarkDirty();
             }
         };
-        AddPair(behavior,
-            "Lotto analisi email:", _numMaxAnalysis, "In Cerca e analizza: quante email leggere a ogni passaggio prima di chiedere se continuare. Non limita la ricerca. Con un modello locale ogni email può richiedere alcuni secondi.",
-            "Livello di log:", _cmbLogLevel, "Quanto scrive il registro tecnico dell'add-in (cartella log, spazio in Privacy e dati). Informazioni per l'uso normale; Diagnostica o Traccia dettagliata solo per cercare un problema, perché scrivono molto di più.");
+        // Own rows: with a «?» the log level did not fit the pair's second column and its button was cut at the card edge.
+        AddRow(behavior, "Lotto analisi email:", _numMaxAnalysis,
+            "In Cerca e analizza: quante email leggere a ogni passaggio prima di chiedere se continuare. Non limita la ricerca. Con un modello locale ogni email può richiedere alcuni secondi.");
+        AddRow(behavior, "Livello di log:", _cmbLogLevel,
+            "Quanto scrive il registro tecnico dell'add-in. Informazioni per l'uso normale; Diagnostica o Traccia dettagliata solo per cercare un problema: scrivono molto di più.");
 
         var history = AddGroup(stack, "Storico chat");
 
@@ -564,7 +566,7 @@ public sealed partial class MainConfigForm : Form
             Text = "Avvia OnlyWorkspace all'accesso a Windows, ridotto nell'area di notifica",
             AutoSize = true,
             Checked = StartupManager.IsRunAtStartupEnabled()
-        }, "L'icona nell'area di notifica ospita il motore dell'archivio: ricerca e avvisi di spazio restano disponibili senza aprire questa finestra. Scrive la voce OnlyWorkspaceTray in HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run per il solo utente corrente; si applica subito, senza Salva. Chiudere o ridurre questa finestra la nasconde nell'area di notifica.");
+        }, "L'icona nell'area di notifica ospita il motore dell'archivio: ricerca e avvisi di spazio senza aprire questa finestra. Scrive OnlyWorkspaceTray in HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run (solo utente corrente); si applica subito, senza Salva. Chiudere la finestra la nasconde nell'area di notifica.");
         _chkAutostart.CheckedChanged += (s, e) =>
         {
             if (!_isLoading && !StartupManager.SetRunAtStartup(_chkAutostart.Checked)) SyncAutostart();
@@ -581,7 +583,7 @@ public sealed partial class MainConfigForm : Form
         var archive = AddGroup(stack, "Archivio locale");
 
         _chkArchiveEnabled = AddWide(archive, new ThemedCheckBox { Text = "Archivio locale delle email", AutoSize = true },
-            "Attiva l'archivio cifrato per utente; ognuno sceglie le cassette\nin «Le mie cassette».\nConserva i corpi integrali acquisiti e i testi degli allegati\nsupportati e consentiti, con ricerca sull'intero testo. Non conserva i file allegati originali.\nLa raccolta richiede Outlook aperto e il PC inattivo.\nLa modifica richiede Salva.");
+            "Attiva l'archivio cifrato per utente; ognuno sceglie le cassette\nin «Le mie cassette».\nConserva corpi integrali e testi degli allegati consentiti, con ricerca\nsull'intero testo, non i file originali.\nLa raccolta richiede Outlook aperto e PC inattivo.\nLa modifica richiede Salva.");
         _chkArchiveEnabled.CheckedChanged += (s, e) => { _config.Archive.Enabled = _chkArchiveEnabled.Checked; MarkDirty(); };
 
         var mine = AddGroup(stack, "Le mie cassette");
@@ -941,7 +943,7 @@ public sealed partial class MainConfigForm : Form
         _btnEgressExport.Margin = new Padding(8, 3, 3, 3);
         _btnEgressExport.Click += async (s, e) => await ExportDataEgressAsync();
         AddRow(egress, "", Inline(_btnEgressAccept, _btnEgressRevoke, _btnEgressExport), "Accettazione, revoca ed esportazione dell'informativa sull'uscita dei dati.");
-        Tip(_btnEgressExport, "Salva un PDF A4 con postazione, profili IA coinvolti, livelli e server autorizzati, dichiarazioni, responsabile che ha abilitato l'uscita dei dati, storico e testo accettato. Funziona anche in sola lettura e senza autorizzazione.");
+        Tip(_btnEgressExport, "Salva un PDF A4 con postazione, profili IA, livelli e server autorizzati, dichiarazioni, responsabile che ha abilitato l'uscita dei dati, storico e testo accettato. Funziona anche in sola lettura.");
         Tip(_btnEgressAccept, "Apre riepilogo dei profili, informativa e dichiarazioni del responsabile. Accetta e salva lega l'autorizzazione a destinazioni, livello, permessi e chiavi; un cambiamento richiede rinnovo. Il normale Salva mantiene bloccati gli invii senza consenso.");
         Tip(_btnEgressRevoke, "Ritira l'autorizzazione e salva: da quel momento nessun dato di Outlook esce verso servizi esterni. La revoca resta nello storico.");
 
@@ -1970,12 +1972,66 @@ public sealed partial class MainConfigForm : Form
         return grid;
     }
 
+    /// <summary>
+    /// Keeps a long description behind a «?» but never alone: the first sentence stays visible beside it
+    /// (same pattern as the notes of the guided setup). A description that is one short sentence needs no «?».
+    /// </summary>
     private void DescriptionHelp(Control description, string title)
     {
         var parent = description.Parent;
         if (parent == null) return;
         description.Visible = false;
-        parent.Controls.Add(ContextHelp.Button(this, title, () => description.Text, _tips));
+        var lead = new SelectableLabel { AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(3, 6, 6, 3) };
+        Theme.SetTone(lead, Tone.Muted);
+        var button = ContextHelp.Button(this, title, () => description.Text, _tips);
+        void Refresh()
+        {
+            lead.Text = LeadOf(description.Text);
+            lead.Visible = lead.Text.Length > 0;
+            button.Visible = description.Text.Trim().Length > lead.Text.Length;
+        }
+        description.TextChanged += (_, _) => Refresh();
+        Refresh();
+        Tip(lead, description.Text.Length > 0 ? description.Text : title);
+        parent.Controls.Add(lead);
+        parent.Controls.Add(button);
+        FitLead(parent, lead, button);
+    }
+
+    /// <summary>First sentence of a text, cut at a word when still long: the visible line beside a «?».</summary>
+    internal static string LeadOf(string text)
+    {
+        text = text.Trim();
+        int end = text.IndexOf(". ", StringComparison.Ordinal);
+        string first = end > 0 ? text.Substring(0, end + 1) : text;
+        if (first.Length <= 90) return first;
+        int cut = first.LastIndexOf(' ', 87);
+        return first.Substring(0, cut > 40 ? cut : 87).TrimEnd(',', ';', ':', ' ') + "…";
+    }
+
+    /// <summary>A visible lead with its «?» in one row: <paramref name="lead"/> wraps in what the grid leaves beside the button.</summary>
+    private FlowLayoutPanel LeadWithHelp(string lead, string title, Func<string> detail)
+    {
+        var label = new SelectableLabel { Text = lead, AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(3, 6, 6, 3) };
+        Theme.SetTone(label, Tone.Muted);
+        var button = ContextHelp.Button(this, title, detail, _tips);
+        var row = Inline(label, button);
+        Tip(label, detail());
+        FitLead(row, label, button);
+        return row;
+    }
+
+    private void FitLead(Control row, Label lead, Control button)
+    {
+        void Fit(object? sender, LayoutEventArgs e)
+        {
+            if (row.Parent is not TableLayoutPanel grid) return;
+            int room = Math.Max(Ui.Px(this, 120), grid.ClientSize.Width - row.Left - row.Margin.Horizontal
+                - (button.Visible ? button.Width + button.Margin.Horizontal : 0) - lead.Margin.Horizontal - Ui.Px(this, 8));
+            if (lead.MaximumSize.Width != room) lead.MaximumSize = new Size(room, 0);
+        }
+        if (row.Parent is TableLayoutPanel now) now.Layout += Fit;
+        else row.ParentChanged += (_, _) => { if (row.Parent is TableLayoutPanel grid) grid.Layout += Fit; };
     }
 
     private T AddRow<T>(TableLayoutPanel grid, string label, T field, string tip) where T : Control
@@ -2031,13 +2087,14 @@ public sealed partial class MainConfigForm : Form
         if (span > 1) grid.SetColumnSpan(cell, span);
     }
 
-    private T AddWide<T>(TableLayoutPanel grid, T field, string tip) where T : Control
+    private T AddWide<T>(TableLayoutPanel grid, T field, string tip, string? lead = null) where T : Control
     {
         int row = grid.RowCount++;
         grid.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         Control shown = field;
+        // A long label stays behind a «?», with a short line visible beside it.
         if (field is SelectableLabel && field.Text.Length > 100)
-            shown = ContextHelp.Button(this, "Informazioni", () => field.Text, _tips);
+            shown = LeadWithHelp(lead ?? LeadOf(field.Text), "Informazioni", () => field.Text);
         grid.Controls.Add(shown, 0, row);
         grid.SetColumnSpan(shown, grid.ColumnCount);
         Tip(field, tip);

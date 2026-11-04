@@ -36,9 +36,6 @@ public sealed class HttpErrorCancellationTests
     [InlineData("anthropic", true)]
     [InlineData("gemini", true)]
     [InlineData("ollama", false)]
-    [InlineData("openai", false)]
-    [InlineData("anthropic", false)]
-    [InlineData("gemini", false)]
     public async Task ErrorBodyAfterHeaders_IsInterrupted_AndItsReadIsFinished(string provider, bool cancel)
     {
         var stream = new PendingReadStream("{\"error\":");

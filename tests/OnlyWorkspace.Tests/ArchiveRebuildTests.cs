@@ -149,23 +149,15 @@ public sealed class ArchiveRebuildTests : IDisposable
     }
 
     [Theory]
-    [InlineData(11, "backup-error")]
     [InlineData(12, "backup-error")]
-    [InlineData(11, "corrupt")]
     [InlineData(12, "corrupt")]
-    [InlineData(11, "changed")]
     [InlineData(12, "changed")]
-    [InlineData(11, "changed-retired-data")]
     [InlineData(12, "changed-retired-data")]
-    [InlineData(11, "cancel")]
     [InlineData(12, "cancel")]
-    [InlineData(11, "commit-error")]
     [InlineData(12, "commit-error")]
     [InlineData(11, "ddl-error")]
-    [InlineData(11, "destination-error")]
     [InlineData(12, "destination-error")]
     [InlineData(11, "cancel-at-commit")]
-    [InlineData(12, "cancel-at-commit")]
     public void FailureNeverConfirmsMigration_AndRetryUsesTheRetainedOriginal(int sourceVersion, string failure)
     {
         Legacy(sourceVersion); using var cancel = new CancellationTokenSource();

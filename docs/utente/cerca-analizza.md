@@ -17,7 +17,7 @@ flowchart TD
     F --> I
     G --> I
     H --> I
-    D --> J(["Avvia ricerca"])
+    D --> J(["Avvia analisi"])
     I --> J
 ```
 

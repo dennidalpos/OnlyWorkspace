@@ -387,7 +387,7 @@ internal sealed class MailboxAuthorizationPanel : TableLayoutPanel
             label = line;
         }
         AddRow(label, archive);
-        _tips.SetToolTip(archive, "Sceglie se conservare le email nell’archivio locale. Con Tutte le cassette attivo le singole scelte sono bloccate; le cassette chiuse si modificano dopo averle riaperte in Outlook.");
+        _tips.SetToolTip(archive, "Sceglie se conservare le email nell’archivio locale. Con Tutte le cassette attivo le singole scelte sono bloccate; le cassette chiuse si modificano riaprendole in Outlook.");
         _rows[id] = archive;
         if (open) _open.Add(id);
         archive.CheckedChanged += async (_, _) => { if (!_building) await ApplyAsync(archive); };

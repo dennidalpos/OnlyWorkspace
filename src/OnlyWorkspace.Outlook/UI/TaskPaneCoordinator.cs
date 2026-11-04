@@ -1006,7 +1006,7 @@ public partial class TaskPaneCoordinator : IDisposable
             string attachmentNotice = string.Empty;
             if (activeProfile.IsExternal)
             {
-                if (opType != "action_items") throw new DataEgressBlockedException(CloudFactsRequest.BlockedMessage);
+                if (opType != "action_items") throw new DataEgressBlockedException(FactsOnlyMessage);
                 var mail = new ChatMailItem { EntryId = email.EntryId, StoreId = email.StoreId, Subject = email.Subject,
                     Received = email.ReceivedTime, Facts = ArchiveFactExtractor.Extract(email.Body ?? "") };
                 var pack = MailEvidencePack.Chronological(new[] { new MailEvidence { Mail = mail } });
@@ -1648,7 +1648,7 @@ public partial class TaskPaneCoordinator : IDisposable
 
     private static string WholeEmailsRefused(LlmProfileConfig profile) =>
         ExposurePolicy.Of(profile).Level == ExposureLevel.LocalOnly
-            ? "Il profilo cloud è al livello di esposizione «0 · Solo locale»: non invia nulla. Per questa azione usare un profilo locale, oppure il livello 2 o 3 nel ConfigTool."
+            ? "Il profilo cloud è al livello di esposizione «0 · Solo locale»: non invia nulla. Per questa azione usare un profilo locale."
             : FactsOnlyMessage;
 
     private async Task<IReadOnlyList<SecuritySource>> BuildSecuritySourcesAsync(EmailSecurityData data, EmailSecurityReport report,
@@ -2322,14 +2322,15 @@ public partial class TaskPaneCoordinator : IDisposable
             throw new OperationCanceledException("La policy del profilo è cambiata.");
     }
 
+    // No cloud level sends whole items, so raising the level or the grant would not unlock the action.
     public const string FactsOnlyMessage =
-        "Il profilo cloud è al livello di esposizione «1 · Minimo»: invia solo fatti estratti in locale, non il testo " +
-        "di email, appuntamenti o contatti. Per questa azione usare un profilo locale, oppure il livello 2 nel ConfigTool.";
+        "Questa azione richiede il testo dell'email, che un profilo cloud non invia mai: all'estero vanno solo fatti estratti in locale, " +
+        "qualunque sia il livello di esposizione o l'autorizzazione concessa. Selezionare un profilo locale per questa azione.";
 
     /// <summary>The action sends whole emails, appointments or contacts: refused at a cards-only exposure level, before any request.</summary>
     private static void EnsureWholeEmails(LlmProfileConfig profile)
     {
-        if (!ExposurePolicy.Of(profile).WholeEmails) throw new DataEgressBlockedException(CloudFactsRequest.BlockedMessage);
+        if (!ExposurePolicy.Of(profile).WholeEmails) throw new DataEgressBlockedException(WholeEmailsRefused(profile));
     }
 
     /// <param name="wholeEmails">The action sends whole Outlook items; false for archive evidence, the user's own text or a probe.</param>
