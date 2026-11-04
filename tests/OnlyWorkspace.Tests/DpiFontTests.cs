@@ -44,6 +44,29 @@ public sealed class DpiFontTests
     }
 
     [Fact]
+    public void ProfileTabs_ShowTheirWholeLabelAcrossFontScalesAndWindowWidths()
+    {
+        OnSta(() => WithConfigurator(form =>
+        {
+            foreach (float scale in new[] { 1f, 1.25f, 1.5f, 2f })
+            foreach (int width in new[] { 820, 900 })
+            {
+                form.Font = new Font("Segoe UI", 9f * scale);
+                form.ClientSize = new Size((int)(width * scale), (int)(600 * scale));
+                Application.DoEvents();
+                var tabs = Descendants(form).OfType<NavButton>().Where(b => b.TabStyle && b.Visible && b.Text is "Connessione" or "Contesto" or "Autorizzazioni" or "Avanzate").ToList();
+                Assert.Equal(4, tabs.Count);
+                foreach (var tab in tabs)
+                {
+                    int text = TextRenderer.MeasureText(tab.Text, tab.Font, Size.Empty, TextFormatFlags.SingleLine).Width;
+                    Assert.True(tab.ClientSize.Width >= text, $"«{tab.Text}» is cut ({tab.ClientSize.Width} px for {text} px of text) at scale {scale}, client {width}.");
+                    Assert.True(tab.Right <= tab.Parent!.ClientSize.Width, $"«{tab.Text}» leaves its bar at scale {scale}, client {width}.");
+                }
+            }
+        }));
+    }
+
+    [Fact]
     public void RowsCreatedAfterScaling_UseTheCurrentContainerScaleOnce()
     {
         OnSta(() =>

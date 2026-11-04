@@ -235,3 +235,24 @@ assert.equal(node('flowAnalyze').disabled, true, 'a summary still requires an AI
 assert.doesNotMatch(html, /id="flowDrawer"|id="flowCase"|case_close|case_reopen/);
 assert.match(html, /data-preset="reconstruct"/);
 console.log('PASS A208 local reconstruction, explicit synthesis and stale-request rejection');
+
+// #068: a new selection marks the shown result as superseded; a refusal is announced as such.
+const announced = []; context.announce = text => announced.push(text);
+node('anReconstruction').hidden = false;
+context.state.selectedEmail = { entryId: 'root', storeId: 'pst' };
+deliver({ seed: root, items: [root] });
+assert.equal(node('flowStale').hidden, true, 'same starting email: result is current');
+context.state.selectedEmail = { entryId: 'other', storeId: 'pst' };
+context.flowStale();
+assert.equal(node('flowStale').hidden, false, 'another email selected: result flagged as superseded');
+context.state.selectedEmail = null;
+context.flowStale();
+assert.equal(node('flowStale').hidden, true, 'no selection: nothing to compare');
+context.state.selectedEmail = { entryId: 'other', storeId: 'pst' };
+deliver({ seed: { ...root, entryId: 'other' }, items: [root] });
+assert.equal(node('flowStale').hidden, true, 'a new reconstruction of the selected email clears the flag');
+deliver({ items: [], refused: 'L\'email di partenza non è più disponibile. Seleziona un\'email e riprova.' });
+assert.match(node('flowStatus').textContent, /non è più disponibile/);
+assert.match(announced.at(-1), /non è più disponibile/);
+assert.doesNotMatch(announced.at(-1), /completata/);
+console.log('PASS #068 superseded result flag and refusal announcement');

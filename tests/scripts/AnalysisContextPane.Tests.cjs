@@ -20,6 +20,7 @@ let scope = 'accounts';
 let posted;
 const context = vm.createContext({
   state,
+  flowStale: () => {},
   $: id => {
     if (!nodes.has(id)) nodes.set(id, { hidden: true, classList: { remove() {} } });
     return nodes.get(id);

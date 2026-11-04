@@ -16,6 +16,7 @@ const state = { busy: false, configOk: true, contextKey: '', contextStoreId: '',
 let closed = 0;
 const ctx = vm.createContext({
   state, prompt: {},
+  flowStale: () => {},
   $: id => {
     if (!nodes.has(id)) nodes.set(id, { hidden: true, innerHTML: '', classList: { remove() {} } });
     return nodes.get(id);

@@ -177,7 +177,7 @@ const terminal = vm.createContext({ setupContextHelp() {}, addDocumentReport() {
 const terminalCases = html.slice(html.indexOf("      case 'stream_error':"), html.indexOf("      case 'toast':"));
 vm.runInContext('function dispatch(data) { switch(data.type) {' + terminalCases + '} }', terminal);
 terminal.dispatch({ type: 'stream_error', message: 'Operazione non riuscita.' });
-terminal.dispatch({ type: 'stream_cancelled', message: 'Operazione annullata.' });
+terminal.dispatch({ type: 'stream_cancelled', message: 'Operazione interrotta.' });
 assert.equal(terminalResults[0].status, 'error');
 assert.equal(terminalResults[1].status, 'cancelled');
 console.log('PASS A192: JavaScript exception stays in diagnostic, Italian toast announced, cancellation distinct');
@@ -197,8 +197,8 @@ function ending(status, message) {
   return assistant;
 }
 assert.equal(ending('error', 'Operazione non riuscita.').children[0].className, 'error-box');
-assert.equal(ending('cancelled', 'Operazione annullata.').children[0].className, 'msg-note');
-assert.deepEqual(terminalSpeech, ['Errore: Operazione non riuscita.', 'Operazione annullata.']);
+assert.equal(ending('cancelled', 'Operazione interrotta.').children[0].className, 'msg-note');
+assert.deepEqual(terminalSpeech, ['Errore: Operazione non riuscita.', 'Operazione interrotta.']);
 console.log('PASS A192: real finishTurn renders and announces failures separately from cancellation');
 
 announced.length = 0;

@@ -40,6 +40,8 @@ La [documentazione ufficiale di migrazione](https://docs.perplexity.ai/docs/agen
 
 La riqualifica A67 esercita il client applicativo con fixture sintetiche di risposta JSON e SSE, schema richiesto, consumo osservato, conclusione/troncamento e metadati delle fonti. È una verifica locale del contratto descritto, non una prova autenticata del servizio: su WS-DP01 non è configurato un profilo Perplexity. Restano non verificati disponibilità per account/modello e accettazione effettiva dei parametri/schema. Il client conserva gli eventuali marcatori `[n]` nel testo ma non trasforma `citations`/`search_results` in un elenco di URL o in riferimenti `[Wn]`; questi ultimi appartengono al distinto flusso Web Search dell'app. Non presentare quei marcatori come fonti già verificate da OnlyWorkspace. Nessuna migrazione automatica o attestazione di funzionamento reale deriva dalle fixture.
 
+Per fornitori europei (Mistral AI, Scaleway, OVHcloud, IONOS, STACKIT) vedere il [censimento con fonti primarie](../tecnico/provider-ia-ue.md): sono dichiarazioni dei fornitori, non ancora qualificate con una chiamata autenticata.
+
 ## Prima dell'attivazione
 
 1. Il cliente sceglie provider, modello, titolare dell'account e chi paga; chiavi separate per cliente.

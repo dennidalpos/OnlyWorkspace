@@ -27,6 +27,9 @@
     --danger-fill: #c50f1f;
     --success: #107c10;
     --success-soft: #f1faf1;
+    /* In progress and cloud marker: yellow with a dark amber edge (the edge keeps 3:1 against a light bar). */
+    --work-fill: #fcd116;
+    --work-edge: #8a5a00;
     --warn: #8a3707;
     --warn-soft: #fff4ce;
     --warn-border: #fce100;
@@ -171,7 +174,7 @@
 
   /* ---------- Cloud marker ---------- */
   /* Yellow cloud = data leaves the local network for a cloud model (active profile, confirmation, answer). */
-  svg.i.cloud-y { fill: #fcd116; stroke: #8a5a00; stroke-width: 0.9; }
+  svg.i.cloud-y { fill: var(--work-fill); stroke: var(--work-edge); stroke-width: 0.9; }
   /* Archivio and IA indicators: a pill with status badge, name and destination in words (PC or Cloud).
      Badge as in the tray, never colour alone: tick verified, spinner only while work runs, ! error,
      bars paused, dots waiting, dash off or not verified. Details in Stato, not only in the tooltip. */
@@ -196,7 +199,7 @@
   [data-light='Paused'] > .ind-badge::before { content: '‖'; }
   [data-light='Waiting'] > .ind-badge::before { content: '…'; }
   /* Yellow with a dark amber edge: the edge keeps 3:1 against a light bar. */
-  [data-light='Working'] > .ind-badge { background: #fcd116; border: 2px solid #8a5a00; border-top-color: transparent; animation: spin 0.9s linear infinite; }
+  [data-light='Working'] > .ind-badge { background: var(--work-fill); border: 2px solid var(--work-edge); border-top-color: transparent; animation: spin 0.9s linear infinite; }
   [data-light='Working'] > .ind-badge::before { content: ''; }
   .store-name { flex: 1 1 8em; min-width: 0; overflow-wrap: anywhere; }
   .help-list { display: flex; flex-direction: column; gap: 4px; padding-left: 18px; font-size: var(--text-size-12-5); }
@@ -567,9 +570,9 @@
   .status-text[data-light='Error']::before { content: '!'; }
   .status-text[data-light='Waiting']::before { content: '…'; }
   .status-text[data-light='Paused']::before { content: '‖'; }
-  .status-text[data-light='Working']::before { content: ''; width: 12px; height: 12px; border: 2px solid #8a5a00; border-top-color: transparent; border-radius: 50%; animation: spin .9s linear infinite; }
+  .status-text[data-light='Working']::before { content: ''; width: 12px; height: 12px; border: 2px solid var(--work-edge); border-top-color: transparent; border-radius: 50%; animation: spin .9s linear infinite; }
   .state-symbol { flex: none; }
-  .state-badge[data-light='Working'] > .state-symbol { width: 12px; height: 12px; border: 2px solid #8a5a00; border-top-color: transparent; border-radius: 50%; animation: spin .9s linear infinite; }
+  .state-badge[data-light='Working'] > .state-symbol { width: 12px; height: 12px; border: 2px solid var(--work-edge); border-top-color: transparent; border-radius: 50%; animation: spin .9s linear infinite; }
   .view-warning { padding: 8px; border-left: 3px solid var(--danger); background: var(--danger-soft); overflow-wrap: anywhere; }
   .history-item .icon-btn { margin-right: 4px; }
   .history-actions { display: flex; align-items: center; margin-left: auto; }
@@ -1049,6 +1052,7 @@
       <div id="anStartNote" class="form-note" hidden></div>
       <section id="anReconstruction" class="analysis-options" aria-label="Pratica ricostruita" hidden>
       <h3 id="anReconstructionSubject" tabindex="-1"></h3>
+      <div id="flowStale" class="view-warning" role="status" hidden>Hai selezionato un’altra email: il risultato riguarda ancora l’email di partenza. Avvia la ricerca per aggiornarlo.</div>
       <div id="flowStatus" class="form-note">Seleziona un'email per ricostruire il flusso.</div>
       <div id="flowWarnings" hidden></div>
       <details id="flowArchiveDetails" data-ui-key="coverage" class="coverage-details"><summary>Dettagli dell’archivio</summary><div id="flowCoverage"></div></details>
@@ -2118,7 +2122,7 @@
       announce(result.status === 'ok' ? (c.kind === 'chat' ? 'Risposta' : c.action || 'Risposta') + ' completata' +
           (c.securityReport ? ': ' + securityLabel(c.securityReport) + (c.securityReport.partial ? ', controllo parziale.' : '.') : '.')
         : result.status === 'error' ? 'Errore: ' + (result.message || '')
-        : result.status === 'cancelled' ? (result.message || 'Operazione annullata.') : '');
+        : result.status === 'cancelled' ? (result.message || 'Operazione interrotta.') : '');
       if (result.status === 'ok') {
         if (!c.text.trim() && !c.securityReport) {
           // Not a dead end: the same request can be sent again.
@@ -2156,7 +2160,7 @@
         c.assistant.appendChild(box);
         if (result.retryable && result.op) addRetry(c, result.op);
       } else if (result.status === 'cancelled') {
-        c.assistant.appendChild(el('div', 'msg-note', result.message || 'Operazione annullata.'));
+        c.assistant.appendChild(el('div', 'msg-note', result.message || 'Operazione interrotta.'));
       } else if (result.status === 'silent') {
         c.turn.remove();
       }
@@ -2806,6 +2810,7 @@
     if (!seed.entryId || !seed.storeId) { showToast('Seleziona o apri un\'email per ricostruire la pratica.', 'info'); return; }
     flow.requestId += 1;
     renderFlow({ requestId: flow.requestId, seed: seed, items: [], possible: [], coverage: [] });
+    flowStale(false);
     flow.loading = true;
     $('anReconstruction').hidden = false;
     $('flowStatus').textContent = 'Ricostruzione della pratica…';
@@ -2877,7 +2882,13 @@
     $('anReconstruction').hidden = false;
     renderFlowPage();
     if (focusResult) { $('anReconstructionSubject').focus(); $('anReconstructionSubject').scrollIntoView({ block: 'nearest' }); }
-    announce('Ricostruzione della pratica completata. ' + flow.items.length + ' email.');
+    flowStale();
+    announce(flow.refused || 'Ricostruzione della pratica completata. ' + flow.items.length + ' email.');
+  }
+  // A new selection leaves the shown result tied to its old starting email: say so until the search is run again.
+  function flowStale(force) {
+    var note = $('flowStale'), shown = flow.seed && !flow.loading && !$('anReconstruction').hidden, current = state.selectedEmail;
+    note.hidden = force === false || !(shown && current && (current.entryId !== flow.seed.entryId || current.storeId !== flow.seed.storeId));
   }
   function renderFlowPage() {
     var saved = rememberView($('analysisDrawer'), mailKey(flow.seed || {}));
@@ -3437,6 +3448,7 @@
         if ((changed && state.composerMode === 'refine') || ((changed || !state.hasEmail) && state.composerMode === 'reply')) setComposerMode('chat');
         // The open search form follows the selection (folder, sender, conversation); frozen while an operation runs.
         if (changed && !state.busy && !$('analysisDrawer').hidden && ['thread', 'folder', 'flow'].indexOf(analysisScope()) >= 0) requestAnalysisContext();
+        flowStale();
         updateActions();
         break;
       }

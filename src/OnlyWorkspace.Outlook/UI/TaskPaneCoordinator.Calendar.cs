@@ -282,7 +282,7 @@ public partial class TaskPaneCoordinator
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
             OnlyWorkspaceLog.Logger.Information("Mailbox scan cancelled after {LatencyMs} ms", sw.ElapsedMilliseconds);
-            PostStream(turn, new { type = "stream_cancelled", message = "Operazione annullata." });
+            PostStream(turn, new { type = "stream_cancelled", message = "Operazione interrotta." });
         }
         catch (Exception ex)
         {

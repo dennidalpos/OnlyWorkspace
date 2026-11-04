@@ -762,7 +762,7 @@ public partial class TaskPaneCoordinator : IDisposable
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
-            PostStream(turn, new { type = "stream_cancelled", message = "Operazione annullata." });
+            PostStream(turn, new { type = "stream_cancelled", message = "Operazione interrotta." });
             OnlyWorkspaceLog.Logger.Information("{Op} cancelled by user", logOp);
         }
         catch (Exception ex)
@@ -1069,7 +1069,7 @@ public partial class TaskPaneCoordinator : IDisposable
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
-            PostStream(turn, new { type = "stream_cancelled", message = "Operazione annullata." });
+            PostStream(turn, new { type = "stream_cancelled", message = "Operazione interrotta." });
         }
         catch (Exception ex)
         {
@@ -1263,7 +1263,7 @@ public partial class TaskPaneCoordinator : IDisposable
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
-            PostStream(turn, new { type = "stream_cancelled", message = "Operazione annullata." });
+            PostStream(turn, new { type = "stream_cancelled", message = "Operazione interrotta." });
         }
         catch (Exception ex)
         {
@@ -1441,7 +1441,7 @@ public partial class TaskPaneCoordinator : IDisposable
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
-            PostStream(turn, new { type = "stream_cancelled", message = "Operazione annullata." });
+            PostStream(turn, new { type = "stream_cancelled", message = "Operazione interrotta." });
         }
         catch (Exception ex)
         {
