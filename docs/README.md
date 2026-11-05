@@ -1,43 +1,34 @@
-# Documentazione di OnlyWorkspace
+# OnlyWorkspace documentation
 
-Guide del comportamento disponibile, organizzate per destinatario. Per i primi passi vedi [Iniziare su un PC Windows](OVERVIEW.it.md#iniziare-su-un-pc-windows); [Verifica e qualifica](tecnico/verifica.md) distingue codice, prove isolate e comportamento osservato sulla build installata.
+The maintained English guides cover user, administrator and developer workflows. The application interface remains Italian; labels match the controls on screen.
 
-## Utente
+- [User guide](user-guide.md): first use, pane, writing, search, archive, case reconstruction and recovery.
+- [Administrator guide](admin-guide.md): setup/update, ConfigTool, profiles, settings, permissions, backups and CLI.
+- [Developer guide](developer-guide.md): architecture, isolated outputs, tests, extraction, archive and transport boundaries.
 
-| Voglio… | Guida |
+## Italian reference map
+
+Detailed Italian translations/references remain available. Dated receipts/provider research and exact Italian UI inventories retain their original language and attribution.
+
+| Italian page | English coverage |
 | --- | --- |
-| Usare il riquadro: sintesi, bozze, verifica, attività, dati, briefing, chat | [Riquadro e azioni](utente/riquadro.md) |
-| Cercare e analizzare la corrispondenza, trovare scadenze o email senza risposta | [Cerca e analizza](utente/cerca-analizza.md) |
-| Attivare l'archivio, cercare offline, ricostruire una pratica | [Archivio](utente/archivio.md) |
-| Sapere chi riceve i dati e quando si cerca sul web | [Modelli IA e Web Search](utente/modelli-web.md) |
-| Avere una mappa visiva di tutti i percorsi, scelte e recuperi | [Guida visiva ai percorsi](utente/guida-visiva.md) |
+| [Overview](OVERVIEW.it.md) | User first use; administrator installation |
+| [Pane](utente/riquadro.md), [visual workflow guide](utente/guida-visiva.md) | [User workflows](user-guide.md) |
+| [Search](utente/cerca-analizza.md) | [Search, briefing and chat](user-guide.md#search-briefing-and-chat) |
+| [Archive](utente/archivio.md) | [Archive/reconstruction](user-guide.md#archive-and-reconstruction) and maintenance |
+| [Models/web](utente/modelli-web.md) | User data controls; administrator profiles/authorization |
+| [Installation](admin/installazione.md) | Administrator installation/update; developer packaging |
+| [Configuration](admin/configurazione.md), [ConfigTool](admin/configtool.md) | [Administrator guide](admin-guide.md) |
+| [Providers](admin/provider-ia.md), [provider survey](tecnico/provider-ia-ue.md) | Administrator AI profiles; dated vendor research preserved |
+| [Security](admin/sicurezza.md), [EU discussion](admin/conformita-ue.md) | Administrator authorization/storage; dated legal-source work preserved, no general compliance claim |
+| [Architecture](tecnico/architettura.md), [archive engine](tecnico/archivio-motore.md) | Developer architecture/archive |
+| [Attachments](tecnico/allegati.md) | [Attachment limits](developer-guide.md#attachments) |
+| [Pseudonymization](tecnico/pseudonimizzazione.md) | Developer pseudonymization; administrator authorization |
+| [Outputs](tecnico/output-locali.md), [static analysis](tecnico/analisi-statica.md) | Developer build/verification |
+| [Dependencies](tecnico/dipendenze.md) | Developer packaging/dependencies; original notices |
+| [Verification](tecnico/verifica.md) | Developer current commands/limits; dated receipts preserved |
+| [UI vocabulary](tecnico/interfaccia-vocabolario.md), [inventory](tecnico/inventario-testi-interfaccia.md) | User navigation/developer UI vocabulary; exact Italian label inventories preserved |
 
-## Amministratore
+## Assets, evidence and help
 
-| Voglio… | Guida |
-| --- | --- |
-| Compilare, firmare, installare o disinstallare | [Installazione](admin/installazione.md) |
-| Conoscere `config.json`, i profili IA e i segreti | [Configurazione](admin/configurazione.md) |
-| Usare la finestra Configurazione, la CLI e la tray | [ConfigTool e tray](admin/configtool.md) |
-| Scegliere e acquistare un servizio IA | [Provider IA](admin/provider-ia.md) |
-| Sapere dove stanno i dati e come sono protetti | [Sicurezza e privacy](admin/sicurezza.md) |
-| Configurare l'uscita dei dati secondo GDPR e AI Act, livelli di esposizione ed export dell'informativa | [Conformità UE](admin/conformita-ue.md) |
-
-## Tecnico
-
-| Argomento | Guida |
-| --- | --- |
-| Componenti, thread e confini | [Architettura](tecnico/architettura.md) |
-| Strategie locali, segnaposto e registro delle richieste | [Pseudonimizzazione](tecnico/pseudonimizzazione.md) |
-| Formato, sincronizzazione e limiti dell'archivio | [Motore dell'archivio](tecnico/archivio-motore.md) |
-| Lettura degli allegati, formati e limiti | [Allegati](tecnico/allegati.md) |
-| Programmi, librerie e servizi usati | [Dipendenze](tecnico/dipendenze.md) |
-| Comandi di verifica, CI e stato della qualifica | [Verifica e qualifica](tecnico/verifica.md) |
-| Stati, termini e testi dell'interfaccia | [Vocabolario](tecnico/interfaccia-vocabolario.md), [Inventario dei testi](tecnico/inventario-testi-interfaccia.md) |
-| Corpus sintetico, misure dei fatti e revisione della fedeltà | [Banco di fedeltà](../tests/fixtures/fidelity/README.md) |
-
-## Fonti e manutenzione
-
-- Ogni guida mantiene un ambito; qui si trova l'indice completo. I comandi di build e verifica sono in [Verifica e qualifica](tecnico/verifica.md), le istruzioni per gli agenti in [AGENTS.md](../AGENTS.md).
-- [Kit illustrativo e copy](../assets/social_copy.md): sorgenti editoriali e istruzioni di rigenerazione. Il set social contiene sette PNG (01–04 da catture installate del 21/10/2026 su dati sintetici con QwenCloud; 05–07 illustrazioni). I PDF sono del deck e della scheda prodotto, non del set social.
-- [Avvisi e licenze](../THIRD-PARTY-NOTICES.txt): conservare gli avvisi originali; verificare versioni e testi nei pacchetti effettivamente ripristinati. I file di licenza delle dipendenze e la Public Suffix List incorporata non si sintetizzano come una guida.
+[Fidelity corpus](../tests/fixtures/fidelity/README.md) contains synthetic test inputs, not real-mail qualification. [Image provenance](../assets/social_copy.md) distinguishes actual installed captures from illustrations; historical screenshots do not prove the current build. Preserve [third-party notices](../THIRD-PARTY-NOTICES.txt). See [Contributing](../CONTRIBUTING.md) and [security reporting](../SECURITY.md).
