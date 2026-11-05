@@ -290,17 +290,25 @@ SectionEnd
 
     $purgeFiles = @('pd\OnlyWorkspace\config.json', 'pd\OnlyWorkspace\secrets.bin', 'pd\Other\keep.txt', 'lad\OnlyWorkspace\archive\Outlook.engine.db', 'lad\OnlyWorkspace\config-non-leggibile\secrets.bin', 'lad\OnlyWorkspace\logs\addin.log', 'lad\Microsoft\Outlook\mail.ost', 'otheruser\OnlyWorkspace\archive\Outlook.engine.db', 'outside\OnlyWorkspace\config.json')
     $purgedFiles = @('pd\OnlyWorkspace\config.json', 'pd\OnlyWorkspace\secrets.bin', 'lad\OnlyWorkspace\archive\Outlook.engine.db', 'lad\OnlyWorkspace\config-non-leggibile\secrets.bin')
+    $purgeCaseNumber = 0
     foreach ($case in @(@('/S', '0'), @('/S /PURGE', '1'), @('/PURGE /S', '1'), @('/S /PURGE=1', '0'), @('/S /PURGEALL', '0'), @('/CONFIG=x.json /PURGE /S', '1'))) {
-        $data = Join-Path $checksFixture ('data-' + [guid]::NewGuid().ToString('N'))
+        # The scratch root is already unique. Keep NSIS paths below MAX_PATH and exercise quoting.
+        $data = Join-Path $checksFixture ('p ' + (++$purgeCaseNumber))
+        foreach ($file in $purgeFiles) {
+            $path = Join-Path $data $file
+            if ($path.Length -ge 260) { throw "NSIS purge fixture path exceeds 259 characters. Use a shorter test temporary root: $path" }
+        }
         foreach ($file in $purgeFiles) {
             New-Item -ItemType Directory -Path (Split-Path (Join-Path $data $file)) -Force | Out-Null
-            [IO.File]::WriteAllText((Join-Path $data $file), 'synthetic')
+            [IO.File]::WriteAllText((Join-Path $data $file), $file)
         }
-        $result = Invoke-SetupChecks "$($case[0]) /CASE=purge /ARG=$data"
+        $result = Invoke-SetupChecks "$($case[0]) /CASE=purge /ARG=`"$data`""
         if ($result.ExitCode -ne 0 -or ($result.Lines -join ',') -ne "purge=$($case[1]),done") { throw "Purge '$($case[0])': exit $($result.ExitCode), $($result.Lines -join ',')" }
         foreach ($file in $purgeFiles) {
+            $path = Join-Path $data $file
             $expectedGone = $case[1] -eq '1' -and $purgedFiles -contains $file
-            if ((Test-Path -LiteralPath (Join-Path $data $file)) -eq $expectedGone) { throw "Purge '$($case[0])': unexpected state of $file" }
+            if ((Test-Path -LiteralPath $path) -eq $expectedGone) { throw "Purge '$($case[0])': unexpected state of $file" }
+            if (!$expectedGone -and [IO.File]::ReadAllText($path) -cne $file) { throw "Purge '$($case[0])': content changed in $file" }
         }
         if ($case[1] -eq '1' -and (Test-Path -LiteralPath (Join-Path $data 'pd\OnlyWorkspace'))) { throw "Purge '$($case[0])': ProgramData folder kept" }
     }

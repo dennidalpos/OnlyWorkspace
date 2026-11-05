@@ -1,6 +1,6 @@
 # Output locali di build e verifica
 
-`ONLYWORKSPACE_RUNTIME_ROOT` è una configurazione facoltativa della postazione: deve indicare una cartella assoluta esistente. Nei checkout gestiti la cartella risiede sotto SecondBrain `.runtime`, con nome `work-<yyyyMMdd>-<slug>`. Il valore non è incluso nel repository. Dopo una modifica delle variabili utente, riaprire terminali e IDE affinché ereditino il nuovo ambiente.
+`ONLYWORKSPACE_RUNTIME_ROOT` deve indicare una cartella assoluta esistente. Per un lotto su un checkout gestito, inizializzare l'area `work` con `work.ps1 -Init` in SecondBrain e assegnare al processo una sottocartella esistente dell'area. Il valore della postazione non è incluso nel repository. Dopo una modifica delle variabili utente, riaprire terminali e IDE affinché ereditino il nuovo ambiente.
 
 `Directory.Build.props` imposta `ArtifactsPath` sotto questa radice, separando i checkout con i primi 12 caratteri SHA-256 del percorso canonico in minuscolo. Il layout SDK separa progetti, configurazioni, framework e RID. Un `ArtifactsPath` esplicito conserva la precedenza. Senza la variabile rimane il layout SDK ordinario; una radice configurata ma invalida produce errore. I vecchi `bin/obj` restano conservati ed esclusi dagli input sorgente.
 
@@ -10,7 +10,7 @@ Con `-Dir` esterno al grafo corrente, `PanePolicy.Tests.ps1` richiede extractor 
 
 Le cache NuGet possono essere instradate con `NUGET_PACKAGES`, `NUGET_HTTP_CACHE_PATH`, `NUGET_PLUGINS_CACHE_PATH` e `NUGET_SCRATCH`. Le impostazioni utente interessano anche gli altri repository della postazione: conservare i valori precedenti e le cache esistenti prima di cambiarle. I percorsi effettivi si controllano con `dotnet nuget locals all --list`.
 
-Con la centralizzazione attiva, gli harness e le impostazioni VSTest generate applicano TEMP/TMP e `ONLYWORKSPACE_TEST_ARTIFACTS` soltanto ai processi di verifica. Le fixture hanno nomi univoci sotto radici centrali brevi `tmp-<yyyyMMdd>-<checkout>` e `fixture-<yyyyMMdd>-<checkout>`, per i limiti di percorso net48/NSIS. I finalizzatori conservano le fixture gestite; le rimozioni che simulano assenze o errori restano parte dei test. La conservazione delle fixture non modifica i dati dell'applicazione installata.
+Con la centralizzazione attiva, gli harness e le impostazioni VSTest generate applicano TEMP/TMP e `ONLYWORKSPACE_TEST_ARTIFACTS` soltanto ai processi di verifica. Le fixture hanno nomi univoci sotto `tmp-<yyyyMMdd>-<checkout>` e `fixture-<yyyyMMdd>-<checkout>`. Se il percorso fisico dell'area di lavoro è troppo lungo per net48 o NSIS, usare un alias temporaneo di unità per la stessa area. Verificare che l'alias risolva lo stesso manifest e che output, temporanei e fixture restino al suo interno. Rilasciare l'alias al termine. I finalizzatori conservano le fixture gestite. Le rimozioni che simulano assenze o errori restano parte dei test.
 
 Comandi dalla radice:
 

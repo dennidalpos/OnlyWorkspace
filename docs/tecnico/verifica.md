@@ -6,6 +6,14 @@ Test di codice, prova sulla build installata e qualifica su cassette e provider 
 
 Contenuto datato trasferito nel dossier SecondBrain: `02-areas/products/OnlyWorkspace/history/imported/docs/tecnico/verifica.md`. Originale e SHA-256 nel rapporto di migrazione; questa voce conserva i riferimenti esistenti e non autorizza nuovi interventi.
 
+## Regressione `/PURGE` e gate dopo il ritiro delle skill — 5 novembre 2026
+
+Working tree sopra `0646fa0`. Lo stesso eseguibile sintetico NSIS 3.13, con gli stessi dati e argomenti, rimuove archivio e copia illeggibile del vault a 192 e 199 caratteri. A 270 e 277 caratteri i due file restano anche con codice di uscita 0. I file ProgramData sono rimossi in entrambi i casi. La fixture corretta supera i sei casi, inclusi i due ordini di `/PURGE`, un percorso con spazi, le opzioni che devono conservare i dati e il controllo dei contenuti delle sentinelle. La prova riguarda le macro su dati sintetici. La disinstallazione reale e i percorsi lunghi restano da qualificare separatamente.
+
+`check-code.ps1` è passato senza le skill ritirate. I riferimenti di `egress-reviewer` alle sorgenti e alla documentazione sono stati verificati. Un primo tentativo con il percorso fisico annidato ha incontrato errori net48 sui file temporanei dell'importazione. L'alias temporaneo ha mantenuto output e fixture nella stessa area gestita. [Configurazione degli output](output-locali.md)
+
+Il gate con l'alias ha completato la build senza avvisi o errori, 1.802 test su ciascun runtime (net48 e net10.0-windows, zero ignorati), 24 script, smoke net48 x64/x86 e il controllo NuGet senza vulnerabilità segnalate. Ricevuta nel dossier `history/2026-11-05-purge-gate/report.md`.
+
 ## Trasporto mascherato e tooltip dei profili — 5 novembre 2026
 
 Working tree sopra `271af3c`. `MaskedFreeTextTransportTests` esercita factory, dispatcher e HTTP su loopback: OpenAI, Anthropic, Gemini e Ollama, Standard/Esteso, risposte strutturate e streaming (16 casi), compresi segnaposto divisi fra eventi e ripristino esatto. Un caso per famiglia verifica entrambi i percorsi senza connessione a Minimo, con testo non sigillato a Standard/Esteso e con rifiuto del masker. Il Follow-up cloud Standard usa coordinatore, autorizzazione di fixture e trasporto reali, una email sintetica e un precedente: una richiesta, fonti, risposta ripristinata e salvataggio dell'esito. Catture e registri DPAPI sono conservati nelle fixture centrali. Il catalogo 2 non riconosce `1234,56 euro`: limite osservato via HTTP, documentato in [Pseudonimizzazione](pseudonimizzazione.md), distinto dagli importi riconosciuti come `1234,56 EUR`.
