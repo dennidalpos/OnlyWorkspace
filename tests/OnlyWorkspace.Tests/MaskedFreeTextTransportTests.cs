@@ -1,72 +1,266 @@
+using System.Globalization;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Text.Json;
+using System.Text.RegularExpressions;
+using OnlyWorkspace.Core.Context;
+using OnlyWorkspace.Core.Interfaces;
 using OnlyWorkspace.Core.Models;
 using OnlyWorkspace.Core.Privacy;
 using OnlyWorkspace.Infrastructure.Llm;
+using OnlyWorkspace.Infrastructure.Security;
 
 namespace OnlyWorkspace.Tests;
 
-/// <summary>Free text through the real dispatcher and a real HTTP client: masked at Standard, refused at Minimo.</summary>
+/// <summary>Real factory, dispatcher and HTTP on loopback; no provider account or Outlook data.</summary>
 public sealed class MaskedFreeTextTransportTests
 {
     private const string Schema = "{\"type\":\"object\",\"properties\":{\"name\":{\"type\":\"string\"}},\"required\":[\"name\"],\"additionalProperties\":false}";
-    private const string Text = "Da Anna Bianchi <anna@esempio.it>: conferma il bonifico su IT60X0542811101000000123456";
+    private const string Text = "Da Anna Bianchi <anna@example.test>: conferma il bonifico di 1234,56 EUR entro il 15/11/2026 su IT60X0542811101000000123456";
+    private static readonly string[] Originals = { "Anna Bianchi", "anna@example.test", "IT60X0542811101000000123456", "1234,56", "15/11/2026" };
 
-    private static LlmProfileConfig Profile(TcpListener listener, ExposureLevel level) => new()
+    public static IEnumerable<object[]> Transports()
     {
-        Type = "openai", Model = "synthetic", External = true, Exposure = level,
-        BaseUrl = "http://127.0.0.1:" + ((IPEndPoint)listener.LocalEndpoint).Port + "/v1"
+        foreach (string provider in new[] { "openai", "anthropic", "gemini", "ollama" })
+        foreach (var exposure in new[] { ExposureLevel.Standard, ExposureLevel.Extended })
+        foreach (bool stream in new[] { false, true })
+            yield return new object[] { provider, exposure, stream };
+    }
+
+    private static LlmProfileConfig Profile(Server server, string provider, ExposureLevel exposure) => new()
+    {
+        Id = "masked-http", Type = provider, Model = "synthetic", External = true, Exposure = exposure,
+        ServiceRegion = ServiceRegion.Eu, UseSystemProxy = false,
+        BaseUrl = server.Address + (provider == "ollama" ? "/" : provider == "gemini" ? "/v1beta" : "/v1")
     };
 
-    [Fact]
-    public async Task Standard_SendsOnlyMaskedText_OverRealHttp()
+    [Theory]
+    [MemberData(nameof(Transports))]
+    public async Task MaskedText_RoundtripsThroughEveryTransport(string provider, ExposureLevel exposure, bool stream)
     {
-        var listener = new TcpListener(IPAddress.Loopback, 0); listener.Start();
-        try
+        using var server = new Server(provider + "-" + exposure + "-" + stream);
+        var profile = Profile(server, provider, exposure);
+        string? masked = null;
+        var capture = server.ServeAsync(provider, request =>
         {
-            var profile = Profile(listener, ExposureLevel.Standard);
-            var capture = Task.Run(async () =>
-            {
-                using var socket = await listener.AcceptTcpClientAsync(); using var stream = socket.GetStream();
-                var header = new StringBuilder(); var one = new byte[1];
-                while (!header.ToString().EndsWith("\r\n\r\n", StringComparison.Ordinal)) { Assert.Equal(1, await stream.ReadAsync(one, 0, 1)); header.Append((char)one[0]); }
-                int length = int.Parse(header.ToString().Split(new[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries)
-                    .Single(l => l.StartsWith("Content-Length:", StringComparison.OrdinalIgnoreCase)).Substring(15).Trim(), System.Globalization.CultureInfo.InvariantCulture);
-                var bytes = new byte[length];
-                for (int offset = 0; offset < length;) { int n = await stream.ReadAsync(bytes, offset, length - offset); if (n <= 0) break; offset += n; }
-                byte[] body = Encoding.UTF8.GetBytes("{\"choices\":[{\"message\":{\"content\":\"{\\\"name\\\":\\\"ok\\\"}\"},\"finish_reason\":\"stop\"}]}");
-                byte[] head = Encoding.ASCII.GetBytes("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: " + body.Length + "\r\nConnection: close\r\n\r\n");
-                await stream.WriteAsync(head, 0, head.Length); await stream.WriteAsync(body, 0, body.Length);
-                return Encoding.UTF8.GetString(bytes);
-            });
-            using var dispatch = new LlmRequestDispatcher(new OpenAIClient(profile), profile, audit: TestPrivacyAudit.Store);
-            await dispatch.CompleteStructuredAsync(new[] { ChatMessage.User(Text) }, Schema);
-            string wire = await capture;
-            Assert.DoesNotContain("anna@esempio.it", wire);
-            Assert.DoesNotContain("Anna Bianchi", wire);
-            Assert.DoesNotContain("IT60X0542811101000000123456", wire);
-            Assert.Contains("conferma il bonifico", wire);
+            masked = Strings(request).Single(s => s.Contains("conferma il bonifico"));
+            return stream ? masked : JsonSerializer.Serialize(new { name = masked });
+        });
+        using var dispatch = new LlmRequestDispatcher(LlmClientFactory.CreateClient(profile), profile, audit: server.Audit);
+        if (stream)
+        {
+            var answer = new StringBuilder();
+            await foreach (string chunk in dispatch.StreamChatAsync(new[] { ChatMessage.User(Text) }, server.Token)) answer.Append(chunk);
+            Assert.Equal(Text, answer.ToString());
         }
-        finally { listener.Stop(); }
+        else
+        {
+            string answer = await dispatch.CompleteStructuredAsync(new[] { ChatMessage.User(Text) }, Schema, server.Token);
+            using var json = JsonDocument.Parse(answer);
+            Assert.Equal(Text, json.RootElement.GetProperty("name").GetString());
+        }
+        AssertMasked(await capture);
+        Assert.NotNull(masked);
+        Assert.Contains("conferma il bonifico", masked);
+        Assert.Matches(@"\[[A-Z][A-Z0-9]*_\d+\]", masked);
+        Assert.NotNull(dispatch.LastCompletion);
+        Assert.False(dispatch.LastCompletion!.IsTruncated);
+        var audit = Assert.Single(server.Audit.Read());
+        Assert.Equal("completed", audit.Outcome);
+        foreach (string category in new[] { "PERSONA", "EMAIL", "IBAN", "IMPORTO", "DATA" })
+            Assert.True(audit.Counts[category] > 0);
+        Assert.False(server.Pending);
+    }
+
+    [Theory]
+    [InlineData("openai")]
+    [InlineData("anthropic")]
+    [InlineData("gemini")]
+    [InlineData("ollama")]
+    public async Task Rejections_OpenNoConnection_ForStructuredAndStreaming(string provider)
+    {
+        using var server = new Server(provider + "-refused");
+        var profile = Profile(server, provider, ExposureLevel.Minimal);
+        using (var dispatch = new LlmRequestDispatcher(LlmClientFactory.CreateClient(profile), profile, audit: server.Audit))
+            await RefusesBoth(dispatch, server.Token);
+        foreach (var exposure in new[] { ExposureLevel.Standard, ExposureLevel.Extended })
+        {
+            profile.Exposure = exposure;
+            var bare = LlmClientFactory.CreateClient(profile);
+            try { await RefusesBoth(bare, server.Token); }
+            finally { (bare as IDisposable)?.Dispose(); }
+            using var dispatch = new LlmRequestDispatcher(LlmClientFactory.CreateClient(profile), profile,
+                validatePolicy: null, status: null, requestStarting: null,
+                maskMessages: (_, _) => throw new DataEgressBlockedException("Synthetic masking refusal"), audit: server.Audit);
+            await RefusesBoth(dispatch, server.Token);
+        }
+        Assert.False(server.Pending);
+        File.WriteAllText(Path.Combine(server.DirectoryPath, "no-connection.txt"), "Minimal free text, unsealed Standard/Extended and masking refusal: no pending TCP connection.");
     }
 
     [Fact]
-    public async Task Minimal_RefusesFreeText_BeforeAnyConnection()
+    public async Task FollowUp_StandardCloud_UsesMaskedHttpAndSavesRestoredCitedAnswer()
     {
-        var listener = new TcpListener(IPAddress.Loopback, 0); listener.Start();
-        try
+        using var server = new Server("followup-standard");
+        var profile = Profile(server, "openai", ExposureLevel.Standard);
+        var config = TestEgress.Accepted(new WorkspaceConfig { DefaultProfile = profile.Id, Profiles = new() { profile } });
+        Assert.True(DataEgress.AllowsModel(config, profile, TestEgress.ResolveSecret));
+        var capture = server.ServeAsync("openai", request =>
         {
-            var profile = Profile(listener, ExposureLevel.Minimal);
-            using var dispatch = new LlmRequestDispatcher(new OpenAIClient(profile), profile, audit: TestPrivacyAudit.Store);
-            await Assert.ThrowsAsync<DataEgressBlockedException>(() => dispatch.CompleteStructuredAsync(new[] { ChatMessage.User(Text) }, Schema));
-            Assert.False(listener.Pending());
-            // A client used directly, without the dispatcher, refuses unmasked text at every level.
-            profile.Exposure = ExposureLevel.Standard;
-            using var bare = new OpenAIClient(profile);
-            await Assert.ThrowsAsync<DataEgressBlockedException>(() => bare.CompleteStructuredAsync(new[] { ChatMessage.User(Text) }, Schema));
-            Assert.False(listener.Pending());
+            string prompt = string.Join("\n", Strings(request));
+            string email = Regex.Match(prompt, @"\[EMAIL_\d+\]").Value;
+            Assert.NotEmpty(email);
+            return JsonSerializer.Serialize(new { sections = new[] { new { title = "Stato", points = new[] {
+                new { text = "Riscontro per " + email, sources = new[] { "M1", "M2" } }
+            } } }, gaps = Array.Empty<string>() });
+        });
+        var prior = new FollowUpMail { EntryId = "prior", StoreId = "synthetic-store", Subject = "Ordine ABC-1234",
+            Sender = "Anna Bianchi <anna@example.test>", SenderEmail = "anna@example.test", Body = Text,
+            ReceivedTime = new DateTime(2026, 11, 1, 10, 0, 0, DateTimeKind.Local) };
+        var current = new FollowUpMail { EntryId = "current", StoreId = prior.StoreId, Subject = "Re: Ordine ABC-1234",
+            Sender = prior.Sender, SenderEmail = prior.SenderEmail, Body = Text, ReceivedTime = prior.ReceivedTime.AddDays(1),
+            ThreadMessages = new[] { prior } };
+        FollowUpActionResult? saved = null;
+        int saves = 0;
+        var chunks = new List<string>();
+        var workflow = new FollowUpCoordinator
+        {
+            ResolveEmail = _ => current,
+            CreateClient = () => new LlmRequestDispatcher(LlmClientFactory.CreateClient(profile), profile,
+                validatePolicy: () => Assert.True(DataEgress.AllowsModel(config, profile, TestEgress.ResolveSecret)), audit: server.Audit),
+            OnChunk = chunks.Add,
+            SaveHistoryAsync = result => { saves++; saved = result; return Task.CompletedTask; }
+        };
+        var result = await workflow.ExecuteAsync(null, profile, new ContextBuilder(), false, server.Token);
+        AssertMasked(await capture);
+        Assert.Equal(FollowUpOutcome.Completed, result.Outcome);
+        Assert.Equal(new[] { "prior", "current" }, result.MailSources.Select(s => s.EntryId));
+        Assert.All(result.MailSources, source => Assert.Equal(prior.StoreId, source.StoreId));
+        Assert.Contains("anna@example.test", result.Answer);
+        Assert.Contains("[M1]", result.Answer);
+        Assert.Contains("[M2]", result.Answer);
+        Assert.DoesNotContain("[EMAIL_", result.Answer);
+        Assert.Equal(result.Answer, string.Concat(chunks));
+        Assert.Same(result, saved);
+        Assert.Equal(1, saves);
+        Assert.Equal(1, server.Requests);
+        Assert.False(server.Pending);
+        File.WriteAllText(Path.Combine(server.DirectoryPath, "local-answer.txt"), result.Answer);
+    }
+
+    private static async Task RefusesBoth(ILlmClient client, CancellationToken token)
+    {
+        await Assert.ThrowsAsync<DataEgressBlockedException>(() => client.CompleteStructuredAsync(new[] { ChatMessage.User(Text) }, Schema, token));
+        await Assert.ThrowsAsync<DataEgressBlockedException>(async () =>
+        {
+            await foreach (var _ in client.StreamChatAsync(new[] { ChatMessage.User(Text) }, token)) { }
+        });
+    }
+
+    private static void AssertMasked(string wire)
+    {
+        foreach (string original in Originals) Assert.DoesNotContain(original, wire);
+        using var json = JsonDocument.Parse(wire.Substring(wire.IndexOf("\r\n\r\n", StringComparison.Ordinal) + 4));
+        string decoded = string.Join("\n", Strings(json.RootElement));
+        foreach (string original in Originals) Assert.DoesNotContain(original, decoded);
+        Assert.Contains("conferma il bonifico", decoded);
+    }
+
+    private static IEnumerable<string> Strings(JsonElement element)
+    {
+        if (element.ValueKind == JsonValueKind.String) yield return element.GetString()!;
+        else if (element.ValueKind == JsonValueKind.Object)
+            foreach (var property in element.EnumerateObject()) foreach (string value in Strings(property.Value)) yield return value;
+        else if (element.ValueKind == JsonValueKind.Array)
+            foreach (var item in element.EnumerateArray()) foreach (string value in Strings(item)) yield return value;
+    }
+
+    private static string Response(string provider, string answer)
+    {
+        // Split inside a placeholder to exercise the real stream restorer, including structured output.
+        var placeholder = Regex.Match(answer, @"\[[A-Z][A-Z0-9]*_\d+\]");
+        int split = placeholder.Success ? placeholder.Index + placeholder.Length / 2 : answer.Length / 2;
+        string[] chunks = { answer.Substring(0, split), answer.Substring(split) };
+        string Event(object value) => "data: " + JsonSerializer.Serialize(value) + "\n\n";
+        return provider switch
+        {
+            "ollama" => string.Concat(chunks.Select(chunk => JsonSerializer.Serialize(new { message = new { content = chunk }, done = false }) + "\n")) +
+                JsonSerializer.Serialize(new { message = new { content = "" }, done = true, done_reason = "stop" }) + "\n",
+            "gemini" => string.Concat(chunks.Select(chunk => Event(new { candidates = new[] { new { content = new { parts = new[] { new { text = chunk } } } } } }))) +
+                Event(new { candidates = new[] { new { finishReason = "STOP" } } }),
+            "anthropic" => Event(new { type = "message_start", message = new { } }) +
+                string.Concat(chunks.Select(chunk => Event(new { type = "content_block_delta", index = 0, delta = new { type = "text_delta", text = chunk } }))) +
+                Event(new { type = "message_delta", delta = new { stop_reason = "end_turn" } }) + Event(new { type = "message_stop" }),
+            _ => string.Concat(chunks.Select(chunk => Event(new { choices = new[] { new { delta = new { content = chunk } } } }))) +
+                Event(new { choices = new[] { new { delta = new { }, finish_reason = "stop" } } }) + "data: [DONE]\n\n"
+        };
+    }
+
+    private sealed class Server : IDisposable
+    {
+        private readonly TcpListener _listener = new(IPAddress.Loopback, 0);
+        private readonly CancellationTokenSource _deadline = new(TimeSpan.FromSeconds(15));
+        private readonly CancellationTokenRegistration _stop;
+        public string DirectoryPath { get; }
+        public string Address => "http://127.0.0.1:" + ((IPEndPoint)_listener.LocalEndpoint).Port;
+        public CancellationToken Token => _deadline.Token;
+        public bool Pending => _listener.Pending();
+        public int Requests { get; private set; }
+        public IPseudonymizationAuditStore Audit { get; }
+
+        public Server(string scenario)
+        {
+            DirectoryPath = Path.Combine(Environment.GetEnvironmentVariable("ONLYWORKSPACE_TEST_ARTIFACTS") ?? Path.GetTempPath(),
+                "masked-http-" + scenario + "-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(DirectoryPath);
+            Audit = new PseudonymizationAuditStore(Path.Combine(DirectoryPath, "audit"));
+            _listener.Start();
+            _stop = Token.Register(_listener.Stop);
         }
-        finally { listener.Stop(); }
+
+        public async Task<string> ServeAsync(string provider, Func<JsonElement, string> answer)
+        {
+            using var socket = await _listener.AcceptTcpClientAsync().WaitAsync(TimeSpan.FromSeconds(15));
+            using var close = Token.Register(socket.Close);
+            using var stream = socket.GetStream();
+            var header = new StringBuilder();
+            var one = new byte[1];
+            while (!header.ToString().EndsWith("\r\n\r\n", StringComparison.Ordinal))
+            {
+                Assert.True(header.Length < 65536, "HTTP headers exceeded fixture limit.");
+                Assert.Equal(1, await stream.ReadAsync(one, 0, 1, Token));
+                header.Append((char)one[0]);
+            }
+            int length = int.Parse(header.ToString().Split(new[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries)
+                .Single(line => line.StartsWith("Content-Length:", StringComparison.OrdinalIgnoreCase)).Substring(15).Trim(), CultureInfo.InvariantCulture);
+            Assert.InRange(length, 1, 1024 * 1024);
+            var bytes = new byte[length];
+            for (int offset = 0; offset < length;)
+            {
+                int read = await stream.ReadAsync(bytes, offset, length - offset, Token);
+                Assert.True(read > 0, "Incomplete HTTP request body.");
+                offset += read;
+            }
+            Requests++;
+            string body = Encoding.UTF8.GetString(bytes), wire = header + body;
+            File.WriteAllText(Path.Combine(DirectoryPath, "request.http"), wire);
+            using var json = JsonDocument.Parse(body);
+            byte[] response = Encoding.UTF8.GetBytes(Response(provider, answer(json.RootElement)));
+            File.WriteAllBytes(Path.Combine(DirectoryPath, "response.txt"), response);
+            string mime = provider == "ollama" ? "application/x-ndjson" : "text/event-stream";
+            byte[] head = Encoding.ASCII.GetBytes("HTTP/1.1 200 OK\r\nContent-Type: " + mime + "\r\nContent-Length: " + response.Length + "\r\nConnection: close\r\n\r\n");
+            await stream.WriteAsync(head, 0, head.Length, Token);
+            await stream.WriteAsync(response, 0, response.Length, Token);
+            return wire;
+        }
+
+        public void Dispose()
+        {
+            _deadline.Cancel();
+            _stop.Dispose();
+            _deadline.Dispose();
+            _listener.Stop();
+        }
     }
 }

@@ -146,12 +146,12 @@ public sealed partial class MainConfigForm
     private void BuildConnectionRows(TableLayoutPanel conn)
     {
         _txtProfileId = AddRow(conn, "ID profilo:", new ThemedTextBox { Width = 180, Anchor = AnchorStyles.Left },
-            "Nome tecnico del profilo, unico, usato nei file di configurazione (per esempio qwen-cloud). Gli utenti non lo vedono. La modifica vale quando premi Invio o lasci il campo.");
+            "ID univoco nei file di configurazione. Invio o uscita dal campo aggiorna il profilo; Salva applica la modifica.");
         _txtProfileId.Leave += (s, e) => ApplyProfileIdChange();
         _txtProfileId.KeyDown += (s, e) => { if (e.KeyCode == Keys.Enter) { ApplyProfileIdChange(); e.SuppressKeyPress = true; } };
 
         _txtDisplayName = AddRow(conn, "Nome visualizzato:", StretchTextBox(),
-            "Nome che gli utenti vedono nel riquadro di Outlook, nel suggerimento sul nome OnlyWorkspace e in Stato (per esempio «Qwen cloud»).");
+            "Nome mostrato in Stato e nel suggerimento del pallino del riquadro. Si applica con Salva.");
         _txtDisplayName.TextChanged += (s, e) =>
         {
             OnProfileFieldChanged();
@@ -159,12 +159,12 @@ public sealed partial class MainConfigForm
         };
 
         _cmbProvider = AddRow(conn, "Servizio IA:", Combo(240),
-            "Sceglie tra sei servizi preimpostati. Compatibile OpenAI richiede un indirizzo e non offre ricerca web né lettura delle capacità. I servizi precedenti restano solo nei loro profili. La modifica si applica al salvataggio.");
+            "Sei servizi preimpostati. Compatibile OpenAI richiede un indirizzo, senza ricerca web né lettura capacità. I precedenti restano nei loro profili. Si applica con Salva.");
         _cmbProvider.Items.AddRange(ProviderCatalog.All.Cast<object>().ToArray());
         _cmbProvider.SelectedIndexChanged += (s, e) => OnProviderChanged();
 
         _txtEndpoint = AddRow(conn, "Indirizzo del servizio:", StretchTextBox(),
-            "Indirizzo del servizio, di solito già proposto. Per un servizio su questo PC basta http://127.0.0.1:…; per un server in rete o in cloud serve https://.");
+            "Indirizzo del servizio: HTTP solo su loopback (127.0.0.1), HTTPS per rete e cloud. Si applica con Salva.");
         _txtEndpoint.TextChanged += (s, e) => { OnProfileFieldChanged(); ApplyCapabilities(); InvalidateWebSupport(); };
 
         _txtModel = new ThemedTextBox { Anchor = AnchorStyles.Left | AnchorStyles.Right };
@@ -179,12 +179,12 @@ public sealed partial class MainConfigForm
             OnProfileFieldChanged();
             if (!_isLoading) { ShowModelLimits(); InvalidateWebSupport(); }
         };
-        Tip(_txtModel, "Nome esatto del modello (per esempio qwen3.5:9b). Con un servizio cloud inserisci prima la chiave e poi usa «Scegli modello…» per sceglierlo dall'elenco.");
+        Tip(_txtModel, "Nome esatto del modello. Per il cloud inserisci prima la chiave, poi usa «Scegli modello…». Si applica con Salva.");
         _btnDetectModels = SecondaryButton(DetectModelsText);
         _btnDetectModels.MinimumSize = new Size(0, 23);
         _btnDetectModels.Margin = new Padding(3);
         _btnDetectModels.Click += BtnDetectModels_Click;
-        Tip(_btnDetectModels, "Chiede al servizio, con la chiave inserita, l'elenco dei modelli disponibili e te li fa scegliere. Non invia dati di Outlook e non verifica le capacità del modello: per quelle c'è «Avanzate».");
+        Tip(_btnDetectModels, "Elenca i modelli usando la chiave inserita, senza dati di Outlook. Per le capacità usa Avanzate; Salva applica la scelta.");
         AddRow(conn, "Modello:", FillRow(new InputFrame(_txtModel), _btnDetectModels), "Nome del modello invocato.");
 
         _lblModelLimits = AddRow(conn, "", new SelectableLabel { AutoSize = true, Margin = new Padding(3, 0, 3, 6) },
@@ -192,7 +192,7 @@ public sealed partial class MainConfigForm
         Theme.SetTone(_lblModelLimits, Tone.Muted);
 
         _cmbAuthType = AddRow(conn, "Autenticazione:", Combo(180),
-            "Come il servizio riconosce OnlyWorkspace: nessuna (servizio locale aperto), token (Bearer) o chiave API del fornitore cloud. Di solito va lasciato il valore proposto.");
+            "Autenticazione del servizio: nessuna, token Bearer o chiave API. Mantieni il valore proposto se corretto. Si applica con Salva.");
         _cmbAuthType.SelectedIndexChanged += (s, e) => { OnProfileFieldChanged(); ApplyCapabilities(); InvalidateWebSupport(); };
 
         _txtToken = new ThemedTextBox { Anchor = AnchorStyles.Left | AnchorStyles.Right, UseSystemPasswordChar = true };
@@ -208,7 +208,7 @@ public sealed partial class MainConfigForm
                 InvalidateProbes(item.Profile);
             }
         };
-        Tip(_txtToken, "Chiave o token rilasciato dal servizio. Viene salvato cifrato su questo PC (secrets.bin) e mai mostrato agli utenti. Lascia vuoto per toglierla.");
+        Tip(_txtToken, "Chiave del servizio, cifrata su questo PC con Salva. Lascia vuoto e salva per rimuoverla.");
         _chkShowToken = new ThemedCheckBox { Text = "Mostra", AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(6, 3, 3, 3) };
         _chkShowToken.CheckedChanged += (s, e) => _txtToken.UseSystemPasswordChar = !_chkShowToken.Checked;
         Tip(_chkShowToken, "Mostra la chiave in chiaro per controllarla; non viene salvato nulla.");
@@ -216,15 +216,15 @@ public sealed partial class MainConfigForm
 
 
         _numFirstTokenTimeout = AddRow(conn, "Timeout primo token (s):", Numeric(5, 3600, 120, 5),
-            "Quanti secondi aspettare l'inizio della risposta, compreso il caricamento del modello. Aumentalo se un modello locale grande risulta «non ha risposto in tempo».");
+            "Secondi per l’inizio della risposta, incluso il caricamento del modello. Si applica con Salva.");
         _numFirstTokenTimeout.ValueChanged += (s, e) => OnProfileFieldChanged();
 
         _numIdleTimeout = AddRow(conn, "Timeout inattività (s):", Numeric(0, 3600, 60, 5),
-            "Quanti secondi di silenzio tollerare a risposta già iniziata prima di fermarla. 0 = aspetta sempre.");
+            "Secondi senza nuovi dati prima di fermare la risposta iniziata; 0 disattiva il limite. Si applica con Salva.");
         _numIdleTimeout.ValueChanged += (s, e) => OnProfileFieldChanged();
 
         _chkUseProxy = AddWide(conn, new ThemedCheckBox { Text = "Usa il proxy di sistema", AutoSize = true },
-            "Usa il proxy impostato in Windows per raggiungere il servizio. Serve di solito in azienda per i servizi cloud; lascialo spento per un servizio su questo PC.");
+            "Usa il proxy di Windows per raggiungere il servizio; lascialo spento sul PC locale. Si applica con Salva.");
         _chkUseProxy.CheckedChanged += (s, e) => OnProfileFieldChanged();
     }
 
@@ -232,21 +232,21 @@ public sealed partial class MainConfigForm
     private void BuildContextRows(TableLayoutPanel ctx)
     {
         _cmbPreset = AddRow(ctx, "Preset contesto:", Combo(210),
-            "Solo modelli locali: combinazioni pronte di quanto testo il modello legge e scrive. Più testo richiede più memoria sul PC. Con i servizi cloud non serve: decide il fornitore.");
+            "Solo locale: imposta contesto e risposta; più testo richiede più memoria. Nel cloud decide il servizio. Si applica con Salva.");
         _cmbPreset.SelectedIndexChanged += (s, e) => OnPresetChanged();
 
         _numNumCtx = AddRow(ctx, "NumCtx (Ollama):", Numeric(2048, 262144, 16384, 1024),
-            "Solo Ollama: quanto testo (in token, circa 3,5 caratteri l'uno) il modello tiene in memoria tra domanda e risposta. Cambiarlo spesso rallenta, perché il modello si ricarica.");
+            "Solo Ollama: token disponibili per domanda e risposta. Cambiarli può ricaricare il modello. Si applica con Salva.");
         _numNumCtx.ValueChanged += (s, e) => OnContextValueChanged(recomputeBudget: true);
 
         _numMaxTokens = AddRow(ctx, "Max output token:", Numeric(256, 128000, 2048, 256),
-            "Solo modelli locali: lunghezza massima di una risposta, in token (circa 3,5 caratteri l'uno).");
+            "Solo locale: massimo di token della risposta. Si applica con Salva.");
         _numMaxTokens.ValueChanged += (s, e) => OnContextValueChanged(recomputeBudget: true);
 
         _numBudget = Numeric(1000, 1000000, 12698, 500);
         _numBudget.ValueChanged += (s, e) => OnContextValueChanged(recomputeBudget: false);
-        Tip(_numBudget, "Solo modelli locali: quanto testo di email e allegati può entrare in una richiesta (token da circa 3,5 caratteri). Un testo più lungo non viene letto a pezzi: il riquadro avvisa.");
-        AddRow(ctx, "Budget token (prompt):", _numBudget, "Solo modelli locali: quanto testo di email e allegati può entrare in una richiesta.");
+        Tip(_numBudget, "Solo locale: token per email e allegati. Se il testo supera il budget, il riquadro si ferma e avvisa. Si applica con Salva.");
+        AddRow(ctx, "Budget token (prompt):", _numBudget, "Solo locale: token per email e allegati. Se il testo supera il budget, il riquadro si ferma e avvisa. Si applica con Salva.");
         _lblBudgetHint = AddRow(ctx, "", new SelectableLabel { AutoSize = true, Margin = new Padding(3, 0, 3, 6) },
             "Valore consigliato per le impostazioni scelte sopra.");
         Theme.SetTone(_lblBudgetHint, Tone.Muted);
@@ -254,15 +254,15 @@ public sealed partial class MainConfigForm
         _lblBudgetHint.Visible = false;
 
         _numTemp = AddRow(ctx, "Temperatura:", new ThemedNumeric { Width = 100, Minimum = 0M, Maximum = 2M, DecimalPlaces = 2, Increment = 0.05M, Value = 0.3M, Anchor = AnchorStyles.Left },
-            "Quanto il modello varia le risposte: 0 = sempre uguali e prudenti, valori alti = più creative ma meno precise. 0,3 va bene per sintesi e bozze.");
+            "Variazione delle risposte: valori bassi la riducono, valori alti la aumentano. Si applica con Salva.");
         _numTemp.ValueChanged += (s, e) => OnProfileFieldChanged();
 
         _txtKeepAlive = AddRow(ctx, "Mantieni in memoria (Ollama):", new ThemedTextBox { Width = 100, Anchor = AnchorStyles.Left },
-            "Solo Ollama: quanto il modello resta caricato dopo l'ultima richiesta (per esempio 30m, 1h, 90s; 0 = libera subito la memoria). Più a lungo = risposte successive più rapide.");
+            "Solo Ollama: durata in memoria dopo la richiesta (30m, 1h, 90s); 0 libera subito la memoria. Si applica con Salva.");
         _txtKeepAlive.TextChanged += (s, e) => OnProfileFieldChanged();
 
         _chkDisableThinking = AddWide(ctx, new ThemedCheckBox { Text = "Disattiva ragionamento del modello", AutoSize = true },
-            "Per i modelli che «ragionano» prima di rispondere (Ollama, Qwen): spunta per risposte più rapide e meno token pagati; il ragionamento non verrebbe comunque mostrato.");
+            "Disattiva il ragionamento nei modelli supportati (Ollama, Qwen), riducendo tempi e token. Non viene mostrato. Si applica con Salva.");
         _chkDisableThinking.CheckedChanged += (s, e) => OnProfileFieldChanged();
     }
 
@@ -313,7 +313,7 @@ public sealed partial class MainConfigForm
         _lblWebSupport = AddRow(net, "Ricerca web:", new SelectableLabel { AutoSize = true, Text = WebNotChecked, Margin = new Padding(3, 5, 3, 6) },
             "Se il modello scelto sa cercare sul web, secondo il servizio o secondo la prova fatta con il pulsante.");
         _btnWebRetry = AddRow(net, "", SecondaryButton("Verifica Ricerca web"),
-            "Fa una vera ricerca di prova (senza dati di Outlook) per capire se il modello sa cercare sul web. Il fornitore può addebitarla.");
+            "Verifica il supporto con una ricerca sintetica, senza dati di Outlook. Il servizio può addebitarla.");
         _btnWebRetry.Click += async (s, e) => await CheckWebSupportAsync();
         _chkWebSearch = AddRow(net, "Abilitazione:", new ThemedCheckBox { Text = "Ricerca web attiva", AutoSize = true },
             "Abilita la ricerca web per le azioni spuntate sotto. Oggi le ricerche durante le azioni sono bloccate: testo della richiesta, parole delle email e query generate dal modello non vengono inviati. Richiede l'informativa accettata.");
@@ -331,7 +331,7 @@ public sealed partial class MainConfigForm
         }
         AddRow(net, "Azioni con ricerca:", _webActions, "Quali azioni del riquadro integrano la risposta con una ricerca sul web.");
         _txtWebSearchKey = AddRow(net, "Chiave Ollama Web:", new ThemedTextBox { Anchor = AnchorStyles.Left | AnchorStyles.Right, UseSystemPasswordChar = true },
-            "Solo Ollama: chiave del servizio di ricerca web di ollama.com (diversa da quella del modello). Salvata cifrata su questo PC.");
+            "Solo Ollama Web: chiave distinta da quella del modello. Salva la conserva cifrata su questo PC.");
         _txtWebSearchKey.TextChanged += (s, e) =>
         {
             if (_isLoading || _lstProfiles.SelectedItem is not ProfileItem selected) return;
@@ -351,7 +351,7 @@ public sealed partial class MainConfigForm
         _btnTestProfile = SecondaryButton("Verifica connessione");
         _btnTestProfile.MinimumSize = new Size(0, 30);
         _btnTestProfile.Click += BtnTestProfile_Click;
-        Tip(_btnTestProfile, "Prova che il servizio risponda, che la chiave sia accettata e che il modello esista. Invia solo una richiesta di prova, senza dati di Outlook.");
+        Tip(_btnTestProfile, "Controlla servizio, chiave e modello con una richiesta sintetica, senza dati di Outlook. Non salva le modifiche.");
         // AutoSize with side anchors wraps to the column: a long error grows the row instead of being clipped.
         _lblTestResult = Ui.SetFont(new OperationalStatusLabel
         {

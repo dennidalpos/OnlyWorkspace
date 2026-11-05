@@ -60,7 +60,7 @@ public sealed partial class MainConfigForm
 
         _btnRefreshCapabilities = SecondaryButton("Aggiorna capacità");
         _btnRefreshCapabilities.Click += async (s, e) => await RefreshDeclaredCapabilitiesAsync();
-        Tip(_btnRefreshCapabilities, "Rilegge limiti e capacità che il servizio pubblica per il modello. Nessuna generazione di testo e nessun costo; alcuni servizi (per esempio QwenCloud) non pubblicano nulla.");
+        Tip(_btnRefreshCapabilities, "Rilegge limiti e capacità dichiarati, senza generazione né costi. Alcuni servizi non li pubblicano. Salva conserva gli esiti.");
         _btnProbe = SecondaryButton("Prova funzioni");
         _btnProbe.Click += async (s, e) => await RunProbesAsync();
         Tip(_btnProbe, ProbeCost);
@@ -76,7 +76,7 @@ public sealed partial class MainConfigForm
 
         // The cost note sits behind a «?» beside the checkbox; the status label below stays visible, short, and shows progress.
         _chkProbeWeb = new ThemedCheckBox { Text = "Prova anche la Ricerca web", AutoSize = true };
-        Tip(_chkProbeWeb, "Aggiunge alle prove una vera ricerca web di prova, la stessa di «Verifica Ricerca web» in Autorizzazioni. Spento per impostazione predefinita.");
+        Tip(_chkProbeWeb, "Aggiunge una ricerca sintetica, senza dati di Outlook, con possibili addebiti. Spento per impostazione predefinita.");
         var probeWebRow = Inline(_chkProbeWeb, ContextHelp.Button(this, "Costo delle prove", () => ProbeCost, _tips));
         int probeWebIndex = grid.RowCount++;
         grid.RowStyles.Add(new RowStyle(SizeType.AutoSize));

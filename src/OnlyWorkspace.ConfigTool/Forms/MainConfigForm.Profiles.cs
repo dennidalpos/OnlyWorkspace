@@ -341,7 +341,7 @@ public sealed partial class MainConfigForm
         RefillPresets(caps);
         Tip(_cmbProvider, caps.DisplayName + (caps.IsExternal ? " (cloud)" : caps.Type == ProviderCatalog.OpenAICompatible ? " (destinazione dall'indirizzo)" : " (locale)") +
             (caps.Type == ProviderCatalog.OpenAICompatible ? "\nInserisci l'indirizzo. Lettura delle capacità specifiche e ricerca web non disponibili." : "") +
-            "\nDocumentazione: " + caps.DocsUrl);
+            "\nSi applica con Salva. Documentazione: " + caps.DocsUrl);
     }
 
     /// <summary>Presets only for a fixed client-side window, and only those within the model's declared maximum.</summary>
@@ -474,7 +474,7 @@ public sealed partial class MainConfigForm
         int output = (int)_numMaxTokens.Value;
         int suggested = ProviderCatalog.ComputeBudget(numCtx, output);
         bool overflows = (int)_numBudget.Value + output > numCtx;
-        Tip(_numBudget, $"Solo Ollama: budget consigliato {suggested} token. Un'email o un allegato deve entrare intero nel contesto.");
+        Tip(_numBudget, $"Solo Ollama: consigliati {suggested} token. Email e allegati devono entrare interi; altrimenti il riquadro si ferma. Si applica con Salva.");
         _lblBudgetHint.Visible = overflows;
         if (overflows)
         {

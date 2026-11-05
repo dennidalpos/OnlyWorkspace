@@ -2,7 +2,7 @@
 
 ## Confine per livello
 
-Ogni richiesta al modello passa dal dispatcher (`LlmRequestDispatcher`) e da una pseudonimizzazione meccanica prima del trasporto, anche per i profili locali. In locale sono sostituiti solo gli identificativi riconosciuti (nomi, indirizzi, recapiti, IBAN, codici); importi e date solo con le opzioni del profilo. Nel cloud importi e date sono sempre sostituiti. Le risposte vengono ripristinate sul PC (`Restore`, `RestoreJson`, `StreamRestorer`).
+Ogni richiesta al modello passa dal dispatcher (`LlmRequestDispatcher`) e da una pseudonimizzazione meccanica prima del trasporto, anche per i profili locali. In locale sono sostituiti solo gli identificativi riconosciuti (nomi, indirizzi, recapiti, IBAN, codici); importi e date solo con le opzioni del profilo. Nel cloud la sostituzione di importi e date riconosciuti è sempre attiva. Le risposte vengono ripristinate sul PC (`Restore`, `RestoreJson`, `StreamRestorer`).
 
 | Livello del profilo cloud | Cosa esce |
 | --- | --- |
@@ -30,5 +30,7 @@ Il registro DPAPI conserva identificativo casuale, data, esito, revisioni e cont
 ## Autorizzazione e limiti
 
 L'informativa 6 registra una conferma tecnica con utente Windows, postazione, data e testo accettato, distinta per profilo, destinazione, area del servizio, permessi e credenziali effettive. L'area (UE, non UE, non specificata) è dichiarata dall'amministratore per profilo; se non specificata serve una conferma separata. Non registra dichiarazioni aziendali o contrattuali. I record precedenti restano conservati e richiedono rinnovo. La policy conversazionale 8 separa i nuovi contesti dallo storico precedente.
+
+Il catalogo 2 riconosce gli importi accanto a EUR, USD, GBP o ai simboli €, $, £. La forma `1234,56 euro` non viene sostituita: il limite è confermato da una cattura HTTP sintetica; l’estensione del riconoscimento resta da implementare.
 
 È pseudonimizzazione reversibile, non anonimizzazione né attestazione di conformità. I dati sensibili che la procedura non riconosce, comprese le categorie particolari, restano nel testo e non sono anonimizzati. Prove sintetiche, runtime isolato e Outlook installato restano qualifiche distinte: [Verifica](verifica.md).

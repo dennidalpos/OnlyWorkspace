@@ -178,6 +178,25 @@ public sealed class ConfigToolTooltipTests
             var pages = (List<Control>)typeof(MainConfigForm).GetField("_pages", Flags)!.GetValue(form)!;
             for (int i = 0; i < pages.Count; i++) typeof(MainConfigForm).GetMethod("ShowPage", Flags)!.Invoke(form, new object[] { i });
             AssertEveryControlHasATip(form, Tips(form));
+            string TipOf(string field) => Tips(form).GetToolTip((Control)typeof(MainConfigForm).GetField(field, Flags)!.GetValue(form)!) ?? string.Empty;
+            // Guard effects and persistence instructions, without prescribing whole sentences.
+            foreach (string field in new[] { "_txtProfileId", "_txtDisplayName", "_cmbProvider", "_txtEndpoint", "_txtModel",
+                "_cmbAuthType", "_txtToken", "_numFirstTokenTimeout", "_numIdleTimeout", "_chkUseProxy", "_cmbPreset",
+                "_numNumCtx", "_numMaxTokens", "_numBudget", "_numTemp", "_txtKeepAlive", "_chkDisableThinking" })
+                Assert.Contains("Salva", TipOf(field));
+            Assert.DoesNotContain("OnlyWorkspace", TipOf("_txtDisplayName"));
+            Assert.Contains("pallino", TipOf("_txtDisplayName"));
+            Assert.Contains("HTTPS", TipOf("_txtEndpoint"));
+            Assert.Contains("cifrata", TipOf("_txtToken"));
+            Assert.Contains("rimuoverla", TipOf("_txtToken"));
+            Assert.Contains("0", TipOf("_numIdleTimeout"));
+            Assert.Contains("si ferma", TipOf("_numBudget"));
+            Assert.Contains("senza dati di Outlook", TipOf("_btnDetectModels"));
+            Assert.Contains("senza dati di Outlook", TipOf("_btnTestProfile"));
+            Assert.Contains("addebiti", TipOf("_chkProbeWeb"));
+            Assert.Contains("pagamento", TipOf("_btnProbe"));
+            Assert.Contains("permesso", TipOf("_cmbExposure"));
+            Assert.Contains("bloccate", TipOf("_chkWebSearch"));
         });
     }
 
