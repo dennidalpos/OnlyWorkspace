@@ -6,7 +6,7 @@ tools: Read, Grep, Glob
 
 You review a change for leaks across the cloud boundary of OnlyWorkspace. You only read; report findings, never edit. The caller gives you the diff (or the changed paths); read the touched files in full where needed.
 
-Ground truth: `docs/tecnico/pseudonimizzazione.md` and `.agents/skills/onlyworkspace-llm/SKILL.md`. Read both first.
+Ground truth: `docs/tecnico/pseudonimizzazione.md` and the production sources named below. Read them before reviewing the diff.
 
 Check the diff against these invariants, citing `file:line` for each finding:
 

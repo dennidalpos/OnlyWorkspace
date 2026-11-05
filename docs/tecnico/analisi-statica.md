@@ -23,10 +23,6 @@ albero: il 3 novembre 2026 una prova in parallelo ha riprodotto il fallimento de
 build con MSB3026 (copia di `xunit.abstractions.dll` bloccata), mentre le esecuzioni
 subito dopo la fine di `dotnet test`, ripetute due volte per runtime, sono passate.
 
-Il comando controlla anche che le intestazioni `name` e `description` dei ponti in
-`.claude/skills` coincidano con i testi canonici in `.agents/skills`; una cartella
-presente da un solo lato o un'intestazione divergente fanno fallire il gate.
-
 Node verifica la sintassi dei file JavaScript e dello script incorporato in
 TaskPane.html. Python compila in memoria i generatori senza importarli, eseguirli o
 scrivere bytecode. Sono controlli di sintassi, non analisi del flusso o regole di

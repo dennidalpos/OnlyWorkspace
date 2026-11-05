@@ -68,40 +68,6 @@ try {
     $scripts[0].Groups[2].Value | & node --check --input-type=commonjs
     if ($LASTEXITCODE -ne 0) { throw 'Sintassi JavaScript di TaskPane.html non valida.' }
 
-    # Each .claude/skills bridge must carry the same name/description header as its .agents/skills canonical text.
-    function Get-SkillHeader([string]$Path) {
-        $match = [regex]::Match([IO.File]::ReadAllText($Path), '(?s)\A---\r?\n(.*?)\r?\n---')
-        if (-not $match.Success) { throw "Intestazione assente: $Path" }
-        $header = @{}
-        foreach ($key in 'name', 'description') {
-            $line = [regex]::Match($match.Groups[1].Value, "(?m)^${key}:[ \t]*(.*?)[ \t]*\r?$")
-            if (-not $line.Success) { throw "Campo $key assente: $Path" }
-            $header[$key] = $line.Groups[1].Value
-        }
-        $header
-    }
-    $skillRoot = Join-Path $repoRoot '.agents/skills'
-    $bridgeRoot = Join-Path $repoRoot '.claude/skills'
-    $skillNames = @(
-        foreach ($root in $skillRoot, $bridgeRoot) {
-            if (Test-Path -LiteralPath $root) { (Get-ChildItem -LiteralPath $root -Directory).Name }
-        }
-    ) | Sort-Object -Unique
-    foreach ($skill in $skillNames) {
-        $canonical = Join-Path $skillRoot "$skill/SKILL.md"
-        $bridge = Join-Path $bridgeRoot "$skill/SKILL.md"
-        if (-not (Test-Path -LiteralPath $canonical) -or -not (Test-Path -LiteralPath $bridge)) {
-            throw "Ponte skill non allineato: $skill ha un solo lato tra .agents/skills e .claude/skills."
-        }
-        $expected = Get-SkillHeader $canonical
-        $actual = Get-SkillHeader $bridge
-        foreach ($key in 'name', 'description') {
-            if ($expected[$key] -cne $actual[$key]) {
-                throw "Ponte skill non allineato: $skill ($key diverso tra .agents/skills e .claude/skills)."
-            }
-        }
-    }
-
     $pythonFiles = @($files | Where-Object Extension -eq '.py')
     if ($pythonFiles.Count -gt 0) {
         & python -c 'import pathlib, sys; [compile(p.read_text(encoding="utf-8-sig"), str(p), "exec") for p in map(pathlib.Path, sys.argv[1:])]' @($pythonFiles.FullName)
@@ -120,7 +86,7 @@ try {
         $reader = [Xml.XmlReader]::Create($file.FullName, $xmlSettings)
         try { while ($reader.Read()) {} } finally { $reader.Dispose() }
     }
-    "OK: .NET; $($psFiles.Count) PowerShell; $($jsFiles.Count) JavaScript + TaskPane; $($skillNames.Count) ponti skill; $($pythonFiles.Count) Python; $($jsonFiles.Count) JSON; $($xmlFiles.Count) XML."
+    "OK: .NET; $($psFiles.Count) PowerShell; $($jsFiles.Count) JavaScript + TaskPane; $($pythonFiles.Count) Python; $($jsonFiles.Count) JSON; $($xmlFiles.Count) XML."
 } finally {
     Pop-Location
 }
