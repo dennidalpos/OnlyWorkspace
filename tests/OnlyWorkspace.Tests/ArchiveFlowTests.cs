@@ -67,9 +67,12 @@ public sealed class ArchiveFlowTests : IDisposable
         Assert.Single(limited.Timeline);
     }
 
+    /// <summary>#124: the view limit is a parameter, so the walk past it uses a small one; the default is pinned apart (it took 8 s with 20,001 rows).</summary>
     [Fact]
-    public void FullAnalysisCanReadPastTheTwentyThousandItemViewLimit()
+    public void FullAnalysisCanReadPastTheViewLimit()
     {
+        Assert.Equal(20000, ArchiveDb.MaxFlowEmails);
+        const int limit = 400;
         using var db = ArchiveDb.Open(_directory, "synthetic");
         var folders = new[]
         {
@@ -77,18 +80,21 @@ public sealed class ArchiveFlowTests : IDisposable
             db.GetOrAddFolder("pst-b", "projects", "Projects")
         };
         var now = DateTime.UtcNow;
-        for (int start = 0; start < 20001; start += 500)
+        const int total = limit + 1;
+        for (int start = 0; start < total; start += 100)
         {
-            var batch = Enumerable.Range(start, Math.Min(500, 20001 - start))
+            var batch = Enumerable.Range(start, Math.Min(100, total - start))
                 .Select(i => Header("mail-" + i, "m-" + i, "", "large-flow", "Progetto", now.AddSeconds(i))).ToArray();
-            db.AddHeaders(folders[start / 500 % folders.Length], batch, folderDone: start + batch.Length == 20001);
+            db.AddHeaders(folders[start / 100 % folders.Length], batch, folderDone: start + batch.Length == total);
         }
         var seed = new ArchiveFlowSeed { EntryId = "mail-0", StoreId = "pst-a" };
-        Assert.True(db.GetFlow(seed).LimitReached);
+        var limited = db.GetFlow(seed, limit);
+        Assert.True(limited.LimitReached);
+        Assert.Equal(limit, limited.Timeline.Count);
         var complete = db.GetFlow(seed, int.MaxValue - 1);
         Assert.False(complete.LimitReached);
-        Assert.Equal(20001, complete.Timeline.Count);
-        Assert.Equal("mail-20000", complete.Timeline[^1].EntryId);
+        Assert.Equal(total, complete.Timeline.Count);
+        Assert.Equal("mail-" + limit, complete.Timeline[^1].EntryId);
     }
 
     [Fact]

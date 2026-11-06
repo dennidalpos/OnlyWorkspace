@@ -1300,5 +1300,17 @@ finally {
     $resolved = [IO.Path]::GetFullPath($scratch)
     if (!$resolved.StartsWith($tempRoot, [StringComparison]::OrdinalIgnoreCase) -or
         ![IO.Path]::GetFileName($resolved).StartsWith('OnlyWorkspace-PanePolicy-', [StringComparison]::Ordinal)) { throw 'Unsafe fixture cleanup path' }
-    if (!(Test-Path Env:ONLYWORKSPACE_TEST_ARTIFACTS) -and (Test-Path -LiteralPath $resolved)) { Remove-Item -LiteralPath $resolved -Recurse -Force }
+    if (!(Test-Path Env:ONLYWORKSPACE_TEST_ARTIFACTS) -and (Test-Path -LiteralPath $resolved)) {
+        # Assemblies and native libraries (sqlite3mc.dll) of the staged runtime stay mapped until this process exits: Windows refuses to delete them.
+        $held = 0
+        foreach ($file in @(Get-ChildItem -LiteralPath $resolved -Recurse -Force -File)) {
+            try { [IO.File]::Delete($file.FullName) } catch [UnauthorizedAccessException], [IO.IOException] { $held++ }
+        }
+        if ($held -eq 0) { Remove-Item -LiteralPath $resolved -Recurse -Force }
+        else {
+            # The mapped files go once the process has ended; a hidden shell waits for the PID, then removes the folder.
+            $cleanup = 'for /l %i in (1,1,60) do @(tasklist /fi "PID eq {0}" /nh | find "{0}" >nul || (rd /s /q "{1}" & exit /b) & ping -n 2 127.0.0.1 >nul)' -f $PID, $resolved
+            Start-Process -FilePath $env:ComSpec -ArgumentList '/d', '/c', $cleanup -WindowStyle Hidden
+        }
+    }
 }

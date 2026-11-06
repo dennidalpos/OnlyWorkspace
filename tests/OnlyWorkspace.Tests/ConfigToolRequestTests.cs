@@ -86,8 +86,13 @@ public sealed class ConfigToolRequestTests
             Assert.False(task.IsCompleted);
             var again = (Task)Call(form, "RefreshDeclaredCapabilitiesAsync")!; Assert.True(again.IsCompleted);
             Assert.Equal(1, client.Calls);
-            Field<Button>(form, "_btnProbeCancel").PerformClick();
+            // PerformClick does nothing on a button of a tab that was never shown: raise the Click handlers directly,
+            // otherwise only the 10 second deadline ends the run and the test measures that instead of the button.
+            var cancel = Field<Button>(form, "_btnProbeCancel");
+            Assert.True(cancel.Enabled);
+            typeof(Button).GetMethod("OnClick", Flags)!.Invoke(cancel, new object[] { EventArgs.Empty });
             Pump(() => task.IsCompleted); task.GetAwaiter().GetResult();
+            Assert.Contains("annullato", Field<Label>(form, "_lblProbeStatus").Text);
             Assert.True(client.Disposed); Assert.True(client.Token.IsCancellationRequested);
             Assert.False(Field<Button>(form, "_btnProbeCancel").Enabled);
         });

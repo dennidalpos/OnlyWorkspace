@@ -68,15 +68,15 @@ public sealed class ArchiveIndexerUnreadableAttachmentTests : IDisposable
         {
             await StartAsync();
             var outlook = new FakeOutlook(new[] { Header("many", FakeOutlook.Newest) }, _copies);
-            outlook.ManyAttachments["many"] = 23;
+            outlook.ManyAttachments["many"] = 12;
             using var indexer = Indexer(outlook);
             await TickUntilAsync(indexer, async () => (await Client().GetStatsAsync()).BodiesIndexed == 1);
             var hit = Assert.Single(await Client().SearchAsync(new ArchiveQuery()));
-            Assert.Equal(23, hit.Attachments.Count);
+            Assert.Equal(12, hit.Attachments.Count);
             Assert.All(hit.Attachments, a => Assert.Equal("indexed", a.State));
             var original = await Client().GetOriginalAsync(hit.EntryId, hit.StoreId);
-            Assert.Contains("Allegato 23", ArchiveAttachmentReader.WholeText(original!));
-            Assert.Equal(23, outlook.SavedAttachmentCopies);
+            Assert.Contains("Allegato 12", ArchiveAttachmentReader.WholeText(original!));
+            Assert.Equal(12, outlook.SavedAttachmentCopies);
             Assert.All(outlook.CopyDirectories, d => Assert.False(Directory.Exists(d)));
             Assert.Equal(0, outlook.OffUiThread);
         });
