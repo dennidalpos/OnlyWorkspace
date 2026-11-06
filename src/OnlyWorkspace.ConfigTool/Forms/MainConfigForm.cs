@@ -1212,13 +1212,12 @@ public sealed partial class MainConfigForm : Form
     public async void RunSetupWizard()
     {
         if (IsDisposed) return;
-        if (LoadBlocked || _isLocked)
+        if (SetupWizardApplier.BlockedReason(LoadBlocked, _isLocked) is { } blocked)
         {
-            CopyableMessageBox.Show(this, LoadBlocked ? "La configurazione attuale non è leggibile: risolvi prima il problema indicato." : "Sblocca la configurazione con la password amministrativa per usare la procedura guidata.",
-                "Configurazione guidata", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            CopyableMessageBox.Show(this, blocked, "Configurazione guidata", MessageBoxButtons.OK, MessageBoxIcon.Information);
             return;
         }
-        var profile = _config.Profiles.FirstOrDefault(IsDefaultProfile) ?? _config.Profiles[0];
+        var profile = SetupWizardApplier.StartingProfile(_config, Profiles);
         using var wizard = new SetupWizardForm(profile, _inMemorySecrets.TryGetValue(profile.Id, out var secret) ? secret : null,
             _config.Archive.Enabled, _config.Archive.IndexAttachmentText);
         var result = wizard.ShowDialog(this);
@@ -1227,12 +1226,10 @@ public sealed partial class MainConfigForm : Form
         SyncAutostart();
         if (result != DialogResult.OK) return;
 
-        _config.Profiles[_config.Profiles.IndexOf(profile)] = wizard.Profile;
-        _config.DefaultProfile = wizard.Profile.Id;
-        if (wizard.Secret != null) _inMemorySecrets[wizard.Profile.Id] = wizard.Secret;
-        else _inMemorySecrets.Remove(wizard.Profile.Id);
-        _config.Archive.Enabled = wizard.ArchiveEnabled;
-        _config.Archive.IndexAttachmentText = wizard.IndexAttachments;
+        SetupWizardApplier.Apply(_config, _inMemorySecrets, profile, new SetupWizardResult
+        {
+            Profile = wizard.Profile, Secret = wizard.Secret, ArchiveEnabled = wizard.ArchiveEnabled, IndexAttachments = wizard.IndexAttachments
+        });
         PopulateUiFromConfig();
         MarkDirty();
         LogActivity("Procedura guidata completata: profilo '" + wizard.Profile.Id + "' su " + wizard.Profile.BaseUrl + ".");

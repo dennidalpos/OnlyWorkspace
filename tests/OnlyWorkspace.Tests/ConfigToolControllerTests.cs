@@ -154,4 +154,52 @@ public sealed class ConfigToolControllerTests
         config = new WorkspaceConfig { DefaultProfile = "x" };
         Assert.True(editor.IsDefault(new LlmProfileConfig { Id = "X" }));
     }
+
+    [Theory]
+    [InlineData(true, true, "La configurazione attuale non è leggibile: risolvi prima il problema indicato.")]
+    [InlineData(true, false, "La configurazione attuale non è leggibile: risolvi prima il problema indicato.")]
+    [InlineData(false, true, "Sblocca la configurazione con la password amministrativa per usare la procedura guidata.")]
+    [InlineData(false, false, null)]
+    public void WizardIsBlockedByAnUnreadableConfigurationFirstThenByTheLock(bool loadBlocked, bool locked, string? expected) =>
+        Assert.Equal(expected, SetupWizardApplier.BlockedReason(loadBlocked, locked));
+
+    [Fact]
+    public void WizardStartsFromTheDefaultProfileElseTheFirst()
+    {
+        var (editor, config) = Editor("a", "b");
+        config.DefaultProfile = "b";
+        Assert.Same(config.Profiles[1], SetupWizardApplier.StartingProfile(config, editor));
+        config.DefaultProfile = "missing";
+        Assert.Same(config.Profiles[0], SetupWizardApplier.StartingProfile(config, editor));
+    }
+
+    [Fact]
+    public void WizardResultReplacesTheProfileSetsTheDefaultKeyAndArchiveOptions()
+    {
+        var (editor, config) = Editor("a", "b");
+        var starting = config.Profiles[0];
+        editor.Secrets["a"] = "old";
+        var chosen = new LlmProfileConfig { Id = "cloud" };
+
+        SetupWizardApplier.Apply(config, editor.Secrets, starting, new SetupWizardResult
+        {
+            Profile = chosen, Secret = "new", ArchiveEnabled = true, IndexAttachments = false
+        });
+
+        Assert.Same(chosen, config.Profiles[0]);
+        Assert.Equal(2, config.Profiles.Count);
+        Assert.Equal("cloud", config.DefaultProfile);
+        Assert.Equal("new", editor.SecretFor("cloud"));
+        Assert.True(config.Archive.Enabled);
+        Assert.False(config.Archive.IndexAttachmentText);
+    }
+
+    [Fact]
+    public void WizardResultWithoutAKeyRemovesAnyKeyTypedUnderTheSameId()
+    {
+        var (editor, config) = Editor("a");
+        editor.Secrets["a"] = "old";
+        SetupWizardApplier.Apply(config, editor.Secrets, config.Profiles[0], new SetupWizardResult { Profile = new LlmProfileConfig { Id = "a" } });
+        Assert.Null(editor.SecretFor("a"));
+    }
 }
