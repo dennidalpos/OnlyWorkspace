@@ -45,6 +45,7 @@ public sealed class TrayStartupSmokeTests
                     using (primary)
                     {
                         Assert.True(SingleInstanceManager.SignalPrimaryInstance(scope));
+                        // Let the listener thread consume the signal first: delivery before the tray subscribes.
                         Thread.Sleep(100);
                         stage = "constructing tray";
                         using var tray = new TrayApplicationContext(configDir, startMinimized: true,

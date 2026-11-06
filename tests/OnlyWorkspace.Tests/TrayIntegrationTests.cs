@@ -105,6 +105,7 @@ public class TrayIntegrationTests
         {
             Assert.True(SingleInstanceManager.SignalPrimaryInstance(scope));
             using var received = new ManualResetEventSlim(false);
+            // The listener thread must have consumed the signal before the subscription: that is the case under test.
             Thread.Sleep(100);
             primary!.ShowWindowRequested += () => received.Set();
             Assert.True(received.Wait(TimeSpan.FromSeconds(3)));

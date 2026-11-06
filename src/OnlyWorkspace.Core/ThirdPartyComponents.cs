@@ -77,7 +77,7 @@ public static class ThirdPartyComponents
             distributed: false, note: "Solo compilazione: tipi incorporati, DLL non distribuita; il pacchetto non dichiara una licenza"),
         new ThirdPartyComponent("Microsoft.Office.Interop.Word", "15.0.4797.1004", "Nessuna licenza nel pacchetto", "https://www.nuget.org/packages/Microsoft.Office.Interop.Word",
             distributed: false, note: "Solo compilazione: tipi incorporati, DLL non distribuita; il pacchetto non dichiara una licenza"),
-        new ThirdPartyComponent("Microsoft.Windows.SDK.Contracts", "10.0.19041.1", "Licenza Microsoft Windows SDK", "https://aka.ms/WinSDKLicenseURL",
+        new ThirdPartyComponent("Microsoft.Windows.SDK.Contracts", "10.0.28000.2957", "Licenza Microsoft Windows SDK", "https://aka.ms/WinSDKLicenseURL",
             distributed: false, note: "Solo compilazione: metadati delle API OCR e PDF di Windows, nessun file distribuito"),
         new ThirdPartyComponent("NSIS", "3", "zlib/libpng", "https://nsis.sourceforge.io/License", note: "programma di installazione"),
         // Build and test only.

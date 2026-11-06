@@ -21,6 +21,39 @@ public class AttachmentExtractionTests
         Assert.Equal(new[] { "Scadenza: venerdì", "Importo: 1.220,00 €" }, Lines(result));
     }
 
+    [Theory]
+    [InlineData("utf8-bom.txt", "UTF8BOM")]
+    [InlineData("utf16le.txt", "UTF16LE")]
+    [InlineData("utf16be.txt", "UTF16BE")]
+    [InlineData("ansi.csv", "CP1252")]
+    public async Task Text_EncodingsAreDetected(string name, string encoding)
+    {
+        const string content = "Importo: 1.220,00 \u20ac\r\nScadenza: venerd\u00ec";
+        byte[] body = encoding switch
+        {
+            "UTF8BOM" => new byte[] { 0xEF, 0xBB, 0xBF }.Concat(Encoding.UTF8.GetBytes(content)).ToArray(),
+            "UTF16LE" => Encoding.Unicode.GetPreamble().Concat(Encoding.Unicode.GetBytes(content)).ToArray(),
+            "UTF16BE" => Encoding.BigEndianUnicode.GetPreamble().Concat(Encoding.BigEndianUnicode.GetBytes(content)).ToArray(),
+            // Not valid UTF-8, so Windows-1252: 0x80 is the euro sign, 0xEC is "i" with a grave accent.
+            _ => Encoding.ASCII.GetBytes("Importo: 1.220,00 ").Concat(new byte[] { 0x80 }).Concat(Encoding.ASCII.GetBytes("\r\nScadenza: venerd")).Concat(new byte[] { 0xEC }).ToArray(),
+        };
+
+        var result = await ExtractAsync(name, body);
+
+        Assert.Equal("text", result.Format);
+        Assert.Null(result.Problem);
+        Assert.Equal(new[] { "Importo: 1.220,00 \u20ac", "Scadenza: venerd\u00ec" }, Lines(result));
+    }
+
+    [Fact]
+    public async Task Calendar_WithoutVcalendarMarkup_IsMalformed()
+    {
+        var result = await ExtractAsync("invito.ics", Encoding.UTF8.GetBytes("Riunione domani alle 10"));
+
+        Assert.Equal("malformed-calendar", result.Problem);
+        Assert.Equal(string.Empty, result.Text);
+    }
+
     [Fact]
     public async Task BinaryBehindTextExtension_IsUnsupported()
     {

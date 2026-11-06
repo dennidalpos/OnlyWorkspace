@@ -400,6 +400,22 @@ try {
             for (int w = 0; w < 2; w++)
                 for (int i = 0; i < 30; i++) Assert.True(service.GetUserFlag("worker" + w + "_" + i));
             Assert.False(service.GetUserFlag("shared"));
+            // A234: the writers' own timings are asserted. The production writer waits 2 s for the mutex before it
+            // fails, so no completed operation may come near that; 5 s leaves room for a loaded machine.
+            for (int w = 0; w < 2; w++)
+            {
+                using var timings = JsonDocument.Parse(File.ReadAllText(Path.Combine(_tempDir, "worker-" + w + "-timings.json")));
+                double frequency = timings.RootElement.GetProperty("frequency").GetDouble();
+                var samples = timings.RootElement.GetProperty("samples");
+                Assert.Equal(60, samples.GetArrayLength());
+                double slowest = 0;
+                foreach (var sample in samples.EnumerateArray())
+                {
+                    Assert.Equal(string.Empty, sample.GetProperty("error").GetString());
+                    slowest = Math.Max(slowest, (sample.GetProperty("ended").GetInt64() - sample.GetProperty("began").GetInt64()) * 1000.0 / frequency);
+                }
+                Assert.True(slowest < 5000, "Worker " + w + " slowest preference write: " + slowest.ToString("F0") + " ms.");
+            }
         }
         finally
         {

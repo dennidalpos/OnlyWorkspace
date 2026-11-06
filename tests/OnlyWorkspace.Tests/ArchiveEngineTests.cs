@@ -514,6 +514,7 @@ public sealed class ArchiveEngineTests : IDisposable
             }
             var client = new ArchiveClient("p", _directory);
             var call = client.OpenAsync(true);
+            // Negative check: no event signals "still waiting for a free pipe", so a fixed pause is the only observable.
             await Task.Delay(500);
             Assert.False(call.IsCompleted, call.Exception?.ToString());
             idle[0].Dispose();

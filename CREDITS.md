@@ -42,7 +42,7 @@ Components with a copyleft or weak-copyleft license that need an owner decision 
 | `Microsoft.Office.Interop.Outlook` | 15.0.4797.1004 | unverified (no license metadata) | direct | https://www.nuget.org/packages/Microsoft.Office.Interop.Outlook/15.0.4797.1004 |
 | `Microsoft.Office.Interop.Word` | 15.0.4797.1004 | unverified (no license metadata) | direct | https://www.nuget.org/packages/Microsoft.Office.Interop.Word/15.0.4797.1004 |
 | `Microsoft.Web.WebView2` | 1.0.4314.35 | file: LICENSE.txt | direct | https://aka.ms/webview |
-| `Microsoft.Windows.SDK.Contracts` | 10.0.19041.1 | url: https://aka.ms/WinSDKLicenseURL | direct | https://aka.ms/WinSDKProjectURL |
+| `Microsoft.Windows.SDK.Contracts` | 10.0.28000.2957 | url: https://aka.ms/WinSDKLicenseURL | direct | https://aka.ms/WinSDKProjectURL |
 | `MimeKitLite` | 4.18.1 | MIT | direct | https://www.mimekit.net/ |
 | `Nager.PublicSuffix` | 3.8.0 | MIT | direct | https://github.com/nager/Nager.PublicSuffix |
 | `OpenMcdf` | 3.4.0 | MPL-2.0 | direct | https://openmcdf.github.io/openmcdf/ |
