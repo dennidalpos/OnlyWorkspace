@@ -1,7 +1,7 @@
 # Istruzioni del repository: OnlyWorkspace
 
 <!-- secondbrain:repository:begin -->
-Direttive comuni applicate: revisione **1.0** — 2026-11-05. <!-- secondbrain:source global=A673995DCF6B94765D80ABE7C4216E8357899F1E08A81FF549E350901F45768A workstation=877122D70AC9C38F743C7D502CA4572FC59BE3C295D7AA722C7E7B5BDE8B4777 -->
+Direttive comuni applicate: revisione **1.0** — 2026-11-05. <!-- secondbrain:source global=DEBBD2DC05F279C64E56CDF43B3A5F4908D9442F5BF4E4D916CCD93DEB828E0F workstation=097F6E1ECEF67815D778B74534E0AEF87F64F49E201F99E0F8A4E61CAB89458B -->
 ## SecondBrain
 
 Direttive comuni e conoscenza del repository risiedono nel dossier SecondBrain; qui restano codice, guide e asset pubblicabili.
@@ -18,4 +18,6 @@ Direttive comuni e conoscenza del repository risiedono nel dossier SecondBrain; 
 - A fine sessione porta le evidenze o i rapporti utili nel dossier (history/), chiudi la cartella con lo stesso comando e -Close (aggiorna MANIFEST.json) e lascia fixture e tmp alla retention (7 giorni, ultime 5 conservate; work 30 giorni dalla chiusura; evidence e report mai automatici). Ricostruisci l’indice con scripts/cleanup.ps1 -RuntimeReport.
 - Pulizia e migrazione (scripts/cleanup.ps1 -Migrate, -Regenerable) partono in anteprima e si applicano solo su richiesta esplicita, sulla propria postazione, con perimetro concreto e inattività delle sessioni.
 - Backup, journal e artefatti ufficiali non si eliminano; i dati sensibili grezzi restano nell’area locale esclusa da Git.
+
+- Ciclo memorie solo dopo attivazione esplicita del repository; registro separato dai derivati, privati esclusi e divieto di scrittura esteso alla persistenza. MEM03 e SYS05 distinguono turni, lotti e manutenzione.
 <!-- secondbrain:repository:end -->
