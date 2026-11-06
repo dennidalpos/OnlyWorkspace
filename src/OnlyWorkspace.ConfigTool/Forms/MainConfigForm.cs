@@ -38,6 +38,8 @@ public sealed partial class MainConfigForm : Form
     private WorkspaceConfig _config = new();
     private readonly Dictionary<string, string> _inMemorySecrets = new();
     private readonly Dictionary<string, string> _inMemoryWebSecrets = new();
+    private ProfileEditor? _profileEditor;
+    private ProfileEditor Profiles => _profileEditor ??= new ProfileEditor(() => _config, _inMemorySecrets, _inMemoryWebSecrets);
     private System.Threading.CancellationTokenSource? _webSupportCheck;
     private bool _isDirty;
     private bool _isLocked;

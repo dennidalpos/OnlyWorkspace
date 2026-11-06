@@ -231,14 +231,14 @@ public sealed partial class MainConfigForm
         }
 
         string key = CapabilityKey(p);
-        string? secret = _inMemorySecrets.TryGetValue(p.Id, out var s) && !string.IsNullOrWhiteSpace(s) ? s : null;
-        string? webSecret = _inMemoryWebSecrets.TryGetValue(p.Id, out var w) && !string.IsNullOrWhiteSpace(w) ? w : null;
+        string? secret = Profiles.SecretFor(p.Id);
+        string? webSecret = Profiles.WebSecretFor(p.Id);
         bool webAvailable = ProviderCatalog.Get(p.Type).WebSearch != WebSearchMode.None;
         var kinds = new List<ProbeKind> { ProbeKind.Text, ProbeKind.Json, ProbeKind.Reasoning };
         if (webAvailable && _chkProbeWeb.Checked) kinds.Add(ProbeKind.Web);
 
         bool Current() => !IsDisposed && ReferenceEquals(_lstProfiles.SelectedItem, item) && CapabilityKey(p) == key &&
-                          secret == (_inMemorySecrets.TryGetValue(p.Id, out var now) && !string.IsNullOrWhiteSpace(now) ? now : null);
+                          secret == Profiles.SecretFor(p.Id);
 
         var run = new CancellationTokenSource();
         _probeRun = run;

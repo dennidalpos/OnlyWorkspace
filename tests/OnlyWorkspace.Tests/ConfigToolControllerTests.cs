@@ -1,5 +1,6 @@
 using System.Windows.Forms;
 using OnlyWorkspace.ConfigTool.Services;
+using OnlyWorkspace.Core.Models;
 
 namespace OnlyWorkspace.Tests;
 
@@ -57,4 +58,100 @@ public sealed class ConfigToolControllerTests
     [InlineData(false, false, false, false, CloseReason.UserClosing, CloseAction.Close)]
     public void ClosePolicyDecidesFromTheStateAlone(bool busy, bool dirty, bool tray, bool exiting, CloseReason reason, CloseAction expected) =>
         Assert.Equal(expected, ClosePolicy.Decide(busy, dirty, tray, exiting, reason));
+
+    private static (ProfileEditor Editor, WorkspaceConfig Config) Editor(params string[] ids)
+    {
+        var config = new WorkspaceConfig { DefaultProfile = ids[0] };
+        config.Profiles = ids.Select(id => new LlmProfileConfig { Id = id }).ToList();
+        return (new ProfileEditor(() => config, new Dictionary<string, string>(), new Dictionary<string, string>()), config);
+    }
+
+    [Fact]
+    public void AddUsesTheFirstFreeProfileId()
+    {
+        var (editor, config) = Editor("profile-2", "a");
+        var added = editor.Add();
+        Assert.Equal("profile-3", added.Id);
+        Assert.Contains(added, config.Profiles);
+        Assert.Equal("Nuovo Profilo (profile-3)", added.DisplayName);
+    }
+
+    [Fact]
+    public void RenameMovesKeysAndDefaultAndDropsVaultReferences()
+    {
+        var (editor, config) = Editor("a", "b");
+        var profile = config.Profiles[0];
+        profile.SecretRef = "vault:a";
+        profile.WebSearchSecretRef = "vault:web-a";
+        editor.Secrets["a"] = "k";
+        editor.WebSecrets["a"] = "w";
+
+        Assert.Equal(RenameOutcome.Renamed, editor.Rename(profile, " c "));
+
+        Assert.Equal("c", profile.Id);
+        Assert.Equal("c", config.DefaultProfile);
+        Assert.Equal(string.Empty, profile.SecretRef);
+        Assert.Equal(string.Empty, profile.WebSearchSecretRef);
+        Assert.Equal("k", editor.SecretFor("c"));
+        Assert.Equal("w", editor.WebSecretFor("c"));
+        Assert.Null(editor.SecretFor("a"));
+        Assert.Null(editor.WebSecretFor("a"));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("  ")]
+    [InlineData("B")]
+    public void RenameRejectsEmptyOrDuplicateIdsAndChangesNothing(string newId)
+    {
+        var (editor, config) = Editor("a", "b");
+        editor.Secrets["a"] = "k";
+        Assert.Equal(RenameOutcome.Invalid, editor.Rename(config.Profiles[0], newId));
+        Assert.Equal("a", config.Profiles[0].Id);
+        Assert.Equal("a", config.DefaultProfile);
+        Assert.Equal("k", editor.SecretFor("a"));
+    }
+
+    [Fact]
+    public void RenameToTheSameIdIsUnchanged()
+    {
+        var (editor, config) = Editor("a");
+        Assert.Equal(RenameOutcome.Unchanged, editor.Rename(config.Profiles[0], " a"));
+    }
+
+    [Fact]
+    public void RemoveDropsKeysAndMovesTheDefaultToTheFirstProfileLeft()
+    {
+        var (editor, config) = Editor("a", "b", "c");
+        editor.Secrets["a"] = "k";
+        editor.WebSecrets["a"] = "w";
+
+        Assert.Equal(RemoveOutcome.Removed, editor.Remove(config.Profiles[0]));
+
+        Assert.Equal(new[] { "b", "c" }, config.Profiles.Select(p => p.Id));
+        Assert.Equal("b", config.DefaultProfile);
+        Assert.Empty(editor.Secrets);
+        Assert.Empty(editor.WebSecrets);
+    }
+
+    [Fact]
+    public void RemoveKeepsTheLastProfileAndTheDefaultWhenAnotherIsRemoved()
+    {
+        var (editor, config) = Editor("a", "b");
+        Assert.Equal(RemoveOutcome.Removed, editor.Remove(config.Profiles[1]));
+        Assert.Equal("a", config.DefaultProfile);
+        Assert.Equal(RemoveOutcome.LastProfile, editor.Remove(config.Profiles[0]));
+        Assert.Single(config.Profiles);
+    }
+
+    [Fact]
+    public void BlankKeysCountAsAbsentAndTheConfigurationIsReadAtEachCall()
+    {
+        var config = new WorkspaceConfig();
+        var editor = new ProfileEditor(() => config, new Dictionary<string, string> { ["a"] = " " }, new Dictionary<string, string>());
+        Assert.Null(editor.SecretFor("a"));
+
+        config = new WorkspaceConfig { DefaultProfile = "x" };
+        Assert.True(editor.IsDefault(new LlmProfileConfig { Id = "X" }));
+    }
 }

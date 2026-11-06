@@ -33,34 +33,16 @@ public sealed partial class MainConfigForm
         if (_isLoading || _lstProfiles.SelectedItem is not ProfileItem item) return;
 
         var profile = item.Profile;
-        string newId = _txtProfileId.Text.Trim();
-        if (newId == profile.Id) return;
-
-        if (string.IsNullOrWhiteSpace(newId) || _config.Profiles.Any(p => p != profile && string.Equals(p.Id, newId, StringComparison.OrdinalIgnoreCase)))
-        {
-            CopyableMessageBox.Show(this, "L'ID profilo deve essere univoco e non vuoto.", "ID non valido", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            _txtProfileId.Text = profile.Id;
-            return;
-        }
-
         string oldId = profile.Id;
-        profile.Id = newId;
-        profile.SecretRef = string.Empty;
-        profile.WebSearchSecretRef = string.Empty;
-
-        if (_inMemorySecrets.TryGetValue(oldId, out var secret))
+        string newId = _txtProfileId.Text.Trim();
+        switch (Profiles.Rename(profile, newId))
         {
-            _inMemorySecrets.Remove(oldId);
-            _inMemorySecrets[newId] = secret;
-        }
-        if (_inMemoryWebSecrets.TryGetValue(oldId, out var webSecret))
-        {
-            _inMemoryWebSecrets.Remove(oldId);
-            _inMemoryWebSecrets[newId] = webSecret;
-        }
-        if (_config.DefaultProfile == oldId)
-        {
-            _config.DefaultProfile = newId;
+            case RenameOutcome.Unchanged:
+                return;
+            case RenameOutcome.Invalid:
+                CopyableMessageBox.Show(this, "L'ID profilo deve essere univoco e non vuoto.", "ID non valido", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                _txtProfileId.Text = profile.Id;
+                return;
         }
 
         RefreshProfileNames();
@@ -72,7 +54,7 @@ public sealed partial class MainConfigForm
 
     private ProviderCapabilities CurrentCaps() => _cmbProvider.SelectedItem as ProviderCapabilities ?? ProviderCatalog.All[0];
 
-    private bool IsDefaultProfile(LlmProfileConfig profile) => string.Equals(profile.Id, _config.DefaultProfile, StringComparison.OrdinalIgnoreCase);
+    private bool IsDefaultProfile(LlmProfileConfig profile) => Profiles.IsDefault(profile);
 
     /// <summary>Re-reads names and the default marker in the profile list and in the default-profile combo.</summary>
     private void RefreshProfileNames(bool combo = true)
@@ -164,7 +146,7 @@ public sealed partial class MainConfigForm
         var caps = ProviderCatalog.Get(p.Type);
         if (caps.Capabilities == CapabilitySource.None) return null;
         string key = LimitsKey(p);
-        string? secret = _inMemorySecrets.TryGetValue(p.Id, out var s) && !string.IsNullOrWhiteSpace(s) ? s : null;
+        string? secret = Profiles.SecretFor(p.Id);
         if (caps.RequiresSecret && secret == null && !string.Equals(p.AuthType, "none", StringComparison.OrdinalIgnoreCase)) return "Inserisci la chiave di accesso.";
 
         ModelInfo? info = null;
@@ -528,12 +510,8 @@ public sealed partial class MainConfigForm
 
     private void BtnAddProfile_Click(object? sender, EventArgs e)
     {
-        int n = _config.Profiles.Count + 1;
-        while (_config.Profiles.Any(p => string.Equals(p.Id, "profile-" + n, StringComparison.OrdinalIgnoreCase))) n++;
-        string newId = "profile-" + n;
-        // LlmProfileConfig defaults = local Ollama from ProviderCatalog.
-        var newProfile = new LlmProfileConfig { Id = newId, DisplayName = "Nuovo Profilo (" + newId + ")" };
-        _config.Profiles.Add(newProfile);
+        var newProfile = Profiles.Add();
+        string newId = newProfile.Id;
 
         var item = new ProfileItem(newProfile, IsDefaultProfile);
         _lstProfiles.Items.Add(item);
@@ -557,11 +535,7 @@ public sealed partial class MainConfigForm
                     "Rimuovi profilo", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
                 return;
 
-            _config.Profiles.Remove(item.Profile);
-            _inMemorySecrets.Remove(item.Profile.Id);
-            _inMemoryWebSecrets.Remove(item.Profile.Id);
-            // The default must always point to an existing profile.
-            if (IsDefaultProfile(item.Profile)) _config.DefaultProfile = _config.Profiles[0].Id;
+            Profiles.Remove(item.Profile);
 
             int idx = _lstProfiles.SelectedIndex;
             _lstProfiles.Items.Remove(item);
@@ -587,7 +561,7 @@ public sealed partial class MainConfigForm
         {
             UpdateSelectedProfileFromUi();
             var p = item.Profile;
-            string? secret = _inMemorySecrets.TryGetValue(p.Id, out var s) && !string.IsNullOrWhiteSpace(s) ? s : null;
+            string? secret = Profiles.SecretFor(p.Id);
             await ModelPicker.PickAsync(_btnDetectModels, p, secret, async m =>
             {
                 try
@@ -683,8 +657,8 @@ public sealed partial class MainConfigForm
             CopyableMessageBox.Show(this, "Inserisci endpoint e modello prima della verifica.", "Verifica Ricerca web", MessageBoxButtons.OK, MessageBoxIcon.Information);
             return;
         }
-        var modelSecret = _inMemorySecrets.TryGetValue(profile.Id, out var token) && !string.IsNullOrWhiteSpace(token) ? token : null;
-        var webSecret = _inMemoryWebSecrets.TryGetValue(profile.Id, out var key) && !string.IsNullOrWhiteSpace(key) ? key : null;
+        var modelSecret = Profiles.SecretFor(profile.Id);
+        var webSecret = Profiles.WebSecretFor(profile.Id);
         string identity = CapabilityKey(profile);
         _webSupportCheck?.Cancel();
         var cts = new System.Threading.CancellationTokenSource(WebSearchService.CheckTimeout + TimeSpan.FromSeconds(5));
