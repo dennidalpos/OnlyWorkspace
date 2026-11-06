@@ -106,27 +106,168 @@ FunctionEnd
     ${EndIf}
 !macroend
 
+Var PurgeFailure
+!define /math PURGE_CHILD_LIMIT ${NSIS_MAX_STRLEN} - 6
+!define /math PURGE_ROOT_LIMIT ${NSIS_MAX_STRLEN} - 13
+
+; Walk an extended path one directory at a time. Hold each parent open without write/delete
+; sharing during enumeration. A reparse point is a leaf, including directory junctions.
+!macro PurgeChild PREFIX MODE
+    StrLen $R3 $R0
+    StrLen $R4 $R2
+    IntOp $R3 $R3 + $R4
+    ${If} $R3 < ${PURGE_CHILD_LIMIT}
+        Push "${MODE}"
+        Push "$R0\$R2"
+        Call ${PREFIX}PurgeTree
+    ${Else}
+        StrCpy $PurgeFailure 1
+    ${EndIf}
+!macroend
+
+!macro DefinePurgeTree PREFIX
+Function ${PREFIX}PurgeTree
+    Exch $R0 ; extended path
+    Exch 1
+    Exch $R5 ; empty: any entry; dot: directory root; otherwise: named child of this parent
+    Push $R1
+    Push $R2
+    Push $R3
+    Push $R4
+
+    ; FILE_READ_ATTRIBUTES, FILE_SHARE_READ, OPEN_EXISTING, BACKUP_SEMANTICS | OPEN_REPARSE_POINT
+    System::Call 'kernel32::CreateFileW(w R0, i 0x80, i 1, p 0, i 3, i 0x02200000, p 0) p.R1 ?e'
+    Pop $R2
+    ${If} $R1 == -1
+        ${If} $R2 != 2 ; ERROR_FILE_NOT_FOUND
+        ${AndIf} $R2 != 3 ; ERROR_PATH_NOT_FOUND
+            StrCpy $PurgeFailure 1
+        ${EndIf}
+        Goto purgeDone
+    ${EndIf}
+    ; FileAttributeTagInfo gives attributes of the opened object, including the link itself.
+    System::Call 'kernel32::GetFileInformationByHandleEx(p R1, i 9, *l .R2, i 8) i.R3'
+    ${If} $R3 == 0
+        StrCpy $PurgeFailure 1
+        System::Call 'kernel32::CloseHandle(p R1)'
+        Goto purgeDone
+    ${EndIf}
+    IntOp $R3 $R2 & 0x10 ; FILE_ATTRIBUTE_DIRECTORY
+    IntOp $R2 $R2 & 0x400 ; FILE_ATTRIBUTE_REPARSE_POINT
+    ${If} $R5 != ""
+    ${AndIf} $R5 != "."
+        ${If} $R3 == 0
+        ${OrIf} $R2 != 0
+            StrCpy $PurgeFailure 1
+        ${Else}
+            StrCpy $R2 $R5
+            !insertmacro PurgeChild "${PREFIX}" "."
+        ${EndIf}
+        System::Call 'kernel32::CloseHandle(p R1)'
+        Goto purgeDone
+    ${EndIf}
+
+    ${If} $R3 == 0
+        System::Call 'kernel32::CloseHandle(p R1)'
+        ${If} $R5 == "."
+            StrCpy $PurgeFailure 1
+        ${Else}
+            ClearErrors
+            Delete "$R0"
+            ${If} ${Errors}
+                StrCpy $PurgeFailure 1
+            ${EndIf}
+        ${EndIf}
+        Goto purgeDone
+    ${EndIf}
+    ${If} $R2 == 0
+        ClearErrors
+        FindFirst $R5 $R2 "$R0\*"
+        ${Unless} ${Errors}
+            ${Do}
+                ${If} $R2 != "."
+                ${AndIf} $R2 != ".."
+                    !insertmacro PurgeChild "${PREFIX}" ""
+                ${EndIf}
+                ClearErrors
+                FindNext $R5 $R2
+            ${LoopUntil} ${Errors}
+            FindClose $R5
+        ${EndUnless}
+    ${EndIf}
+    System::Call 'kernel32::CloseHandle(p R1)'
+    ; Never remove recursively here. An enumeration error leaves a nonempty directory and fails.
+    System::Call 'kernel32::RemoveDirectoryW(w R0) i.R3'
+    ${If} $R3 == 0
+        StrCpy $PurgeFailure 1
+    ${EndIf}
+
+    purgeDone:
+    Pop $R4
+    Pop $R3
+    Pop $R2
+    Pop $R1
+    Pop $R5
+    Pop $R0
+FunctionEnd
+!macroend
+
+!macro PurgeFolder PREFIX ROOT CHILD
+    Push $R0
+    Push $R1
+    StrCpy $R0 "${ROOT}"
+    StrLen $R1 $R0
+    ${If} $R1 >= ${PURGE_ROOT_LIMIT}
+        StrCpy $PurgeFailure 1
+    ${Else}
+        StrCpy $R1 $R0 2
+        ${If} $R1 == "\\"
+            StrCpy $R0 $R0 "" 2
+            StrCpy $R0 "\\?\UNC\$R0"
+        ${Else}
+            StrCpy $R1 $R0 2 1
+            ${If} $R1 == ":\"
+                StrCpy $R0 "\\?\$R0"
+            ${Else}
+                StrCpy $R0 ""
+            ${EndIf}
+        ${EndIf}
+        ${If} $R0 != ""
+            Push "${CHILD}"
+            Push $R0
+            Call ${PREFIX}PurgeTree
+        ${Else}
+            StrCpy $PurgeFailure 1
+        ${EndIf}
+    ${EndIf}
+    Pop $R1
+    Pop $R0
+!macroend
+
 ; Dati del prodotto alla disinstallazione: configurazione e segreti in PROGRAMDATA\OnlyWorkspace (con le copie non
 ; leggibili salvate dal ConfigTool in LOCALAPPDATA\OnlyWorkspace\config-non-leggibile), archivio delle email in
 ; LOCALAPPDATA\OnlyWorkspace\archive. Con PURGE = 1 li elimina senza chiedere; altrimenti chiede, e in modalita'
 ; silenziosa conserva entrambi. Il resto di LOCALAPPDATA\OnlyWorkspace (storico, log) resta.
-!macro PurgeUserData PURGE PROGRAMDATA LOCALAPPDATA
+!macro PurgeUserData PREFIX PURGE PROGRAMDATA LOCALAPPDATA
+    StrCpy $PurgeFailure 0
     ${If} ${PURGE} == 1
-        DetailPrint "Rimozione completa configurazione e segreti in ProgramData (/PURGE)..."
-        RMDir /r "${PROGRAMDATA}\OnlyWorkspace"
-        RMDir /r "${LOCALAPPDATA}\OnlyWorkspace\config-non-leggibile"
-    ${ElseIf} ${Cmd} `MessageBox MB_YESNO|MB_ICONQUESTION "Mantenere i file di configurazione e i segreti crittografati in ProgramData per eventuali reinstallazioni successive?" /SD IDYES IDNO`
-        RMDir /r "${PROGRAMDATA}\OnlyWorkspace"
-        RMDir /r "${LOCALAPPDATA}\OnlyWorkspace\config-non-leggibile"
+    ${OrIf} ${Cmd} `MessageBox MB_YESNO|MB_ICONQUESTION "Mantenere i file di configurazione e i segreti crittografati in ProgramData per eventuali reinstallazioni successive?" /SD IDYES IDNO`
+        DetailPrint "Rimozione configurazione e segreti..."
+        !insertmacro PurgeFolder "${PREFIX}" "${PROGRAMDATA}\OnlyWorkspace" "."
+        !insertmacro PurgeFolder "${PREFIX}" "${LOCALAPPDATA}\OnlyWorkspace" "config-non-leggibile"
     ${EndIf}
 
     ; Archivio delle email dell'utente che disinstalla (gli altri profili Windows conservano il proprio)
-    ${If} ${FileExists} "${LOCALAPPDATA}\OnlyWorkspace\archive\*.*"
-        ${If} ${PURGE} == 1
-        ${OrIf} ${Cmd} `MessageBox MB_YESNO|MB_ICONQUESTION|MB_DEFBUTTON2 "Eliminare anche l'archivio delle email di questo utente Windows? Le email in Outlook non vengono toccate; l'archivio si puo' ricreare dal riquadro." /SD IDNO IDYES`
-            DetailPrint "Rimozione archivio delle email dell'utente..."
-            RMDir /r "${LOCALAPPDATA}\OnlyWorkspace\archive"
-        ${EndIf}
+    ${If} ${PURGE} == 1
+        !insertmacro PurgeFolder "${PREFIX}" "${LOCALAPPDATA}\OnlyWorkspace" "archive"
+    ${ElseIf} ${FileExists} "${LOCALAPPDATA}\OnlyWorkspace\archive\*.*"
+    ${AndIf} ${Cmd} `MessageBox MB_YESNO|MB_ICONQUESTION|MB_DEFBUTTON2 "Eliminare anche l'archivio delle email di questo utente Windows? Le email in Outlook non vengono toccate; l'archivio si puo' ricreare dal riquadro." /SD IDNO IDYES`
+        !insertmacro PurgeFolder "${PREFIX}" "${LOCALAPPDATA}\OnlyWorkspace" "archive"
+    ${EndIf}
+    ${If} $PurgeFailure == 1
+        DetailPrint "Rimozione incompleta dei dati di OnlyWorkspace."
+        MessageBox MB_OK|MB_ICONEXCLAMATION "Alcuni dati di OnlyWorkspace non sono stati rimossi. Controllare le cartelle dei dati." /SD IDOK
+        SetErrorLevel 3
     ${EndIf}
 !macroend
 

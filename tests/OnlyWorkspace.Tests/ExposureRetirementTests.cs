@@ -12,17 +12,9 @@ public sealed class ExposureRetirementTests
     [InlineData("\"full\"")]
     [InlineData("3")]
     [InlineData("\"3\"")]
-    public void RetiredLevelLoadsAsStandardAndCannotBeWrittenBack(string json)
+    public void RetiredLevelsAreRefused(string json)
     {
-        var level = JsonSerializer.Deserialize<ExposureLevel>(json);
-        Assert.Equal(ExposureLevel.Standard, level);
-        Assert.Equal("\"Standard\"", JsonSerializer.Serialize(level));
-        var policy = ExposurePolicy.For(level);
-        Assert.False(policy.Attachments);
-        Assert.True(policy.Pseudonymize);
-        Assert.False(policy.AllowsWeb(WebSearchAction.Chat));
-        Assert.True(policy.AllowsWeb(WebSearchAction.Security));
-        Assert.Equal(new[] { ExposureLevel.LocalOnly, ExposureLevel.Minimal, ExposureLevel.Standard, ExposureLevel.Extended }, ExposurePolicy.All);
+        Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<ExposureLevel>(json));
     }
 
     [Theory]
@@ -38,7 +30,7 @@ public sealed class ExposureRetirementTests
     }
 
     [Fact]
-    public void LegacyConfigurationLoadsWithoutWritingFilesOrChangingProfileIdentity()
+    public void LegacyExposureInConfigurationFailsWithoutWritingFiles()
     {
         string directory = Path.Combine(Path.GetTempPath(), "ow-exposure-upgrade-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(directory);
@@ -47,8 +39,14 @@ public sealed class ExposureRetirementTests
             string path = Path.Combine(directory, "config.json");
             const string json = "{\"schemaVersion\":1,\"defaultProfile\":\"local\",\"archive\":{\"enabled\":true,\"cardsEnabled\":true,\"cardsProfile\":\"cloud\",\"cardsDailyTokens\":500000},\"profiles\":[{\"id\":\"local\",\"type\":\"ollama\",\"baseUrl\":\"http://127.0.0.1:11434\",\"model\":\"fixture\"},{\"id\":\"cloud\",\"type\":\"openai\",\"baseUrl\":\"https://provider.invalid/v1\",\"model\":\"fixture\",\"secretRef\":\"profile_cloud_token\",\"exposure\":\"Full\"}]}";
             File.WriteAllText(path, json);
-            var config = new FileConfigurationService(directory, directory).LoadConfiguration();
+            var service = new FileConfigurationService(directory, directory);
+            var error = Assert.Throws<JsonException>(() => service.LoadConfiguration());
+            Assert.Contains("Livello di esposizione non valido", error.Message);
             Assert.Equal(json, File.ReadAllText(path));
+            string currentJson = json.Replace("\"Full\"", "\"Standard\"");
+            File.WriteAllText(path, currentJson);
+            var config = service.LoadConfiguration();
+            Assert.Equal(currentJson, File.ReadAllText(path));
             var cloud = config.Profiles.Single(p => p.Id == "cloud");
             Assert.Equal(ExposureLevel.Standard, cloud.Exposure);
             Assert.Equal("profile_cloud_token", cloud.SecretRef);

@@ -196,12 +196,15 @@ try {
 Unicode True
 RequestExecutionLevel user
 SilentInstall silent
+SilentUnInstall silent
 Name "Setup checks fixture"
 OutFile "setupchecks.exe"
 !include "LogicLib.nsh"
 !include "x64.nsh"
 !include "FileFunc.nsh"
 !include "@CHECKS@"
+!insertmacro DefinePurgeTree ""
+!insertmacro DefinePurgeTree "un."
 Var Out
 Var Case
 Var Arg
@@ -242,7 +245,7 @@ Section
     ${ElseIf} $Case == "purge"
         !insertmacro PurgeRequested $R0 $1
         !insertmacro Record "purge=$1"
-        !insertmacro PurgeUserData $1 "$Arg\pd" "$Arg\lad"
+        !insertmacro PurgeUserData "" $1 "$Arg\pd" "$Arg\lad"
         !insertmacro Record "done"
     ${ElseIf} $Case == "logexec"
         Push "sentinel"
@@ -257,7 +260,15 @@ Section
     ${ElseIf} $Case == "resiliency"
         !insertmacro RemoveAddinResiliency $Arg
         !insertmacro Record "done"
+    ${ElseIf} $Case == "make-uninstaller"
+        WriteUninstaller "$EXEDIR\uninstall-fixture.exe"
     ${EndIf}
+SectionEnd
+Section "Uninstall"
+    ${GetParameters} $R0
+    ${GetOptions} $R0 "/ARG=" $Arg
+    !insertmacro PurgeRequested $R0 $1
+    !insertmacro PurgeUserData "un." $1 "$Arg\pd" "$Arg\lad"
 SectionEnd
 '@.Replace('@CHECKS@', (Join-Path $repoRoot 'installer\SetupChecks.nsh')))
     & $nsis /V2 $checksNsi 2>&1 | Out-Null
@@ -313,6 +324,63 @@ SectionEnd
         if ($case[1] -eq '1' -and (Test-Path -LiteralPath (Join-Path $data 'pd\OnlyWorkspace'))) { throw "Purge '$($case[0])': ProgramData folder kept" }
     }
     Write-Output 'PASS setup checks: /PURGE removes only the documented data'
+
+    $longRoot = Join-Path $checksFixture 'long path '
+    $longRoot = $longRoot.PadRight(229, 'x')
+    $localData = Join-Path $longRoot 'lad\OnlyWorkspace'
+    $archive = Join-Path $localData 'archive'
+    $vaultCopy = Join-Path $localData 'config-non-leggibile\secrets.bin'
+    $outside = Join-Path $checksFixture 'junction target'
+    $sentinel = Join-Path $outside 'keep.txt'
+    $db = Join-Path $archive 'Outlook.engine.db'
+    foreach ($file in @($db, $vaultCopy, $sentinel)) {
+        [void][IO.Directory]::CreateDirectory((Split-Path -LiteralPath $file))
+        [IO.File]::WriteAllText($file, 'synthetic')
+    }
+    if ($db.Length -le 260 -or $vaultCopy.Length -le 260) { throw 'Long purge fixture does not exceed MAX_PATH.' }
+    New-Item -ItemType Junction -Path (Join-Path $archive 'linked') -Target $outside | Out-Null
+    $result = Invoke-SetupChecks "/S /CASE=purge /ARG=`"$longRoot`""
+    if ($result.ExitCode -ne 0 -or (Get-Content -Raw -LiteralPath $db) -cne 'synthetic' -or (Get-Content -Raw -LiteralPath $vaultCopy) -cne 'synthetic') {
+        throw 'Silent uninstall without PURGE changed long-path data.'
+    }
+    $result = Invoke-SetupChecks "/S /PURGE /CASE=purge /ARG=`"$longRoot`""
+    if ($result.ExitCode -ne 0 -or (Test-Path -LiteralPath $archive) -or (Test-Path -LiteralPath $vaultCopy)) {
+        throw "Long-path purge left data behind: exit $($result.ExitCode)."
+    }
+    if ((Get-Content -Raw -LiteralPath $sentinel) -cne 'synthetic') { throw 'Purge followed a junction to unrelated data.' }
+
+    $blocked = Join-Path $checksFixture 'blocked data'
+    $blockedParent = Join-Path $blocked 'lad\OnlyWorkspace'
+    [void][IO.Directory]::CreateDirectory((Split-Path -LiteralPath $blockedParent))
+    New-Item -ItemType Junction -Path $blockedParent -Target $outside | Out-Null
+    $result = Invoke-SetupChecks "/S /PURGE /CASE=purge /ARG=`"$blocked`""
+    if ($result.ExitCode -ne 3 -or (Get-Content -Raw -LiteralPath $sentinel) -cne 'synthetic') {
+        throw "Purge did not safely refuse a redirected data parent: exit $($result.ExitCode)."
+    }
+
+    $unexpectedRoot = Join-Path $checksFixture 'unexpected data'
+    $unexpected = Join-Path $unexpectedRoot 'pd\OnlyWorkspace'
+    [void][IO.Directory]::CreateDirectory((Split-Path -LiteralPath $unexpected))
+    [IO.File]::WriteAllText($unexpected, 'unexpected file at directory path')
+    $result = Invoke-SetupChecks "/S /PURGE /CASE=purge /ARG=`"$unexpectedRoot`""
+    if ($result.ExitCode -ne 3 -or (Get-Content -Raw -LiteralPath $unexpected) -cne 'unexpected file at directory path') {
+        throw "Purge touched a file where a data directory was expected: exit $($result.ExitCode)."
+    }
+
+    [void][IO.Directory]::CreateDirectory($archive)
+    $result = Invoke-SetupChecks '/CASE=make-uninstaller'
+    $uninstaller = Join-Path $checksFixture 'uninstall-fixture.exe'
+    if ($result.ExitCode -ne 0 -or !(Test-Path -LiteralPath $uninstaller -PathType Leaf)) { throw 'Could not create the synthetic uninstaller.' }
+    $heldFile = [IO.File]::Open($db, [IO.FileMode]::CreateNew, [IO.FileAccess]::Write, [IO.FileShare]::Read)
+    try {
+        # _?= runs the uninstaller directly, so the caller can observe its own error level.
+        $uninstallArgs = "/S /PURGE /ARG=`"$longRoot`" _?=$checksFixture"
+        $process = Start-Process -FilePath $uninstaller -ArgumentList $uninstallArgs -WindowStyle Hidden -PassThru
+        if (!$process.WaitForExit(30000) -or $process.ExitCode -ne 3 -or !(Test-Path -LiteralPath $db -PathType Leaf)) { throw 'The direct uninstaller did not report locked data with exit 3.' }
+    } finally { $heldFile.Dispose() }
+    $result = Invoke-SetupChecks "/S /PURGE /CASE=purge /ARG=`"$longRoot`""
+    if ($result.ExitCode -ne 0 -or (Test-Path -LiteralPath $archive)) { throw "Purge retry after unlocking failed: exit $($result.ExitCode)." }
+    Write-Output 'PASS setup checks: long paths, junction boundaries, and locked data'
 
     # A126: uninstall removes only our DoNotDisableAddinList value, on a synthetic HKCU key.
     $resiliency = 'Software\OnlyWorkspace-PackagingTest-' + [guid]::NewGuid().ToString('N')

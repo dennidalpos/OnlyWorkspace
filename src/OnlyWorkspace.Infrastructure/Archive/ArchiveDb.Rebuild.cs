@@ -11,26 +11,17 @@ public sealed partial class ArchiveDb
     private bool HasTable(string name, SqliteTransaction tx) =>
         Scalar<long>("select count(*) from sqlite_master where type='table' and name=$n", tx, ("$n", name)) != 0;
 
-    private void InitializeIndex(long version, CancellationToken ct, ArchiveMigrationOptions? options)
+    private void InitializeIndex(long version, CancellationToken ct)
     {
         bool empty = Scalar<long>("select count(*) from sqlite_master where type='table' and name not like 'sqlite_%'") == 0;
-        if (!empty && version != 11 && version != 12 && version != SchemaVersion)
-            throw new InvalidDataException("Formato dell'archivio non supportato. I dati sono conservati; ripristina una versione supportata.");
-        string? expected = !empty && version != SchemaVersion ? CreateMigrationBackup(version, ct, options) : null;
+        if (!(version == 0 && empty) && (version != SchemaVersion || empty))
+            throw new InvalidDataException($"Formato dell'archivio non supportato ({version}). Il motore richiede il formato {SchemaVersion}; i dati sono conservati.");
         using var tx = _db.BeginTransaction();
-        if (expected != null)
-        {
-            if (version == 11) RetireStoredCards(tx);
-            Exec("drop table if exists archive_case_closures", tx);
-            Exec("delete from rpc_batches where operation='SetCaseClosed'", tx);
-            if (PreservedDigest(_db, ct, tx) != expected)
-                throw new InvalidDataException("La migrazione ha modificato dati da preservare; nessuna modifica confermata.");
-            if (version == 11) FinishStoredCardRetirement(tx);
-        }
         if (empty)
         {
             CreateSchema(tx);
             Exec("insert or replace into meta(key,value) values($k,$v)", tx, ("$k", MetaCheckTime), ("$v", UnixText(DateTime.UtcNow)));
+            Exec("pragma user_version=" + SchemaVersion, tx);
         }
         // The address book flow is gone: its refusals and last scope go in every format, current included.
         Exec("drop table if exists contact_rejects", tx);
@@ -54,9 +45,6 @@ public sealed partial class ArchiveDb
         }
         InitializeFacts(tx);
         InitializeSearch(tx);
-        Exec("pragma user_version=" + SchemaVersion, tx);
-        ct.ThrowIfCancellationRequested();
-        options?.BeforeCommit?.Invoke();
         ct.ThrowIfCancellationRequested();
         tx.Commit();
     }

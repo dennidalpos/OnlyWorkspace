@@ -59,7 +59,7 @@ La cronologia usa l'ora d'invio, se disponibile, altrimenti la ricezione; ignora
 
 ## Analisi e aggiornamento
 
-Le analisi usano originali acquisiti o fatti locali secondo il profilo. Al primo avvio sul formato precedente, il motore crea e verifica un backup cifrato prima di rimuovere i dati IA pregressi e le chiusure delle pratiche ritirate. Email e testi restano nell'archivio. Le copie sono conservate in `%LOCALAPPDATA%\OnlyWorkspace\archive-migration-backups`, con un manifest SHA-256 e la chiave protetta per lo stesso utente Windows. Se il backup o la migrazione falliscono, lo Stato mostra l'errore e i dati precedenti restano disponibili per il recupero. La configurazione e il vault dei provider restano separati.
+Le analisi usano originali acquisiti o fatti locali secondo il profilo. Il motore apre il formato 13. Per recuperare archivi precedenti e copie cifrate già create, conserva il database e la relativa chiave DPAPI e usa una build compatibile. La configurazione e il vault dei provider restano separati.
 
 ## Manutenzione ed eliminazione
 
@@ -67,6 +67,6 @@ L’archivio segue Outlook: Posta eliminata conta come presenza. Quando scompare
 
 Nella finestra archivio: **Pausa/Riprendi**, **Aggiorna da Outlook** (chiede una nuova passata), **Ottimizza indice**, **Compatta database** (serve spazio libero pari a circa due volte il database più 1 GiB). **Elimina archivio** (schermata Stato del riquadro, conferma in due clic) cancella indice e testi dell'utente; non tocca Outlook, lo storico o i backup operativi esterni. Le copie automatiche di rollback sono state rimosse.
 
-Un archivio non leggibile (altro utente Windows o chiave DPAPI mancante) non viene sovrascritto. I formati sconosciuti sono rifiutati; la migrazione dai formati 11 e 12 avviene soltanto dopo la verifica del backup. Gli indici mancanti sono ricostruiti dai testi conservati.
+Un archivio non leggibile (altro utente Windows o chiave DPAPI mancante) non viene sovrascritto. I formati precedenti al 13 sono rifiutati con un errore e i dati sono conservati. Gli indici mancanti sono ricostruiti dai testi conservati.
 
 Testi integrali, cancellazione sull’ultima copia, fatti e correlazioni locali, pratiche e OCR restano supportati. Le qualifiche correnti e i limiti sono in [Verifica e qualifica](../tecnico/verifica.md); il banco attivo misura i fatti locali.

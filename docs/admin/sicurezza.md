@@ -17,7 +17,7 @@ L’archivio è uno specchio di Outlook: include testo integrale cifrato, con ma
 | Copie degli allegati | `%TEMP%\OnlyWorkspace\scan` | Eliminate dopo l'uso; i residui oltre un'ora all'avvio di Outlook |
 | Esportazioni | CSV in Download, diagnostica sul Desktop, backup nella cartella scelta | Su richiesta |
 
-Un archivio con chiave assente o illeggibile non viene sovrascritto. La migrazione 11→12 crea prima un backup cifrato verificato con chiave DPAPI e manifest SHA-256, poi rimuove i dati IA pregressi in transazione preservando originali e scelte. Le copie rimangono in `%LOCALAPPDATA%\OnlyWorkspace\archive-migration-backups`; sono utilizzabili dallo stesso utente Windows. Il ripristino di una build precedente richiede la copia verificata, separata dai dati correnti. Dettagli e procedura: [Motore dell'archivio](../tecnico/archivio-motore.md#formato-conservazione-e-ricostruzione).
+Il motore rifiuta gli archivi con chiave assente o illeggibile e i formati precedenti al 13, preservando i dati. Le copie di migrazione esistenti sotto `%LOCALAPPDATA%\OnlyWorkspace\archive-migration-backups` includono la chiave DPAPI e restano utilizzabili dallo stesso utente Windows con una build compatibile. [Motore dell'archivio](../tecnico/archivio-motore.md#formato-conservazione-e-ricostruzione)
 
 La rimozione dell’ultima copia verificata elimina anche le conversazioni dipendenti. La cancellazione manuale dell’intero archivio resta distinta dalla riconciliazione delle email e non cancella automaticamente ogni conversazione indipendente. Dettagli: [motore archivio](../tecnico/archivio-motore.md#testi-integrali-e-cancellazione).
 

@@ -1235,19 +1235,27 @@ try {
     $imported = (New-Object OnlyWorkspace.Infrastructure.Configuration.FileConfigurationService($importTarget, $importTarget)).LoadConfiguration()
     Assert-Pass $imported.Profiles[0].IsExternal 'Import lost the effective remote classification'
     Assert-Pass (![OnlyWorkspace.Core.Privacy.DataEgress]::AllowsModel($imported, $imported.Profiles[0])) 'Imported profile bypassed notice'
-    # A205: retired card settings are ignored; Full is read as Standard without losing the saved key.
+    # Greenfield: Full is refused without changing the destination. Retired card settings remain inert.
     $secretBefore = (New-Object OnlyWorkspace.Infrastructure.Configuration.FileConfigurationService($importTarget, $importTarget)).ResolveSecret($imported.Profiles[0].SecretRef)
     $legacy = Get-Content -LiteralPath (Join-Path $importTarget 'config.json') -Raw | ConvertFrom-Json
     $legacy.archive | Add-Member -NotePropertyName cardsEnabled -NotePropertyValue $true -Force
     $legacy.archive | Add-Member -NotePropertyName cardsDailyTokens -NotePropertyValue -1 -Force
     $legacy.profiles[0] | Add-Member -NotePropertyName exposure -NotePropertyValue 'Full' -Force
     $legacyPath = Join-Path $scratch 'legacy-cards.json'
+    $destinationFiles = @((Join-Path $importTarget 'config.json'), (Join-Path $importTarget 'secrets.bin'))
+    $hashesBefore = @((Get-FileHash -LiteralPath $destinationFiles).Hash)
+    [IO.File]::WriteAllText($legacyPath, ($legacy | ConvertTo-Json -Depth 30))
+    $exitCode = $entry.Invoke($null, (,([string[]]@('import', $legacyPath, $importTarget, '--skip-test'))))
+    Assert-Pass ($exitCode -eq 2) 'Retired Full level was accepted by the CLI'
+    $hashesAfter = @((Get-FileHash -LiteralPath $destinationFiles).Hash)
+    Assert-Pass (!(Compare-Object $hashesBefore $hashesAfter)) 'Rejected import changed config or vault'
+    $legacy.profiles[0].exposure = 'Standard'
     [IO.File]::WriteAllText($legacyPath, ($legacy | ConvertTo-Json -Depth 30))
     $exitCode = $entry.Invoke($null, (,([string[]]@('import', $legacyPath, $importTarget, '--skip-test'))))
     Assert-Pass ($exitCode -eq 0) 'Retired card fields blocked the import'
     $serviceAfter = New-Object OnlyWorkspace.Infrastructure.Configuration.FileConfigurationService($importTarget, $importTarget)
     $configAfter = $serviceAfter.LoadConfiguration()
-    Assert-Pass ($configAfter.Profiles[0].Exposure -eq [OnlyWorkspace.Core.Privacy.ExposureLevel]::Standard) 'Retired Full level was not restricted to Standard'
+    Assert-Pass ($configAfter.Profiles[0].Exposure -eq [OnlyWorkspace.Core.Privacy.ExposureLevel]::Standard) 'Import changed the explicit Standard level'
     Assert-Pass ($secretBefore -eq $serviceAfter.ResolveSecret($configAfter.Profiles[0].SecretRef)) 'Legacy import changed the saved key'
     $savedAfter = Get-Content -LiteralPath (Join-Path $importTarget 'config.json') -Raw
     Assert-Pass (!$savedAfter.Contains('cardsEnabled') -and !$savedAfter.Contains('cardsDailyTokens')) 'Retired generation fields were written back'

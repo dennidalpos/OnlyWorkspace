@@ -14,9 +14,9 @@ Missing WebView2 is downloaded only after verifying its Microsoft signature and 
 
 Silent setup closes tray/ConfigTool and requests restart through Explorer; without an interactive desktop restart waits for logon. Interactive setup asks for closure and offers Configuration afterward.
 
-Update tray/add-in together (pipe v15). Current code still migrates archive 11/12 to 13 only after verified encrypted database/key/SHA-256 backups. Unknown formats are refused. Rollback needs the matching old build and verified archive copy. A lifecycle flag does not remove compatibility code.
+Update tray/add-in together (pipe v15). New archives use format 13. Earlier formats, including 11 and 12, are refused with an explicit error and preserved for recovery. Use the matching build and a verified archive copy for recovery.
 
-Interactive uninstall defaults to keeping ProgramData config/secrets and the current user's archive. Silent `/S /PURGE` requests removal of those files, unreadable configuration copies and the invoking user's archive. `/PURGE=1` preserves those data. Back up first and verify the affected folders afterward. In a synthetic NSIS test, files on long paths remained even though the process returned exit code 0. Other users' archives and Outlook mail are outside the purge scope. Uninstall removes only New Outlook policies created by setup and logs RegAsm/certificate removal failures. [Verification and limits](developer-guide.md#verification)
+Interactive uninstall defaults to keeping ProgramData config/secrets and the current user's archive. Silent `/S /PURGE` requests removal of those files, unreadable configuration copies and the invoking user's archive. `/PURGE=1` preserves those data. Back up first and verify the affected folders afterward. Purge uses extended Windows paths and removes directory junctions as links, preserving their targets. If removal is incomplete, the running uninstaller returns exit code 3. The standard NSIS launcher returns its own launch status. Other users' archives and Outlook mail are outside the purge scope. Uninstall removes only New Outlook policies created by setup and logs RegAsm/certificate removal failures. [Verification and limits](developer-guide.md#verification)
 
 ## ConfigTool, first run and recovery
 

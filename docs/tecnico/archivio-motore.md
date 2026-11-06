@@ -4,11 +4,9 @@ La tray possiede i database e li espone su pipe; Outlook raccoglie e invia i lot
 
 ## Formato, conservazione e ricostruzione
 
-Il formato corrente è **13**, la pipe **v15**: tray e add-in devono essere aggiornati insieme. I nuovi archivi nascono senza generazione IA automatica. I formati diversi da 11, 12 e 13 sono rifiutati senza eliminare dati.
+Il formato corrente è **13**, la pipe **v15**. Aggiornare insieme tray e add-in. I nuovi archivi nascono direttamente nel formato corrente, senza generazione IA automatica. Il motore rifiuta i formati precedenti, inclusi 11 e 12, preservando i dati.
 
-I formati 11 e 12 vengono migrati sotto ownership esclusiva, prima di servire richieste. Il motore crea una copia cifrata coerente con la [SQLite Backup API](https://www.sqlite.org/backup.html), include `archive.key` già protetta con DPAPI e verifica riapertura, tutte le righe di `integrity_check`, versione e impronta dei dati conservati. Backup e manifest SHA-256 rimangono in `%LOCALAPPDATA%\OnlyWorkspace\archive-migration-backups\<identificativo>`; non vengono eliminati automaticamente. Le copie appartengono allo stesso utente Windows: non contengono una chiave in chiaro e non sono un ripristino portabile su un altro account.
-
-Solo dopo la verifica, una transazione rimuove le chiusure delle pratiche e, dal formato 11, elimina i dati IA pregressi, i consensi e la contabilità dedicati, i marcatori cloud e le strutture di ricerca relative. Email, identità, testi, allegati, fatti, indici degli originali, scelte e cancellazioni pendenti sono confrontati prima del commit. Errore, spazio insufficiente o annullamento impediscono il commit. Per ripristinare: fermare Outlook e tray, conservare lo stato corrente e ripristinare insieme DB e chiave dalla copia verificata; una build corrente migra nuovamente i formati 11 e 12.
+Le copie di migrazione già esistenti sotto `%LOCALAPPDATA%\OnlyWorkspace\archive-migration-backups` restano disponibili. Per il recupero fermare Outlook e tray, conservare lo stato corrente e usare insieme la build compatibile, il database verificato e la chiave DPAPI dello stesso utente Windows.
 
 La ricostruzione riguarda soltanto i derivati: gli indici mancanti sono recuperati dai testi acquisiti, senza eliminare gli originali o richiedere Outlook. Le identità rimaste fuori da un indice precedente sono conservate in `archive_source_checks`: Outlook deve ancora provarne l'assenza prima di invalidare lo Storico. `archive_deletions` resta durevole.
 
@@ -88,7 +86,7 @@ La catena percorre transitivamente Message-ID, In-Reply-To, References e Convers
 
 Il preset `reconstruct` di Cerca e analizza usa l’ambito interno `flow` e la ricostruzione esistente, prima della factory IA. Il risultato `analysis_reconstruction` conserva identità dell’email di partenza, email, copie, possibili collegamenti, copertura e limiti; l’identificativo della richiesta impedisce di sostituire un risultato più recente. La sintesi parte soltanto dal comando esplicito sulla stessa fonte e applica la policy corrente del modello.
 
-Non esistono stati o chiusure delle pratiche nel contratto attivo. La migrazione rimuove `archive_case_closures` e i lotti RPC `SetCaseClosed` dopo aver verificato il backup completo; i dati rimossi restano nella copia di recupero. I campi `Case`, `CaseFacts`, `Cases` e `CaseKey` sono ritirati dalla pipe v14.
+Non esistono stati o chiusure delle pratiche nel contratto attivo. I nuovi archivi non includono `archive_case_closures` né i lotti RPC `SetCaseClosed`. Le copie di migrazione precedenti conservano i dati rimossi dalle build dell'epoca. I campi `Case`, `CaseFacts`, `Cases` e `CaseKey` sono ritirati dalla pipe v14.
 
 ## Manutenzione
 

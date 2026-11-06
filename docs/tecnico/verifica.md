@@ -6,6 +6,12 @@ Test di codice, prova sulla build installata e qualifica su cassette e provider 
 
 Contenuto datato trasferito nel dossier SecondBrain: `02-areas/products/OnlyWorkspace/history/imported/docs/tecnico/verifica.md`. Originale e SHA-256 nel rapporto di migrazione; questa voce conserva i riferimenti esistenti e non autorizza nuovi interventi.
 
+## Percorsi estesi per `/PURGE` e formato corrente dell'archivio — 6 novembre 2026
+
+Working tree sopra `dedad06`. Con NSIS 3.13 la fixture rimuove archivio e copia del vault su percorsi oltre 260 caratteri, preserva i file delle destinazioni delle junction e rifiuta un contenitore locale reindirizzato. Il disinstallatore sintetico avviato direttamente restituisce 3 su un file bloccato. Il nuovo tentativo, dopo lo sblocco, riesce. Il setup con payload sintetico è stato compilato senza firma. La pulizia della directory programma e la disinstallazione su una build reale restano qualifiche separate. [Codici del disinstallatore NSIS](https://nsis.sourceforge.io/Docs/AppendixD.html#D.1)
+
+Il motore inizializza e riapre il formato 13. Le prove di rifiuto confrontano i byte di database e chiave prima e dopo l'apertura dei formati precedenti. L'import CLI rifiuta `Full` e conserva configurazione e vault. Il gate locale registra 1.792 test per runtime, 24 script, build e analisi statica senza avvisi o errori, smoke net48 x64/x86 e zero vulnerabilità NuGet segnalate. La nuova installazione Windows rimane da verificare. Ricevuta nel dossier `history/2026-11-06-purge-greenfield/report.md`.
+
 ## Regressione `/PURGE` e gate dopo il ritiro delle skill — 5 novembre 2026
 
 Working tree sopra `0646fa0`. Lo stesso eseguibile sintetico NSIS 3.13, con gli stessi dati e argomenti, rimuove archivio e copia illeggibile del vault a 192 e 199 caratteri. A 270 e 277 caratteri i due file restano anche con codice di uscita 0. I file ProgramData sono rimossi in entrambi i casi. La fixture corretta supera i sei casi, inclusi i due ordini di `/PURGE`, un percorso con spazi, le opzioni che devono conservare i dati e il controllo dei contenuti delle sentinelle. La prova riguarda le macro su dati sintetici. La disinstallazione reale e i percorsi lunghi restano da qualificare separatamente.

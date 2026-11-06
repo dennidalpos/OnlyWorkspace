@@ -46,6 +46,7 @@ Var FreshInstall
 
 ; Controlli di prerequisiti, comandi e /PURGE, provati anche da tests\scripts\Packaging.Tests.ps1
 !include "SetupChecks.nsh"
+!insertmacro DefinePurgeTree "un."
 
 ; Pagine Installer
 !define MUI_ICON "..\src\OnlyWorkspace.ConfigTool\Assets\OnlyWorkspace.ico"
@@ -452,7 +453,9 @@ Section "Uninstall"
     ; Dati in ProgramData e archivio dell'utente: /PURGE senza valore o conferma interattiva (SetupChecks.nsh)
     ${GetParameters} $R0
     !insertmacro PurgeRequested $R0 $PurgeParam
-    !insertmacro PurgeUserData $PurgeParam "$ProgramDataDir" "$LOCALAPPDATA"
+    !insertmacro PurgeUserData "un." $PurgeParam "$ProgramDataDir" "$LOCALAPPDATA"
 
-    DetailPrint "Disinstallazione completata."
+    ${If} $PurgeFailure == 0
+        DetailPrint "Disinstallazione completata."
+    ${EndIf}
 SectionEnd

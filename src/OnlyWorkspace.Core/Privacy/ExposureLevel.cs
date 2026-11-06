@@ -21,7 +21,7 @@ public enum ExposureLevel
     Extended = 4
 }
 
-/// <summary>Reads the retired level only to migrate existing configurations to the stricter Standard policy.</summary>
+/// <summary>Reads and writes only supported exposure levels.</summary>
 public sealed class ExposureLevelJsonConverter : JsonConverter<ExposureLevel>
 {
     public override ExposureLevel Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
@@ -29,12 +29,10 @@ public sealed class ExposureLevelJsonConverter : JsonConverter<ExposureLevel>
         if (reader.TokenType == JsonTokenType.String)
         {
             var value = reader.GetString();
-            if (string.Equals(value, "Full", StringComparison.OrdinalIgnoreCase) || value == "3") return ExposureLevel.Standard;
             if (Enum.TryParse<ExposureLevel>(value, true, out var level) && Enum.IsDefined(typeof(ExposureLevel), level)) return level;
         }
         else if (reader.TokenType == JsonTokenType.Number && reader.TryGetInt32(out int value))
         {
-            if (value == 3) return ExposureLevel.Standard;
             if (Enum.IsDefined(typeof(ExposureLevel), value)) return (ExposureLevel)value;
         }
         throw new JsonException("Livello di esposizione non valido.");

@@ -29,7 +29,7 @@ scripts/build-paths.ps1 evaluates TargetPath/TargetDir/ProjectAssetsFile/Artifac
 
 The gate builds Release with warnings as errors, SDK analyzer level 10 including net48, analyzer verification, selected PSScriptAnalyzer 1.25.0 correctness rules, JavaScript/embedded TaskPane syntax, Python in-memory compilation, JSON and XML checks. It does not lint every YAML/NSIS/SVG/CSS or qualify Outlook/security. Missing tools require explicit provisioning, not silent installation.
 
-Run `test-scripts.ps1` after the build. `Packaging.Tests.ps1` compiles a synthetic fixture against the production NSIS macros. It uses short case directories under a unique temporary root, exercises quoted paths with spaces and checks the contents of files that should remain. The earlier failure was reproduced by lengthening the fixture paths: at 270 and 277 characters, the archive and the unreadable vault copy remained despite exit code 0. The fixture checks the documented purge scope within its path limit. [Dated verification](tecnico/verifica.md)
+Run `test-scripts.ps1` after the build. `Packaging.Tests.ps1` compiles a synthetic fixture against the production NSIS macros. It uses short case directories under a unique temporary root, exercises quoted paths with spaces and checks the contents of files that should remain. The long-path fixture checks the original failure, preservation of a junction target and the direct uninstaller exit code when a file is locked. It uses the NSIS `_?=` mechanism to observe the uninstaller process. [Dated verification](tecnico/verifica.md)
 
 Windows PowerShell 5.1 is needed for the net48 and WebView smoke tests. Loopback Ollama, external providers, signing, installation, registry repair and real Outlook tests have separate prerequisites and side effects. The maintainer currently disables GitHub Actions and uses local gates despite retaining CI source.
 
@@ -37,7 +37,7 @@ Windows PowerShell 5.1 is needed for the net48 and WebView smoke tests. Loopback
 
 ## Archive and local facts
 
-Current format 13 supports 11/12 verified-backup migrations; unknown formats/unreadable DPAPI keys fail without overwriting originals. Missing derived indexes rebuild from retained text. Migration removal belongs to the separate greenfield task.
+The archive initializes directly in format 13. Older formats and unreadable DPAPI keys fail without overwriting originals. Missing derived indexes rebuild from retained text within format 13.
 
 Per-folder EntryID identities preserve physical copies. Deleted Items proves presence; RSS/Junk/Drafts/Outbox/sync-problem folders are excluded. Complete PST inventory proves absence; cache GetItemFromID must return MAPI_E_NOT_FOUND, not generic error. Closed stores remain searchable. Retry starts at five minutes, doubles and stops after eight attempts until source changes.
 

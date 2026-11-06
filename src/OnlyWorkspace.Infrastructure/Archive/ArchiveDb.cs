@@ -192,14 +192,6 @@ public sealed partial class ArchiveDb : IDisposable
 
     /// <summary>Opens (or creates) the archive of one Outlook profile.</summary>
     public static ArchiveDb Open(string directory, string name, CancellationToken cancellationToken = default, Func<string, long>? availableFreeSpace = null)
-        => OpenCore(directory, name, cancellationToken, availableFreeSpace, null);
-
-    internal static ArchiveDb OpenForMigration(string directory, string name, ArchiveMigrationOptions options,
-        CancellationToken cancellationToken = default, Func<string, long>? availableFreeSpace = null) =>
-        OpenCore(directory, name, cancellationToken, availableFreeSpace, options);
-
-    private static ArchiveDb OpenCore(string directory, string name, CancellationToken cancellationToken,
-        Func<string, long>? availableFreeSpace, ArchiveMigrationOptions? options)
     {
         cancellationToken.ThrowIfCancellationRequested();
         Directory.CreateDirectory(directory);
@@ -215,14 +207,14 @@ public sealed partial class ArchiveDb : IDisposable
                 throw new ArchiveUnreadableException("The existing archive key is missing.");
             var key = ArchiveKey.LoadOrCreate(keyPath)
                       ?? throw new ArchiveUnreadableException("The archive key cannot be decrypted by this Windows user.");
-            DeleteStagingCopies(path);
             connection = Connect(path, key);
             connection.Open();
             var db = new ArchiveDb(connection, path, ownership, availableFreeSpace ?? (p => new DriveInfo(Path.GetPathRoot(p)!).AvailableFreeSpace));
             db.Exec("pragma secure_delete=on");
             long version = db.Scalar<long>("pragma user_version");
             cancellationToken.ThrowIfCancellationRequested();
-            using (cancellationToken.Register(() => SQLitePCL.raw.sqlite3_interrupt(connection.Handle))) db.InitializeIndex(version, cancellationToken, options);
+            using (cancellationToken.Register(() => SQLitePCL.raw.sqlite3_interrupt(connection.Handle))) db.InitializeIndex(version, cancellationToken);
+            DeleteStagingCopies(path);
             db.Exec("pragma journal_mode=wal");
             db.Exec("pragma synchronous=full");
             db.Exec("pragma secure_delete=on");
