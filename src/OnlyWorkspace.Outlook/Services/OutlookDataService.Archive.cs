@@ -66,7 +66,7 @@ public sealed class ArchiveHeaderReader : IArchiveHeaderReader
         }
         finally
         {
-            if (columns != null) Marshal.ReleaseComObject(columns);
+            ComObjects.Release(columns);
         }
     }
 
@@ -84,7 +84,7 @@ public sealed class ArchiveHeaderReader : IArchiveHeaderReader
         }
         finally
         {
-            if (column != null) Marshal.ReleaseComObject(column);
+            ComObjects.Release(column);
         }
     }
 
@@ -150,12 +150,12 @@ public sealed class ArchiveHeaderReader : IArchiveHeaderReader
 
     public void Dispose()
     {
-        if (_table != null) Marshal.ReleaseComObject(_table);
+        ComObjects.Release(_table);
         _table = null;
     }
 }
 
-public sealed partial class OutlookDataService : IArchiveMailSource
+public sealed partial class OutlookDataService : IArchiveMailSource, IOutlookDataService
 {
     private const int MaxArchiveFolderDepth = 12;
     private const int MaxArchiveFolders = 3000;
@@ -175,7 +175,7 @@ public sealed partial class OutlookDataService : IArchiveMailSource
             return store.IsDataFileStore && store.ExchangeStoreType == MSOutlook.OlExchangeStoreType.olNotExchange &&
                    (store.FilePath ?? string.Empty).EndsWith(".pst", StringComparison.OrdinalIgnoreCase);
         }
-        finally { if (store != null) Marshal.ReleaseComObject(store); }
+        finally { ComObjects.Release(store); }
     }
 
     /// <summary>Name of the Outlook profile in use: each profile has its own archive.</summary>
@@ -194,7 +194,7 @@ public sealed partial class OutlookDataService : IArchiveMailSource
         }
         finally
         {
-            if (session != null) Marshal.ReleaseComObject(session);
+            ComObjects.Release(session);
         }
     }
 
@@ -238,10 +238,10 @@ public sealed partial class OutlookDataService : IArchiveMailSource
             if (sent == null) return null;
             table = sent.GetTable(Type.Missing, MSOutlook.OlTableContents.olUserItems);
             columns = table.Columns;
-            Marshal.ReleaseComObject(columns.Add("SenderName"));
-            Marshal.ReleaseComObject(columns.Add("SenderEmailAddress"));
+            ComObjects.Release(columns.Add("SenderName"));
+            ComObjects.Release(columns.Add("SenderEmailAddress"));
             bool hasSmtp = true;
-            try { Marshal.ReleaseComObject(columns.Add(DaslQueryBuilder.PropSenderSmtpAddress)); }
+            try { ComObjects.Release(columns.Add(DaslQueryBuilder.PropSenderSmtpAddress)); }
             catch { hasSmtp = false; }
             try { table.Sort("[SentOn]", true); }
             catch { table.Sort("[ReceivedTime]", true); }
@@ -255,7 +255,7 @@ public sealed partial class OutlookDataService : IArchiveMailSource
                     rows.Add(new SentRow(hasSmtp ? row[DaslQueryBuilder.PropSenderSmtpAddress] as string : null, row["SenderEmailAddress"] as string, row["SenderName"] as string));
                 }
                 catch { } // unreadable row
-                finally { if (row != null) Marshal.ReleaseComObject(row); }
+                finally { ComObjects.Release(row); }
             }
             return StoreOwnAddresses.Guess(rows);
         }
@@ -266,11 +266,11 @@ public sealed partial class OutlookDataService : IArchiveMailSource
         }
         finally
         {
-            if (columns != null) Marshal.ReleaseComObject(columns);
-            if (table != null) Marshal.ReleaseComObject(table);
-            if (sent != null) Marshal.ReleaseComObject(sent);
-            if (store != null) Marshal.ReleaseComObject(store);
-            if (session != null) Marshal.ReleaseComObject(session);
+            ComObjects.Release(columns);
+            ComObjects.Release(table);
+            ComObjects.Release(sent);
+            ComObjects.Release(store);
+            ComObjects.Release(session);
         }
     }
 
@@ -287,7 +287,7 @@ public sealed partial class OutlookDataService : IArchiveMailSource
                 return session.GetFolderFromID(accessor.BinaryToString(id), storeId);
         }
         catch { } // property absent
-        finally { if (accessor != null) Marshal.ReleaseComObject(accessor); }
+        finally { ComObjects.Release(accessor); }
 
         MSOutlook.MAPIFolder? root = null;
         MSOutlook.Folders? children = null;
@@ -310,14 +310,14 @@ public sealed partial class OutlookDataService : IArchiveMailSource
                     }
                 }
                 catch { } // unreadable folder
-                finally { if (child != null) Marshal.ReleaseComObject(child); }
+                finally { ComObjects.Release(child); }
             }
         }
         catch { } // store without a readable root
         finally
         {
-            if (children != null) Marshal.ReleaseComObject(children);
-            if (root != null) Marshal.ReleaseComObject(root);
+            ComObjects.Release(children);
+            ComObjects.Release(root);
         }
         return null;
     }
@@ -358,11 +358,11 @@ public sealed partial class OutlookDataService : IArchiveMailSource
                     if (!string.IsNullOrEmpty(folder?.EntryID)) result.Add(folder!.EntryID);
                 }
                 catch { } // store without that folder (archive, public folders)
-                finally { if (folder != null) Marshal.ReleaseComObject(folder); }
+                finally { ComObjects.Release(folder); }
             }
         }
         catch (Exception ex) { OnlyWorkspaceLog.Logger.Debug(ex, "Archive: default folders of a store not readable"); }
-        finally { if (store != null) Marshal.ReleaseComObject(store); }
+        finally { ComObjects.Release(store); }
         return result;
     }
 
@@ -445,7 +445,7 @@ public sealed partial class OutlookDataService : IArchiveMailSource
                 catch (Exception ex)
                 {
                     OnlyWorkspaceLog.Logger.Debug(ex, "Archive: failed to read subfolder {Index}", frame.Next - 1);
-                    if (child != null) Marshal.ReleaseComObject(child);
+                    ComObjects.Release(child);
                     _storeComplete = false;
                 }
             }
@@ -504,8 +504,8 @@ public sealed partial class OutlookDataService : IArchiveMailSource
         {
             var frame = _stack.Pop();
             if (_stack.Count == 0) CloseStore(frame.Folder);
-            if (frame.Children != null) Marshal.ReleaseComObject(frame.Children);
-            Marshal.ReleaseComObject(frame.Folder);
+            ComObjects.Release(frame.Children);
+            ComObjects.Release(frame.Folder);
         }
 
         private void CloseStore(MSOutlook.MAPIFolder root)
@@ -538,10 +538,10 @@ public sealed partial class OutlookDataService : IArchiveMailSource
             while (_stack.Count > 0)
             {
                 var frame = _stack.Pop();
-                if (frame.Children != null) Marshal.ReleaseComObject(frame.Children);
-                Marshal.ReleaseComObject(frame.Folder);
+                ComObjects.Release(frame.Children);
+                ComObjects.Release(frame.Folder);
             }
-            if (_session != null) Marshal.ReleaseComObject(_session);
+            ComObjects.Release(_session);
             _session = null;
         }
 
@@ -586,8 +586,8 @@ public sealed partial class OutlookDataService : IArchiveMailSource
         }
         finally
         {
-            if (folder != null) Marshal.ReleaseComObject(folder);
-            if (session != null) Marshal.ReleaseComObject(session);
+            ComObjects.Release(folder);
+            ComObjects.Release(session);
         }
     }
 
@@ -623,8 +623,8 @@ public sealed partial class OutlookDataService : IArchiveMailSource
         }
         finally
         {
-            if (item != null) Marshal.ReleaseComObject(item);
-            if (session != null) Marshal.ReleaseComObject(session);
+            ComObjects.Release(item);
+            ComObjects.Release(session);
         }
     }
 
@@ -670,7 +670,7 @@ public sealed partial class OutlookDataService : IArchiveMailSource
                     }
                     finally
                     {
-                        if (r != null) Marshal.ReleaseComObject(r);
+                        ComObjects.Release(r);
                     }
                 }
             }
@@ -681,7 +681,7 @@ public sealed partial class OutlookDataService : IArchiveMailSource
             }
             finally
             {
-                if (recipients != null) Marshal.ReleaseComObject(recipients);
+                ComObjects.Release(recipients);
             }
 
             MSOutlook.Attachments? attachments = null;
@@ -706,7 +706,7 @@ public sealed partial class OutlookDataService : IArchiveMailSource
                     }
                     finally
                     {
-                        if (attachment != null) Marshal.ReleaseComObject(attachment);
+                        ComObjects.Release(attachment);
                     }
                 }
             }
@@ -717,7 +717,7 @@ public sealed partial class OutlookDataService : IArchiveMailSource
             }
             finally
             {
-                if (attachments != null) Marshal.ReleaseComObject(attachments);
+                ComObjects.Release(attachments);
             }
             return body;
         });

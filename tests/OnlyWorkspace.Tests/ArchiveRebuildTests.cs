@@ -24,6 +24,9 @@ public sealed class ArchiveRebuildTests : IDisposable
     private long Value(string sql)
     { using var db = Raw(); using var cmd = db.CreateCommand(); cmd.CommandText = sql; return Convert.ToInt64(cmd.ExecuteScalar()); }
 
+    private string? StringValue(string sql)
+    { using var db = Raw(); using var cmd = db.CreateCommand(); cmd.CommandText = sql; return cmd.ExecuteScalar() as string; }
+
     private void SeedCurrent()
     {
         using (var db = ArchiveDb.Open(_directory, "p"))
@@ -84,6 +87,7 @@ public sealed class ArchiveRebuildTests : IDisposable
     {
         SeedCurrent();
         Assert.Equal(13, Value("pragma user_version"));
+        Assert.Equal("content_hash", StringValue("select name from pragma_index_info('ix_attachments_hash')"));
         using var db = ArchiveDb.Open(_directory, "p");
         Assert.Contains("ORD-98765", db.GetOriginal("one", "store")!.Text);
         Assert.Single(db.Search(new ArchiveQuery { Text = "attachmentuniqueterm" }));

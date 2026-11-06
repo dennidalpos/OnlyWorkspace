@@ -129,7 +129,7 @@ public sealed class ProviderCompatibilityTests : IDisposable
         byte[] backupBytes = File.ReadAllBytes(backup);
         ConfigurationBackupService.ValidateBackup(backup);
         ConfigurationBackupService.RestoreBackup(backup, restored);
-        ConfigurationBackupService.ApplyStaged(source, staged);
+        ConfigurationBackupService.ApplyStaged(source, staged, ConfigurationBackupService.StagedDigest(Path.Combine(source, "config.json")), ConfigurationBackupService.StagedDigest(Path.Combine(source, "secrets.bin")));
         foreach (string target in new[] { restored, staged })
         {
             var service = new FileConfigurationService(target, target);

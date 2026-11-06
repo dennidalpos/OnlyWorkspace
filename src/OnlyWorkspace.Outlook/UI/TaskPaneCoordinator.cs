@@ -33,7 +33,7 @@ namespace OnlyWorkspace.Outlook.UI;
 public partial class TaskPaneCoordinator : IDisposable
 {
     private readonly TaskPaneControl _control;
-    private readonly OutlookDataService _dataService;
+    private readonly IOutlookDataService _dataService;
     private readonly object? _contextWindow;
     private readonly IConfigurationService _configService;
     private readonly IContextBuilder _contextBuilder;
@@ -63,7 +63,7 @@ public partial class TaskPaneCoordinator : IDisposable
 
     public TaskPaneCoordinator(
         TaskPaneControl control,
-        OutlookDataService dataService,
+        IOutlookDataService dataService,
         object? contextWindow = null,
         IConfigurationService? configService = null,
         IContextBuilder? contextBuilder = null,

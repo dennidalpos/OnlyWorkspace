@@ -117,7 +117,7 @@ public sealed class MainConfigFormTests
     }
 
     [Fact]
-    public void PseudonymizationOptionsLoadEditAndSurviveConnectorChanges()
+    public void CloudProfile_AlwaysMasks_AndNeverStoresTheForcedStateAsTheOption()
     {
         OnSta(directory =>
         {
@@ -125,14 +125,50 @@ public sealed class MainConfigFormTests
             cloud.PseudonymizeAmounts = true;
             Write(directory, new WorkspaceConfig { DefaultProfile = "a", Profiles = new() { cloud } }, new());
             using var form = new MainConfigForm(directory, null, directory);
-            Assert.True(Field<CheckBox>(form, "_chkPseudonymizeAmounts").Checked);
-            Assert.True(Field<CheckBox>(form, "_chkPseudonymizeDates").Checked);
-            Assert.False(Field<CheckBox>(form, "_chkPseudonymizeDates").Visible);
+            var amounts = Field<CheckBox>(form, "_chkPseudonymizeAmounts");
+            var dates = Field<CheckBox>(form, "_chkPseudonymizeDates");
+            // Cloud masks both regardless: the options are hidden and show only what the user chose before.
+            Assert.False(OwnVisible(amounts)); Assert.False(OwnVisible(dates));
+            Assert.True(amounts.Checked); Assert.False(dates.Checked);
             Call(form, "UpdateSelectedProfileFromUi");
-            Assert.True(Field<WorkspaceConfig>(form, "_config").Profiles.Single().PseudonymizeDates);
+            var saved = Field<WorkspaceConfig>(form, "_config").Profiles.Single();
+            Assert.True(saved.PseudonymizeAmounts); Assert.False(saved.PseudonymizeDates);
+            Assert.True(saved.IsExternal);
+
             Field<ComboBox>(form, "_cmbProvider").SelectedItem = ProviderCatalog.Get("ollama");
-            Assert.False(Field<CheckBox>(form, "_chkPseudonymizeDates").Enabled);
-            Assert.True(Field<WorkspaceConfig>(form, "_config").Profiles.Single().PseudonymizeDates);
+            Assert.True(OwnVisible(amounts)); Assert.True(OwnVisible(dates));
+            Assert.True(amounts.Enabled); Assert.True(dates.Enabled);
+            Assert.True(amounts.Checked); Assert.False(dates.Checked);
+            Assert.StartsWith("Profilo locale", Field<Label>(form, "_lblExposure").Text);
+            Assert.DoesNotContain("non si applicano", Field<Label>(form, "_lblExposure").Text);
+        });
+    }
+
+    [Fact]
+    public void LocalProfile_ChoosesAmountsAndDates_AndTheChoiceIsSaved()
+    {
+        OnSta(directory =>
+        {
+            Write(directory, new WorkspaceConfig { DefaultProfile = "a", Profiles = new() { Local("a") } }, new());
+            using var form = new MainConfigForm(directory, null, directory);
+            var amounts = Field<CheckBox>(form, "_chkPseudonymizeAmounts");
+            var dates = Field<CheckBox>(form, "_chkPseudonymizeDates");
+            Assert.True(OwnVisible(amounts)); Assert.True(OwnVisible(dates));
+            Assert.True(amounts.Enabled); Assert.True(dates.Enabled);
+            Assert.False(amounts.Checked); Assert.False(dates.Checked);
+
+            dates.Checked = true;
+            Call(form, "UpdateSelectedProfileFromUi");
+            var profile = Field<WorkspaceConfig>(form, "_config").Profiles.Single();
+            Assert.False(profile.IsExternal);
+            Assert.False(profile.PseudonymizeAmounts); Assert.True(profile.PseudonymizeDates);
+
+            // A cloud connector masks both anyway and keeps the local choice untouched for the way back.
+            Field<ComboBox>(form, "_cmbProvider").SelectedItem = ProviderCatalog.Get("qwen");
+            Assert.False(OwnVisible(amounts)); Assert.False(OwnVisible(dates));
+            Call(form, "UpdateSelectedProfileFromUi");
+            Assert.False(profile.PseudonymizeAmounts); Assert.True(profile.PseudonymizeDates);
+            Assert.True(profile.IsExternal);
         });
     }
 

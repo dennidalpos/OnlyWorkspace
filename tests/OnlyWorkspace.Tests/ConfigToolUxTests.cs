@@ -30,6 +30,9 @@ public sealed class ConfigToolUxTests
                 Assert.StartsWith("apply-staged ", arguments);
                 staging = resultDir;
                 Assert.True(File.Exists(Path.Combine(staging!, "config.json")));
+                // The elevated command is bound to the exact files staged before the consent.
+                Assert.EndsWith(" " + OnlyWorkspace.Infrastructure.Configuration.ConfigurationBackupService.StagedDigest(Path.Combine(staging!, "config.json")) + " " +
+                    OnlyWorkspace.Infrastructure.Configuration.ConfigurationBackupService.StagedDigest(Path.Combine(staging!, "secrets.bin")), arguments);
                 return completion.Task;
             };
             typeof(MainConfigForm).GetField("_elevatedWriter", Flags)!.SetValue(form, writer);

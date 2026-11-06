@@ -80,7 +80,7 @@ public sealed partial class OutlookDataService
         }
         finally
         {
-            if (item != null) Marshal.ReleaseComObject(item);
+            ComObjects.Release(item);
         }
     }
 
@@ -117,9 +117,9 @@ public sealed partial class OutlookDataService
             }
             finally
             {
-                if (range != null) Marshal.ReleaseComObject(range);
-                if (selection != null) Marshal.ReleaseComObject(selection);
-                if (app != null) Marshal.ReleaseComObject(app);
+                ComObjects.Release(range);
+                ComObjects.Release(selection);
+                ComObjects.Release(app);
             }
         }) != null;
     }
@@ -151,8 +151,8 @@ public sealed partial class OutlookDataService
         }
         finally
         {
-            if (inspector != null) Marshal.ReleaseComObject(inspector);
-            if (mail != null) Marshal.ReleaseComObject(mail);
+            ComObjects.Release(inspector);
+            ComObjects.Release(mail);
         }
     }
 
@@ -186,8 +186,8 @@ public sealed partial class OutlookDataService
         }
         finally
         {
-            if (editor != null) Marshal.ReleaseComObject(editor);
-            if (item != null) Marshal.ReleaseComObject(item);
+            ComObjects.Release(editor);
+            ComObjects.Release(item);
         }
     }
 
@@ -209,8 +209,8 @@ public sealed partial class OutlookDataService
         }
         finally
         {
-            if (selection != null) Marshal.ReleaseComObject(selection);
-            if (app != null) Marshal.ReleaseComObject(app);
+            ComObjects.Release(selection);
+            ComObjects.Release(app);
         }
     }
 

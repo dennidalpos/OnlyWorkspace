@@ -173,27 +173,29 @@ internal static class Program
 
     /// <summary>
     /// Internal command run elevated by the GUI (UAC) to copy staged config.json / secrets.bin
-    /// into the admin-protected configuration folder.
+    /// into the admin-protected configuration folder: apply-staged &lt;staging_dir&gt; &lt;config_dir&gt; &lt;config_sha256&gt; &lt;secrets_sha256|-&gt;.
     /// </summary>
     private static int HandleApplyStaged(string[] args) => IsElevated() ? ApplyStaged(args) : 1;
 
     /// <summary>apply-staged without the elevation check: tests run it on isolated local copies.</summary>
     internal static int ApplyStaged(string[] args)
     {
-        if (args.Length < 3)
+        if (args.Length != 5)
         {
-            Console.Error.WriteLine("[ERROR] Usage: apply-staged <staging_dir> <config_dir>");
+            Console.Error.WriteLine("[ERROR] Usage: apply-staged <staging_dir> <config_dir> <config_sha256> <secrets_sha256|->");
             return 1;
         }
 
-        string stagingDir = args[1];
+        // Same gate as restore-authorized: only a folder made by CreateStagingDirectory receives the result.
+        string stagingDir = Path.GetFullPath(args[1]);
+        if (!ElevatedConfigWriter.IsStagingDirectory(stagingDir)) return 1;
         string configDir = args[2];
         string resultFile = Path.Combine(stagingDir, ElevatedConfigWriter.ResultFileName);
 
         try
         {
             ElevatedConfigWriter.EnsureProtectedDirectory(configDir);
-            ConfigurationBackupService.ApplyStaged(stagingDir, configDir);
+            ConfigurationBackupService.ApplyStaged(stagingDir, configDir, args[3], args[4]);
             File.WriteAllText(resultFile, "OK");
             return 0;
         }

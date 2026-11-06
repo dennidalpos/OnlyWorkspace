@@ -1463,7 +1463,9 @@ public sealed partial class MainConfigForm : Form
 
             SetStatus("In attesa dell'autorizzazione di amministratore...");
             var result = await RunElevatedAsync(
-                "apply-staged " + ElevatedConfigWriter.Quote(stagingDir) + " " + ElevatedConfigWriter.Quote(_configDir),
+                "apply-staged " + ElevatedConfigWriter.Quote(stagingDir) + " " + ElevatedConfigWriter.Quote(_configDir) + " " +
+                ConfigurationBackupService.StagedDigest(Path.Combine(stagingDir, "config.json")) + " " +
+                ConfigurationBackupService.StagedDigest(Path.Combine(stagingDir, "secrets.bin")),
                 stagingDir);
 
             if (result.Success) return true;

@@ -99,7 +99,7 @@ public sealed class ConfigurationBackupServiceTests : IDisposable
         vault.SetSecret("key", "synthetic-key");
         ConfigurationBackupService.SaveConfiguration(staged, new WorkspaceConfig { DefaultProfile = "p", Profiles = new() {
             new() { Id = "p", Type = "ollama", BaseUrl = "http://localhost:11434", Model = "test" } } }, vault);
-        ConfigurationBackupService.ApplyStaged(staged, target);
+        ConfigurationBackupService.ApplyStaged(staged, target, ConfigurationBackupService.StagedDigest(Path.Combine(staged, "config.json")), ConfigurationBackupService.StagedDigest(Path.Combine(staged, "secrets.bin")));
         Assert.Equal(File.ReadAllBytes(Path.Combine(staged, "config.json")), File.ReadAllBytes(Path.Combine(target, "config.json")));
         Assert.Equal(File.ReadAllBytes(Path.Combine(staged, "secrets.bin")), File.ReadAllBytes(Path.Combine(target, "secrets.bin")));
     }
@@ -203,7 +203,7 @@ public sealed class ConfigurationBackupServiceTests : IDisposable
 
         Assert.Throws<InvalidOperationException>(() => ConfigurationBackupService.ValidateBackup(backupFile));
         Assert.Throws<InvalidOperationException>(() => ConfigurationBackupService.RestoreBackup(backupFile, targetDir));
-        Assert.Throws<InvalidOperationException>(() => ConfigurationBackupService.ApplyStaged(sourceDir, targetDir));
+        Assert.Throws<InvalidOperationException>(() => ConfigurationBackupService.ApplyStaged(sourceDir, targetDir, ConfigurationBackupService.StagedDigest(Path.Combine(sourceDir, "config.json")), ConfigurationBackupService.StagedDigest(Path.Combine(sourceDir, "secrets.bin"))));
         Assert.Equal("current", File.ReadAllText(Path.Combine(targetDir, "config.json")));
         Assert.Equal("current", File.ReadAllText(Path.Combine(targetDir, "secrets.bin")));
     }

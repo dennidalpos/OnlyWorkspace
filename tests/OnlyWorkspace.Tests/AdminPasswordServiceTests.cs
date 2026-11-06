@@ -20,7 +20,8 @@ public sealed class AdminPasswordServiceTests
     [Fact]
     public void Verifier_AllowsChangeAndRemovalWithoutStoringPlaintext()
     {
-        string directory = Path.Combine(Path.GetTempPath(), "OnlyWorkspace_AdminPassword_" + Guid.NewGuid().ToString("N"));
+        // Short names: net48 stops at MAX_PATH and the managed temp root plus the atomic-write temp names leave little room.
+        string directory = Path.Combine(Path.GetTempPath(), "owap-" + Guid.NewGuid().ToString("N").Substring(0, 8));
         Directory.CreateDirectory(directory);
         try
         {
@@ -43,7 +44,7 @@ public sealed class AdminPasswordServiceTests
     [Fact]
     public void CliImport_RequiresPasswordOnEveryWrite()
     {
-        string directory = Path.Combine(Path.GetTempPath(), "OnlyWorkspace_AdminCli_" + Guid.NewGuid().ToString("N"));
+        string directory = Path.Combine(Path.GetTempPath(), "owac-" + Guid.NewGuid().ToString("N").Substring(0, 8));
         string target = Path.Combine(directory, "target");
         Directory.CreateDirectory(target);
         try
@@ -77,7 +78,7 @@ public sealed class AdminPasswordServiceTests
     [Fact]
     public void GuiStartsLockedAndCannotSaveWhenPasswordIsEnabled()
     {
-        string directory = Path.Combine(Path.GetTempPath(), "OnlyWorkspace_AdminGui_" + Guid.NewGuid().ToString("N"));
+        string directory = Path.Combine(Path.GetTempPath(), "owag-" + Guid.NewGuid().ToString("N").Substring(0, 8));
         Directory.CreateDirectory(directory);
         try
         {
@@ -107,7 +108,7 @@ public sealed class AdminPasswordServiceTests
     [Fact]
     public void CliRestore_RequiresPasswordBeforeReplacingConfiguration()
     {
-        string directory = Path.Combine(Path.GetTempPath(), "OnlyWorkspace_AdminRestore_" + Guid.NewGuid().ToString("N"));
+        string directory = Path.Combine(Path.GetTempPath(), "owar-" + Guid.NewGuid().ToString("N").Substring(0, 8));
         string source = Path.Combine(directory, "source");
         string target = Path.Combine(directory, "target");
         Directory.CreateDirectory(source);

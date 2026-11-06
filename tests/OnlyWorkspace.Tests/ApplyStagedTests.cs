@@ -15,13 +15,17 @@ public sealed class ApplyStagedTests : IDisposable
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), "ow_test_apply_staged_" + Guid.NewGuid().ToString("N"));
     private readonly string _staging;
+    private readonly string _notStaging;
     private readonly string _target;
 
     public ApplyStagedTests()
     {
-        _staging = Path.Combine(_root, "staging");
+        // The elevated command only accepts a folder with the shape CreateStagingDirectory gives.
+        _staging = Path.Combine(_root, "OnlyWorkspace-staging-" + Guid.NewGuid().ToString("N"));
+        _notStaging = Path.Combine(_root, "staging");
         _target = Path.Combine(_root, "target");
         Directory.CreateDirectory(_staging);
+        Directory.CreateDirectory(_notStaging);
         Directory.CreateDirectory(_target);
     }
 
@@ -74,7 +78,15 @@ public sealed class ApplyStagedTests : IDisposable
         if (secrets != null) File.WriteAllBytes(Path.Combine(_staging, "secrets.bin"), secrets);
     }
 
-    private int Run() => Program.ApplyStaged(new[] { "apply-staged", _staging, _target });
+    private string[] ArgumentsFor(string staging) => new[]
+    {
+        "apply-staged", staging, _target,
+        ConfigurationBackupService.StagedDigest(Path.Combine(staging, "config.json")),
+        ConfigurationBackupService.StagedDigest(Path.Combine(staging, "secrets.bin"))
+    };
+
+    // The GUI computes the digests when it stages the files, before the consent.
+    private int Run() => Program.ApplyStaged(ArgumentsFor(_staging));
 
     private void AssertUntouched((string Config, byte[] Secrets) previous)
     {
@@ -126,6 +138,73 @@ public sealed class ApplyStagedTests : IDisposable
 
         Assert.NotEqual(0, Run());
         Assert.NotEqual(0, Program.ApplyStaged(new[] { "apply-staged", _staging }));
+        Assert.NotEqual(0, Program.ApplyStaged(new[] { "apply-staged", _staging, _target }));
+        AssertUntouched(previous);
+    }
+
+    [Fact]
+    public void StagedFileReplacedAfterTheConsent_IsNotApplied()
+    {
+        var previous = SeedTarget();
+        Stage(ConfigJson("approved"), Vault("approved"));
+        string[] consented = ArgumentsFor(_staging);
+
+        // Valid content swapped in by another process of the user while the UAC prompt was open.
+        Stage(ConfigJson("swapped"), null);
+
+        Assert.NotEqual(0, Program.ApplyStaged(consented));
+        Assert.Contains("modificati dopo l'autorizzazione", ResultText);
+        AssertUntouched(previous);
+    }
+
+    [Fact]
+    public void StagedSecretsReplacedAfterTheConsent_AreNotApplied()
+    {
+        var previous = SeedTarget();
+        Stage(ConfigJson("approved"), Vault("approved"));
+        string[] consented = ArgumentsFor(_staging);
+
+        Stage(null, Vault("swapped"));
+
+        Assert.NotEqual(0, Program.ApplyStaged(consented));
+        Assert.Contains("modificati dopo l'autorizzazione", ResultText);
+        AssertUntouched(previous);
+    }
+
+    [Fact]
+    public void SecretsAddedAfterTheConsent_AreNotApplied()
+    {
+        var previous = SeedTarget();
+        Stage(ConfigJson("approved"), null);
+        string[] consented = ArgumentsFor(_staging);
+
+        Stage(null, Vault("added"));
+
+        Assert.NotEqual(0, Program.ApplyStaged(consented));
+        AssertUntouched(previous);
+    }
+
+    [Fact]
+    public void ApprovedContentUnchangedSinceTheConsent_IsApplied()
+    {
+        SeedTarget();
+        Stage(ConfigJson("approved"), Vault("approved"));
+        string[] consented = ArgumentsFor(_staging);
+
+        Assert.Equal(0, Program.ApplyStaged(consented));
+        Assert.Equal("approved", TokenIn(TargetSecrets));
+    }
+
+    [Fact]
+    public void ApplyStaged_OnlyAcceptsAFolderMadeByCreateStagingDirectory()
+    {
+        var previous = SeedTarget();
+        Stage(ConfigJson("new"), Vault("new"));
+        File.Copy(Path.Combine(_staging, "config.json"), Path.Combine(_notStaging, "config.json"));
+        File.Copy(Path.Combine(_staging, "secrets.bin"), Path.Combine(_notStaging, "secrets.bin"));
+
+        Assert.Equal(1, Program.ApplyStaged(ArgumentsFor(_notStaging)));
+        Assert.False(File.Exists(Path.Combine(_notStaging, ElevatedConfigWriter.ResultFileName)));
         AssertUntouched(previous);
     }
 
@@ -212,7 +291,7 @@ public sealed class ApplyStagedTests : IDisposable
         Directory.CreateDirectory(staging);
 
         Assert.True(ElevatedConfigWriter.IsStagingDirectory(staging));
-        Assert.False(ElevatedConfigWriter.IsStagingDirectory(_staging));
+        Assert.False(ElevatedConfigWriter.IsStagingDirectory(_notStaging));
         Assert.False(ElevatedConfigWriter.IsStagingDirectory(Path.Combine(otherUsersTemp, "OnlyWorkspace-staging-x")));
         Assert.False(ElevatedConfigWriter.IsStagingDirectory(Path.Combine(otherUsersTemp, "OnlyWorkspace-staging-" + Guid.NewGuid().ToString("N"))));
     }
@@ -237,8 +316,8 @@ public sealed class ApplyStagedTests : IDisposable
             Assert.Equal(ConfigJson("kept"), File.ReadAllText(TargetConfig));
 
             // Only a folder made by CreateStagingDirectory receives the result.
-            Assert.Equal(1, Program.RestoreAuthorized(new[] { "restore-authorized", backup, _target, _staging }));
-            Assert.False(File.Exists(Path.Combine(_staging, ElevatedConfigWriter.ResultFileName)));
+            Assert.Equal(1, Program.RestoreAuthorized(new[] { "restore-authorized", backup, _target, _notStaging }));
+            Assert.False(File.Exists(Path.Combine(_notStaging, ElevatedConfigWriter.ResultFileName)));
         }
         finally { ElevatedConfigWriter.DeleteStagingDirectory(staging); }
     }

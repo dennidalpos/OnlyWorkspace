@@ -31,6 +31,8 @@ function Get-CodeFile([string]$Directory) {
 
 Push-Location $repoRoot
 try {
+    & dotnet restore OnlyWorkspace.sln --locked-mode --nologo
+    if ($LASTEXITCODE -ne 0) { throw 'Restore bloccato fallito: i pacchetti non corrispondono a packages.lock.json. Dopo una modifica voluta di Directory.Packages.props eseguire dotnet restore --force-evaluate e includere i lockfile.' }
     & dotnet build OnlyWorkspace.sln -c Release --nologo -warnaserror
     if ($LASTEXITCODE -ne 0) { throw 'Build/analizzatori .NET falliti. Con MSB3021/MSB3026 un altro build o dotnet test usa lo stesso albero: attendere la fine e ripetere in sequenza.' }
     & dotnet format analyzers OnlyWorkspace.sln --no-restore --verify-no-changes --severity warn

@@ -223,7 +223,7 @@ public sealed class TaskPaneEntry : IDisposable
 public sealed class TaskPaneManager : IDisposable
 {
     private readonly MSOutlook.Application _application;
-    private readonly OutlookDataService _dataService;
+    private readonly IOutlookDataService _dataService;
     private ICTPFactory? _ctpFactory;
     private readonly Dictionary<object, TaskPaneEntry> _entries = new();
     private readonly Dictionary<object, Action> _windowUnsubscribers = new();
@@ -236,7 +236,7 @@ public sealed class TaskPaneManager : IDisposable
         foreach (var entry in _entries.Values) entry.Stop();
     }
 
-    public TaskPaneManager(MSOutlook.Application application, OutlookDataService dataService)
+    public TaskPaneManager(MSOutlook.Application application, IOutlookDataService dataService)
     {
         _application = application ?? throw new ArgumentNullException(nameof(application));
         _dataService = dataService ?? throw new ArgumentNullException(nameof(dataService));

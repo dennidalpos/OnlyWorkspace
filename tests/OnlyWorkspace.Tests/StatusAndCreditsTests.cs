@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Xml.Linq;
 using OnlyWorkspace.Core;
 using OnlyWorkspace.Core.Archive;
@@ -58,11 +59,20 @@ public sealed class StatusAndCreditsTests
     public void Credits_MatchThePackageReferencesOfTheProjects()
     {
         string root = TestBuildPaths.RepositoryRoot;
+        // Versions live only in Directory.Packages.props; a PackageReference never carries its own.
+        var central = XDocument.Load(Path.Combine(root, "Directory.Packages.props")).Descendants("PackageVersion")
+            .ToDictionary(v => (string)v.Attribute("Include")!, v => (string)v.Attribute("Version")!, StringComparer.OrdinalIgnoreCase);
         var referenced = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (var project in Directory.GetFiles(Path.Combine(root, "src"), "*.csproj", SearchOption.AllDirectories)
                      .Concat(Directory.GetFiles(Path.Combine(root, "tests"), "*.csproj", SearchOption.AllDirectories)))
             foreach (var reference in XDocument.Load(project).Descendants("PackageReference"))
-                referenced[(string)reference.Attribute("Include")!] = (string)reference.Attribute("Version")!;
+            {
+                string id = (string)reference.Attribute("Include")!;
+                Assert.Null(reference.Attribute("Version"));
+                Assert.True(central.TryGetValue(id, out var version), id + " has no PackageVersion in Directory.Packages.props.");
+                referenced[id] = version!;
+            }
+        Assert.All(central.Keys, id => Assert.True(referenced.ContainsKey(id), id + " is in Directory.Packages.props but no project references it."));
 
         var credited = ThirdPartyComponents.All.ToDictionary(c => c.Name, StringComparer.OrdinalIgnoreCase);
         foreach (var package in referenced)
@@ -71,8 +81,61 @@ public sealed class StatusAndCreditsTests
             Assert.Equal(package.Value, component!.Version);
         }
         var notPackages = new[] { "Public Suffix List", "NSIS", "SQLitePCLRaw.core" };
-        Assert.All(ThirdPartyComponents.All.Where(c => !notPackages.Contains(c.Name)), c => Assert.Contains(c.Name, referenced.Keys));
+        var shipped = ShippedPackages();
+        Assert.All(ThirdPartyComponents.All.Where(c => !notPackages.Contains(c.Name)), c => Assert.True(referenced.ContainsKey(c.Name) || shipped.ContainsKey(c.Name), c.Name + " is neither referenced nor shipped."));
         Assert.All(ThirdPartyComponents.All, c => Assert.StartsWith("https://", c.Url));
+    }
+
+    /// <summary>The restore is reproducible: SDK pinned, versions central, and every project has the lock file that pins the transitive packages.</summary>
+    [Fact]
+    public void Restore_IsPinned_BySdkCentralVersionsAndLockFiles()
+    {
+        string root = TestBuildPaths.RepositoryRoot;
+        using (var global = JsonDocument.Parse(File.ReadAllText(Path.Combine(root, "global.json"))))
+        {
+            var sdk = global.RootElement.GetProperty("sdk");
+            Assert.Matches(@"^\d+\.\d+\.\d+$", sdk.GetProperty("version").GetString()!);
+            Assert.Equal("latestPatch", sdk.GetProperty("rollForward").GetString());
+        }
+        Assert.Contains("<RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>", File.ReadAllText(Path.Combine(root, "Directory.Build.props")));
+        foreach (var project in Directory.GetFiles(Path.Combine(root, "src"), "*.csproj", SearchOption.AllDirectories)
+                     .Concat(Directory.GetFiles(Path.Combine(root, "tests"), "*.csproj", SearchOption.AllDirectories)))
+            Assert.True(File.Exists(Path.Combine(Path.GetDirectoryName(project)!, "packages.lock.json")), project + " has no packages.lock.json.");
+    }
+
+    /// <summary>Packages whose assemblies reach the installation, direct or transitive, from the restore graphs of the add-in and the extractor.</summary>
+    private static Dictionary<string, HashSet<string>> ShippedPackages()
+    {
+        var shipped = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var file in new[] { "OutlookAssetsFile", "ExtractorAssetsFile" })
+        {
+            using var assets = JsonDocument.Parse(File.ReadAllText(TestBuildPaths.Get(file)));
+            foreach (var framework in assets.RootElement.GetProperty("targets").EnumerateObject().Where(t => t.Name.StartsWith("net4", StringComparison.Ordinal) || t.Name.StartsWith(".NETFramework", StringComparison.Ordinal)))
+                foreach (var library in framework.Value.EnumerateObject())
+                {
+                    if (library.Value.GetProperty("type").GetString() != "package" || !library.Value.TryGetProperty("runtime", out var runtime)) continue;
+                    if (runtime.EnumerateObject().All(r => r.Name.EndsWith("_._", StringComparison.Ordinal))) continue;
+                    string[] idAndVersion = library.Name.Split('/');
+                    if (!shipped.TryGetValue(idAndVersion[0], out var versions)) shipped[idAndVersion[0]] = versions = new HashSet<string>();
+                    versions.Add(idAndVersion[1]);
+                }
+        }
+        return shipped;
+    }
+
+    /// <summary>The credits also cover the packages that arrive only as dependencies and whose assemblies are installed.</summary>
+    [Fact]
+    public void Credits_CoverEveryShippedAssemblyPackage_IncludingTransitiveOnes()
+    {
+        var shipped = ShippedPackages();
+        Assert.NotEmpty(shipped);
+        var credited = ThirdPartyComponents.All.ToDictionary(c => c.Name, StringComparer.OrdinalIgnoreCase);
+        foreach (var package in shipped)
+        {
+            Assert.True(credited.TryGetValue(package.Key, out var component), package.Key + " ships but is not credited.");
+            Assert.True(component!.Distributed, package.Key + " ships but is credited as not distributed.");
+            Assert.True(package.Value.Contains(component.Version), package.Key + " is credited as " + component.Version + " but ships as " + string.Join("/", package.Value) + ".");
+        }
     }
 
     [Fact]

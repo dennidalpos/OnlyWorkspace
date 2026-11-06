@@ -53,20 +53,37 @@ public static class ConfigurationBackupService
         ReplacePair(targetConfigDir, config, secrets, File.Replace);
     }
 
+    /// <summary>SHA-256 (hex) of a staged file, or "-" when it is absent: the digest the elevated command receives on its command line.</summary>
+    public static string StagedDigest(string path) =>
+        File.Exists(path) ? Sha256Hex(File.ReadAllBytes(path)) : "-";
+
     /// <summary>
     /// Elevated half of a GUI save: the staged config.json (and secrets.bin, when staged) replace the pair in
-    /// <paramref name="targetConfigDir"/> under the same validation and rollback as a restore. Nothing is written
-    /// when the staging is missing, unreadable or invalid.
+    /// <paramref name="targetConfigDir"/> under the same validation and rollback as a restore. The staging folder is
+    /// writable by the unelevated user, so the bytes read once must match the digests the GUI passed on the elevated
+    /// command line: a file replaced after the consent is refused. Nothing is written when the staging is missing,
+    /// unreadable, replaced or invalid.
     /// </summary>
-    public static void ApplyStaged(string stagingDir, string targetConfigDir)
+    public static void ApplyStaged(string stagingDir, string targetConfigDir, string expectedConfigDigest, string expectedSecretsDigest)
     {
         string stagedConfig = Path.Combine(stagingDir, "config.json");
         string stagedSecrets = Path.Combine(stagingDir, "secrets.bin");
         if (!File.Exists(stagedConfig)) throw new FileNotFoundException("La configurazione da applicare non è presente.", stagedConfig);
         byte[] config = ReadFile(stagedConfig, MaxConfigBytes);
         byte[]? secrets = File.Exists(stagedSecrets) ? ReadFile(stagedSecrets, MaxSecretsBytes) : null;
+        if (!DigestMatches(config, expectedConfigDigest) || (secrets == null ? expectedSecretsDigest != "-" : !DigestMatches(secrets, expectedSecretsDigest)))
+            throw new InvalidDataException("I file da applicare sono stati modificati dopo l'autorizzazione. Riprovare il salvataggio.");
         config = ValidateContents(config, secrets, "della configurazione da applicare");
         ReplacePair(targetConfigDir, config, secrets, File.Replace);
+    }
+
+    private static bool DigestMatches(byte[] content, string expected) =>
+        string.Equals(Sha256Hex(content), expected, StringComparison.OrdinalIgnoreCase);
+
+    private static string Sha256Hex(byte[] content)
+    {
+        using var sha = SHA256.Create();
+        return BitConverter.ToString(sha.ComputeHash(content)).Replace("-", "");
     }
 
     /// <summary>

@@ -102,7 +102,7 @@ public sealed partial class OutlookDataService
                 }
                 finally
                 {
-                    if (row != null) Marshal.ReleaseComObject(row);
+                    ComObjects.Release(row);
                 }
             }
             return found;
@@ -124,7 +124,7 @@ public sealed partial class OutlookDataService
                     _table = _folder.GetTable(_dasl.Length > 0 ? _dasl : Type.Missing, MSOutlook.OlTableContents.olUserItems);
                     _columns = _table.Columns;
                     foreach (var name in new[] { "SenderName", "SenderEmailAddress", "ReceivedTime" })
-                        Marshal.ReleaseComObject(_columns.Add(name));
+                        ComObjects.Release(_columns.Add(name));
                     _hasMessageId = TryColumn(DaslQueryBuilder.PropInternetMessageId);
                     _hasSmtp = _rows != null && TryColumn(DaslQueryBuilder.PropSenderSmtpAddress);
                     _hasTo = _rows?.NeedsRecipients == true && TryColumn("To") && TryColumn("CC");
@@ -143,14 +143,14 @@ public sealed partial class OutlookDataService
 
         private bool TryColumn(string name)
         {
-            try { Marshal.ReleaseComObject(_columns!.Add(name)); return true; }
+            try { ComObjects.Release(_columns!.Add(name)); return true; }
             catch { return false; }
         }
 
         private void CloseFolder()
         {
-            if (_columns != null) { Marshal.ReleaseComObject(_columns); _columns = null; }
-            if (_table != null) { Marshal.ReleaseComObject(_table); _table = null; }
+            if (_columns != null) { ComObjects.Release(_columns); _columns = null; }
+            if (_table != null) { ComObjects.Release(_table); _table = null; }
             if (_folder == null) return;
             if (_depth > 0)
             {
@@ -168,13 +168,13 @@ public sealed partial class OutlookDataService
                                 StoreId = child.StoreID ?? string.Empty, Path = child.FolderPath ?? string.Empty }, _depth - 1));
                         }
                         catch (Exception ex) { FoldersFailed++; OnlyWorkspaceLog.Logger.Debug(ex, "Failed to list a child mail folder"); }
-                        finally { if (child != null) Marshal.ReleaseComObject(child); }
+                        finally { ComObjects.Release(child); }
                     }
                 }
                 catch (Exception ex) { FoldersFailed++; OnlyWorkspaceLog.Logger.Warning(ex, "Failed to list child mail folders"); }
-                finally { if (children != null) Marshal.ReleaseComObject(children); }
+                finally { ComObjects.Release(children); }
             }
-            Marshal.ReleaseComObject(_folder);
+            ComObjects.Release(_folder);
             _folder = null;
         }
 
@@ -184,7 +184,7 @@ public sealed partial class OutlookDataService
             if (_disposed) return;
             _depth = 0;
             CloseFolder();
-            if (_session != null) { Marshal.ReleaseComObject(_session); _session = null; }
+            if (_session != null) { ComObjects.Release(_session); _session = null; }
             _disposed = true;
         }
     }
@@ -260,7 +260,7 @@ public sealed partial class OutlookDataService
                     });
                 }
                 catch (Exception ex) { OnlyWorkspaceLog.Logger.Debug(ex, "Failed to inspect a sent mail item"); }
-                finally { if (item != null) Marshal.ReleaseComObject(item); }
+                finally { ComObjects.Release(item); }
             }
             return found;
         }
@@ -292,10 +292,10 @@ public sealed partial class OutlookDataService
 
         private void CloseFolder()
         {
-            if (_restricted != null && !ReferenceEquals(_restricted, _items)) Marshal.ReleaseComObject(_restricted);
+            if (_restricted != null && !ReferenceEquals(_restricted, _items)) ComObjects.Release(_restricted);
             _restricted = null;
-            if (_items != null) { Marshal.ReleaseComObject(_items); _items = null; }
-            if (_folder != null) { Marshal.ReleaseComObject(_folder); _folder = null; }
+            if (_items != null) { ComObjects.Release(_items); _items = null; }
+            if (_folder != null) { ComObjects.Release(_folder); _folder = null; }
         }
 
         public void Dispose()
@@ -303,7 +303,7 @@ public sealed partial class OutlookDataService
             _owner.EnsureUiThread();
             if (_disposed) return;
             CloseFolder();
-            if (_session != null) { Marshal.ReleaseComObject(_session); _session = null; }
+            if (_session != null) { ComObjects.Release(_session); _session = null; }
             _disposed = true;
         }
     }

@@ -34,16 +34,16 @@ public sealed partial class OutlookDataService
                 }
                 finally
                 {
-                    if (folder != null) Marshal.ReleaseComObject(folder);
-                    if (store != null) Marshal.ReleaseComObject(store);
+                    ComObjects.Release(folder);
+                    ComObjects.Release(store);
                 }
             }
             return result;
         }
         finally
         {
-            if (stores != null) Marshal.ReleaseComObject(stores);
-            if (session != null) Marshal.ReleaseComObject(session);
+            ComObjects.Release(stores);
+            ComObjects.Release(session);
         }
     }
 
@@ -69,7 +69,7 @@ public sealed partial class OutlookDataService
                         }
                         return row;
                     }
-                    finally { if (item != null) Marshal.ReleaseComObject(item); }
+                    finally { ComObjects.Release(item); }
                     void Add(string category, string? value)
                     {
                         if (!string.IsNullOrWhiteSpace(value)) row.Add(new PrivacyEntity { Category = category, Value = value!.Trim() });
@@ -81,13 +81,13 @@ public sealed partial class OutlookDataService
             {
                 await slice.NextAsync(thread, ct); MSOutlook.MAPIFolder? child = null;
                 try { child = children[i]; await ReadPrivacyFolderAsync(child, result, slice, thread, ct); }
-                finally { if (child != null) Marshal.ReleaseComObject(child); }
+                finally { ComObjects.Release(child); }
             }
         }
         finally
         {
-            if (children != null) Marshal.ReleaseComObject(children);
-            if (items != null) Marshal.ReleaseComObject(items);
+            ComObjects.Release(children);
+            ComObjects.Release(items);
         }
     }
 }

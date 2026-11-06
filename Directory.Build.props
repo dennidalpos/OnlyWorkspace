@@ -5,6 +5,8 @@
     <!-- Include the shipped net48 targets; SDK defaults only enable analyzers for modern .NET. -->
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
     <AnalysisLevel>10.0</AnalysisLevel>
+    <!-- Transitive packages are pinned in packages.lock.json next to each project; scripts\check-code.ps1 restores in locked mode. -->
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <!-- Optional workstation configuration; no SecondBrain path is embedded in the repository. -->
     <OnlyWorkspaceRepositoryRoot>$(MSBuildThisFileDirectory)</OnlyWorkspaceRepositoryRoot>
     <OnlyWorkspaceCheckoutKey>$([MSBuild]::StableStringHash($(OnlyWorkspaceRepositoryRoot.ToLowerInvariant()), 'Sha256').Substring(0, 12))</OnlyWorkspaceCheckoutKey>

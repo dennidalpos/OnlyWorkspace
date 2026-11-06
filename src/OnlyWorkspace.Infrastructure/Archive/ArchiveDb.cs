@@ -411,6 +411,8 @@ public sealed partial class ArchiveDb : IDisposable
             "text_limited integer not null default 0, content_hash text)",
             "create table attachment_contents(hash text primary key, text text not null) without rowid",
             "create index ix_attachments_email on attachments(email_id)",
+            // The prune of attachment_contents and the FTS triggers look attachments up by hash.
+            "create index ix_attachments_hash on attachments(content_hash)",
             // Contentless: the words are searchable, the text cannot be read back.
             "create virtual table body_fts using fts5(subject, body, content='', contentless_delete=1, tokenize='unicode61 remove_diacritics 2')",
             "create virtual table attachment_fts using fts5(name,body,content='',contentless_delete=1,tokenize='unicode61 remove_diacritics 2')",

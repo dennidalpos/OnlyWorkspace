@@ -303,10 +303,9 @@ public sealed partial class MainConfigForm
             "Con Esteso autorizza l'invio del testo estratto in locale dagli allegati, mascherato. I nomi dei file e i file restano sul PC. Si applica con Salva.");
         _chkAllowAttachments.CheckedChanged += (s, e) => OnProfileFieldChanged();
         _chkPseudonymizeAmounts = AddWide(net, new ThemedCheckBox { Text = "Sostituisci gli importi con segnaposto", AutoSize = true },
-            "Negli invii esterni sostituisce gli importi riconosciuti; li ripristina nella risposta su questo PC. Si applica con Salva.");
+            "Sostituisce gli importi riconosciuti prima che il testo arrivi al modello e li ripristina nella risposta su questo PC. Nei profili cloud è sempre attiva. Si applica con Salva.");
         _chkPseudonymizeDates = AddWide(net, new ThemedCheckBox { Text = "Sostituisci le date con segnaposto", AutoSize = true },
-            "Negli invii esterni sostituisce le date riconosciute; le ripristina nella risposta su questo PC. Si applica con Salva.");
-        _chkPseudonymizeAmounts.Visible = _chkPseudonymizeDates.Visible = false;
+            "Sostituisce le date riconosciute prima che il testo arrivi al modello e le ripristina nella risposta su questo PC. Nei profili cloud è sempre attiva. Si applica con Salva.");
         _chkPseudonymizeAmounts.CheckedChanged += (s, e) => OnProfileFieldChanged();
         _chkPseudonymizeDates.CheckedChanged += (s, e) => OnProfileFieldChanged();
 
@@ -343,7 +342,7 @@ public sealed partial class MainConfigForm
     }
 
     private void ShowExposure() =>
-        _lblExposure.Text = _chkExternal.Checked ? ExposurePolicy.Describe(SelectedExposure) : "Profilo locale: nessun dato lascia il PC; le opzioni qui sotto non si applicano.";
+        _lblExposure.Text = _chkExternal.Checked ? ExposurePolicy.Describe(SelectedExposure) : "Profilo locale: nessun dato lascia il PC; importi e date si sostituiscono se lo scegli.";
 
     /// <summary>Verifica connessione with its result, always visible under the sections.</summary>
     private TableLayoutPanel BuildProfileTestRow()

@@ -252,8 +252,9 @@ public sealed partial class MainConfigForm
             foreach (CheckBox box in _webActions.Controls)
                 box.Checked = (p.WebSearchActions ?? new List<string>()).Contains((string)box.Tag!, StringComparer.OrdinalIgnoreCase);
             _chkAllowAttachments.Checked = p.AllowAttachmentUpload;
-            _chkPseudonymizeAmounts.Checked = p.IsExternal || p.PseudonymizeAmounts;
-            _chkPseudonymizeDates.Checked = p.IsExternal || p.PseudonymizeDates;
+            // The option is the user's choice for a local profile; a cloud profile always masks both and never stores that as the option.
+            _chkPseudonymizeAmounts.Checked = p.PseudonymizeAmounts;
+            _chkPseudonymizeDates.Checked = p.PseudonymizeDates;
             _cmbExposure.SelectedItem = _cmbExposure.Items.Cast<ExposureItem>().First(i => i.Level == p.Exposure);
             _cmbRegion.SelectedItem = _cmbRegion.Items.Cast<RegionItem>().First(i => i.Region == p.ServiceRegion);
             ShowExposure();
@@ -392,8 +393,10 @@ public sealed partial class MainConfigForm
         _chkExternal.Enabled = !caps.IsExternal && !remote;
         _cmbExposure.Enabled = _chkExternal.Checked;
         _cmbRegion.Enabled = _chkExternal.Checked;
-        _chkPseudonymizeAmounts.Enabled = _chkExternal.Checked;
-        _chkPseudonymizeDates.Enabled = _chkExternal.Checked;
+        // Local profiles choose; a cloud profile always masks amounts and dates, so the options go away instead of showing a fixed state.
+        _chkPseudonymizeAmounts.Enabled = _chkPseudonymizeDates.Enabled = !_chkExternal.Checked;
+        SetRowVisible(_chkPseudonymizeAmounts, !_chkExternal.Checked);
+        SetRowVisible(_chkPseudonymizeDates, !_chkExternal.Checked);
         _chkAllowAttachments.Enabled = _chkExternal.Checked && ExposurePolicy.For(SelectedExposure).Attachments;
         ShowExposure();
         _txtWebSearchKey.Enabled = caps.WebSearch == WebSearchMode.OllamaCom;

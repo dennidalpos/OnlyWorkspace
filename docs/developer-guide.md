@@ -12,6 +12,8 @@ The dispatcher mechanically masks input, checks exposure and seals a nonserializ
 
 Requirements: Windows, .NET SDK 10, PowerShell 7; Node/Python 3 for syntax gates. Packaging additionally needs NSIS 3.13, signtool and existing signing materials.
 
+The restore is pinned: `global.json` fixes SDK 10.0.403 (roll forward to the latest patch only), `Directory.Packages.props` is the single place for direct package versions and each project keeps a `packages.lock.json` for transitive ones. `scripts/check-code.ps1` restores in locked mode and fails with NU1004 when versions and lock files disagree. After an intended version change run `dotnet restore OnlyWorkspace.sln --force-evaluate` and commit the lock files with it. The locked restore was verified locally; Actions are disabled, so no CI run covers it.
+
 Set ONLYWORKSPACE_RUNTIME_ROOT to an existing absolute managed runtime directory. Directory.Build.props derives per-checkout ArtifactsPath using a 12-character SHA-256 key; explicit ArtifactsPath wins. No variable means ordinary SDK paths; invalid configured root fails. Old bin/obj remain excluded from source inputs.
 
     dotnet build OnlyWorkspace.sln -c Release --nologo
