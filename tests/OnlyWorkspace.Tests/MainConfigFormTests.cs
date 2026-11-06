@@ -248,6 +248,35 @@ public sealed class MainConfigFormTests
         });
     }
 
+    /// <summary>#075: with Ricerca web off the saved actions are drawn empty, not ticked and grey; they are still saved and reappear.</summary>
+    [Fact]
+    public void WebActionsOfAProfileWithoutWebSearch_AreDrawnEmpty_ButKeepAndSaveTheirValues()
+    {
+        OnSta(directory =>
+        {
+            var profile = Local("a");
+            profile.WebSearchActions = new() { WebSearchAction.Chat, WebSearchAction.Security, WebSearchAction.FollowUp, WebSearchAction.Briefing };
+            Write(directory, new WorkspaceConfig { DefaultProfile = "a", Profiles = new() { profile } }, new() { ["profile_a_token"] = "secret" });
+            using var form = new MainConfigForm(directory, null, directory);
+            var boxes = Field<TableLayoutPanel>(form, "_webActions").Controls.Cast<CheckBox>().ToList();
+            var web = Field<CheckBox>(form, "_chkWebSearch");
+            Assert.False(web.Checked);
+
+            Assert.All(boxes, box => { Assert.False(box.Enabled); Assert.True(((ThemedCheckBox)box).ShowUnmarked); });
+            Assert.Equal(new[] { WebSearchAction.Briefing, WebSearchAction.Chat, WebSearchAction.FollowUp, WebSearchAction.Security },
+                boxes.Where(b => b.Checked).Select(b => (string)b.Tag!).OrderBy(a => a, StringComparer.Ordinal).ToArray());
+
+            Call(form, "UpdateSelectedProfileFromUi");
+            Assert.Equal(new[] { WebSearchAction.Briefing, WebSearchAction.Chat, WebSearchAction.FollowUp, WebSearchAction.Security },
+                Field<WorkspaceConfig>(form, "_config").Profiles[0].WebSearchActions.OrderBy(a => a, StringComparer.Ordinal).ToArray());
+
+            typeof(MainConfigForm).GetMethod("UpdateWebActionsEnabled", Flags)!.Invoke(form, null);
+            web.Enabled = true;
+            web.Checked = true;
+            Assert.All(boxes, box => { Assert.True(box.Enabled); Assert.False(((ThemedCheckBox)box).ShowUnmarked); });
+        });
+    }
+
     [Fact]
     public void OllamaWebKeyRow_IsShownOnlyForOllamaConnectors()
     {

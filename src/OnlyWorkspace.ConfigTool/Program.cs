@@ -188,15 +188,15 @@ internal static class Program
 
         // Same gate as restore-authorized: only a folder made by CreateStagingDirectory receives the result.
         string stagingDir = Path.GetFullPath(args[1]);
-        if (!ElevatedConfigWriter.IsStagingDirectory(stagingDir)) return 1;
+        using var hold = ElevatedConfigWriter.HoldStagingDirectory(stagingDir);
+        if (hold == null) return 1;
         string configDir = args[2];
-        string resultFile = Path.Combine(stagingDir, ElevatedConfigWriter.ResultFileName);
 
         try
         {
             ElevatedConfigWriter.EnsureProtectedDirectory(configDir);
             ConfigurationBackupService.ApplyStaged(stagingDir, configDir, args[3], args[4]);
-            File.WriteAllText(resultFile, "OK");
+            ElevatedConfigWriter.WriteResult(stagingDir, ElevatedConfigWriter.ResultFileName, "OK");
             return 0;
         }
         catch (Exception ex)
@@ -239,13 +239,13 @@ internal static class Program
     {
         if (args.Length != 4) return 1;
         string staging = Path.GetFullPath(args[3]);
-        if (!ElevatedConfigWriter.IsStagingDirectory(staging)) return 1;
-        string resultFile = Path.Combine(staging, ElevatedConfigWriter.ResultFileName);
+        using var hold = ElevatedConfigWriter.HoldStagingDirectory(staging);
+        if (hold == null) return 1;
         try
         {
             ElevatedConfigWriter.EnsureProtectedDirectory(args[2]);
             ConfigurationBackupService.RestoreBackup(args[1], args[2]);
-            File.WriteAllText(resultFile, "OK");
+            ElevatedConfigWriter.WriteResult(staging, ElevatedConfigWriter.ResultFileName, "OK");
             return 0;
         }
         catch (Exception ex)
@@ -297,13 +297,14 @@ internal static class Program
     {
         if (!IsElevated() || args.Length != 3) return 1;
         string staging = Path.GetFullPath(args[1]);
-        if (!ElevatedConfigWriter.IsStagingDirectory(staging)) return 1;
+        using var hold = ElevatedConfigWriter.HoldStagingDirectory(staging);
+        if (hold == null) return 1;
         try
         {
             ElevatedConfigWriter.EnsureProtectedDirectory(args[2]);
             string source = Path.Combine(staging, "verifier.json");
             new AdminPasswordService(args[2]).ApplyRecord(File.Exists(source) ? File.ReadAllBytes(source) : null);
-            File.WriteAllText(Path.Combine(staging, ElevatedConfigWriter.ResultFileName), "OK");
+            ElevatedConfigWriter.WriteResult(staging, ElevatedConfigWriter.ResultFileName, "OK");
             return 0;
         }
         catch (Exception ex)

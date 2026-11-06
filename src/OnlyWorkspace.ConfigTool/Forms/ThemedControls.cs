@@ -511,6 +511,17 @@ internal sealed class ThemedCheckBox : CheckBox, IThemed
 
     public void ApplyTheme() => Invalidate();
 
+    private bool _showUnmarked;
+
+    /// <summary>Paint as empty while the saved value stays: an option the current setup cannot use is not shown as chosen.
+    /// Checked, CheckState and what gets saved are untouched.</summary>
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public bool ShowUnmarked
+    {
+        get => _showUnmarked;
+        set { if (_showUnmarked == value) return; _showUnmarked = value; Invalidate(); }
+    }
+
     private int Box => Ui.Px(this, 16);
 
     private int TextLeft => Box + Ui.Px(this, 7);
@@ -542,7 +553,7 @@ internal sealed class ThemedCheckBox : CheckBox, IThemed
         // Wrapped label: the box stays beside the first line instead of the middle of the block.
         var box = new Rectangle(1, wrapped ? Ui.Px(this, 3) + (lineHeight - Box) / 2 : (Height - Box) / 2, Box - 1, Box - 1);
         // Checked is also true for Indeterminate: an unknown state gets a dash, never the tick of a real choice.
-        if (Checked)
+        if (Checked && !_showUnmarked)
         {
             Ui.FillRounded(g, box, Ui.Px(this, 3), Enabled ? c.Accent : c.Disabled);
             using var pen = new Pen(Enabled ? c.OnAccent : c.Card, 1.7f * Ui.Scale(this)) { StartCap = LineCap.Round, EndCap = LineCap.Round, LineJoin = LineJoin.Round };

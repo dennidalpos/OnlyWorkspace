@@ -52,6 +52,38 @@ public sealed class ThemedControlsPaintTests
         });
     }
 
+    /// <summary>#075: an option the profile cannot use is drawn empty, yet keeps its saved value for Salva.</summary>
+    [Fact]
+    public void CheckBox_ShowUnmarked_PaintsEmptyAndKeepsTheSavedValue()
+    {
+        OnSta(() =>
+        {
+            using var marked = new ThemedCheckBox { Text = "Briefing", AutoSize = true, Checked = true, Enabled = false };
+            using var hidden = new ThemedCheckBox { Text = "Briefing", AutoSize = true, Checked = true, Enabled = false, ShowUnmarked = true };
+            using var empty = new ThemedCheckBox { Text = "Briefing", AutoSize = true, Checked = false, Enabled = false };
+
+            Assert.NotEqual(Render(marked), Render(hidden));
+            Assert.Equal(Render(empty), Render(hidden));
+            Assert.True(hidden.Checked);
+            Assert.Equal(CheckState.Checked, hidden.CheckState);
+
+            hidden.ShowUnmarked = false;
+            Assert.Equal(Render(marked), Render(hidden));
+        });
+    }
+
+    private static string Render(Control control)
+    {
+        var size = control.GetPreferredSize(Size.Empty);
+        control.Size = size;
+        using var bitmap = new Bitmap(size.Width, size.Height);
+        control.DrawToBitmap(bitmap, new Rectangle(Point.Empty, size));
+        var sb = new System.Text.StringBuilder();
+        for (int y = 0; y < size.Height; y++)
+            for (int x = 0; x < size.Width; x++) sb.Append(bitmap.GetPixel(x, y).ToArgb().ToString("x")).Append(',');
+        return sb.ToString();
+    }
+
     [Fact]
     public void ProfileList_MarksTheFocusedRowOnlyWhenFocusCuesAreShown()
     {

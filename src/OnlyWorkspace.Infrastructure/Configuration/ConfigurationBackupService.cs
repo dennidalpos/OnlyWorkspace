@@ -95,7 +95,7 @@ public static class ConfigurationBackupService
         Directory.CreateDirectory(targetConfigDir);
         string configPath = Path.Combine(targetConfigDir, "config.json");
         string secretsPath = Path.Combine(targetConfigDir, "secrets.bin");
-        string suffix = ".restore-" + Guid.NewGuid().ToString("N");
+        string suffix = ".restore-" + AtomicFile.ShortId();
         string configStage = configPath + suffix;
         string secretsStage = secretsPath + suffix;
         string secretsBackup = secretsPath + suffix + ".bak";

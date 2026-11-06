@@ -104,10 +104,12 @@ public sealed class StatusAndCreditsTests
     }
 
     /// <summary>Packages whose assemblies reach the installation, direct or transitive, from the restore graphs of the add-in and the extractor.</summary>
-    private static Dictionary<string, HashSet<string>> ShippedPackages()
+    private static readonly string[] ShippedGraphs = { "OutlookAssetsFile", "ExtractorAssetsFile" };
+
+    private static Dictionary<string, HashSet<string>> ShippedPackages(params string[] graphs)
     {
         var shipped = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
-        foreach (var file in new[] { "OutlookAssetsFile", "ExtractorAssetsFile" })
+        foreach (var file in graphs.Length == 0 ? ShippedGraphs : graphs)
         {
             using var assets = JsonDocument.Parse(File.ReadAllText(TestBuildPaths.Get(file)));
             foreach (var framework in assets.RootElement.GetProperty("targets").EnumerateObject().Where(t => t.Name.StartsWith("net4", StringComparison.Ordinal) || t.Name.StartsWith(".NETFramework", StringComparison.Ordinal)))
@@ -127,14 +129,18 @@ public sealed class StatusAndCreditsTests
     [Fact]
     public void Credits_CoverEveryShippedAssemblyPackage_IncludingTransitiveOnes()
     {
-        var shipped = ShippedPackages();
-        Assert.NotEmpty(shipped);
         var credited = ThirdPartyComponents.All.ToDictionary(c => c.Name, StringComparer.OrdinalIgnoreCase);
-        foreach (var package in shipped)
+        // Per shipped component: one credit line cannot cover two versions, so each graph must ship exactly the credited one.
+        foreach (var graph in ShippedGraphs)
         {
-            Assert.True(credited.TryGetValue(package.Key, out var component), package.Key + " ships but is not credited.");
-            Assert.True(component!.Distributed, package.Key + " ships but is credited as not distributed.");
-            Assert.True(package.Value.Contains(component.Version), package.Key + " is credited as " + component.Version + " but ships as " + string.Join("/", package.Value) + ".");
+            var shipped = ShippedPackages(graph);
+            Assert.NotEmpty(shipped);
+            foreach (var package in shipped)
+            {
+                Assert.True(credited.TryGetValue(package.Key, out var component), package.Key + " ships but is not credited (" + graph + ").");
+                Assert.True(component!.Distributed, package.Key + " ships but is credited as not distributed.");
+                Assert.True(package.Value.All(v => v == component.Version), package.Key + " is credited as " + component.Version + " but " + graph + " ships " + string.Join("/", package.Value) + ".");
+            }
         }
     }
 

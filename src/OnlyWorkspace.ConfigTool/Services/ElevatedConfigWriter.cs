@@ -95,6 +95,22 @@ public static class ElevatedConfigWriter
                Guid.TryParseExact(info.Name.Substring(prefix.Length), "N", out _);
     }
 
+    [System.Runtime.InteropServices.DllImport("kernel32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode, SetLastError = true)]
+    private static extern Microsoft.Win32.SafeHandles.SafeFileHandle CreateFile(string name, uint access, uint share,
+        IntPtr security, uint disposition, uint flags, IntPtr template);
+
+    /// <summary>Checks the folder and keeps it open without delete sharing: the user can no longer rename or replace it
+    /// (or a parent) with a junction between this check and the result write. Null if it is not a staging folder.</summary>
+    internal static IDisposable? HoldStagingDirectory(string path)
+    {
+        const uint ListDirectory = 0x1, ShareRead = 0x1, OpenExisting = 3, BackupSemantics = 0x02000000, OpenReparsePoint = 0x00200000;
+        var handle = CreateFile(Path.GetFullPath(path), ListDirectory, ShareRead, IntPtr.Zero, OpenExisting,
+            BackupSemantics | OpenReparsePoint, IntPtr.Zero);
+        if (handle.IsInvalid) { handle.Dispose(); return null; }
+        if (!IsStagingDirectory(path)) { handle.Dispose(); return null; }
+        return handle;
+    }
+
     public static void DeleteStagingDirectory(string? stagingDir)
     {
         if (string.IsNullOrEmpty(stagingDir)) return;
@@ -180,8 +196,20 @@ public static class ElevatedConfigWriter
     internal static void WriteFailure(string stagingDir, Exception ex)
     {
         var result = Failure(ex);
-        File.WriteAllText(Path.Combine(stagingDir, ResultFileName), result.Message);
-        File.WriteAllText(Path.Combine(stagingDir, DetailFileName), result.TechnicalDetail);
+        WriteResult(stagingDir, ResultFileName, result.Message);
+        WriteResult(stagingDir, DetailFileName, result.TechnicalDetail);
+    }
+
+    /// <summary>The staging folder belongs to the unelevated user, so the elevated writer never opens an existing entry:
+    /// a link or hardlink left at the name is removed (File.Delete drops the entry, not its target) and the file is
+    /// created new. If the user re-plants a link in between, CreateNew fails and nothing is written.</summary>
+    internal static void WriteResult(string stagingDir, string fileName, string text)
+    {
+        string path = Path.Combine(stagingDir, fileName);
+        File.Delete(path);
+        using var stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None);
+        var bytes = new System.Text.UTF8Encoding(false).GetBytes(text);
+        stream.Write(bytes, 0, bytes.Length);
     }
 
     public static string Quote(string value) => "\"" + value.TrimEnd('\\') + "\"";

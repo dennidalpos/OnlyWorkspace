@@ -208,6 +208,67 @@ public sealed class ApplyStagedTests : IDisposable
         AssertUntouched(previous);
     }
 
+    [System.Runtime.InteropServices.DllImport("kernel32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode, SetLastError = true)]
+    private static extern bool CreateHardLink(string newFile, string existingFile, IntPtr reserved);
+
+    [Fact]
+    public void ResultFile_HardlinkInStaging_DoesNotOverwriteTheTarget()
+    {
+        SeedTarget();
+        Stage(ConfigJson("new"), Vault("new"));
+        string protectedFile = Path.Combine(_root, "protected.txt");
+        File.WriteAllText(protectedFile, "PROTECTED");
+        Assert.True(CreateHardLink(Path.Combine(_staging, ElevatedConfigWriter.ResultFileName), protectedFile, IntPtr.Zero));
+
+        Assert.Equal(0, Run());
+        Assert.Equal("OK", ResultText);
+        Assert.Equal("PROTECTED", File.ReadAllText(protectedFile));
+    }
+
+    [Fact]
+    public void FailureFiles_HardlinkInStaging_DoNotOverwriteTheTarget()
+    {
+        string protectedFile = Path.Combine(_root, "protected.txt");
+        File.WriteAllText(protectedFile, "PROTECTED");
+        foreach (string name in new[] { ElevatedConfigWriter.ResultFileName, ElevatedConfigWriter.DetailFileName })
+            Assert.True(CreateHardLink(Path.Combine(_staging, name), protectedFile, IntPtr.Zero));
+
+        ElevatedConfigWriter.WriteFailure(_staging, new InvalidOperationException("boom"));
+
+        Assert.Equal("PROTECTED", File.ReadAllText(protectedFile));
+        Assert.Contains("InvalidOperationException", File.ReadAllText(Path.Combine(_staging, ElevatedConfigWriter.DetailFileName)));
+    }
+
+    [Fact]
+    public void HeldStagingFolder_CannotBeRenamedOrReplaced_AndOnlyAStagingFolderIsHeld()
+    {
+        string moved = Path.Combine(_root, "moved");
+        var hold = ElevatedConfigWriter.HoldStagingDirectory(_staging);
+        Assert.NotNull(hold);
+        Assert.ThrowsAny<IOException>(() => Directory.Move(_staging, moved));
+        Assert.Null(ElevatedConfigWriter.HoldStagingDirectory(_notStaging));
+        hold!.Dispose();
+
+        Directory.Move(_staging, moved);
+        Assert.True(Directory.Exists(moved));
+    }
+
+#if NET
+    [Fact]
+    public void ResultFile_SymlinkInStaging_IsReplacedNotFollowed()
+    {
+        string protectedFile = Path.Combine(_root, "protected.txt");
+        File.WriteAllText(protectedFile, "PROTECTED");
+        try { File.CreateSymbolicLink(Path.Combine(_staging, ElevatedConfigWriter.ResultFileName), protectedFile); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return; } // symlinks need a privilege
+
+        ElevatedConfigWriter.WriteResult(_staging, ElevatedConfigWriter.ResultFileName, "OK");
+
+        Assert.Equal("PROTECTED", File.ReadAllText(protectedFile));
+        Assert.Equal("OK", ResultText);
+    }
+#endif
+
     [Theory]
     [InlineData("")]
     [InlineData("not json")]

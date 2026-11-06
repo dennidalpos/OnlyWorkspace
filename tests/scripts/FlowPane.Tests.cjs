@@ -236,6 +236,13 @@ assert.doesNotMatch(html, /id="flowDrawer"|id="flowCase"|case_close|case_reopen/
 assert.match(html, /data-preset="reconstruct"/);
 console.log('PASS A208 local reconstruction, explicit synthesis and stale-request rejection');
 
+// #076: the superseded note names a control that exists, in the vocabulary of the buttons.
+const staleNote = /<div id="flowStale"[^>]*>([^<]*)<\/div>/.exec(html)[1];
+assert.match(staleNote, /«Ricostruisci la pratica»/);
+assert.doesNotMatch(staleNote, /ricerca/i);
+assert.match(html, /<button class="chip"[^>]*data-preset="reconstruct">Ricostruisci la pratica<\/button>/);
+console.log('PASS #076 superseded note names the reconstruct control');
+
 // #068: a new selection marks the shown result as superseded; a refusal is announced as such.
 const announced = []; context.announce = text => announced.push(text);
 node('anReconstruction').hidden = false;

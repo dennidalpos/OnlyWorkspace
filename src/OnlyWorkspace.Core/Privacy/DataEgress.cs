@@ -289,6 +289,7 @@ public static partial class DataEgress
         var accepted = Event(DataEgressEvent.Accepted, consent, windowsUser, machine, nowUtc);
         if (unspecified.Count > 0) accepted.ConfirmedUnspecifiedRegionProfiles = unspecified;
         config.DataEgress.History.Add(accepted);
+        ScrubHistory(config.DataEgress);
         BindProfiles(config, resolveSecret);
         return consent;
     }
@@ -299,6 +300,7 @@ public static partial class DataEgress
         if (consent == null) return;
         config.DataEgress!.Consent = null;
         config.DataEgress.History.Add(Event(DataEgressEvent.Revoked, consent, windowsUser, machine, nowUtc));
+        ScrubHistory(config.DataEgress);
         BindProfiles(config, null);
     }
 
@@ -308,8 +310,30 @@ public static partial class DataEgress
         Date = consent.Date, NoticeVersion = consent.NoticeVersion, NoticeHash = consent.NoticeHash, Hosts = consent.Hosts.ToList(),
         Levels = consent.Providers.Select(p => $"{p.Host}: {ExposurePolicy.Label(p.Level)}").ToList(),
         Profiles = consent.Profiles.Select(p => p.ProfileId).ToList(),
-        Authorization = JsonSerializer.Deserialize<DataEgressConsent>(JsonSerializer.Serialize(consent))
+        Authorization = WithoutCredentialProofs(JsonSerializer.Deserialize<DataEgressConsent>(JsonSerializer.Serialize(consent))!)
     };
+
+    /// <summary>A past authorization is never verified again, so its history copy keeps what was accepted (text, declarations,
+    /// profile and policy key) but not the salts and fingerprints that tie a grant to the credentials: they would sit in
+    /// config.json for good and help a guess at a weak key.</summary>
+    internal static DataEgressConsent WithoutCredentialProofs(DataEgressConsent consent)
+    {
+        foreach (var grant in consent.Profiles ?? new List<DataEgressProfileGrant>())
+        {
+            grant.CredentialSalt = string.Empty;
+            grant.CredentialFingerprint = string.Empty;
+        }
+        return consent;
+    }
+
+    /// <summary>Copies written before this rule; the current consent is the only place that keeps the proofs.</summary>
+    private static void ScrubHistory(WorkspaceDataEgressConfig egress)
+    {
+        // A hand-edited config may hold a null list or entry: cleanup must never stop Revoke before BindProfiles.
+        if (egress.History == null) return;
+        foreach (var entry in egress.History)
+            if (entry?.Authorization != null) WithoutCredentialProofs(entry.Authorization);
+    }
 }
 
 /// <summary>A request that would send Outlook data to a server the accepted notice does not cover.</summary>

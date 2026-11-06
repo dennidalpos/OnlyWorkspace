@@ -249,3 +249,7 @@ Lo stato aperto e i criteri di chiusura sono nel tracker (SecondBrain: `02-areas
 ## Accettazione E6 — 24/10/2026 notte
 
 Ricevuta storica trasferita nel dossier SecondBrain: `02-areas/products/OnlyWorkspace/history/imported/docs/tecnico/verifica.md#accettazione-e6--24102026-notte`. Questo riferimento conserva i collegamenti delle guide e delle fixture; non ripete la qualifica sul codice corrente.
+
+## Preferenze concorrenti: limite misurato
+
+`UpdatePreferences` attende il mutex delle preferenze per 2 secondi e poi lancia `TimeoutException` («riprovare»); non perde né corrompe flag. Misure del 6 nov 2026 (Release net10, scrittura con flush su disco, thread nello stesso processo, 16 core con 16 cicli CPU e 4 scrittori di disco in parallelo): con 2 scrittori l'operazione più lenta è 242 ms; con 8, 767 ms; con 16, 1,2 s; con 32, 1,7 s, senza nessun timeout. L'attesa cresce con il numero di scrittori in coda, quindi il test `ConcurrentProcesses_PreserveEveryFlag` (2 processi) ha un margine di circa 8 volte a carico alto; un timeout richiede un arresto del singolo flush o della scansione antivirus oltre 2 s, che non si è riprodotto. Il limite resta documentato e il writer non è cambiato. In 20 esecuzioni della classe `FileConfigurationServiceTests` (10 net10 e 10 net48) sotto carico di CPU e disco non ci sono stati fallimenti.

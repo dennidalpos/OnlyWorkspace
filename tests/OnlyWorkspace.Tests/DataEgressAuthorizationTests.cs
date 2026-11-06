@@ -115,6 +115,55 @@ public sealed class DataEgressAuthorizationTests
         Assert.Equal(string.Empty, restored.Profiles[0].EgressAuthorizationKey);
     }
 
+    /// <summary>#086: the history keeps what was accepted, never the salts and fingerprints of past grants; only the current consent has them.</summary>
+    [Fact]
+    public void HistoryCopiesOfGrants_DropSaltsAndFingerprints_AndOlderEntriesAreScrubbed()
+    {
+        var config = Config(Profile());
+        var first = Accept(config);
+        // An entry written before the rule carries the proofs of its grant.
+        config.DataEgress.History[0].Authorization!.Profiles[0].CredentialSalt = first.Profiles[0].CredentialSalt;
+        config.DataEgress.History[0].Authorization!.Profiles[0].CredentialFingerprint = first.Profiles[0].CredentialFingerprint;
+        var second = Accept(config);
+        DataEgress.Revoke(config, "u", "pc", DateTime.UtcNow);
+
+        Assert.True(config.DataEgress.History.Count >= 3);
+        foreach (var entry in config.DataEgress.History)
+        {
+            var grants = entry.Authorization!.Profiles;
+            Assert.NotEmpty(grants);
+            Assert.All(grants, g => { Assert.Equal(string.Empty, g.CredentialSalt); Assert.Equal(string.Empty, g.CredentialFingerprint); Assert.NotEmpty(g.PolicyKey); Assert.NotEmpty(g.ProfileId); });
+            Assert.Equal(DataEgressNotice.Text, entry.Authorization.NoticeText);
+        }
+        string json = JsonSerializer.Serialize(config, ConfigJson.Write);
+        // Base64 holds + and /, which the serializer may escape: look for the escaped form too.
+        foreach (var proof in new[] { first.Profiles[0].CredentialSalt, first.Profiles[0].CredentialFingerprint })
+        {
+            Assert.DoesNotContain(proof, json);
+            Assert.DoesNotContain(JsonSerializer.Serialize(proof).Trim('"'), json);
+        }
+        Assert.NotEmpty(second.Profiles[0].CredentialFingerprint);
+
+        Assert.Null(config.DataEgress.Consent);
+        var third = Accept(config);
+        Assert.NotEmpty(third.Profiles[0].CredentialFingerprint);
+        Assert.True(DataEgress.AllowsModel(config, config.Profiles[0], Secret));
+    }
+
+    [Fact]
+    public void Revoke_WithANullHistoryEntry_StillClearsTheAuthorizationBinding()
+    {
+        var config = Config(Profile());
+        Accept(config);
+        Assert.NotEmpty(config.Profiles[0].EgressAuthorizationKey);
+        config.DataEgress.History.Add(null!);
+
+        DataEgress.Revoke(config, "u", "pc", DateTime.UtcNow);
+
+        Assert.Null(config.DataEgress.Consent);
+        Assert.Equal(string.Empty, config.Profiles[0].EgressAuthorizationKey);
+    }
+
     [Fact]
     public void HostOnlyV4ConsentNeedsRenewalAndItsSignedDeclarationsRemainInHistory()
     {

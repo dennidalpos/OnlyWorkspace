@@ -44,6 +44,35 @@ public sealed class ConfigurationBackupServiceTests : IDisposable
         Assert.Empty(Directory.GetFiles(target, "*.restore-*"));
     }
 
+    /// <summary>net48 stops at MAX_PATH (259) where long paths are off. The longest temp name was secrets.bin.restore-&lt;32&gt;.&lt;32&gt;.tmp
+    /// (90 characters, folders over about 168 failed); it is now 49, so folders up to about 209 work. The test checks the name
+    /// length, which does not depend on the machine's LongPathsEnabled setting.</summary>
+    [Fact]
+    public void ReplacePair_KeepsTemporaryNamesShort_AndWorksInALongConfigurationFolder()
+    {
+        string target = Path.Combine(_testDir, new string('d', 205 - _testDir.Length - 1));
+        Assert.Equal(205, target.Length);
+        Directory.CreateDirectory(target);
+        File.WriteAllText(Path.Combine(target, "config.json"), "old");
+        File.WriteAllBytes(Path.Combine(target, "secrets.bin"), new byte[] { 1 });
+        int longest = 0;
+        void Replace(string source, string destination, string? backup)
+        {
+            longest = Math.Max(longest, Path.GetFileName(source).Length);
+            if (backup != null) longest = Math.Max(longest, Path.GetFileName(backup).Length);
+            File.Replace(source, destination, backup);
+        }
+
+        ConfigurationBackupService.ReplacePair(target, new byte[] { 2 }, new byte[] { 3 }, Replace);
+
+        Assert.InRange(longest, 1, 36);
+        string stage = "secrets.bin.restore-" + AtomicFile.ShortId();
+        Assert.InRange(AtomicFile.TempName(stage).Length, 1, 49);
+        Assert.Equal(new byte[] { 2 }, File.ReadAllBytes(Path.Combine(target, "config.json")));
+        Assert.Equal(new byte[] { 3 }, File.ReadAllBytes(Path.Combine(target, "secrets.bin")));
+        Assert.Equal(2, Directory.GetFiles(target).Length);
+    }
+
     [Fact]
     public void PairRecoveryFailure_PreservesReadableBackup_AndNamesIt()
     {

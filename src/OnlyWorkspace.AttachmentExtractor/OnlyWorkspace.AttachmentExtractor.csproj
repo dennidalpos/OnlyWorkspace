@@ -17,6 +17,8 @@
     <PackageReference Include="ExcelDataReader" />
     <!-- Lite: MIME parser only, without the S/MIME and PGP stack (BouncyCastle). -->
     <PackageReference Include="MimeKitLite" />
+    <!-- Direct so the extractor ships the credited version, not the older one pulled in by Microsoft.Extensions.Logging.Abstractions. -->
+    <PackageReference Include="System.Diagnostics.DiagnosticSource" />
     <!-- E8: Windows Runtime metadata for Windows.Media.Ocr and Windows.Data.Pdf, part of Windows 10+; compile time only,
          nothing is copied: https://learn.microsoft.com/en-us/windows/apps/desktop/modernize/desktop-to-uwp-enhance -->
     <PackageReference Include="Microsoft.Windows.SDK.Contracts" PrivateAssets="all" />

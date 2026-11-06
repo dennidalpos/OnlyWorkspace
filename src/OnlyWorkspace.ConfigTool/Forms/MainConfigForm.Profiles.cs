@@ -656,6 +656,9 @@ public sealed partial class MainConfigForm
         foreach (Control box in _webActions.Controls)
         {
             bool allowed = on && policy.AllowsWeb((string)box.Tag!);
+            // The saved choice stays (Checked is what Salva writes); while the action cannot be used (Ricerca web off, or
+            // not permitted by the exposure level) it is only drawn empty instead of ticked and grey.
+            if (box is ThemedCheckBox themed) themed.ShowUnmarked = !allowed;
             if (_isLocked) _lockedControls[box] = allowed;
             else box.Enabled = allowed;
         }
