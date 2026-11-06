@@ -1733,10 +1733,11 @@ public sealed partial class MainConfigForm : Form
         _btnRepairAddin.Visible = state is AddinState.DisabledByOutlook or AddinState.DisabledByUser;
     }
 
-    protected override async void OnFormClosing(FormClosingEventArgs e)
+    protected override void OnFormClosing(FormClosingEventArgs e)
     {
-        if (_elevationBusy || _closeSavePending) { e.Cancel = true; return; }
-        if (_isDirty)
+        var action = ClosePolicy.Decide(_elevationBusy || _closeSavePending, _isDirty, _trayContext != null, _closingForExit, e.CloseReason);
+        if (action == CloseAction.Block) { e.Cancel = true; return; }
+        if (action == CloseAction.AskUnsaved)
         {
             var res = CopyableMessageBox.Show(
                 this,
@@ -1748,36 +1749,44 @@ public sealed partial class MainConfigForm : Form
             if (res == DialogResult.Yes)
             {
                 e.Cancel = true;
-                bool exiting = _closingForExit;
                 _closeSavePending = true;
-                bool saved;
-                try { saved = await SaveActiveConfiguration(); }
-                finally { _closeSavePending = false; }
-                if (saved)
-                {
-                    // Repeat the close only after persistence, outside this closing callback.
-                    BeginInvoke(new Action(() => { if (exiting && _trayContext != null) _trayContext.ExitApplication(); else Close(); }));
-                }
+                // Observed task, not an async void: the close is repeated only after persistence, outside this callback.
+                _ = SaveThenCloseAsync(_closingForExit);
                 return;
             }
-            else if (res == DialogResult.Cancel)
+            if (res == DialogResult.Cancel)
             {
                 e.Cancel = true;
                 return;
             }
             // The window only hides in the tray and is shown again later: discarded edits must not come back with it.
-            else if (_trayContext != null && !_closingForExit) LoadActiveConfiguration();
+            if (_trayContext != null && !_closingForExit) LoadActiveConfiguration();
+            action = ClosePolicy.Decide(false, false, _trayContext != null, _closingForExit, e.CloseReason);
         }
 
-        if (_trayContext != null && e.CloseReason == CloseReason.UserClosing && !_closingForExit)
+        if (action == CloseAction.HideToTray)
         {
             e.Cancel = true;
             Hide();
-            _trayContext.NotifyMinimizedToTray();
+            _trayContext!.NotifyMinimizedToTray();
             return;
         }
 
         base.OnFormClosing(e);
+    }
+
+    private async Task SaveThenCloseAsync(bool exiting)
+    {
+        bool saved = false;
+        try { saved = await SaveActiveConfiguration(); }
+        catch (Exception ex)
+        {
+            // Nothing may escape a fire-and-forget task: the window stays open with its edits and the reason is logged.
+            if (!IsDisposed) { SetStatus("Salvataggio non riuscito.", Tone.Danger); LogActivity("Errore salvataggio alla chiusura: " + ex.Message); }
+        }
+        finally { _closeSavePending = false; }
+        if (saved && !IsDisposed)
+            BeginInvoke(new Action(() => { if (exiting && _trayContext != null) _trayContext.ExitApplication(); else Close(); }));
     }
 
     protected override void OnResize(EventArgs e)
@@ -1857,30 +1866,15 @@ public sealed partial class MainConfigForm : Form
 
                 if (confirm == DialogResult.Yes)
                 {
-                    if (ElevatedConfigWriter.CanWriteConfig(_configDir))
+                    var restore = await BackupRestoreFlow.Create(_configDir, RunElevatedAsync).RestoreAsync(ofd.FileName);
+                    if (restore.Outcome != RestoreOutcome.Completed)
                     {
-                        ConfigurationBackupService.RestoreBackup(ofd.FileName, _configDir);
-                    }
-                    else
-                    {
-                        var staging = ElevatedConfigWriter.CreateStagingDirectory();
-                        ElevatedConfigWriter.ElevationResult result;
-                        try
-                        {
-                            result = await RunElevatedAsync(
-                                "restore-authorized " + ElevatedConfigWriter.Quote(ofd.FileName) + " " + ElevatedConfigWriter.Quote(_configDir) + " " + ElevatedConfigWriter.Quote(staging),
-                                staging);
-                        }
-                        finally { ElevatedConfigWriter.DeleteStagingDirectory(staging); }
-                        if (!result.Success)
-                        {
-                            if (result.Cancelled)
-                                SetStatus("Ripristino annullato: autorizzazione amministratore non concessa.", Tone.Warning);
-                            else
-                                CopyableMessageBox.Show(this, "Ripristino non riuscito: " + result.Message, "Ripristino", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                            LogActivity("Ripristino non eseguito: " + result.Message);
-                            return;
-                        }
+                        if (restore.Outcome == RestoreOutcome.Cancelled)
+                            SetStatus("Ripristino annullato: autorizzazione amministratore non concessa.", Tone.Warning);
+                        else
+                            CopyableMessageBox.Show(this, "Ripristino non riuscito: " + restore.Message, "Ripristino", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        LogActivity("Ripristino non eseguito: " + restore.Message);
+                        return;
                     }
                     LogActivity("Ripristino completato con successo da: " + ofd.FileName);
                     LoadActiveConfiguration();

@@ -282,6 +282,7 @@ public static partial class DataEgress
             Profiles = profiles.Select(p => CreateGrant(p, resolveSecret)).ToList()
         };
         config.DataEgress ??= new WorkspaceDataEgressConfig();
+        ScrubHistory(config.DataEgress);
         var previous = config.DataEgress.Consent;
         if (previous != null && !config.DataEgress.History.Any(e => e.Authorization?.AcceptedUtc == previous.AcceptedUtc && e.Authorization.NoticeVersion == previous.NoticeVersion && e.Authorization.NoticeHash == previous.NoticeHash && e.Authorization.NoticeText == previous.NoticeText))
             config.DataEgress.History.Add(Event(DataEgressEvent.Accepted, previous, previous.WindowsUser, previous.Machine, previous.AcceptedUtc));
@@ -298,6 +299,7 @@ public static partial class DataEgress
     {
         var consent = config.DataEgress?.Consent;
         if (consent == null) return;
+        ScrubHistory(config.DataEgress!);
         config.DataEgress!.Consent = null;
         config.DataEgress.History.Add(Event(DataEgressEvent.Revoked, consent, windowsUser, machine, nowUtc));
         ScrubHistory(config.DataEgress);
@@ -326,13 +328,20 @@ public static partial class DataEgress
         return consent;
     }
 
-    /// <summary>Copies written before this rule; the current consent is the only place that keeps the proofs.</summary>
+    /// <summary>Copies written before this rule; the current consent is the only place that keeps the proofs. Called on every
+    /// Accept, Revoke and save, so a config.json rewritten for any reason drops them (backups already written keep theirs).</summary>
+    public static void ScrubHistory(WorkspaceConfig config)
+    {
+        if (config.DataEgress != null) ScrubHistory(config.DataEgress);
+    }
+
     private static void ScrubHistory(WorkspaceDataEgressConfig egress)
     {
-        // A hand-edited config may hold a null list or entry: cleanup must never stop Revoke before BindProfiles.
-        if (egress.History == null) return;
+        // A hand-edited config may hold a null list or entry: cleanup must never stop Accept or Revoke before BindProfiles.
+        egress.History ??= new List<DataEgressEvent>();
+        egress.History.RemoveAll(entry => entry == null);
         foreach (var entry in egress.History)
-            if (entry?.Authorization != null) WithoutCredentialProofs(entry.Authorization);
+            if (entry.Authorization != null) WithoutCredentialProofs(entry.Authorization);
     }
 }
 

@@ -164,6 +164,43 @@ public sealed class DataEgressAuthorizationTests
         Assert.Equal(string.Empty, config.Profiles[0].EgressAuthorizationKey);
     }
 
+    /// <summary>#120: a hand-edited history with a null entry or list must not stop a new acceptance.</summary>
+    [Fact]
+    public void Accept_WithNullHistoryEntriesOrList_SucceedsAndDropsTheNulls()
+    {
+        var config = Config(Profile());
+        Accept(config);
+        config.DataEgress.History.Add(null!);
+        Assert.NotNull(Accept(config));
+        Assert.DoesNotContain(null, config.DataEgress.History);
+
+        config.DataEgress.History = null!;
+        Assert.NotNull(Accept(config));
+        Assert.NotEmpty(config.DataEgress.History);
+    }
+
+    /// <summary>#120: saving rewrites config.json without the proofs a pre-#086 history copy still carried.</summary>
+    [Fact]
+    public void SavingTheConfiguration_ScrubsProofsFromOlderHistoryEntries()
+    {
+        string directory = Path.Combine(Path.GetTempPath(), "OnlyWorkspace-egress-scrub-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        var service = new FileConfigurationService(directory, directory);
+        var config = Config(Profile());
+        Accept(config);
+        // Distinct from the current consent's proofs, which legitimately stay in config.json.
+        var grant = config.DataEgress.History[0].Authorization!.Profiles[0];
+        grant.CredentialSalt = "OLDSALTMARKER";
+        grant.CredentialFingerprint = "OLDFINGERPRINTMARKER";
+
+        service.SaveConfiguration(config);
+
+        string written = File.ReadAllText(Path.Combine(directory, "config.json"));
+        Assert.DoesNotContain("OLDSALTMARKER", written);
+        Assert.DoesNotContain("OLDFINGERPRINTMARKER", written);
+        Assert.Equal(string.Empty, config.DataEgress.History[0].Authorization!.Profiles[0].CredentialSalt);
+    }
+
     [Fact]
     public void HostOnlyV4ConsentNeedsRenewalAndItsSignedDeclarationsRemainInHistory()
     {

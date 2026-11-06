@@ -139,6 +139,7 @@ public sealed class FileConfigurationService : IConfigurationService
     public void SaveConfiguration(WorkspaceConfig config)
     {
         ProviderCompatibility.Normalize(config);
+        DataEgress.ScrubHistory(config);
         var validation = ConfigurationValidator.Validate(config);
         if (!validation.IsValid)
         {

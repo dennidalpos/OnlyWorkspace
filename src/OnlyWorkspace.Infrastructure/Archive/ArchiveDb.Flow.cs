@@ -8,7 +8,7 @@ namespace OnlyWorkspace.Infrastructure.Archive;
 
 public sealed partial class ArchiveDb
 {
-    private const int MaxFlowEmails = 20000;
+    internal const int MaxFlowEmails = 20000;
     private const string FlowProjection = "e.id,e.entry_id,f.store_id,e.message_id,e.in_reply_to,e.conv_id,e.subject,coalesce(nullif(e.sender_name,''),a.addr,''),e.received,e.body_state," +
         "(select json_group_array(name) from attachments where email_id=e.id)," +
         "e.sent_utc,e.internet_references,e.thread_metadata_complete,f.path";
