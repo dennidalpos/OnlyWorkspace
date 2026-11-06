@@ -253,6 +253,7 @@
           "System.ValueTuple": "4.6.2"
         }
       }
-    }
+    },
+    ".NETFramework,Version=v4.8/win-x86": {}
   }
 }
