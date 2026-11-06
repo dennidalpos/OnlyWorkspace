@@ -52,6 +52,7 @@
     <Compile Include="..\..\src\OnlyWorkspace.Outlook\Services\WatchedArchiveMailSource.cs" Link="Outlook\WatchedArchiveMailSource.cs" />
     <Compile Include="..\..\src\OnlyWorkspace.Outlook\Services\StoreListCache.cs" Link="Outlook\StoreListCache.cs" />
     <Compile Include="..\..\src\OnlyWorkspace.Outlook\Services\UiSlice.cs" Link="Outlook\UiSlice.cs" />
+    <Compile Include="..\..\src\OnlyWorkspace.Outlook\Services\KnownFolders.cs" Link="Outlook\KnownFolders.cs" />
     <Compile Include="..\..\src\OnlyWorkspace.Outlook\Services\ArchiveColumnProbe.cs" Link="Outlook\ArchiveColumnProbe.cs" />
     <Compile Include="..\..\src\OnlyWorkspace.Outlook\Services\AttachmentCopies.cs" Link="Outlook\AttachmentCopies.cs" />
     <Compile Include="..\..\src\OnlyWorkspace.Outlook\Services\ConfigToolLauncher.cs" Link="Outlook\ConfigToolLauncher.cs" />
