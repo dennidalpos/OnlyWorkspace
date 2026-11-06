@@ -80,14 +80,14 @@ public sealed class CloudFactsTests
     {
         var profile = new LlmProfileConfig { Id = "cloud", External = true, Exposure = ExposureLevel.Standard };
         var config = new WorkspaceConfig { Profiles = new() { profile } };
-        var first = DataEgress.Accept(config, "synthetic-user", "synthetic-pc", DateTime.UtcNow, _ => "synthetic-key");
+        var first = DataEgress.Accept(config, "synthetic-user", "synthetic-pc", DateTime.UtcNow, _ => "synthetic-key", TestEgress.ConfirmedRegions(config));
         Assert.True(DataEgress.HasProfileGrant(config, profile, _ => "synthetic-key"));
         Assert.Empty(first.Company); Assert.Empty(first.LegalBasis);
         Assert.False(first.WorkersInformed); Assert.False(first.AiLiteracy);
         Assert.All(first.Providers, p => { Assert.False(p.NoTraining); Assert.False(p.ProcessingAgreement); });
         first.NoticeVersion = 4;
         Assert.False(DataEgress.AllowsModel(config, profile));
-        DataEgress.Accept(config, "synthetic-user", "synthetic-pc", DateTime.UtcNow.AddSeconds(1), _ => "synthetic-key");
+        DataEgress.Accept(config, "synthetic-user", "synthetic-pc", DateTime.UtcNow.AddSeconds(1), _ => "synthetic-key", TestEgress.ConfirmedRegions(config));
         Assert.Contains(config.DataEgress.History, e => e.Authorization?.NoticeVersion == 4);
     }
 

@@ -184,6 +184,7 @@ try {
         if ($setupLines[$i] -match 'Framework64' -and $setupLines[$i - 1] -notmatch '\$\{If\} \$\{RunningX64\}') { throw 'The 64-bit regasm runs on 32-bit systems too.' }
     }
     if ($uninstallCommands -ne 4) { throw "Expected 4 uninstall commands, found $uninstallCommands." }
+    if ($setupLines -match '^\s*RMDir\s+/r\b') { throw 'Setup still uses recursive NSIS deletion.' }
     $bootstrapper = [array]::FindIndex([string[]]$setupLines, [Predicate[string]] { param($line) $line -like '*MicrosoftEdgeWebview2Setup.exe" /silent /install*' })
     if ($bootstrapper -lt 0 -or -not ($setupLines[($bootstrapper + 1)..($bootstrapper + 4)] -match 'Call WebView2RuntimeInstalled')) { throw 'The WebView2 bootstrapper result is not followed by a new runtime check.' }
     Write-Output 'PASS NSIS: critical setup commands are checked'
@@ -199,6 +200,16 @@ SilentInstall silent
 SilentUnInstall silent
 Name "Setup checks fixture"
 OutFile "setupchecks.exe"
+!include "MUI2.nsh"
+VIProductVersion "1.0.0.0"
+VIAddVersionKey "ProductName" "OnlyWorkspace"
+VIAddVersionKey "CompanyName" "OnlyApps"
+VIAddVersionKey "FileDescription" "Setup checks fixture"
+VIAddVersionKey "FileVersion" "1.0.0.0"
+VIAddVersionKey "LegalCopyright" "Synthetic fixture"
+!insertmacro MUI_PAGE_INSTFILES
+!insertmacro MUI_UNPAGE_INSTFILES
+!insertmacro MUI_LANGUAGE "Italian"
 !include "LogicLib.nsh"
 !include "x64.nsh"
 !include "FileFunc.nsh"
@@ -267,6 +278,12 @@ SectionEnd
 Section "Uninstall"
     ${GetParameters} $R0
     ${GetOptions} $R0 "/ARG=" $Arg
+    ${GetOptions} $R0 "/SHORTCUTS" $1
+    ${Unless} ${Errors}
+        StrCpy $PurgeFailure 0
+        !insertmacro RemoveProgramShortcut "$Arg\OnlyWorkspace"
+        !insertmacro ReportProgramCleanup
+    ${EndUnless}
     !insertmacro PurgeRequested $R0 $1
     !insertmacro PurgeUserData "un." $1 "$Arg\pd" "$Arg\lad"
 SectionEnd
@@ -381,6 +398,178 @@ SectionEnd
     $result = Invoke-SetupChecks "/S /PURGE /CASE=purge /ARG=`"$longRoot`""
     if ($result.ExitCode -ne 0 -or (Test-Path -LiteralPath $archive)) { throw "Purge retry after unlocking failed: exit $($result.ExitCode)." }
     Write-Output 'PASS setup checks: long paths, junction boundaries, and locked data'
+
+    $menuRoot = Join-Path $checksFixture 'menu'
+    $menu = Join-Path $menuRoot 'OnlyWorkspace'
+    [void][IO.Directory]::CreateDirectory($menu)
+    $shortcut = Join-Path $menu 'Configurazione OnlyWorkspace.lnk'
+    $otherShortcut = Join-Path $menu 'other.lnk'
+    [IO.File]::WriteAllText($shortcut, 'product')
+    [IO.File]::WriteAllText($otherShortcut, 'foreign')
+    $arguments = "/S /SHORTCUTS /ARG=`"$menuRoot`" _?=$checksFixture"
+    $process = Start-Process -FilePath $uninstaller -ArgumentList $arguments -WindowStyle Hidden -PassThru
+    if (!$process.WaitForExit(30000)) { $process.Kill(); throw 'Shortcut cleanup fixture timed out.' }
+    if ($process.ExitCode -ne 0 -or (Test-Path -LiteralPath $shortcut) -or [IO.File]::ReadAllText($otherShortcut) -cne 'foreign') {
+        throw 'Shortcut cleanup did not preserve the foreign shortcut.'
+    }
+    Write-Output 'PASS setup checks: uninstall removes only the product shortcut'
+
+    # Use the shipped helper in Windows PowerShell 5.1, with only its registry identity changed.
+    $registryName = 'Software\OnlyWorkspace-ProgramFilesTest-' + [guid]::NewGuid().ToString('N')
+    $registryFixture = "HKCU:\$registryName"
+    $programSource = [IO.File]::ReadAllText((Join-Path $repoRoot 'installer\ProgramFiles.ps1')).
+        Replace('Software\Microsoft\Windows\CurrentVersion\Uninstall\OnlyWorkspace', $registryName).
+        Replace('[Microsoft.Win32.RegistryHive]::LocalMachine', '[Microsoft.Win32.RegistryHive]::CurrentUser')
+    $programRoot = Join-Path $checksFixture 'program files'
+    $oldRoot = Join-Path $checksFixture 'old install'
+    $retired = 'prompts\retired.json'
+    $foreignFile = 'prompts\foreign.txt'
+    $outlookDll = 'OnlyWorkspace.Outlook.dll'
+    $programUninstaller = Join-Path $programRoot 'Uninstall.exe'
+    $windowsPowerShell = Join-Path $env:WINDIR 'System32\WindowsPowerShell\v1.0\powershell.exe'
+    $nsisSystem = Join-Path (Split-Path -LiteralPath $nsis) 'Plugins\x86-unicode\System.dll'
+    Copy-Item -LiteralPath $nsisSystem -Destination $checksFixture
+    function New-ProgramStage([string]$Name, [hashtable]$Files) {
+        $stage = Join-Path $checksFixture $Name
+        [void][IO.Directory]::CreateDirectory($stage)
+        foreach ($relative in $Files.Keys) {
+            $target = Join-Path $stage "payload\$relative"
+            [void][IO.Directory]::CreateDirectory((Split-Path -LiteralPath $target))
+            [IO.File]::WriteAllText($target, $Files[$relative])
+        }
+        $helper = Join-Path $stage 'ProgramFiles.ps1'
+        [IO.File]::WriteAllText($helper, $programSource)
+        $helper
+    }
+    function Assert-ProgramOperation([string]$Helper, [string]$Operation, [string]$Destination, [int]$Expected) {
+        $log = Join-Path $checksFixture ('program-' + [guid]::NewGuid().ToString('N') + '.log')
+        $arguments = "-NoProfile -NonInteractive -ExecutionPolicy Bypass -File `"$Helper`" -Operation $Operation -Destination `"$Destination\.`""
+        $runner = if ($Operation -eq 'RetireLegacy' -and [Environment]::Is64BitOperatingSystem) {
+            Join-Path $env:WINDIR 'SysWOW64\WindowsPowerShell\v1.0\powershell.exe'
+        } else { $windowsPowerShell }
+        $process = Start-Process -FilePath $runner -ArgumentList $arguments -WorkingDirectory $checksFixture -RedirectStandardError $log -WindowStyle Hidden -PassThru
+        if (!$process.WaitForExit(30000)) { $process.Kill(); throw "Program operation '$Operation' timed out." }
+        if ($process.ExitCode -ne $Expected) {
+            throw "Program operation '$Operation' returned $($process.ExitCode), expected ${Expected}: $(Get-Content -Raw -LiteralPath $log)"
+        }
+    }
+    try {
+        [void][IO.Directory]::CreateDirectory($oldRoot)
+        [IO.File]::WriteAllText((Join-Path $oldRoot $outlookDll), 'legacy')
+        $oldUninstaller = Join-Path $oldRoot 'Uninstall.exe'
+        $disabled = "$oldUninstaller.disabled"
+        [IO.File]::Copy($uninstaller, $oldUninstaller)
+        $oldHash = (Get-FileHash -LiteralPath $oldUninstaller).Hash
+        $null = New-Item -Path $registryFixture
+        $null = New-ItemProperty -LiteralPath $registryFixture -Name InstallLocation -Value $oldRoot
+        $null = New-ItemProperty -LiteralPath $registryFixture -Name UninstallString -Value ('"' + $oldUninstaller + '"')
+        $first = New-ProgramStage 'stage first' @{ $outlookDll='first'; $retired='old'; 'Uninstall.exe'='first uninstaller' }
+        Assert-ProgramOperation $first Check $oldRoot 2
+        Assert-ProgramOperation $first Check $programRoot 0
+        $failedFirst = New-ProgramStage 'stage failed first' @{ 'Uninstall.exe'='fixture'; 'zzz.dll'='unreadable' }
+        $heldSource = [IO.File]::Open((Join-Path (Split-Path -LiteralPath $failedFirst) 'payload\zzz.dll'), 'Open', 'Read', 'None')
+        try { Assert-ProgramOperation $failedFirst Deploy $programRoot 2 } finally { $heldSource.Dispose() }
+        if (Test-Path -LiteralPath $programRoot) { throw 'Failed first installation left its new program directory.' }
+        Assert-ProgramOperation $first Deploy $programRoot 0
+        if ([IO.File]::ReadAllText((Join-Path $oldRoot $outlookDll)) -cne 'legacy') { throw 'Transition changed the old installation.' }
+        Assert-ProgramOperation $first RetireLegacy $programRoot 3
+        $registeredProgramRoot = $programRoot + '\'
+        Set-ItemProperty -LiteralPath $registryFixture -Name InstallLocation -Value $registeredProgramRoot
+        Set-ItemProperty -LiteralPath $registryFixture -Name UninstallString -Value ('"' + $programUninstaller + '"')
+
+        function New-LegacyRetirementStage([string]$Name, [switch]$TrustedFixture) {
+            $stage = New-ProgramStage $Name @{}
+            $stagePayload = Join-Path (Split-Path -LiteralPath $stage) 'payload'
+            [void][IO.Directory]::CreateDirectory($stagePayload)
+            [IO.File]::WriteAllBytes((Join-Path $stagePayload 'OnlyApps.cer'), $certificate.RawData)
+            if ($TrustedFixture) {
+                # Use a signature double only. The PE metadata, locked handle and Win32 rename are real.
+                $trusted = $programSource.Replace('Microsoft.PowerShell.Security\Get-AuthenticodeSignature -LiteralPath $snapshot',
+                    "[pscustomobject]@{ Status='Valid'; SignerCertificate=@{ Thumbprint='$($certificate.Thumbprint)' } }")
+                [IO.File]::WriteAllText($stage, $trusted)
+            }
+            $stage
+        }
+
+        $unsigned = New-LegacyRetirementStage 'retire unsigned'
+        Assert-ProgramOperation $unsigned RetireLegacy $programRoot 3
+        if ((Get-FileHash -LiteralPath $oldUninstaller).Hash -ne $oldHash) { throw 'Unsigned legacy file was changed.' }
+        $retire = New-LegacyRetirementStage 'retire locked' -TrustedFixture
+        $heldLegacy = [IO.File]::Open($oldUninstaller, 'Open', 'Read', 'Read')
+        try { Assert-ProgramOperation $retire RetireLegacy $programRoot 3 } finally { $heldLegacy.Dispose() }
+
+        [IO.File]::WriteAllText($disabled, 'foreign collision')
+        $retire = New-LegacyRetirementStage 'retire collision' -TrustedFixture
+        Assert-ProgramOperation $retire RetireLegacy $programRoot 3
+        if ([IO.File]::ReadAllText($disabled) -cne 'foreign collision' -or
+            (Get-FileHash -LiteralPath $oldUninstaller).Hash -ne $oldHash) { throw 'Legacy retirement overwrote a file.' }
+        [IO.File]::Move($disabled, (Join-Path $oldRoot 'foreign-copy.txt'))
+
+        $retry = New-ProgramStage 'stage retry' @{ $outlookDll='first'; $retired='old'; 'Uninstall.exe'='first uninstaller' }
+        Assert-ProgramOperation $retry Deploy $programRoot 0
+        $retire = New-LegacyRetirementStage 'retire verified' -TrustedFixture
+        Assert-ProgramOperation $retire RetireLegacy $programRoot 0
+        Assert-ProgramOperation $retire RetireLegacy $programRoot 0
+        $currentRegistry = Get-ItemProperty -LiteralPath $registryFixture
+        if ((Test-Path -LiteralPath $oldUninstaller) -or (Get-FileHash -LiteralPath $disabled).Hash -ne $oldHash -or
+            [IO.File]::ReadAllText((Join-Path $oldRoot $outlookDll)) -cne 'legacy' -or
+            [IO.File]::ReadAllText($programUninstaller) -cne 'first uninstaller' -or
+            $currentRegistry.InstallLocation -cne $registeredProgramRoot -or $currentRegistry.UninstallString -cne ('"' + $programUninstaller + '"') -or
+            ($currentRegistry.ProgramInventory | ConvertFrom-Json).legacyUninstaller) {
+            throw 'Retirement changed files or registrations outside the verified legacy executable.'
+        }
+        Write-Output 'PASS legacy uninstaller: signature check, locked file, no overwrite, rename and idempotent retry'
+
+        $foreignPath = Join-Path $programRoot $foreignFile
+        [IO.File]::WriteAllText($foreignPath, 'keep')
+        $conflict = New-ProgramStage 'stage conflict' @{ $foreignFile='collision'; 'Uninstall.exe'='conflict' }
+        Assert-ProgramOperation $conflict Check $programRoot 2
+        if ([IO.File]::ReadAllText($foreignPath) -cne 'keep') { throw 'A package collision modified a foreign file.' }
+
+        $broken = New-ProgramStage 'stage rollback' @{ $outlookDll='broken'; 'Uninstall.exe'='broken'; 'zzz.dll'='unreadable' }
+        $heldSource = [IO.File]::Open((Join-Path (Split-Path -LiteralPath $broken) 'payload\zzz.dll'), 'Open', 'Read', 'None')
+        try { Assert-ProgramOperation $broken Deploy $programRoot 2 } finally { $heldSource.Dispose() }
+        if ([IO.File]::ReadAllText((Join-Path $programRoot $outlookDll)) -cne 'first' -or
+            [IO.File]::ReadAllText((Join-Path $programRoot $retired)) -cne 'old' -or
+            [IO.File]::ReadAllText($programUninstaller) -cne 'first uninstaller' -or [IO.File]::ReadAllText($foreignPath) -cne 'keep') {
+            throw 'Rollback did not restore the previous payload and preserve foreign files.'
+        }
+
+        $update = New-ProgramStage 'stage update' @{ $outlookDll='updated'; 'Uninstall.exe'='updated'; 'runtimes\new.dll'='new' }
+        Assert-ProgramOperation $update Deploy $programRoot 0
+        $newDll = Join-Path $programRoot 'runtimes\new.dll'
+        if ([IO.File]::ReadAllText((Join-Path $programRoot $outlookDll)) -cne 'updated' -or
+            (Test-Path -LiteralPath (Join-Path $programRoot $retired)) -or [IO.File]::ReadAllText($foreignPath) -cne 'keep') {
+            throw 'An in-place update did not replace only the inventoried files.'
+        }
+
+        Assert-ProgramOperation $update CheckUninstall $programRoot 0
+        $heldProgram = [IO.File]::Open($newDll, 'Open', 'Read', 'Read')
+        try { Assert-ProgramOperation $update Uninstall $programRoot 3 } finally { $heldProgram.Dispose() }
+        if (!(Test-Path -LiteralPath $programUninstaller)) { throw 'Partial uninstall removed its retry entry point.' }
+        Assert-ProgramOperation $update Uninstall $programRoot 0
+        if ((Test-Path -LiteralPath $newDll) -or (Test-Path -LiteralPath $programUninstaller) -or
+            [IO.File]::ReadAllText($foreignPath) -cne 'keep') { throw 'Uninstall retry left payload or touched a foreign file.' }
+
+        $redirect = Join-Path $checksFixture 'program redirect'
+        New-Item -ItemType Junction -Path $redirect -Target $outside | Out-Null
+        Assert-ProgramOperation $first Check (Join-Path $redirect 'child') 2
+        if ([IO.File]::ReadAllText($sentinel) -cne 'synthetic') { throw 'A redirected path touched external data.' }
+        [IO.Directory]::Delete($redirect)
+
+        Remove-ItemProperty -LiteralPath $registryFixture -Name ProgramInventory
+        Set-ItemProperty -LiteralPath $registryFixture -Name InstallLocation -Value $oldRoot
+        $longProgramRoot = (Join-Path $checksFixture 'long program path ').PadRight(220, 'x')
+        $longRelative = 'runtimes\' + ('x' * 50) + '.dll'
+        $longProgramFile = Join-Path $longProgramRoot $longRelative
+        $longStage = New-ProgramStage 'stage long' @{ $longRelative='long'; 'Uninstall.exe'='uninstaller' }
+        if ($longProgramFile.Length -le 260) { throw 'The program path fixture does not exceed MAX_PATH.' }
+        Assert-ProgramOperation $longStage Deploy $longProgramRoot 0
+        if ([IO.File]::ReadAllText($longProgramFile) -cne 'long') { throw 'The long package path was not deployed.' }
+        Assert-ProgramOperation $longStage Uninstall $longProgramRoot 0
+        if (Test-Path -LiteralPath $longProgramRoot) { throw 'Uninstall left an owned long program path.' }
+    } finally { Remove-Item -LiteralPath $registryFixture -ErrorAction SilentlyContinue }
+    Write-Output 'PASS program inventory: legacy transition, collisions, rollback, update, locked uninstall and junctions'
 
     # A126: uninstall removes only our DoNotDisableAddinList value, on a synthetic HKCU key.
     $resiliency = 'Software\OnlyWorkspace-PackagingTest-' + [guid]::NewGuid().ToString('N')

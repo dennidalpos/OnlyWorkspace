@@ -6,6 +6,26 @@ Test di codice, prova sulla build installata e qualifica su cassette e provider 
 
 Contenuto datato trasferito nel dossier SecondBrain: `02-areas/products/OnlyWorkspace/history/imported/docs/tecnico/verifica.md`. Originale e SHA-256 nel rapporto di migrazione; questa voce conserva i riferimenti esistenti e non autorizza nuovi interventi.
 
+## Importi scritti con «euro» — 6 novembre 2026
+
+Con il catalogo 3, `PseudonymizationPipelineTests` verifica parola intera, ripristino esatto e casi esclusi. `MaskedFreeTextTransportTests` verifica su HTTP loopback che due importi con «euro» vengano sostituiti e ripristinati nei percorsi strutturati e in streaming di OpenAI, Anthropic, Gemini e Ollama, a Standard ed Esteso. `DataEgressAuthorizationTests` usa chiavi ricavate dal catalogo 2 per verificare il rinnovo dell'autorizzazione e la separazione della conversazione. I test mirati passano su net48 e net10 con dati sintetici. [Forme riconosciute e limiti](pseudonimizzazione.md#autorizzazione-e-limiti)
+
+## Conferma dell'area del servizio — 6 novembre 2026
+
+`ServiceRegionTests` esercita il dialogo e il motore di autorizzazione su net48 e net10. Il motore rifiuta conferme mancanti o parziali prima di registrare il consenso. Il salvataggio e la rilettura conservano gli identificativi dei profili con area non specificata confermati nell'evento. Il rapporto HTML li rende con escape. Le prove usano configurazioni sintetiche.
+
+## Ritiro del vecchio disinstallatore — 6 novembre 2026
+
+`Packaging.Tests.ps1` verifica che il ritiro attenda la registrazione della nuova installazione, rifiuti un file senza firma, segnali un file bloccato e preservi un file estraneo già presente con estensione `.disabled`. Il test di successo usa una firma simulata e una rinomina Win32 reale. Una prova separata con una copia del disinstallatore firmato verifica Authenticode reale e SHA-256 identico dopo la rinomina. La fixture NSIS restituisce 3 in caso di collisione e 0 al nuovo tentativo, con voce di disinstallazione sintetica, file estranei e certificato del firmatario negli store invariati. La prova del passaggio completo su un pacchetto firmato resta da eseguire. [Rinomina per handle su Windows](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-setfileinformationbyhandle)
+
+## Inventario dei file programma — 6 novembre 2026
+
+`Packaging.Tests.ps1` esercita il codice di installazione in Windows PowerShell 5.1 con una chiave di registro isolata. La matrice copre il rifiuto della cartella precedente senza inventario, la prima installazione in una nuova cartella, il rollback dopo un errore di copia, gli aggiornamenti con file ritirati, il rifiuto delle collisioni con file estranei, le junction, i percorsi oltre 260 caratteri e la ripresa della disinstallazione dopo un file bloccato. Una fixture NSIS 3.13 separata verifica `/D` con spazi, aggiornamento sul posto e uscita del disinstallatore avviato direttamente. La compilazione del setup usa un payload sintetico e la qualifica su un pacchetto firmato resta da eseguire.
+
+## Pulizia dei file programma — 6 novembre 2026
+
+Con NSIS 3.13, `Packaging.Tests.ps1` esercita il rollback dopo un errore di setup e il processo del disinstallatore con file e collegamenti sintetici. La directory programma e le due cartelle del menu Start vengono svuotate dei file rimovibili e delle junction, mentre le sentinelle esterne restano intatte. Un file bloccato produce il codice 3. Dopo lo sblocco, il rollback completa la pulizia e restituisce il codice 2 dell'errore iniziale, mentre la disinstallazione restituisce 0. Una junction al posto della directory programma è rifiutata. Il setup con payload sintetico è stato compilato senza firma. Installazione, aggiornamento e disinstallazione di un pacchetto firmato restano prove separate. [RemoveDirectoryW](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-removedirectoryw)
+
 ## Percorsi estesi per `/PURGE` e formato corrente dell'archivio — 6 novembre 2026
 
 Working tree sopra `dedad06`. Con NSIS 3.13 la fixture rimuove archivio e copia del vault su percorsi oltre 260 caratteri, preserva i file delle destinazioni delle junction e rifiuta un contenitore locale reindirizzato. Il disinstallatore sintetico avviato direttamente restituisce 3 su un file bloccato. Il nuovo tentativo, dopo lo sblocco, riesce. Il setup con payload sintetico è stato compilato senza firma. La pulizia della directory programma e la disinstallazione su una build reale restano qualifiche separate. [Codici del disinstallatore NSIS](https://nsis.sourceforge.io/Docs/AppendixD.html#D.1)

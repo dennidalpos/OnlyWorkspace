@@ -41,8 +41,32 @@ public sealed class ServiceRegionTests
         Assert.Contains("<td>Non UE</td>", html);
     }
 
+    [Fact]
+    public void Acceptance_RequiresEveryUnspecifiedCloudProfile_AndRecordsTheConfirmation()
+    {
+        var first = Cloud(ServiceRegion.Unspecified);
+        var second = Cloud(ServiceRegion.Unspecified);
+        second.Id = "other<&>";
+        var specified = Cloud(ServiceRegion.Eu);
+        specified.Id = "specified";
+        var config = new WorkspaceConfig { DefaultProfile = first.Id, Profiles = new() { first, second, specified } };
+        var now = DateTime.UtcNow;
+        Assert.Throws<InvalidOperationException>(() => DataEgress.Accept(config, "u", "pc", now, TestEgress.ResolveSecret));
+        Assert.Throws<InvalidOperationException>(() => DataEgress.Accept(config, "u", "pc", now, TestEgress.ResolveSecret, new[] { first.Id }));
+        Assert.Null(config.DataEgress.Consent);
+        Assert.Empty(config.DataEgress.History);
+
+        DataEgress.Accept(config, "u", "pc", now, TestEgress.ResolveSecret, new[] { first.Id, second.Id, specified.Id });
+        var saved = JsonSerializer.Deserialize<WorkspaceConfig>(JsonSerializer.Serialize(config))!;
+        Assert.Equal(new[] { first.Id, second.Id }, Assert.Single(saved.DataEgress.History).ConfirmedUnspecifiedRegionProfiles);
+        string html = DataEgressReport.RenderHtml(saved, new DataEgressWorkstation());
+        Assert.Contains("Area non specificata confermata per cloud, other&lt;&amp;&gt;", html);
+        Assert.DoesNotContain("Area non specificata confermata per cloud, other&lt;&amp;&gt;, specified", html);
+    }
+
     [Theory]
     [InlineData(ServiceRegion.Unspecified, true)]
+    [InlineData((ServiceRegion)99, true)]
     [InlineData(ServiceRegion.Eu, false)]
     public void ConsentForm_AsksAnExplicitConfirmation_OnlyForAnUnspecifiedArea(ServiceRegion region, bool needsConfirmation)
     {

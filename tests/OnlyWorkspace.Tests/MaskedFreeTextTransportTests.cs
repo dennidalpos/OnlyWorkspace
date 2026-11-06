@@ -17,8 +17,8 @@ namespace OnlyWorkspace.Tests;
 public sealed class MaskedFreeTextTransportTests
 {
     private const string Schema = "{\"type\":\"object\",\"properties\":{\"name\":{\"type\":\"string\"}},\"required\":[\"name\"],\"additionalProperties\":false}";
-    private const string Text = "Da Anna Bianchi <anna@example.test>: conferma il bonifico di 1234,56 EUR entro il 15/11/2026 su IT60X0542811101000000123456";
-    private static readonly string[] Originals = { "Anna Bianchi", "anna@example.test", "IT60X0542811101000000123456", "1234,56", "15/11/2026" };
+    private const string Text = "Da Anna Bianchi <anna@example.test>: conferma il bonifico di 1234,56 euro e la commissione di EURO 4,50 entro il 15/11/2026 su IT60X0542811101000000123456";
+    private static readonly string[] Originals = { "Anna Bianchi", "anna@example.test", "IT60X0542811101000000123456", "1234,56", "4,50", "15/11/2026" };
 
     public static IEnumerable<object[]> Transports()
     {
@@ -63,11 +63,15 @@ public sealed class MaskedFreeTextTransportTests
         AssertMasked(await capture);
         Assert.NotNull(masked);
         Assert.Contains("conferma il bonifico", masked);
+        Assert.Contains("[IMPORTO_1]", masked);
+        Assert.Contains("[IMPORTO_2]", masked);
         Assert.Matches(@"\[[A-Z][A-Z0-9]*_\d+\]", masked);
         Assert.NotNull(dispatch.LastCompletion);
         Assert.False(dispatch.LastCompletion!.IsTruncated);
         var audit = Assert.Single(server.Audit.Read());
         Assert.Equal("completed", audit.Outcome);
+        Assert.Equal("3", audit.Revisions["catalog"]);
+        Assert.Equal(2, audit.Counts["IMPORTO"]);
         foreach (string category in new[] { "PERSONA", "EMAIL", "IBAN", "IMPORTO", "DATA" })
             Assert.True(audit.Counts[category] > 0);
         Assert.False(server.Pending);

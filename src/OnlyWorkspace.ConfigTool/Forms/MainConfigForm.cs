@@ -689,7 +689,8 @@ public sealed partial class MainConfigForm : Form
         if (profiles.Count == 0) return false;
         using var dialog = new DataEgressConsentForm(DataEgress.ProvidersFor(_config), _config.DataEgress?.Consent, profiles);
         if (dialog.ShowDialog(this) != DialogResult.OK) return false;
-        var consent = DataEgress.Accept(_config, WindowsUser, Environment.MachineName, DateTime.UtcNow, _vault.GetSecret);
+        var consent = DataEgress.Accept(_config, WindowsUser, Environment.MachineName, DateTime.UtcNow, _vault.GetSecret,
+            dialog.ConfirmedUnspecifiedRegionProfiles);
         LogActivity($"Informativa accettata, in attesa di salvataggio, da {consent.Describe()} per: " +
             string.Join(", ", consent.Providers.Select(p => $"{p.Host} ({ExposurePolicy.Label(p.Level)})")) + ".");
         MarkDirty();

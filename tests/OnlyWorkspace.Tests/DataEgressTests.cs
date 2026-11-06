@@ -18,7 +18,7 @@ public sealed class DataEgressTests
     };
 
     private static DataEgressConsent Accept(WorkspaceConfig config, DateTime? nowUtc = null) =>
-        DataEgress.Accept(config, @"PC\admin", "PC", nowUtc ?? DateTime.UtcNow, TestEgress.ResolveSecret);
+        DataEgress.Accept(config, @"PC\admin", "PC", nowUtc ?? DateTime.UtcNow, TestEgress.ResolveSecret, TestEgress.ConfirmedRegions(config));
 
     private static WorkspaceConfig Config(params LlmProfileConfig[] profiles) => new() { DefaultProfile = profiles[0].Id, Profiles = profiles.ToList() };
 

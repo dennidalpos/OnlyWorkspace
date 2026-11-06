@@ -27,7 +27,7 @@ public sealed class PseudonymizationPipelineTests
         string outgoing = Assert.Single(mask.Mask(new[] { ChatMessage.User(input) })).Content;
         Assert.Contains("[" + category + "_1]", outgoing);
         Assert.Equal(input, mask.Restore(outgoing));
-        Assert.Equal(1, mask.Audit.Counts[category]); Assert.Equal("2", mask.Audit.Revisions["catalog"]);
+        Assert.Equal(1, mask.Audit.Counts[category]); Assert.Equal("3", mask.Audit.Revisions["catalog"]);
         string audit = JsonSerializer.Serialize(mask.Audit); Assert.DoesNotContain(input, audit);
     }
 
@@ -40,6 +40,37 @@ public sealed class PseudonymizationPipelineTests
         string outgoing = mask.Mask(new[] { ChatMessage.User(text) })[0].Content;
         Assert.Equal(amounts, outgoing.Contains("[IMPORTO_1]")); Assert.Equal(dates, outgoing.Contains("[DATA_1]"));
         Assert.Contains("20261105", outgoing); Assert.Contains("[M1]", outgoing); Assert.Equal(text, mask.Restore(outgoing));
+    }
+
+    [Theory]
+    [InlineData("1234,56 euro")]
+    [InlineData("EURO -1.234,56")]
+    [InlineData("1,234.56\u00A0Euro")]
+    [InlineData("euro\u202F+42")]
+    [InlineData("EUR1234,56")]
+    public void NamedEuroAndExistingCurrencyFormsPreserveExactOriginals(string amount)
+    {
+        var mask = new Pseudonymizer(maskAmounts: true);
+        string input = $"Totale ({amount}).";
+        string outgoing = Assert.Single(mask.Mask(new[] { ChatMessage.User(input) })).Content;
+        Assert.Equal("Totale ([IMPORTO_1]).", outgoing);
+        Assert.Equal(input, mask.Restore(outgoing));
+    }
+
+    [Theory]
+    [InlineData("1234 eurozona")]
+    [InlineData("1234 EUROZONA")]
+    [InlineData("1234 euros")]
+    [InlineData("antieuro 1234")]
+    [InlineData("euro1234")]
+    [InlineData("euro 1234abc")]
+    [InlineData("codice1234 euro")]
+    [InlineData("05/11/2026 euro")]
+    [InlineData("1 234 euro")]
+    public void NamedCurrencyDoesNotMaskUnrelatedOrUnsupportedText(string input)
+    {
+        var mask = new Pseudonymizer(maskAmounts: true);
+        Assert.Equal(input, Assert.Single(mask.Mask(new[] { ChatMessage.User(input) })).Content);
     }
 
     [Fact]
@@ -82,7 +113,7 @@ public sealed class PseudonymizationPipelineTests
     }
 
     [Theory]
-    [InlineData("20/10/2026")][InlineData("1.250,00 EUR")][InlineData("[M123]")][InlineData("annamarie@example")]
+    [InlineData("20/10/2026")][InlineData("1.250,00 EUR")][InlineData("1234,56 euro")][InlineData("[M123]")][InlineData("annamarie@example")]
     public void NegativeCorpusDoesNotMaskUnrelatedValues(string text)
     {
         var mask = new Pseudonymizer(new[] { new PrivacyEntity { Value = "Anna" } });

@@ -76,7 +76,7 @@ public sealed class ExposureRetirementTests
         Assert.False(DataEgress.Current(old));
         Assert.False(DataEgress.AllowsModel(config, profile));
         Assert.Contains(priorText, DataEgressReport.RenderHtml(config, new DataEgressWorkstation()));
-        DataEgress.Accept(config, "fixture", "fixture", DateTime.UtcNow, TestEgress.ResolveSecret);
+        DataEgress.Accept(config, "fixture", "fixture", DateTime.UtcNow, TestEgress.ResolveSecret, TestEgress.ConfirmedRegions(config));
         Assert.True(DataEgress.AllowsModel(config, profile));
         Assert.Equal(6, config.DataEgress.Consent!.NoticeVersion);
         Assert.Equal(priorText, old.NoticeText);

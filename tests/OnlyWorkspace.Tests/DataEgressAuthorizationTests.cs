@@ -16,7 +16,27 @@ public sealed class DataEgressAuthorizationTests
     private static WorkspaceConfig Config(params LlmProfileConfig[] profiles) => new() { DefaultProfile = profiles[0].Id, Profiles = profiles.ToList() };
     private static string? Secret(string reference) => reference == "model-key" ? "synthetic-model-secret" : "synthetic-web-secret";
     private static DataEgressConsent Accept(WorkspaceConfig config, Func<string, string?>? resolver = null) =>
-        DataEgress.Accept(config, "test", "synthetic", DateTime.UtcNow, resolver ?? Secret);
+        DataEgress.Accept(config, "test", "synthetic", DateTime.UtcNow, resolver ?? Secret, TestEgress.ConfirmedRegions(config));
+
+    [Fact]
+    public void CatalogTwoGrantRequiresRenewalAndItsConversationCannotBeReused()
+    {
+        var profile = Profile();
+        var config = Config(profile);
+        var consent = Accept(config);
+        // Recorded from the same synthetic profile with the embedded catalog at revision 2.
+        consent.Profiles[0].PolicyKey = "TGZ9hboZlWRCv2uQrGTmfVoZu1E1MEkPtx8X+F89Xic=";
+        var oldConversation = new ConversationHistory
+        {
+            ProfileId = profile.Id,
+            PolicyKey = "U6kDyQSHX2PdvPsscAVn9bk43C8Thb9CvjKSSZCoXbE="
+        };
+
+        Assert.False(DataEgress.AllowsModel(config, profile, Secret));
+        Assert.False(ConversationPolicy.Matches(oldConversation, Profile()));
+        Accept(config);
+        Assert.True(DataEgress.AllowsModel(config, profile, Secret));
+    }
 
     [Fact]
     public void ASecondProfileOnTheSameHostCannotInheritAuthorization()

@@ -138,6 +138,12 @@ $flags = [Reflection.BindingFlags]'NonPublic,Instance'
 $type = [OnlyWorkspace.Outlook.UI.TaskPaneCoordinator]
 $control = New-Object OnlyWorkspace.Outlook.UI.TaskPaneControl
 function Assert-Pass([bool]$condition, [string]$label) { if (!$condition) { throw $label } }
+function Approve-FixtureEgress($config, $resolveSecret = $null) {
+    $profiles = [string[]]@([OnlyWorkspace.Core.Privacy.DataEgress]::EgressProfiles($config) |
+        Where-Object { [OnlyWorkspace.Core.Privacy.DataEgress]::RequiresRegionConfirmation($_) } |
+        ForEach-Object { $_.Id })
+    [void][OnlyWorkspace.Core.Privacy.DataEgress]::Accept($config, 'test', 'test', [DateTime]::UtcNow, $resolveSecret, $profiles)
+}
 function PaneMessage([hashtable]$fields) {
     $message = New-Object 'Collections.Generic.Dictionary[string,object]'
     foreach ($key in $fields.Keys) { $message.Add($key, $fields[$key]) }
@@ -410,7 +416,7 @@ try {
     foreach ($provider in $providers) {
         $provider.Provider='Synthetic'; $provider.ProcessingAgreement=$true; $provider.Region='UE';$provider.TransferBasis=[OnlyWorkspace.Core.Privacy.DataEgress]::TransferBases[0];$provider.NoTraining=$true;$provider.Retention='none'
     }
-    [void][OnlyWorkspace.Core.Privacy.DataEgress]::Accept($noticeConfig,'test','test',[DateTime]::UtcNow,$null)
+    Approve-FixtureEgress $noticeConfig
     $noticeClient=$null; $noticeHttp=$null
     try {
         Set-Field '_config' $noticeConfig
@@ -469,7 +475,7 @@ try {
             foreach ($provider in $providers) {
                 $provider.Provider='Synthetic'; $provider.ProcessingAgreement=$true; $provider.Region='UE'; $provider.TransferBasis=[OnlyWorkspace.Core.Privacy.DataEgress]::TransferBases[0]; $provider.NoTraining=$true; $provider.Retention='none'
             }
-            if ($mode -ne 'Local') { [void][OnlyWorkspace.Core.Privacy.DataEgress]::Accept($briefingConfig,'test','test',[DateTime]::UtcNow,$null) }
+            if ($mode -ne 'Local') { Approve-FixtureEgress $briefingConfig }
             Set-Field '_config' $briefingConfig
             $briefingConversation = [OnlyWorkspace.Core.Privacy.ConversationPolicy]::Create($briefingProfile)
             Set-Field '_currentConversation' $briefingConversation
@@ -820,7 +826,7 @@ try {
         foreach ($provider in $attachmentProviders) {
             $provider.Provider='Synthetic'; $provider.ProcessingAgreement=$true; $provider.Region='UE'; $provider.TransferBasis=[OnlyWorkspace.Core.Privacy.DataEgress]::TransferBases[0]; $provider.NoTraining=$true; $provider.Retention='none'
         }
-        [void][OnlyWorkspace.Core.Privacy.DataEgress]::Accept($attachmentConfig,'test','test',[DateTime]::UtcNow,$null)
+        Approve-FixtureEgress $attachmentConfig
         $attachmentClient = Call 'CreateLlmClient' @($attachmentProfile, $false)
         $attachmentMessages = New-Object 'Collections.Generic.List[OnlyWorkspace.Core.Models.ChatMessage]'
         $attachmentMessages.Add([OnlyWorkspace.Core.Models.ChatMessage]::User($attachmentRead.Text))
@@ -838,7 +844,7 @@ try {
         try { [void](Wait-PaneTask ($attachmentClient.CompleteStructuredAsync($attachmentMessages, '{}', [Threading.CancellationToken]::None))) }
         catch { $refused = $_.Exception.ToString().Contains('DataEgressBlockedException') }
         Assert-Pass ($refused -and !$attachmentCapture.Pending) 'A224 revoked consent reached HTTP through a captured client'
-        [void][OnlyWorkspace.Core.Privacy.DataEgress]::Accept($attachmentConfig,'test','test',[DateTime]::UtcNow,$null)
+        Approve-FixtureEgress $attachmentConfig
         $attachmentConfig.DataEgress.Consent.Profiles.Clear()
         $refused = $false
         try { $null = Call 'CreateLlmClient' @($attachmentProfile, $false) }
@@ -855,7 +861,7 @@ try {
         Set-Field '_configService' $egressService
         try {
             foreach ($credential in @('a224-model','a224-web')) {
-                [void][OnlyWorkspace.Core.Privacy.DataEgress]::Accept($attachmentConfig,'test','test',[DateTime]::UtcNow,$egressResolver)
+                Approve-FixtureEgress $attachmentConfig $egressResolver
                 $egressService.SaveConfiguration($attachmentConfig); [void]$egressService.LoadConfiguration()
                 $attachmentClient.Dispose()
                 $attachmentClient = Call 'CreateLlmClient' @($attachmentProfile, $false)
@@ -1072,7 +1078,7 @@ try {
                 foreach ($provider in $providers) {
                     $provider.Provider='Synthetic'; $provider.ProcessingAgreement=$true; $provider.Region='UE'; $provider.TransferBasis=[OnlyWorkspace.Core.Privacy.DataEgress]::TransferBases[0]; $provider.NoTraining=$true; $provider.Retention='none'
                 }
-                if ($mode -ne 'Local') { [void][OnlyWorkspace.Core.Privacy.DataEgress]::Accept($calendarConfig,'test','test',[DateTime]::UtcNow,$null) }
+                if ($mode -ne 'Local') { Approve-FixtureEgress $calendarConfig }
                 Set-Field '_config' $calendarConfig
                 Set-Field '_currentConversation' ([OnlyWorkspace.Core.Privacy.ConversationPolicy]::Create($calendarProfile))
                 Set-Field '_dataService' $calendarData
@@ -1146,7 +1152,7 @@ try {
                     foreach ($provider in $providers) {
                         $provider.Provider='Synthetic'; $provider.ProcessingAgreement=$true; $provider.Region='UE'; $provider.TransferBasis=[OnlyWorkspace.Core.Privacy.DataEgress]::TransferBases[0]; $provider.NoTraining=$true; $provider.Retention='none'
                     }
-                    [void][OnlyWorkspace.Core.Privacy.DataEgress]::Accept($guardConfig,'test','test',[DateTime]::UtcNow,$null)
+                    Approve-FixtureEgress $guardConfig
                 }
                 Set-Field '_config' $guardConfig
                 Set-Field '_currentConversation' ([OnlyWorkspace.Core.Privacy.ConversationPolicy]::Create($guardProfile))

@@ -42,11 +42,43 @@ Var ProgramDataDir
 Var BlockNewOutlook
 Var PurgeParam
 Var RestartConfigTool
-Var FreshInstall
+Var ProgramCleanupFailure
 
 ; Controlli di prerequisiti, comandi e /PURGE, provati anche da tests\scripts\Packaging.Tests.ps1
 !include "SetupChecks.nsh"
 !insertmacro DefinePurgeTree "un."
+
+; Keep one installer or uninstaller active until its process exits.
+!macro LockSetup
+    System::Call 'kernel32::CreateMutexW(p 0, i 0, w "Global\OnlyWorkspaceSetup") p.R9'
+    System::Call 'kernel32::WaitForSingleObject(p R9, i 0) i.R8'
+    ${If} $R8 != 0
+    ${AndIf} $R8 != 128 ; WAIT_ABANDONED
+        MessageBox MB_OK|MB_ICONSTOP "Un altro setup o disinstallatore di OnlyWorkspace e' in corso." /SD IDOK
+        SetErrorLevel 2
+        Quit
+    ${EndIf}
+!macroend
+
+!macro RunProgramFiles OPERATION
+    ; NSIS extracts its own System.dll in $PLUGINSDIR. Keep it out of the PowerShell compiler's working directory.
+    SetOutPath "$SYSDIR"
+    nsExec::ExecToLog '"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$PLUGINSDIR\ProgramFiles.ps1" -Operation ${OPERATION} -Destination "$INSTDIR\."'
+    Pop $0
+!macroend
+
+!macro RequireProgramFiles OPERATION
+    !insertmacro RunProgramFiles "${OPERATION}"
+    ${If} $0 != 0
+        MessageBox MB_OK|MB_ICONSTOP "Gestione dei file programma non riuscita (esito $0). Scegliere una cartella nuova o verificare il log del setup." /SD IDOK
+        ${If} $0 == 3
+            SetErrorLevel 3
+        ${Else}
+            SetErrorLevel 2
+        ${EndIf}
+        Quit
+    ${EndIf}
+!macroend
 
 ; Pagine Installer
 !define MUI_ICON "..\src\OnlyWorkspace.ConfigTool\Assets\OnlyWorkspace.ico"
@@ -70,7 +102,7 @@ Nella pagina dei componenti puoi scegliere se nascondere 'Prova il nuovo Outlook
 ; Pagine Uninstaller
 !insertmacro MUI_UNPAGE_CONFIRM
 !insertmacro MUI_UNPAGE_INSTFILES
-!define MUI_FINISHPAGE_TEXT "OnlyWorkspace e' stato rimosso; le email in Outlook non sono state modificate.$\r$\n$\r$\n\
+!define MUI_FINISHPAGE_TEXT "La disinstallazione di OnlyWorkspace e' terminata; le email in Outlook non sono state modificate.$\r$\n$\r$\n\
 Restano sul PC, se presenti: per ogni utente Windows la cartella LocalAppData\OnlyWorkspace (storico, log, dati del riquadro e, salvo diversa scelta, l'archivio delle email) e il file AppData\OnlyWorkspace\preferences.json; la configurazione in ProgramData\OnlyWorkspace se hai scelto di conservarla. Si possono eliminare a mano."
 !insertmacro MUI_UNPAGE_FINISH
 
@@ -154,6 +186,7 @@ Restano sul PC, se presenti: per ogni utente Windows la cartella LocalAppData\On
 !macroend
 
 Function .onInit
+    !insertmacro LockSetup
     ReadEnvStr $ProgramDataDir "ProgramData"
     ${If} $ProgramDataDir == ""
         StrCpy $ProgramDataDir "C:\ProgramData"
@@ -161,10 +194,17 @@ Function .onInit
 
     ${If} ${RunningX64}
         SetRegView 64
-        StrCpy $INSTDIR "$PROGRAMFILES64\OnlyWorkspace"
     ${Else}
         SetRegView 32
-        StrCpy $INSTDIR "$PROGRAMFILES\OnlyWorkspace"
+    ${EndIf}
+    ${If} $INSTDIR == ""
+        ReadRegStr $INSTDIR HKLM "${UNINST_KEY}" "InstallLocation"
+        ${If} $INSTDIR == ""
+            StrCpy $INSTDIR "$PROGRAMFILES\OnlyWorkspace"
+            ${If} ${RunningX64}
+                StrCpy $INSTDIR "$PROGRAMFILES64\OnlyWorkspace"
+            ${EndIf}
+        ${EndIf}
     ${EndIf}
 
     ; Lettura parametri da riga di comando (/CONFIG=... /BLOCKNEWOUTLOOK=...; /PURGE vale solo per il disinstallatore)
@@ -229,36 +269,29 @@ Section "Add-in OnlyWorkspace" SecOnlyWorkspace
     SectionIn RO
     ; Collegamenti per tutti gli utenti: con l'elevazione da un altro account quelli personali finirebbero nel suo profilo.
     SetShellVarContext all
-    SetOutPath "$INSTDIR"
-    StrCpy $FreshInstall "1"
-    ${If} ${FileExists} "$INSTDIR\OnlyWorkspace.Outlook.dll"
-        StrCpy $FreshInstall "0"
-    ${EndIf}
-
-    ; Aggiornamento: toglie le librerie della versione precedente che il nuovo pacchetto non contiene piu'.
-    ; Solo se la cartella e' gia' un'installazione di OnlyWorkspace (la destinazione e' scelta dall'utente).
-    ${If} ${FileExists} "$INSTDIR\OnlyWorkspace.Outlook.dll"
-        Delete "$INSTDIR\*.dll"
-        Delete "$INSTDIR\*.pdb"
-        RMDir /r "$INSTDIR\extractor"
-        RMDir /r "$INSTDIR\runtimes"
-        ; Every template in prompts\ is loaded: one no longer shipped must not stay behind.
-        RMDir /r "$INSTDIR\prompts"
-    ${EndIf}
-
-    ; Binari, librerie, prompts\ e licenze di terze parti (publish\ e' preparata da scripts\build-installer.ps1)
+    InitPluginsDir
+    SetOutPath "$PLUGINSDIR"
+    File "ProgramFiles.ps1"
+    SetOutPath "$PLUGINSDIR\payload"
+    ClearErrors
     File /r "${PUBLISH_DIR}\*.*"
-
-    ; Copia certificato pubblico
     File "..\certs\OnlyApps.cer"
+    WriteUninstaller "$PLUGINSDIR\payload\Uninstall.exe"
+    CreateShortcut /NoWorkingDir "$PLUGINSDIR\payload\OnlyWorkspace Tray.lnk" "$INSTDIR\OnlyWorkspace.ConfigTool.exe" "--tray"
+    ${If} ${Errors}
+        SetErrorLevel 2
+        Abort "Preparazione dei file di programma non riuscita."
+    ${EndIf}
+    !insertmacro RequireProgramFiles Check
 
     ; Configurazione prima di certificato e registrazioni: se non e' valida il setup si ferma senza
     ; lasciare un add-in registrato a meta'.
     Call SetupConfiguration
+    !insertmacro RequireProgramFiles Deploy
+    SetOutPath "$INSTDIR"
 
     ; Disinstallatore e voce in App e Funzionalita' prima di certificato e registrazioni: un setup fermato
     ; da uno dei comandi seguenti resta rimovibile.
-    WriteUninstaller "$INSTDIR\Uninstall.exe"
     WriteRegStr HKLM "${UNINST_KEY}" "DisplayName" "OnlyWorkspace Outlook Add-in"
     WriteRegStr HKLM "${UNINST_KEY}" "DisplayVersion" "${PRODUCT_VERSION}"
     WriteRegStr HKLM "${UNINST_KEY}" "Publisher" "OnlyApps"
@@ -301,7 +334,6 @@ Section "Add-in OnlyWorkspace" SecOnlyWorkspace
 
     ; Riavvio del ConfigTool chiuso in modalita' silenziosa: tramite explorer parte con l'utente collegato,
     ; non con il token elevato dell'installer (da un servizio senza desktop ripartira' al prossimo accesso).
-    CreateShortcut "$INSTDIR\OnlyWorkspace Tray.lnk" "$INSTDIR\OnlyWorkspace.ConfigTool.exe" "--tray"
     ${If} $RestartConfigTool == "1"
         Exec '"$WINDIR\explorer.exe" "$INSTDIR\OnlyWorkspace Tray.lnk"'
     ${EndIf}
@@ -313,6 +345,14 @@ Section "Nascondi nuovo Outlook" SecBlockNewOutlook
         DetailPrint "Applicazione policy di blocco Prova il nuovo Outlook..."
         !insertmacro WritePolicy "Options\General" "HideNewOutlookToggle" 1
         !insertmacro WritePolicy "Preferences" "UseNewOutlook" 0
+    ${EndIf}
+SectionEnd
+
+Section "-Ritiro disinstallatore precedente"
+    !insertmacro RunProgramFiles RetireLegacy
+    ${If} $0 != 0
+        MessageBox MB_OK|MB_ICONEXCLAMATION "La nuova installazione e' registrata. Il disinstallatore precedente e' ancora da verificare o rinominare. Usare la voce corrente in App e Funzionalita' e consultare il log del setup." /SD IDOK
+        SetErrorLevel 3
     ${EndIf}
 SectionEnd
 
@@ -334,51 +374,43 @@ Function SetupConfiguration
     ; esce con 0 anche se un file non e' stato elaborato.
     CreateDirectory "$ProgramDataDir\OnlyWorkspace"
     nsExec::ExecToLog 'icacls.exe "$ProgramDataDir\OnlyWorkspace" /inheritance:r /grant:r *S-1-5-32-544:(OI)(CI)F *S-1-5-18:(OI)(CI)F *S-1-5-32-545:(OI)(CI)RX'
-    !insertmacro CheckExecResult "Protezione della cartella ProgramData\OnlyWorkspace (icacls)" "La configurazione esistente non e' stata modificata." RemoveFreshInstall
+    !insertmacro CheckExecResult "Protezione della cartella ProgramData\OnlyWorkspace (icacls)" "La configurazione esistente non e' stata modificata." ""
     nsExec::ExecToLog 'icacls.exe "$ProgramDataDir\OnlyWorkspace\*" /reset /T /Q'
-    !insertmacro CheckExecResult "Ripristino dei permessi dei file in ProgramData\OnlyWorkspace (icacls)" "La configurazione esistente non e' stata modificata." RemoveFreshInstall
+    !insertmacro CheckExecResult "Ripristino dei permessi dei file in ProgramData\OnlyWorkspace (icacls)" "La configurazione esistente non e' stata modificata." ""
 
     ${If} $ConfigParam != ""
         DetailPrint "Importazione configurazione iniziale da: $ConfigParam ..."
-        nsExec::ExecToLog '"$INSTDIR\OnlyWorkspace.ConfigTool.exe" import "$ConfigParam" "$ProgramDataDir\OnlyWorkspace" --skip-test'
+        nsExec::ExecToLog '"$PLUGINSDIR\payload\OnlyWorkspace.ConfigTool.exe" import "$ConfigParam" "$ProgramDataDir\OnlyWorkspace" --skip-test'
         Pop $0
         ${If} $0 != 0
             MessageBox MB_OK|MB_ICONSTOP "Errore nell'importazione della configurazione iniziale (codice di uscita $0). Verificare sintassi del file config.json." /SD IDOK
-            Call RemoveFreshInstall
+            SetErrorLevel 2
             Abort "Importazione configurazione iniziale fallita."
         ${EndIf}
     ${Else}
         ; Se non passata da riga di comando, controlla se gia' presente configurazione in %ProgramData%
         ${If} ${FileExists} "$ProgramDataDir\OnlyWorkspace\config.json"
             DetailPrint "Configurazione esistente rilevata in ProgramData. Verifica integrita' in corso..."
-            nsExec::ExecToLog '"$INSTDIR\OnlyWorkspace.ConfigTool.exe" validate "$ProgramDataDir\OnlyWorkspace\config.json"'
+            nsExec::ExecToLog '"$PLUGINSDIR\payload\OnlyWorkspace.ConfigTool.exe" validate "$ProgramDataDir\OnlyWorkspace\config.json"'
             Pop $0
             ${If} $0 != 0
                 MessageBox MB_OK|MB_ICONSTOP "La configurazione esistente in ProgramData non e' valida: il setup si ferma senza registrare l'add-in. Correggerla o ripristinare un backup con la Configurazione, poi ripetere il setup." /SD IDOK
-                Call RemoveFreshInstall
+                SetErrorLevel 2
                 Abort "Configurazione esistente in ProgramData non valida."
             ${EndIf}
         ${Else}
             DetailPrint "Nessuna configurazione pregressa rilevata. Creazione configurazione predefinita in ProgramData..."
             CreateDirectory "$ProgramDataDir\OnlyWorkspace"
-            CopyFiles /SILENT "$INSTDIR\config.template.json" "$ProgramDataDir\OnlyWorkspace\config.json"
-            nsExec::ExecToLog '"$INSTDIR\OnlyWorkspace.ConfigTool.exe" validate "$ProgramDataDir\OnlyWorkspace\config.json"'
+            CopyFiles /SILENT "$PLUGINSDIR\payload\config.template.json" "$ProgramDataDir\OnlyWorkspace\config.json"
+            nsExec::ExecToLog '"$PLUGINSDIR\payload\OnlyWorkspace.ConfigTool.exe" validate "$ProgramDataDir\OnlyWorkspace\config.json"'
             Pop $0
             ${If} $0 != 0
                 MessageBox MB_OK|MB_ICONSTOP "Errore nella validazione della configurazione iniziale predefinita." /SD IDOK
-                Call RemoveFreshInstall
+                SetErrorLevel 2
                 Abort "Configurazione predefinita non valida."
             ${EndIf}
             DetailPrint "Configurazione predefinita creata con successo in $ProgramDataDir\OnlyWorkspace\config.json."
         ${EndIf}
-    ${EndIf}
-FunctionEnd
-
-; Prima installazione fermata dalla configurazione: non lascia file in Programmi. Un aggiornamento conserva i file.
-Function RemoveFreshInstall
-    ${If} $FreshInstall == "1"
-        SetOutPath "$TEMP"
-        RMDir /r "$INSTDIR"
     ${EndIf}
 FunctionEnd
 
@@ -387,6 +419,7 @@ FunctionEnd
 ; =========================================================================
 
 Function un.onInit
+    !insertmacro LockSetup
     ReadEnvStr $ProgramDataDir "ProgramData"
     ${If} $ProgramDataDir == ""
         StrCpy $ProgramDataDir "C:\ProgramData"
@@ -404,6 +437,10 @@ Function un.onInit
 FunctionEnd
 
 Section "Uninstall"
+    InitPluginsDir
+    SetOutPath "$PLUGINSDIR"
+    File "ProgramFiles.ps1"
+    !insertmacro RequireProgramFiles CheckUninstall
     ; De-registrazione COM tramite RegAsm
     DetailPrint "Deregistrazione componenti COM in corso..."
     ${If} ${RunningX64}
@@ -437,18 +474,26 @@ Section "Uninstall"
     nsExec::ExecToLog 'certutil.exe -delstore "TrustedPublisher" "OnlyApps Code Signing"'
     !insertmacro LogExecResult "Rimozione del certificato da TrustedPublisher"
 
-    ; Rimozione voce App e Funzionalita'
-    DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\OnlyWorkspace"
-
     ; Rimozione eventuale avvio automatico tray in HKCU
     DeleteRegValue HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "OnlyWorkspaceTray"
 
     ; Rimozione file programma e collegamenti (per tutti gli utenti e, dalle versioni precedenti, dell'utente corrente)
-    RMDir /r "$INSTDIR"
+    StrCpy $PurgeFailure 0
     SetShellVarContext all
-    RMDir /r "$SMPROGRAMS\OnlyWorkspace"
+    !insertmacro RemoveProgramShortcut "$SMPROGRAMS\OnlyWorkspace"
     SetShellVarContext current
-    RMDir /r "$SMPROGRAMS\OnlyWorkspace"
+    !insertmacro RemoveProgramShortcut "$SMPROGRAMS\OnlyWorkspace"
+    ; Keep the registered uninstaller and inventory available if a program file is locked.
+    ${If} $PurgeFailure == 0
+        !insertmacro RunProgramFiles Uninstall
+        ${If} $0 == 0
+            DeleteRegKey HKLM "${UNINST_KEY}"
+        ${Else}
+            StrCpy $PurgeFailure 1
+        ${EndIf}
+    ${EndIf}
+    StrCpy $ProgramCleanupFailure $PurgeFailure
+    !insertmacro ReportProgramCleanup
 
     ; Dati in ProgramData e archivio dell'utente: /PURGE senza valore o conferma interattiva (SetupChecks.nsh)
     ${GetParameters} $R0
@@ -456,6 +501,7 @@ Section "Uninstall"
     !insertmacro PurgeUserData "un." $PurgeParam "$ProgramDataDir" "$LOCALAPPDATA"
 
     ${If} $PurgeFailure == 0
+    ${AndIf} $ProgramCleanupFailure == 0
         DetailPrint "Disinstallazione completata."
     ${EndIf}
 SectionEnd

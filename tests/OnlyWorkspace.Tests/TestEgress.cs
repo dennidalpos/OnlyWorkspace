@@ -7,6 +7,8 @@ namespace OnlyWorkspace.Tests;
 internal static class TestEgress
 {
     public static string? ResolveSecret(string reference) => "fixture-secret";
+    public static string[] ConfirmedRegions(WorkspaceConfig config) =>
+        DataEgress.EgressProfiles(config).Where(DataEgress.RequiresRegionConfirmation).Select(p => p.Id).ToArray();
 
     public static DataEgressSigner Signer(string? date = null) => new()
     {
@@ -31,7 +33,7 @@ internal static class TestEgress
     {
         if (fullExposure)
             foreach (var profile in config.Profiles.Where(p => p.IsExternal && p.Exposure == ExposureLevel.Minimal)) profile.Exposure = ExposureLevel.Standard;
-        DataEgress.Accept(config, "test", "pc", DateTime.UtcNow, ResolveSecret);
+        DataEgress.Accept(config, "test", "pc", DateTime.UtcNow, ResolveSecret, ConfirmedRegions(config));
         return config;
     }
 }

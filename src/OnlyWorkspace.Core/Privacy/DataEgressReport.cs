@@ -124,10 +124,15 @@ public static class DataEgressReport
             html.Append("<section><h2>Storico delle autorizzazioni</h2><table class=\"grid\"><thead><tr><th>Quando</th><th>Azione</th><th>Responsabile</th>")
                 .Append("<th>Utente e computer</th><th>Versione</th><th>Profili, server e livelli</th></tr></thead><tbody>");
             foreach (var e in history.AsEnumerable().Reverse())
+            {
                 html.Append("<tr><td>").Append(E(When(e.AtUtc))).Append("</td><td>").Append(E(e.Action)).Append("</td><td>").Append(E(e.Responsible))
                     .Append("</td><td>").Append(E($"{e.WindowsUser} su {e.Machine}")).Append("</td><td>").Append(e.NoticeVersion)
                     .Append("</td><td>").Append(E(string.Join(", ", e.Profiles))).Append("<br>")
-                    .Append(E(string.Join(", ", e.Levels.Count > 0 ? e.Levels : e.Hosts))).Append("</td></tr>");
+                    .Append(E(string.Join(", ", e.Levels.Count > 0 ? e.Levels : e.Hosts)));
+                if (e.ConfirmedUnspecifiedRegionProfiles is { Count: > 0 })
+                    html.Append("<br>Area non specificata confermata per ").Append(E(string.Join(", ", e.ConfirmedUnspecifiedRegionProfiles)));
+                html.Append("</td></tr>");
+            }
             html.Append("</tbody></table></section>");
         }
 

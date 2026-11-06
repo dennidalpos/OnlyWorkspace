@@ -14,6 +14,7 @@ internal sealed class DataEgressConsentForm : Form
     private readonly CheckBox _read;
     private readonly FlatButton _accept;
     private readonly Label _hint;
+    internal IReadOnlyList<string> ConfirmedUnspecifiedRegionProfiles { get; private set; } = Array.Empty<string>();
     private bool _closeByKeyboardOrX;
     private readonly ToolTip _tips = new() { AutoPopDelay = 20000 };
     public DataEgressConsentForm(IReadOnlyList<DataEgressProvider> servers, DataEgressSigner? previous,
@@ -41,12 +42,13 @@ internal sealed class DataEgressConsentForm : Form
             MaximumSize = new Size(560, 0) };
         layout.Controls.Add(read);
         // A cloud profile without a declared area needs its own explicit confirmation.
-        var unspecified = (profiles ?? Array.Empty<LlmProfileConfig>()).Where(p => p.IsExternal && p.ServiceRegion == ServiceRegion.Unspecified)
-            .Select(p => p.DisplayName.Length == 0 ? p.Id : p.DisplayName).ToList();
+        var unspecified = (profiles ?? Array.Empty<LlmProfileConfig>()).Where(DataEgress.RequiresRegionConfirmation).ToList();
+        var unspecifiedIds = unspecified.Select(p => p.Id).ToArray();
         CheckBox? region = null;
         if (unspecified.Count > 0)
         {
-            region = new ThemedCheckBox { Text = "Confermo di autorizzare anche l'area non specificata: " + string.Join(", ", unspecified), AutoSize = true,
+            region = new ThemedCheckBox { Text = "Confermo di autorizzare anche l'area non specificata: " +
+                string.Join(", ", unspecified.Select(p => p.DisplayName.Length == 0 ? p.Id : p.DisplayName)), AutoSize = true,
                 MaximumSize = new Size(560, 0) };
             layout.Controls.Add(region);
         }
@@ -67,7 +69,12 @@ internal sealed class DataEgressConsentForm : Form
             region.CheckedChanged += (_, _) => SyncButton();
             hint.Text = "Per abilitare «Autorizza e salva» spunta «Ho letto…» e la conferma dell'area in fondo al testo.";
         }
-        accept.Click += (_, _) => { if (Ready()) DialogResult = DialogResult.OK; };
+        accept.Click += (_, _) =>
+        {
+            if (!Ready()) return;
+            ConfirmedUnspecifiedRegionProfiles = unspecifiedIds;
+            DialogResult = DialogResult.OK;
+        };
         var actions = new FlowLayoutPanel { Dock = DockStyle.Bottom, AutoSize = true, Padding = new Padding(12),
             FlowDirection = FlowDirection.RightToLeft };
         actions.Controls.AddRange(new Control[] { accept, cancel, hint });

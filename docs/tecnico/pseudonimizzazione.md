@@ -23,7 +23,7 @@ Il contratto non è serializzabile come autorizzazione: la prova (`CloudRequestP
 
 ## Strategie e audit locali
 
-Il catalogo incorporato è alla revisione 2. La pipeline mantiene sostituzioni reversibili, priorità fra pattern, budget di dieci secondi, timeout delle regex e annullamento. Le identità vengono raccolte dagli store autorizzati e cercate con un indice letterale compilato una volta per richiesta. Query web libere, domini ricavati dalla posta e query generate da Ollama restano bloccati.
+Il catalogo incorporato è alla revisione 3. La pipeline mantiene sostituzioni reversibili, priorità fra pattern, budget di dieci secondi, timeout delle regex e annullamento. Le identità vengono raccolte dagli store autorizzati e cercate con un indice letterale compilato una volta per richiesta. Query web libere, domini ricavati dalla posta e query generate da Ollama restano bloccati.
 
 Il registro DPAPI conserva identificativo casuale, data, esito, revisioni e conteggi per categoria; non contiene originali o mappa. Il mutex protegge gli aggiornamenti. Scadono dopo trenta giorni solo i metadati di questo registro. Un errore precedente al trasporto impedisce l'invio; un errore successivo non ritira richieste già ricevute. `dispatching` indica un tentativo, non una ricevuta. Il PDF di Privacy e dati include i metadati disponibili.
 
@@ -31,6 +31,6 @@ Il registro DPAPI conserva identificativo casuale, data, esito, revisioni e cont
 
 L'informativa 6 registra una conferma tecnica con utente Windows, postazione, data e testo accettato, distinta per profilo, destinazione, area del servizio, permessi e credenziali effettive. L'area (UE, non UE, non specificata) è dichiarata dall'amministratore per profilo; se non specificata serve una conferma separata. Non registra dichiarazioni aziendali o contrattuali. I record precedenti restano conservati e richiedono rinnovo. La policy conversazionale 8 separa i nuovi contesti dallo storico precedente.
 
-Il catalogo 2 riconosce gli importi accanto a EUR, USD, GBP o ai simboli €, $, £. La forma `1234,56 euro` non viene sostituita: il limite è confermato da una cattura HTTP sintetica; l’estensione del riconoscimento resta da implementare.
+Il catalogo 3 riconosce anche il nome «euro» come parola intera, senza distinzione fra maiuscole e minuscole, prima o dopo un numero separato da spazio orizzontale. Sono coperte forme come `1234,56 euro` ed `EURO -1.234,56`, oltre a EUR, USD, GBP e ai simboli €, $, £. Il nome «euro» richiede cifre, con eventuali separatori interni virgola e punto. Parole come «eurozona» ed «euros», numeri raggruppati con spazi e altri nomi di valuta esulano da questa regola. La revisione 3 richiede di rinnovare le autorizzazioni dei profili interessati e apre un nuovo contesto conversazionale.
 
 È pseudonimizzazione reversibile, non anonimizzazione né attestazione di conformità. I dati sensibili che la procedura non riconosce, comprese le categorie particolari, restano nel testo e non sono anonimizzati. Prove sintetiche, runtime isolato e Outlook installato restano qualifiche distinte: [Verifica](verifica.md).

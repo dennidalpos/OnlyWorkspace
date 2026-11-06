@@ -74,10 +74,10 @@ FunctionEnd
     ${If} $0 != 0
         DetailPrint "${LABEL} non riuscito (esito $0)."
         MessageBox MB_OK|MB_ICONSTOP "${LABEL} non riuscito (esito $0): il setup si ferma. ${HINT}" /SD IDOK
+        SetErrorLevel 2
         !if "${CLEANUP}" != ""
             Call ${CLEANUP}
         !endif
-        SetErrorLevel 2
         Abort "${LABEL} non riuscito."
     ${EndIf}
 !macroend
@@ -129,7 +129,7 @@ Var PurgeFailure
 Function ${PREFIX}PurgeTree
     Exch $R0 ; extended path
     Exch 1
-    Exch $R5 ; empty: any entry; dot: directory root; otherwise: named child of this parent
+    Exch $R5 ; empty: any entry; dot: directory root; ?: validate only; otherwise: named child
     Push $R1
     Push $R2
     Push $R3
@@ -154,6 +154,14 @@ Function ${PREFIX}PurgeTree
     ${EndIf}
     IntOp $R3 $R2 & 0x10 ; FILE_ATTRIBUTE_DIRECTORY
     IntOp $R2 $R2 & 0x400 ; FILE_ATTRIBUTE_REPARSE_POINT
+    ${If} $R5 == "?"
+        ${If} $R3 == 0
+        ${OrIf} $R2 != 0
+            StrCpy $PurgeFailure 1
+        ${EndIf}
+        System::Call 'kernel32::CloseHandle(p R1)'
+        Goto purgeDone
+    ${EndIf}
     ${If} $R5 != ""
     ${AndIf} $R5 != "."
         ${If} $R3 == 0
@@ -242,6 +250,29 @@ FunctionEnd
     ${EndIf}
     Pop $R1
     Pop $R0
+!macroend
+
+; Report before any later cleanup can reset the shared tree status.
+!macro ReportProgramCleanup
+    ${If} $PurgeFailure == 1
+        DetailPrint "Pulizia incompleta dei file programma o dei collegamenti di OnlyWorkspace."
+        MessageBox MB_OK|MB_ICONEXCLAMATION "Alcuni file programma o collegamenti di OnlyWorkspace non sono stati rimossi. Controllare la cartella di installazione e il menu Start." /SD IDOK
+        SetErrorLevel 3
+    ${EndIf}
+!macroend
+
+!macro RemoveProgramShortcut ROOT
+    !insertmacro PurgeFolder "un." "${ROOT}" "?"
+    ${If} $PurgeFailure == 0
+        ClearErrors
+        Delete "${ROOT}\Configurazione OnlyWorkspace.lnk"
+        ${If} ${Errors}
+            StrCpy $PurgeFailure 1
+        ${Else}
+            ; Other shortcuts in this folder belong to their users.
+            RMDir "${ROOT}"
+        ${EndIf}
+    ${EndIf}
 !macroend
 
 ; Dati del prodotto alla disinstallazione: configurazione e segreti in PROGRAMDATA\OnlyWorkspace (con le copie non

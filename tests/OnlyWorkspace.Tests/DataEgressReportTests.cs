@@ -40,7 +40,7 @@ public sealed class DataEgressReportTests
         var config = Config();
         var signer = TestEgress.Signer("2026-10-20");
         signer.Company = "Rossi & Figli <Srl>";
-        DataEgress.Accept(config, @"DOM\anna", "WS-PROVA", new DateTime(2026, 10, 20, 8, 0, 0, DateTimeKind.Utc), TestEgress.ResolveSecret);
+        DataEgress.Accept(config, @"DOM\anna", "WS-PROVA", new DateTime(2026, 10, 20, 8, 0, 0, DateTimeKind.Utc), TestEgress.ResolveSecret, TestEgress.ConfirmedRegions(config));
         string html = DataEgressReport.RenderHtml(config, Pc);
 
         Assert.Contains("Autorizzata per tutti i profili configurati.", html);
@@ -62,7 +62,7 @@ public sealed class DataEgressReportTests
     public void TheAcceptedText_IsReproducedEvenAfterTheNoticeChanges()
     {
         var config = Config();
-        DataEgress.Accept(config, "u", "pc", DateTime.UtcNow, TestEgress.ResolveSecret);
+        DataEgress.Accept(config, "u", "pc", DateTime.UtcNow, TestEgress.ResolveSecret, TestEgress.ConfirmedRegions(config));
         config.DataEgress.Consent!.NoticeText = "Testo firmato in passato, abbastanza lungo da essere un paragrafo intero.";
         config.DataEgress.Consent.NoticeHash = "vecchio";
         string html = DataEgressReport.RenderHtml(config, Pc);

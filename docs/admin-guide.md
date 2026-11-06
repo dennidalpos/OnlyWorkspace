@@ -4,7 +4,7 @@
 
 The managed COM add-in supports classic Outlook 2016+ x86/x64 on Windows x64 with .NET Framework 4.8 and WebView2 Evergreen. New Outlook is unsupported. Close Outlook before setup. Setup elevates, validates configuration, installs the public certificate in Root/TrustedPublisher, registers both RegAsm variants and sets Addins/OnlyWorkspace.Addin LoadBehavior=3. Root certificate installation is current behavior, not permission to trust arbitrary certificates.
 
-Missing WebView2 is downloaded only after verifying its Microsoft signature and its registration is checked again. icacls/certutil/RegAsm failures stop setup with code 2; a stopped installation after file copying remains uninstallable.
+Missing WebView2 is downloaded only after verifying its Microsoft signature and its registration is checked again. Configuration is validated before the program files are deployed. Certificate or RegAsm failures stop setup with code 2 and leave the registered uninstaller available.
 
 | Setup option | Effect |
 | --- | --- |
@@ -13,6 +13,12 @@ Missing WebView2 is downloaded only after verifying its Microsoft signature and 
 | /BLOCKNEWOUTLOOK=0 | Skips the default New Outlook-switch policy component. |
 
 Silent setup closes tray/ConfigTool and requests restart through Explorer; without an interactive desktop restart waits for logon. Interactive setup asks for closure and offers Configuration afterward.
+
+Choose a new or empty folder on first installation or when moving from an older setup that has no file inventory. The earlier folder remains in place. For silent setup, specify the new folder with `/D=C:\Path\OnlyWorkspace` as the final argument, without enclosing it in quotes. The new setup stores its file inventory in the machine uninstall registry key. Later updates use the registered directory, remove retired package files and stop if a new package file would overwrite an unlisted file. A failed deployment restores the previous files if the rollback succeeds.
+
+After registering the new installation, setup checks that the old registry entry named `Uninstall.exe` in the previous directory and verifies its OnlyWorkspace metadata and OnlyApps signature. It renames that file to `Uninstall.exe.disabled` and preserves the other files in the old folder. If the file is locked, verification fails, or the new name is already taken, setup reports exit code 3 and keeps the current Apps & Features entry available. Rerun setup after resolving the reported issue. Use that current entry to uninstall.
+
+Uninstall removes the inventoried program files and the OnlyWorkspace Start menu shortcut. It preserves other files and refuses redirected program paths. Incomplete program or shortcut cleanup is reported with exit code 3 by the running uninstaller. The uninstall entry is kept if program file removal fails.
 
 Update tray/add-in together (pipe v15). New archives use format 13. Earlier formats, including 11 and 12, are refused with an explicit error and preserved for recovery. Use the matching build and a verified archive copy for recovery.
 
@@ -75,7 +81,9 @@ Clearing a key removes it on Save; profile ID rename moves references/default; c
 
 Level 0 sends no external data; Minimal permits typed protected facts/opaque references; Standard masked free text; Extended additionally masked attachment text with distinct permission. Original binary files, names, StoreId/EntryId are not sent. Local requests mask recognized identifiers; optional local amount/date settings differ from mandatory cloud masking.
 
-Notice 6, authorization key 3 and conversation policy 8 bind grants to profile, destination, declared EU/non-EU/unspecified region, permissions and credentials. The UI requests an extra unspecified-region confirmation; core enforcement is a tracked issue, so UI behavior alone is not a policy guarantee. Changed policy/credentials interrupt old work and start a fresh conversation; old history stays readable.
+Notice 6, authorization key 3 and conversation policy 8 bind grants to profile, destination, declared EU/non-EU/unspecified region, permissions and credentials. When issuing a new grant, the authorization engine requires explicit confirmation for each cloud profile whose service region is unspecified. The acceptance history and its report list the confirmed profile IDs. Changed policy or credentials interrupt old work and start a fresh conversation. Old history stays readable.
+
+Masking catalog revision 3 recognizes the whole word `euro` before or after an amount. Moving from revision 2 requires renewing the affected profile authorizations in **Privacy and data**. [Recognized forms and limits](tecnico/pseudonimizzazione.md)
 
 Catalog 2 recognizes currency symbols/codes EUR/USD/GBP, not **1234,56 euro**. Unrecognized sensitive information may remain in permitted free text. Failed masking/audit preparation blocks sending; failure after dispatch cannot retract receipt. Free-form action web queries remain blocked; capability checks use fixed synthetic requests.
 

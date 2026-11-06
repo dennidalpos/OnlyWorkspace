@@ -91,6 +91,8 @@ public sealed class DataEgressEvent
     /// <summary>"host: level" for each covered server.</summary>
     public List<string> Levels { get; set; } = new();
     public List<string> Profiles { get; set; } = new();
+    /// <summary>Profile IDs explicitly confirmed despite their unspecified service region.</summary>
+    public List<string>? ConfirmedUnspecifiedRegionProfiles { get; set; }
     /// <summary>Preserves the accepted declarations/text, including host-only authorizations superseded by renewal.</summary>
     public DataEgressConsent? Authorization { get; set; }
 }
@@ -255,14 +257,21 @@ public static partial class DataEgress
             consent.Hosts.Where(h => !consent.Providers.Any(p => string.Equals(p.Host, h, StringComparison.OrdinalIgnoreCase)))
                 .Select(h => $"{h}: mancano le dichiarazioni sul server.").FirstOrDefault();
 
+    public static bool RequiresRegionConfirmation(LlmProfileConfig profile) =>
+        profile.IsExternal && profile.ServiceRegion is not (ServiceRegion.Eu or ServiceRegion.NonEu);
+
     /// <summary>Technical authorization only; never creates company or provider declarations.</summary>
     public static DataEgressConsent Accept(WorkspaceConfig config, string windowsUser, string machine,
-        DateTime nowUtc, Func<string, string?> resolveSecret)
+        DateTime nowUtc, Func<string, string?> resolveSecret, IReadOnlyCollection<string>? confirmedUnspecifiedRegionProfiles = null)
     {
         if (string.IsNullOrWhiteSpace(windowsUser) || string.IsNullOrWhiteSpace(machine))
             throw new ArgumentException("Utente e postazione sono necessari.");
         var profiles = EgressProfiles(config).ToList();
         if (profiles.Count == 0) throw new InvalidOperationException("Nessun profilo esterno da autorizzare.");
+        var unspecified = profiles.Where(RequiresRegionConfirmation).Select(p => p.Id).ToList();
+        var confirmed = new HashSet<string>(confirmedUnspecifiedRegionProfiles ?? Array.Empty<string>(), StringComparer.OrdinalIgnoreCase);
+        if (unspecified.Any(id => !confirmed.Contains(id)))
+            throw new InvalidOperationException("Confermare esplicitamente tutti i profili con area del servizio non specificata.");
         var consent = new DataEgressConsent
         {
             AcceptedUtc = nowUtc, WindowsUser = windowsUser, Machine = machine,
@@ -277,7 +286,9 @@ public static partial class DataEgress
         if (previous != null && !config.DataEgress.History.Any(e => e.Authorization?.AcceptedUtc == previous.AcceptedUtc && e.Authorization.NoticeVersion == previous.NoticeVersion && e.Authorization.NoticeHash == previous.NoticeHash && e.Authorization.NoticeText == previous.NoticeText))
             config.DataEgress.History.Add(Event(DataEgressEvent.Accepted, previous, previous.WindowsUser, previous.Machine, previous.AcceptedUtc));
         config.DataEgress.Consent = consent;
-        config.DataEgress.History.Add(Event(DataEgressEvent.Accepted, consent, windowsUser, machine, nowUtc));
+        var accepted = Event(DataEgressEvent.Accepted, consent, windowsUser, machine, nowUtc);
+        if (unspecified.Count > 0) accepted.ConfirmedUnspecifiedRegionProfiles = unspecified;
+        config.DataEgress.History.Add(accepted);
         BindProfiles(config, resolveSecret);
         return consent;
     }
