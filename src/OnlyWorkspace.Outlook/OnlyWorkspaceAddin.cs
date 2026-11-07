@@ -127,7 +127,7 @@ public class OnlyWorkspaceAddin : IDTExtensibility2, IRibbonExtensibility, ICust
             _ribbonStateTimer?.Dispose();
             _ribbonStateTimer = null;
             foreach (var ribbon in _ribbonUis)
-                if (Marshal.IsComObject(ribbon)) Marshal.ReleaseComObject(ribbon);
+                ComObjects.Release(ribbon);
             _ribbonUis.Clear();
             _archiveIndexer?.Dispose();
             _archiveIndexer = null;
@@ -139,7 +139,7 @@ public class OnlyWorkspaceAddin : IDTExtensibility2, IRibbonExtensibility, ICust
             {
                 if (_onQuit != null) ((MSOutlook.ApplicationEvents_11_Event)_outlookApp).Quit -= _onQuit;
                 _onQuit = null;
-                Marshal.ReleaseComObject(_outlookApp);
+                ComObjects.Release(_outlookApp);
                 _outlookApp = null;
             }
         }
@@ -233,7 +233,7 @@ public class OnlyWorkspaceAddin : IDTExtensibility2, IRibbonExtensibility, ICust
             return window != null && _dataService?.CanActOnSelectedEmail(window) == true;
         }
         catch { return false; }
-        finally { if (window != null && Marshal.IsComObject(window)) Marshal.ReleaseComObject(window); }
+        finally { ComObjects.Release(window); }
     }
 
     public bool GetNeedsEmailSelection(IRibbonControl? control) => !GetCanActOnEmail(control);
@@ -247,7 +247,7 @@ public class OnlyWorkspaceAddin : IDTExtensibility2, IRibbonExtensibility, ICust
             return _paneManager?.TryGetExistingTaskPane(window)?.Coordinator.CanClearChat == true;
         }
         catch { return false; }
-        finally { if (window != null && Marshal.IsComObject(window)) Marshal.ReleaseComObject(window); }
+        finally { ComObjects.Release(window); }
     }
 
     /// <summary>customUI loadImage: the app icon for the controls that name it (image="ow16" / "ow32").</summary>
@@ -335,7 +335,7 @@ public class OnlyWorkspaceAddin : IDTExtensibility2, IRibbonExtensibility, ICust
         }
 
         if (context == null || context is MSOutlook.Explorer || context is MSOutlook.Inspector) return context;
-        Marshal.ReleaseComObject(context);
+        ComObjects.Release(context);
         return null;
     }
 
@@ -443,7 +443,7 @@ public class OnlyWorkspaceAddin : IDTExtensibility2, IRibbonExtensibility, ICust
             }
             finally
             {
-                Marshal.ReleaseComObject(selection);
+                ComObjects.Release(selection);
             }
         }
         entry.Coordinator.ExecuteOnEmail(control.Tag, entryId, storeId);

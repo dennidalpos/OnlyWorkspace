@@ -12,7 +12,7 @@ namespace OnlyWorkspace.Outlook.Services;
 public sealed partial class OutlookDataService
 {
     /// <summary>Cursor owned by the Outlook UI thread. A caller reads a small row batch, yields, then resumes.</summary>
-    public sealed class MailHeaderScan : IDisposable
+    public sealed class MailHeaderScan : IMailHeaderScan
     {
         private readonly OutlookDataService _owner;
         private readonly Queue<(MailFolderRef Folder, int Depth)> _pending = new();
@@ -189,7 +189,7 @@ public sealed partial class OutlookDataService
         }
     }
 
-    public MailHeaderScan BeginMailHeaderScan(IReadOnlyList<MailFolderRef> folders, bool includeSubfolders, EmailSearchQuery query)
+    public IMailHeaderScan BeginMailHeaderScan(IReadOnlyList<MailFolderRef> folders, bool includeSubfolders, EmailSearchQuery query)
     {
         EnsureUiThread();
         return new MailHeaderScan(this, folders, includeSubfolders, query);
@@ -198,7 +198,7 @@ public sealed partial class OutlookDataService
     public IReadOnlyList<MailFolderRef> GetChatSearchFolders() =>
         DefaultFoldersOfAllStores(MSOutlook.OlDefaultFolders.olFolderInbox, MSOutlook.OlDefaultFolders.olFolderSentMail);
 
-    public sealed class UnansweredSentScan : IDisposable
+    public sealed class UnansweredSentScan : IUnansweredSentScan
     {
         private readonly OutlookDataService _owner;
         private readonly Queue<MailFolderRef> _folders;
@@ -308,7 +308,7 @@ public sealed partial class OutlookDataService
         }
     }
 
-    public UnansweredSentScan BeginUnansweredSentScan(int minDays, int lookbackDays,
+    public IUnansweredSentScan BeginUnansweredSentScan(int minDays, int lookbackDays,
         ICollection<string>? storeIds = null, EmailSearchQuery? filter = null)
     {
         EnsureUiThread();

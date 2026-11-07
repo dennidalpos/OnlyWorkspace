@@ -122,7 +122,7 @@ def panel(index, x, y, w, h):
         s += text(32, 50, "UN PROFILO ESPLICITO", 19, MUTED, 600, spacing=2)
         s += rect(30, 340, 860, 82, "#16314A", 16)
         s += text(58, 375, "Il riquadro indica sempre chi riceve i dati.", 25, weight=600)
-        s += text(58, 406, "Informativa per i servizi esterni; consenso alle schede per cassetta.", 19, MUTED)
+        s += text(58, 406, "Informativa per i servizi esterni; livello di invio per profilo.", 19, MUTED)
     elif index == 5:
         s += text(32, 50, "SCRIVI  /  MIGLIORA  /  TRADUCI  /  OGGETTO", 19, MUTED, 600, spacing=2)
         s += rect(30, 82, 860, 250, PANEL, 18)
@@ -196,7 +196,7 @@ def architecture():
     content += text(822, 575, "Pipe locale · SID", 20, MUTED)
     content += line(650, 446, 300, 640, BLUE, 3, True) + text(291, 550, "Allegati temporanei", 20, BLUE)
     content += line(990, 720, 1136, 720, BLUE, 3, True) + text(1064, 693, "Letture / scritture", 17, BLUE, anchor="middle")
-    nodes = [(90, 280, "Outlook classico", ["Store aperti nel profilo", "Originali email disponibili"], "01"), (610, 280, "Add-in + WebView2", ["Riquadro e ribbon", "Accesso Outlook sul thread UI"], "02"), (1140, 280, "Client IA", ["Ollama locale o cloud", "Profilo e policy configurati"], "03"), (90, 640, "AttachmentExtractor", ["Processo separato", "Timeout e limite di memoria"], "04"), (610, 640, "ConfigTool · tray", ["ArchiveEngine", "Unico proprietario dei DB"], "05"), (1140, 640, "SQLite cifrato", ["Metadati, indice e schede", "Chiave DPAPI per utente"], "06")]
+    nodes = [(90, 280, "Outlook classico", ["Store aperti nel profilo", "Originali email disponibili"], "01"), (610, 280, "Add-in + WebView2", ["Riquadro e ribbon", "Accesso Outlook sul thread UI"], "02"), (1140, 280, "Client IA", ["Ollama locale o cloud", "Profilo e policy configurati"], "03"), (90, 640, "AttachmentExtractor", ["Processo separato", "Timeout e limite di memoria"], "04"), (610, 640, "ConfigTool · tray", ["ArchiveEngine", "Unico proprietario dei DB"], "05"), (1140, 640, "SQLite cifrato", ["Metadati, indice e testo acquisito", "Chiave DPAPI per utente"], "06")]
     for x, y, title, detail, num in nodes:
         content += rect(x, y, 370 if x == 90 else 380, 170, PANEL, 20, LINE)
         content += text(x + 25, y + 38, num, 19, MINT, 600)
@@ -204,14 +204,14 @@ def architecture():
         content += lines(x + 25, y + 116, detail, 20, gap=30, fill=MUTED)
     content += rect(90, 869, 1430, 76, "#142D44", 15)
     content += text(118, 915, "Core: modelli, prompt e regole senza COM  ·  Configurazione e vault separati dai dati utente", 24)
-    content += text(90, 982, "Raccolta con Outlook aperto · Ricerca nell'indice anche offline · Invio cloud secondo policy e consenso", 22, MUTED)
+    content += text(90, 982, "Raccolta con Outlook aperto · Ricerca nell'indice anche offline · Invio cloud secondo policy e informativa", 22, MUTED)
     save("architecture/system.svg", 1600, 1040, content, "Architettura OnlyWorkspace", "Outlook classico espone gli store all'add-in sul thread UI. L'add-in chiama il client IA, estrae allegati in un processo separato e invia dati via pipe al motore nella tray, proprietario del database cifrato.")
     (OUT / "architecture/system.mmd").write_text('''flowchart LR
     O["Outlook classico<br/>Store aperti e originali"] -->|"OOM: thread UI"| A["Add-in COM<br/>Ribbon e WebView2"]
     A -->|"Richiesta secondo profilo e policy"| L["Client IA<br/>Ollama locale o provider cloud"]
     A -->|"Copie temporanee"| X["AttachmentExtractor<br/>Processo isolato"]
     A <-->|"Dati semplici: pipe locale con verifica SID"| T["ConfigTool / tray<br/>ArchiveEngine"]
-    T <-->|"Unico proprietario"| D[("SQLite cifrato<br/>Metadati, indice e schede")]
+    T <-->|"Unico proprietario"| D[("SQLite cifrato<br/>Metadati, indice e testo acquisito")]
     C["ConfigTool GUI / CLI"] --> F["config.json e vault DPAPI LocalMachine"]
     F -.-> A
     F -.-> T
@@ -253,7 +253,7 @@ DECK = [
     ("shot", "Build installata", "Verifica sicurezza: segnali e giudizio.", None, "screenshots/installed/02-verifica-sicurezza.png"),
     ("shot", "Build installata", "Estrai dati: tabella copiabile e CSV.", None, "screenshots/installed/03-estrai-dati.png"),
     ("image", "Architettura", "Confini chiari tra processi e dati.", "Outlook sul thread UI, allegati in un processo separato, archivio cifrato nella tray.", "architecture/system.png"),
-    ("text", "Scrittura e privacy", "Scrivi, verifica, decidi tu.", "Scrivi, Migliora, Traduci e Oggetto lavorano sulla bozza aperta.", (["Inserisci o sostituisci la selezione", "Le bozze non vengono mai inviate dall'add-in", "Informativa prima dell'uscita dei dati", "Allegati al cloud solo se il profilo lo consente"], ["Consenso del responsabile", "a servizi e destinazioni.", "Archivio locale cifrato.", "Nessun fallback al cloud."])),
+    ("text", "Scrittura e privacy", "Scrivi, verifica, decidi tu.", "Scrivi, Migliora, Traduci e Oggetto lavorano sulla bozza aperta.", (["Inserisci o sostituisci la selezione", "Le bozze non vengono mai inviate dall'add-in", "Informativa prima dell'uscita dei dati", "Allegati al cloud solo se il profilo lo consente"], ["Informativa accettata dal", "responsabile per le destinazioni.", "Archivio locale cifrato.", "Nessun fallback al cloud."])),
     ("text", "Stato", "Qualifica interna in corso.", "Le prove su dati sintetici non sostituiscono la qualifica su cassette reali.", (["Outlook classico 2016 e successivi", "Windows, Outlook a 32 o 64 bit", ".NET Framework 4.8 e WebView2 Evergreen", "Le risposte IA richiedono verifica"], ["Nessun connettore", "Graph, IMAP o OAuth:", "solo la posta già", "aperta in Outlook."])),
     ("panel", "OnlyWorkspace", "Seleziona. Analizza. Verifica.", "Un add-in per lavorare sul contesto della posta in Outlook classico.", 6),
 ]

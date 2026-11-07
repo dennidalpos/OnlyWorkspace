@@ -205,7 +205,7 @@ public sealed class TaskPaneEntry : IDisposable
 
         try
         {
-            Marshal.ReleaseComObject(TaskPane);
+            ComObjects.Release(TaskPane);
         }
         catch { }
     }
@@ -382,7 +382,7 @@ public sealed class TaskPaneManager : IDisposable
 
         try
         {
-            Marshal.ReleaseComObject(taskPane);
+            ComObjects.Release(taskPane);
         }
         catch { }
     }
@@ -401,7 +401,7 @@ public sealed class TaskPaneManager : IDisposable
                 // A reply written in the reading pane changes no selection: the pane must switch to the writing actions anyway.
                 MSOutlook.ExplorerEvents_10_InlineResponseEventHandler onInline = item =>
                 {
-                    if (item != null && Marshal.IsComObject(item)) Marshal.ReleaseComObject(item);
+                    ComObjects.Release(item);
                     OnSelectionChange(explorer);
                 };
                 MSOutlook.ExplorerEvents_10_InlineResponseCloseEventHandler onInlineClose = () => OnSelectionChange(explorer);
@@ -501,7 +501,7 @@ public sealed class TaskPaneManager : IDisposable
         {
             try
             {
-                Marshal.ReleaseComObject(_ctpFactory);
+                ComObjects.Release(_ctpFactory);
             }
             catch { }
             _ctpFactory = null;

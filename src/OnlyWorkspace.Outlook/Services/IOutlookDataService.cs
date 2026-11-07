@@ -9,6 +9,24 @@ using OnlyWorkspace.Core.Security;
 
 namespace OnlyWorkspace.Outlook.Services;
 
+/// <summary>Row cursor over mail headers, owned by the Outlook UI thread: read a small batch, yield, resume.</summary>
+public interface IMailHeaderScan : IDisposable
+{
+    bool Complete { get; }
+    int RowsScanned { get; }
+    int FoldersFailed { get; }
+    IReadOnlyList<EmailSearchResult> ReadNext(int rowsPerBatch);
+}
+
+/// <summary>Cursor over sent mail that may still await a reply, with the same batch contract as <see cref="IMailHeaderScan"/>.</summary>
+public interface IUnansweredSentScan : IDisposable
+{
+    bool Complete { get; }
+    int Scanned { get; }
+    int FoldersFailed { get; }
+    IReadOnlyList<FollowUpCandidate> ReadNext(int rowsPerBatch);
+}
+
 /// <summary>
 /// The Outlook operations the task pane needs, UI thread only. The pane depends on this narrow surface, not on the
 /// COM-heavy <see cref="OutlookDataService"/>, so its behavior can be exercised without Outlook.
@@ -31,7 +49,7 @@ public interface IOutlookDataService : IArchiveMailSource
     void DisplayActionItemDraft(ExtractedActionItem item);
     void OpenFollowUpDraft(string entryId, string? storeId, string draftMarkdown);
     bool InsertReplyDraft(string draftMarkdown, object? contextWindow = null, bool replyAll = false, string? entryId = null, string? storeId = null);
-    OutlookDataService.UnansweredSentScan BeginUnansweredSentScan(int minDays, int lookbackDays, ICollection<string>? storeIds = null, EmailSearchQuery? filter = null);
+    IUnansweredSentScan BeginUnansweredSentScan(int minDays, int lookbackDays, ICollection<string>? storeIds = null, EmailSearchQuery? filter = null);
         SelectedEmailInfo? GetCurrentSelectedEmail(object? contextWindow = null);
     SelectedEmailInfo? GetEmailByEntryId(string entryId, string? storeId = null);
     string? GetEmailBody(string entryId, string? storeId);
@@ -42,7 +60,7 @@ public interface IOutlookDataService : IArchiveMailSource
     IReadOnlyList<MailFolderRef> GetChatSearchFolders();
     MailFolderRef? PickFolder();
     MailFolderRef? GetFolderOf(string entryId, string? storeId);
-    OutlookDataService.MailHeaderScan BeginMailHeaderScan(IReadOnlyList<MailFolderRef> folders, bool includeSubfolders, EmailSearchQuery query);
+    IMailHeaderScan BeginMailHeaderScan(IReadOnlyList<MailFolderRef> folders, bool includeSubfolders, EmailSearchQuery query);
     Task<IReadOnlyList<PrivacyEntity>> ReadPrivacyEntitiesAsync(CancellationToken ct);
     void SaveActionItem(ExtractedActionItem item);
     ComposeDraft? GetComposeDraft(object? contextWindow = null);

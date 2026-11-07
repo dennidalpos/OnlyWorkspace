@@ -44,6 +44,32 @@ public sealed class OutlookDataServiceContractTests
     }
 
     [Fact]
+    public void ComReleases_AreWrittenOnlyInTheHelper_AcrossTheOutlookProject()
+    {
+        string root = Path.Combine(TestBuildPaths.RepositoryRoot, "src", "OnlyWorkspace.Outlook");
+        var offenders = Directory.GetFiles(root, "*.cs", SearchOption.AllDirectories)
+            .Where(f => !f.Contains(Path.DirectorySeparatorChar + "obj" + Path.DirectorySeparatorChar) && !f.Contains(Path.DirectorySeparatorChar + "bin" + Path.DirectorySeparatorChar))
+            .Where(f => Path.GetFileName(f) != "ComObjects.cs" && File.ReadAllText(f).Contains("ReleaseComObject"))
+            .Select(f => f.Substring(root.Length + 1)).ToList();
+        Assert.Empty(offenders);
+    }
+
+    [Fact]
+    public void ScanCursors_AreExposedAsInterfaces_AndImplementedByTheService()
+    {
+        string contract = Source("Services", "IOutlookDataService.cs");
+        Assert.Matches(@"\bIMailHeaderScan\s+BeginMailHeaderScan\b", contract);
+        Assert.Matches(@"\bIUnansweredSentScan\s+BeginUnansweredSentScan\b", contract);
+        Assert.DoesNotContain("OutlookDataService.MailHeaderScan", contract);
+        Assert.DoesNotContain("OutlookDataService.UnansweredSentScan", contract);
+        string impl = Source("Services", "OutlookDataService.MailScan.cs");
+        Assert.Matches(@"class MailHeaderScan\s*:\s*IMailHeaderScan\b", impl);
+        Assert.Matches(@"class UnansweredSentScan\s*:\s*IUnansweredSentScan\b", impl);
+        foreach (string file in new[] { Source("UI", "TaskPaneCoordinator.cs"), Source("UI", "TaskPaneCoordinator.Analysis.cs") })
+            Assert.DoesNotMatch(@"(?<![A-Za-z])(MailHeaderScan|UnansweredSentScan)\b", file);
+    }
+
+    [Fact]
     public void ComRelease_IgnoresNullAndPlainObjects_AndReleasesComObjects()
     {
         ComObjects.Release(null);

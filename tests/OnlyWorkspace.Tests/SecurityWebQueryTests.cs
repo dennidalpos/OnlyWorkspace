@@ -43,10 +43,10 @@ public class SecurityWebQueryTests
     {
         var domains = SecurityWebQuery.SenderDomains(new[]
         {
-            "Ufficio Acquisti <acquisti@bioferspa.com>", "Mario Rossi <mario.rossi@gmail.com>", "amici@gmail.com",
-            "noreply@fatture.acme.it", "Altro <info@BIOFERSPA.com>", "Nome senza indirizzo"
+            "Ufficio Acquisti <acquisti@fornitore.it>", "Mario Rossi <mario.rossi@gmail.com>", "amici@gmail.com",
+            "noreply@fatture.acme.it", "Altro <info@FORNITORE.it>", "Nome senza indirizzo"
         }, new[] { "mario.rossi@gmail.com" });
-        Assert.Equal("bioferspa.com, acme.it", domains);
+        Assert.Equal("fornitore.it, acme.it", domains);
         Assert.Null(SecurityWebQuery.SenderDomains(new[] { "Mario Rossi <mario.rossi@gmail.com>", "x@pec.it" }, new[] { "mario.rossi@gmail.com" }));
     }
 

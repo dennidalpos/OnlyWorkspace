@@ -436,7 +436,7 @@ def render_slide(slide_index: int, icon_im: Image.Image) -> Image.Image:
         cdraw.text((c2_x + 20, 40), "Provider Cloud", font=F_TITLE(22), fill=ACCENT_BLUE)
         cdraw.text((c2_x + 20, 72), "Servizio e modello configurati", font=F_TITLE(16), fill=TEXT_MUTED)
         
-        for idx, text_item in enumerate(["Testi inviati al provider scelto", "Informativa per le destinazioni", "Schede cloud: consenso per cassetta", "Uso dati: contratto e piano effettivo"]):
+        for idx, text_item in enumerate(["Testi inviati al provider scelto", "Informativa per le destinazioni", "Livello di invio per profilo", "Uso dati: contratto e piano effettivo"]):
             cdraw.ellipse([c2_x + 20, 126 + idx * 46, c2_x + 30, 136 + idx * 46], fill=ACCENT_BLUE)
             cdraw.text((c2_x + 42, 121 + idx * 46), text_item, font=F_REGULAR(17), fill=TEXT_WHITE)
             
