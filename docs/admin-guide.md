@@ -83,7 +83,7 @@ Level 0 sends no external data; Minimal permits typed protected facts/opaque ref
 
 Notice 6, authorization key 3 and conversation policy 8 bind grants to profile, destination, declared EU/non-EU/unspecified region, permissions and credentials. When issuing a new grant, the authorization engine requires explicit confirmation for each cloud profile whose service region is unspecified. The acceptance history and its report list the confirmed profile IDs. Changed policy or credentials interrupt old work and start a fresh conversation. Old history stays readable.
 
-Masking catalog revision 3 recognizes the whole word `euro` before or after an amount. Moving from revision 2 requires renewing the affected profile authorizations in **Privacy and data**. [Recognized forms and limits](tecnico/pseudonimizzazione.md)
+Masking catalog revision 4 adds Italian postal addresses (`INDIRIZZO`); company names in free text are not masked. Revision 3 recognizes the whole word `euro` before or after an amount. Moving from revision 3 requires renewing the affected profile authorizations in **Privacy and data**. [Recognized forms and limits](tecnico/pseudonimizzazione.md)
 
 Catalog 2 recognizes currency symbols/codes EUR/USD/GBP, not **1234,56 euro**. Unrecognized sensitive information may remain in permitted free text. Failed masking/audit preparation blocks sending; failure after dispatch cannot retract receipt. Free-form action web queries remain blocked; capability checks use fixed synthetic requests.
 

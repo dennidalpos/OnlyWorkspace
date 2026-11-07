@@ -70,7 +70,7 @@ public sealed class MaskedFreeTextTransportTests
         Assert.False(dispatch.LastCompletion!.IsTruncated);
         var audit = Assert.Single(server.Audit.Read());
         Assert.Equal("completed", audit.Outcome);
-        Assert.Equal("3", audit.Revisions["catalog"]);
+        Assert.Equal("4", audit.Revisions["catalog"]);
         Assert.Equal(2, audit.Counts["IMPORTO"]);
         foreach (string category in new[] { "PERSONA", "EMAIL", "IBAN", "IMPORTO", "DATA" })
             Assert.True(audit.Counts[category] > 0);

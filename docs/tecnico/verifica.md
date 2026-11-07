@@ -6,6 +6,10 @@ Test di codice, prova sulla build installata e qualifica su cassette e provider 
 
 Contenuto datato trasferito nel dossier SecondBrain: `02-areas/products/OnlyWorkspace/history/imported/docs/tecnico/verifica.md`. Originale e SHA-256 nel rapporto di migrazione; questa voce conserva i riferimenti esistenti e non autorizza nuovi interventi.
 
+## Indirizzi postali, schede tagliate e pratica — 7 novembre 2026
+
+Il catalogo 4 maschera gli indirizzi postali italiani (`INDIRIZZO`); `PseudonymizationPipelineTests` verifica cinque forme con ripristino esatto, audit senza originale e quattro frasi comuni («via mail», «corso di italiano») lasciate intatte. Le ragioni sociali nel testo libero restano non mascherate e il limite è dichiarato in [Pseudonimizzazione](pseudonimizzazione.md). La revisione 4 rinnova le autorizzazioni dei profili cloud. Schede del ConfigTool: `DpiFontTests` misura le quattro etichette a scala 100–200% con client 820 e 900 px, nessun taglio; la scheda Storico a 200% è tagliata solo sotto il minimo di 340 px CSS del riquadro (scorrimento voluto, nessuna correzione). Pratica: il messaggio per email di partenza non più disponibile e l’avviso di risultato superato sono coperti da `FlowPane.Tests.cjs`; il ramo del coordinatore non ha un test isolato (richiede il riquadro). **Non qualificato:** prove a schermo (task #021), cattura HTTP reale degli indirizzi (task #027).
+
 ## Importi scritti con «euro» — 6 novembre 2026
 
 Con il catalogo 3, `PseudonymizationPipelineTests` verifica parola intera, ripristino esatto e casi esclusi. `MaskedFreeTextTransportTests` verifica su HTTP loopback che due importi con «euro» vengano sostituiti e ripristinati nei percorsi strutturati e in streaming di OpenAI, Anthropic, Gemini e Ollama, a Standard ed Esteso. `DataEgressAuthorizationTests` usa chiavi ricavate dal catalogo 2 per verificare il rinnovo dell'autorizzazione e la separazione della conversazione. I test mirati passano su net48 e net10 con dati sintetici. [Forme riconosciute e limiti](pseudonimizzazione.md#autorizzazione-e-limiti)

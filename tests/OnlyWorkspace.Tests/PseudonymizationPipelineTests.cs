@@ -27,8 +27,40 @@ public sealed class PseudonymizationPipelineTests
         string outgoing = Assert.Single(mask.Mask(new[] { ChatMessage.User(input) })).Content;
         Assert.Contains("[" + category + "_1]", outgoing);
         Assert.Equal(input, mask.Restore(outgoing));
-        Assert.Equal(1, mask.Audit.Counts[category]); Assert.Equal("3", mask.Audit.Revisions["catalog"]);
+        Assert.Equal(1, mask.Audit.Counts[category]); Assert.Equal("4", mask.Audit.Revisions["catalog"]);
         string audit = JsonSerializer.Serialize(mask.Audit); Assert.DoesNotContain(input, audit);
+    }
+
+    [Theory]
+    [InlineData("Via Roma 12", "Sede in {0}, ufficio 3.")]
+    [InlineData("via Dante Alighieri 5/B, 20121 Milano (MI)", "Spedire a {0}.")]
+    [InlineData("Piazza della Repubblica n. 7", "{0}")]
+    [InlineData("Corso Vittorio Emanuele II 101", "Indirizzo: {0} grazie")]
+    [InlineData("Viale dei Mille, 22 - 00100 Roma", "{0}, piano 2")]
+    public void PostalAddressesAreMaskedAndRestored(string address, string template)
+    {
+        string input = string.Format(template, address);
+        var mask = new Pseudonymizer();
+        string outgoing = Assert.Single(mask.Mask(new[] { ChatMessage.User(input) })).Content;
+        Assert.Contains("[INDIRIZZO_1]", outgoing);
+        Assert.DoesNotContain("Roma 12", outgoing); Assert.DoesNotContain("Alighieri", outgoing); Assert.DoesNotContain("Repubblica", outgoing);
+        Assert.DoesNotContain("Emanuele", outgoing); Assert.DoesNotContain("Mille", outgoing);
+        Assert.Equal(input, mask.Restore(outgoing));
+        Assert.Equal(1, mask.Audit.Counts["INDIRIZZO"]);
+        Assert.DoesNotContain(address, JsonSerializer.Serialize(mask.Audit));
+    }
+
+    [Theory]
+    [InlineData("Ti scrivo via mail 2 volte")]
+    [InlineData("Ho passato la via Crucis")]
+    [InlineData("Il corso di italiano dura 12 ore")]
+    [InlineData("La strada è chiusa dal 5 giugno")]
+    public void OrdinaryWordsLikeStreetNamesAreLeftAlone(string input)
+    {
+        var mask = new Pseudonymizer();
+        string outgoing = Assert.Single(mask.Mask(new[] { ChatMessage.User(input) })).Content;
+        Assert.Equal(input, outgoing);
+        Assert.False(mask.Audit.Counts.ContainsKey("INDIRIZZO"));
     }
 
     [Theory]

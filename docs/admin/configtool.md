@@ -37,7 +37,7 @@ I messaggi d'errore mostrano istruzioni in italiano; il dettaglio tecnico resta 
 
 Il motore richiede la conferma dedicata per tutti i profili cloud con area non specificata prima di registrare una nuova accettazione. Lo storico delle autorizzazioni e il rapporto esportabile riportano gli identificativi dei profili confermati.
 
-Passando alla revisione 3 del catalogo di mascheramento, rinnova da questa schermata le autorizzazioni dei profili interessati. [Forme di importo riconosciute](../tecnico/pseudonimizzazione.md#autorizzazione-e-limiti)
+Passando alla revisione 4 del catalogo di mascheramento, rinnova da questa schermata le autorizzazioni dei profili interessati. [Forme di importo riconosciute](../tecnico/pseudonimizzazione.md#autorizzazione-e-limiti)
 
 **Revoca** blocca gli invii. Il normale **Salva** permette di mantenere un profilo cloud non autorizzato; non apre l'informativa. Annullamento, diniego UAC o errore di salvataggio preservano l'autorizzazione precedente. **Esporta PDF…** descrive configurazione salvata, autorizzazione tecnica, storico e testo accettato, senza inventare contratti o adempimenti.
 
