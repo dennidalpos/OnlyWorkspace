@@ -86,7 +86,7 @@ Var ProgramCleanupFailure
 !define MUI_ABORTWARNING
 !define MUI_WELCOMEPAGE_TEXT "Il setup installa per tutti gli utenti di questo PC:$\r$\n$\r$\n\
 - l'add-in OnlyWorkspace per Outlook classico (32 e 64 bit) e lo strumento di configurazione, in Programmi;$\r$\n\
-- il certificato pubblico OnlyApps negli archivi Root e TrustedPublisher del computer, per riconoscere la firma dei file;$\r$\n\
+- il certificato pubblico OnlyApps nell'archivio TrustedPublisher (editori attendibili) del computer, non tra le autorita' radice;$\r$\n\
 - la configurazione condivisa in ProgramData\OnlyWorkspace (scrivibile solo dagli amministratori);$\r$\n\
 - WebView2 Runtime di Microsoft, se manca (scaricato e verificato).$\r$\n$\r$\n\
 Nella pagina dei componenti puoi scegliere se nascondere 'Prova il nuovo Outlook'. Chiudi Outlook prima di continuare."
@@ -103,7 +103,7 @@ Nella pagina dei componenti puoi scegliere se nascondere 'Prova il nuovo Outlook
 !insertmacro MUI_UNPAGE_CONFIRM
 !insertmacro MUI_UNPAGE_INSTFILES
 !define MUI_FINISHPAGE_TEXT "La disinstallazione di OnlyWorkspace e' terminata; le email in Outlook non sono state modificate.$\r$\n$\r$\n\
-Restano sul PC, se presenti: per ogni utente Windows la cartella LocalAppData\OnlyWorkspace (storico, log, dati del riquadro e, salvo diversa scelta, l'archivio delle email) e il file AppData\OnlyWorkspace\preferences.json; la configurazione in ProgramData\OnlyWorkspace se hai scelto di conservarla. Si possono eliminare a mano."
+Restano sul PC, se presenti: per ogni utente Windows la cartella LocalAppData\OnlyWorkspace (chiavi API cifrate, storico, log, dati del riquadro e, salvo diversa scelta, l'archivio delle email) e il file AppData\OnlyWorkspace\preferences.json; la configurazione in ProgramData\OnlyWorkspace se hai scelto di conservarla. Si possono eliminare a mano."
 !insertmacro MUI_UNPAGE_FINISH
 
 !insertmacro MUI_LANGUAGE "Italian"
@@ -301,10 +301,12 @@ Section "Add-in OnlyWorkspace" SecOnlyWorkspace
     WriteRegDWORD HKLM "${UNINST_KEY}" "NoModify" 1
     WriteRegDWORD HKLM "${UNINST_KEY}" "NoRepair" 1
 
-    ; Importazione certificato pubblico negli archivi macchina
-    DetailPrint "Importazione certificato pubblico OnlyApps negli archivi attendibili..."
-    nsExec::ExecToLog 'certutil.exe -addstore -f "Root" "$INSTDIR\OnlyApps.cer"'
-    !insertmacro CheckExecResult "Importazione del certificato OnlyApps in Root" "${SETUP_RETRY_HINT}" ""
+    ; Certificato pubblico solo tra gli editori attendibili: nessuna autorita' radice aggiunta al computer.
+    ; Le versioni precedenti lo avevano messo anche in Root: lo si toglie (se manca, non e' un errore).
+    DetailPrint "Rimozione del certificato OnlyApps dall'archivio Root lasciato da versioni precedenti..."
+    nsExec::ExecToLog 'certutil.exe -delstore "Root" "OnlyApps Code Signing"'
+    !insertmacro LogExecResult "Rimozione del certificato da Root (versioni precedenti)"
+    DetailPrint "Importazione certificato pubblico OnlyApps tra gli editori attendibili..."
     nsExec::ExecToLog 'certutil.exe -addstore -f "TrustedPublisher" "$INSTDIR\OnlyApps.cer"'
     !insertmacro CheckExecResult "Importazione del certificato OnlyApps in TrustedPublisher" "${SETUP_RETRY_HINT}" ""
 

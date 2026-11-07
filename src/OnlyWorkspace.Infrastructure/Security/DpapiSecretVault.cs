@@ -18,11 +18,12 @@ namespace OnlyWorkspace.Infrastructure.Security;
 #endif
 public sealed class DpapiSecretVault : ISecretVault
 {
-    private static readonly byte[] Entropy = Encoding.UTF8.GetBytes("OnlyWorkspace-MachineVault-Entropy-v1");
+    // v2: per-user vault. A v1 (LocalMachine) file fails to open instead of being converted.
+    private static readonly byte[] Entropy = Encoding.UTF8.GetBytes("OnlyWorkspace-UserVault-Entropy-v2");
     private readonly Dictionary<string, string> _secrets = new(StringComparer.OrdinalIgnoreCase);
     private readonly DataProtectionScope _scope;
 
-    public DpapiSecretVault(DataProtectionScope scope = DataProtectionScope.LocalMachine)
+    public DpapiSecretVault(DataProtectionScope scope = DataProtectionScope.CurrentUser)
     {
         _scope = scope;
     }

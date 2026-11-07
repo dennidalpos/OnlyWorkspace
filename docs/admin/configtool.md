@@ -86,7 +86,7 @@ Nel passo **Modello IA**, compilare nell'ordine **Servizio → Indirizzo → Chi
 
 ## Configurazione non leggibile
 
-Se `config.json` o `secrets.bin` esistono ma non si leggono, il salvataggio è bloccato e un dialogo propone **Ripristina backup…**, **Nuova configurazione** (copia prima i file in `%LOCALAPPDATA%\OnlyWorkspace\config-non-leggibile\<data>`; le chiavi vanno reinserite) o **Sola lettura**. Un `config.json` assente non è un errore: viene proposto un profilo Ollama locale.
+Il `secrets.bin` è per utente in `%LOCALAPPDATA%\OnlyWorkspace` (cartella di configurazione scelta: accanto a `config.json`). Se `config.json` o `secrets.bin` esistono ma non si leggono, il salvataggio è bloccato e un dialogo propone **Ripristina backup…**, **Nuova configurazione** (copia prima i file in `%LOCALAPPDATA%\OnlyWorkspace\config-non-leggibile\<data>`; le chiavi vanno reinserite) o **Sola lettura**. Un `config.json` assente non è un errore: viene proposto un profilo Ollama locale.
 
 Un `secrets.bin` presente di zero byte è danneggiato: il caricamento fallisce senza sostituire le chiavi già in memoria e backup/ripristino/apply-staged lo rifiutano prima di modificare la destinazione. Un vault correttamente cifrato con dizionario vuoto è valido; un file assente continua invece a revocare le chiavi caricate.
 
@@ -98,7 +98,7 @@ Un `secrets.bin` presente di zero byte è danneggiato: il caricamento fallisce s
 | `import <source.json> [target_dir] [--skip-test]` | Valida e importa la coppia configurazione/vault; senza `--skip-test` prova le connessioni |
 | `show [config_path]` | Mostra la configurazione con segreti mascherati |
 | `test [config_path]` | Prova gli endpoint dei profili |
-| `backup [dest.owbak] [config_dir]` | Salva `config.json` e `secrets.bin` |
+| `backup [dest.owbak] [config_dir]` | Salva `config.json`; con la cartella standard le chiavi (per utente) restano fuori e si reinseriscono dopo un ripristino, con una cartella scelta salva anche `secrets.bin` |
 | `restore <source.owbak> [config_dir]` | Valida e ripristina sullo stesso PC |
 
 `validate` legge il file indicato. `show` e `test` usano la directory indicata oppure quella che contiene il percorso passato, e vi cercano `config.json`; senza percorso usano la configurazione comune del PC. `test` contatta i provider configurati.
@@ -107,7 +107,7 @@ Un `secrets.bin` presente di zero byte è danneggiato: il caricamento fallisce s
 
 Anche `import` prepara entrambi i file e usa il recupero della coppia dei salvataggi GUI: un errore sulla sostituzione del JSON ripristina il vault precedente, inclusa la sua assenza iniziale. Se il recupero fallisce, l’errore indica la copia cifrata conservata. È gestione degli errori ordinari, senza garanzia di atomicità in caso di crash o perdita di alimentazione.
 
-`restore` accetta solo i due file, ne controlla dimensioni e vault prima di scrivere e, se la seconda sostituzione fallisce, riporta `secrets.bin` com'era. Un arresto improvviso tra le due sostituzioni non è coperto: ripetere il ripristino dal backup. Il backup non include archivio, storico, preferenze né la password amministrativa. Con la password attiva `import` e `restore` la chiedono nel terminale.
+`restore` accetta solo i due file (con la cartella standard ignora `secrets.bin`: le chiavi per utente non si scrivono con i diritti di amministratore), ne controlla dimensioni e vault prima di scrivere e, se la seconda sostituzione fallisce, riporta `secrets.bin` com'era. Un arresto improvviso tra le due sostituzioni non è coperto: ripetere il ripristino dal backup. Il backup non include archivio, storico, preferenze né la password amministrativa. Con la password attiva `import` e `restore` la chiedono nel terminale.
 
 ## Tray
 

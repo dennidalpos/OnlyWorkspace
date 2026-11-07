@@ -4,6 +4,7 @@ using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using OnlyWorkspace.Core;
 using OnlyWorkspace.Core.Models;
 using OnlyWorkspace.Core.Validation;
 using OnlyWorkspace.Infrastructure.Security;
@@ -15,14 +16,33 @@ public static class ConfigurationBackupService
     private const int MaxConfigBytes = 4 * 1024 * 1024;
     private const int MaxSecretsBytes = 16 * 1024 * 1024;
 
-    /// <summary>Prepare both files before replacing the active pair; recover the old vault on a handled config write failure.</summary>
-    public static void SaveConfiguration(string targetConfigDir, WorkspaceConfig config, DpapiSecretVault vault)
+    /// <summary>
+    /// Prepare both files before replacing the active pair; recover the old vault on a handled config write failure.
+    /// For the standard %ProgramData% folder the per-user vault goes to %LOCALAPPDATA% (written by the caller's own
+    /// account, never by an elevated one) and only config.json is written to <paramref name="targetConfigDir"/>, which
+    /// may be a staging folder: <paramref name="configDirOfVault"/> then names the folder the files are meant for.
+    /// </summary>
+    public static void SaveConfiguration(string targetConfigDir, WorkspaceConfig config, DpapiSecretVault vault, string? configDirOfVault = null)
     {
         ProviderCompatibility.Normalize(config);
         byte[] json = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(config, ConfigJson.Write));
         byte[] secrets = vault.ExportEncrypted();
         ValidateContents(json, secrets, "da salvare");
-        ReplacePair(targetConfigDir, json, secrets, File.Replace);
+        string home = configDirOfVault ?? targetConfigDir;
+        if (AppPaths.IsStandardConfigDirectory(home))
+        {
+            SaveSecrets(home, vault);
+            ReplacePair(targetConfigDir, json, null, File.Replace);
+        }
+        else ReplacePair(targetConfigDir, json, secrets, File.Replace);
+    }
+
+    /// <summary>Writes the vault where <see cref="AppPaths.SecretsDirectoryFor"/> puts it for this configuration folder.</summary>
+    public static void SaveSecrets(string configDir, DpapiSecretVault vault)
+    {
+        string dir = AppPaths.SecretsDirectoryFor(configDir);
+        Directory.CreateDirectory(dir);
+        AtomicFile.WriteAllBytes(Path.Combine(dir, "secrets.bin"), vault.ExportEncrypted());
     }
 
     public static void CreateBackup(string configDir, string destinationZipPath)
@@ -34,7 +54,8 @@ public static class ConfigurationBackupService
         string secretsPath = Path.Combine(configDir, "secrets.bin");
         if (!File.Exists(configPath)) throw new FileNotFoundException("La configurazione da salvare non è presente.", configPath);
         byte[] config = ReadFile(configPath, MaxConfigBytes);
-        byte[]? secrets = File.Exists(secretsPath) ? ReadFile(secretsPath, MaxSecretsBytes) : null;
+        // The standard installation keeps the keys per user outside the backup: they are entered again after a restore.
+        byte[]? secrets = !AppPaths.IsStandardConfigDirectory(configDir) && File.Exists(secretsPath) ? ReadFile(secretsPath, MaxSecretsBytes) : null;
 
         string? destDir = Path.GetDirectoryName(destinationZipPath);
         if (!string.IsNullOrEmpty(destDir)) Directory.CreateDirectory(destDir);
@@ -45,12 +66,15 @@ public static class ConfigurationBackupService
         if (secrets != null) WriteEntry(zip, "secrets.bin", secrets);
     }
 
-    public static void ValidateBackup(string backupZipPath) => ReadValidated(backupZipPath);
+    /// <param name="targetConfigDir">The folder the backup is meant for: for the standard one the vault of the file, if any, is not read.</param>
+    public static void ValidateBackup(string backupZipPath, string? targetConfigDir = null) =>
+        ReadValidated(backupZipPath, targetConfigDir != null && AppPaths.IsStandardConfigDirectory(targetConfigDir));
 
     public static void RestoreBackup(string backupZipPath, string targetConfigDir)
     {
-        var (config, secrets) = ReadValidated(backupZipPath);
-        ReplacePair(targetConfigDir, config, secrets, File.Replace);
+        bool standard = AppPaths.IsStandardConfigDirectory(targetConfigDir);
+        var (config, secrets) = ReadValidated(backupZipPath, standard);
+        ReplacePair(targetConfigDir, config, standard ? null : secrets, File.Replace);
     }
 
     /// <summary>SHA-256 (hex) of a staged file, or "-" when it is absent: the digest the elevated command receives on its command line.</summary>
@@ -71,6 +95,9 @@ public static class ConfigurationBackupService
         if (!File.Exists(stagedConfig)) throw new FileNotFoundException("La configurazione da applicare non è presente.", stagedConfig);
         byte[] config = ReadFile(stagedConfig, MaxConfigBytes);
         byte[]? secrets = File.Exists(stagedSecrets) ? ReadFile(stagedSecrets, MaxSecretsBytes) : null;
+        // The elevated account may not be the user's: it never writes the per-user vault.
+        if (secrets != null && AppPaths.IsStandardConfigDirectory(targetConfigDir))
+            throw new InvalidDataException("Le chiavi sono per utente e non si applicano con i diritti di amministratore.");
         if (!DigestMatches(config, expectedConfigDigest) || (secrets == null ? expectedSecretsDigest != "-" : !DigestMatches(secrets, expectedSecretsDigest)))
             throw new InvalidDataException("I file da applicare sono stati modificati dopo l'autorizzazione. Riprovare il salvataggio.");
         config = ValidateContents(config, secrets, "della configurazione da applicare");
@@ -152,7 +179,7 @@ public static class ConfigurationBackupService
         catch (UnauthorizedAccessException) { }
     }
 
-    private static (byte[] Config, byte[]? Secrets) ReadValidated(string backupZipPath)
+    private static (byte[] Config, byte[]? Secrets) ReadValidated(string backupZipPath, bool ignoreSecrets)
     {
         if (!File.Exists(backupZipPath))
             throw new FileNotFoundException($"File di backup non trovato: {backupZipPath}");
@@ -180,6 +207,7 @@ public static class ConfigurationBackupService
         if (configBytes == null)
             throw new InvalidOperationException("L'archivio di backup non contiene un file 'config.json' valido.");
 
+        if (ignoreSecrets) secretsBytes = null;
         configBytes = ValidateContents(configBytes, secretsBytes, "del backup");
         return (configBytes, secretsBytes);
     }

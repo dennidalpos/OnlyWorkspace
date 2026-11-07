@@ -133,6 +133,20 @@ public sealed class ConfigurationBackupServiceTests : IDisposable
         Assert.Equal(File.ReadAllBytes(Path.Combine(staged, "secrets.bin")), File.ReadAllBytes(Path.Combine(target, "secrets.bin")));
     }
 
+    [Fact]
+    public void ApplyStaged_ForTheStandardFolder_RefusesAVaultBeforeWritingAnything()
+    {
+        // The elevated account may not be the user: the per-user vault is never part of the administrators' write.
+        string staged = Path.Combine(_testDir, "staged-standard");
+        var vault = new DpapiSecretVault();
+        vault.SetSecret("key", "synthetic-key");
+        ConfigurationBackupService.SaveConfiguration(staged, new WorkspaceConfig { DefaultProfile = "p", Profiles = new() {
+            new() { Id = "p", Type = "ollama", BaseUrl = "http://localhost:11434", Model = "test" } } }, vault);
+        Assert.True(File.Exists(Path.Combine(staged, "secrets.bin")));
+        Assert.Throws<InvalidDataException>(() => ConfigurationBackupService.ApplyStaged(staged, OnlyWorkspace.Core.AppPaths.ConfigDirectory,
+            ConfigurationBackupService.StagedDigest(Path.Combine(staged, "config.json")), ConfigurationBackupService.StagedDigest(Path.Combine(staged, "secrets.bin"))));
+    }
+
     public ConfigurationBackupServiceTests()
     {
         _testDir = Path.Combine(Path.GetTempPath(), "ow_test_backup_" + Guid.NewGuid().ToString("N"));

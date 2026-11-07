@@ -97,15 +97,22 @@ try {
         Write-Output "PASS pipeline: $global:packagingscenario"
     }
 
-    # Run the real signing script with a fake SDK tool and isolated input files.
+    # Run the real signing script with a fake SDK tool and isolated input files. The PFX is a real, throwaway one:
+    # the script imports it with the password as a SecureString and must leave neither the password on the signtool
+    # command line nor the certificate in the store.
+    $fixtureCertificate = New-SelfSignedCertificate -Subject 'CN=OnlyWorkspace packaging test' -Type CodeSigningCert -CertStoreLocation Cert:\CurrentUser\My
+    $fixturePfx = Join-Path $scratchRoot 'fixture-real.pfx'
+    $fixtureThumbprint = $fixtureCertificate.Thumbprint
+    $null = Export-PfxCertificate -Cert $fixtureCertificate -FilePath $fixturePfx -Password (ConvertTo-SecureString -String $env:ONLYAPPS_PFX_PASSWORD -AsPlainText -Force)
+    Remove-Item -LiteralPath "Cert:\CurrentUser\My\$fixtureThumbprint" -Force
     foreach ($global:packagingscenario in @('missing', 'sign', 'timestamp', 'timestamp-allowed', 'verify', 'success')) {
         & {
             $global:packagingcalls = [Collections.Generic.List[string]]::new()
             $inputPath = Join-Path $scratchRoot 'signing-input.exe'
             [IO.File]::WriteAllText($inputPath, 'fixture')
             if ($global:packagingscenario -eq 'missing') { $inputPath = Join-Path $scratchRoot 'absent.exe' }
-            $pfxPath = Join-Path $scratchRoot 'fixture.pfx'
-            [IO.File]::WriteAllText($pfxPath, 'fixture')
+            $pfxPath = $fixturePfx
+            $global:packagingarguments = [Collections.Generic.List[string]]::new()
             function Test-Path {
                 param($Path, $LiteralPath, $PathType)
                 if ($Path -like '*\signtool.exe') { return $true }
@@ -116,6 +123,7 @@ try {
             function Write-Warning { }
             Set-Item -Path 'Function:local:C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64\signtool.exe' -Value {
                 $global:packagingcalls.Add($args[0])
+                $global:packagingarguments.Add($args -join ' ')
                 $timestampFails = $global:packagingscenario -like 'timestamp*' -and $args -contains '/tr'
                 $global:LASTEXITCODE = if ($global:packagingscenario -eq $args[0] -or $timestampFails) { 23 } else { 0 }
                 if ($global:packagingscenario -eq 'verify' -and $args[0] -eq 'verify') { 'Fixture: untrusted root' }
@@ -126,6 +134,10 @@ try {
             catch { $failure = $_ }
             if (($global:packagingscenario -in @('success', 'timestamp-allowed')) -eq [bool]$failure) { throw "Unexpected signing outcome: $global:packagingscenario; $failure" }
             if ($global:packagingscenario -eq 'missing' -and $global:packagingcalls.Count -ne 0) { throw 'Missing file reached signtool.' }
+            if (Test-Path -LiteralPath "Cert:\CurrentUser\My\$fixtureThumbprint") { throw "The imported signing certificate stayed in the store: $global:packagingscenario" }
+            foreach ($line in @($global:packagingarguments | Where-Object { $_ -like 'sign *' })) {
+                if ($line -match '(^|\s)/p(\s|$)' -or $line.Contains($env:ONLYAPPS_PFX_PASSWORD) -or $line -notmatch "/sha1 $fixtureThumbprint /s My") { throw "signtool did not select the certificate by thumbprint without a password: $line" }
+            }
             if ($global:packagingscenario -in @('sign', 'timestamp') -and ($global:packagingcalls -join ',') -ne 'sign') { throw "A signature without timestamp was attempted or verified: $($global:packagingcalls -join ',') $failure" }
             if ($global:packagingscenario -eq 'timestamp-allowed' -and ($global:packagingcalls -join ',') -ne 'sign,sign,verify') { throw 'The explicit option did not sign without timestamp.' }
             if ($global:packagingscenario -in @('verify', 'success') -and ($global:packagingcalls -join ',') -ne 'sign,verify') { throw 'Signature verification was not executed.' }
@@ -173,7 +185,8 @@ try {
         $criticalCommands++
         if ($setupLines[$i + 1] -notmatch '^\s*!insertmacro CheckExecResult ') { throw "Unchecked setup command: $($setupLines[$i].Trim())" }
     }
-    if ($criticalCommands -ne 6) { throw "Expected 6 critical setup commands, found $criticalCommands." }
+    if ($criticalCommands -ne 5) { throw "Expected 5 critical setup commands, found $criticalCommands." }
+    if ($setupLines -match 'addstore.*"Root"') { throw 'The setup adds the certificate to Root.' }
     # Uninstall: every command result is read and logged; the 64-bit regasm runs only on a 64-bit system.
     $uninstall = [array]::FindIndex([string[]]$setupLines, [Predicate[string]] { param($line) $line -like 'Section "Uninstall"*' })
     $uninstallCommands = 0

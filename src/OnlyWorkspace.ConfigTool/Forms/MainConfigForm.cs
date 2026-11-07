@@ -1135,7 +1135,9 @@ public sealed partial class MainConfigForm : Form
             _config = FileOrDefaultConfiguration();
         }
 
-        string secretsFile = Path.Combine(_configDir, "secrets.bin");
+        string secretsFile = Path.Combine(AppPaths.SecretsDirectoryFor(_configDir), "secrets.bin");
+        if (AppPaths.IsStandardConfigDirectory(_configDir) && File.Exists(AppPaths.LegacySecretsFile))
+            LogActivity("[AVVISO] " + AppPaths.LegacySecretsFile + " è il vault di una versione precedente: non viene più letto ed è leggibile da tutti gli utenti del PC. Reinserisci le chiavi API e fai eliminare il file a un amministratore.");
         if (File.Exists(secretsFile))
         {
             try
@@ -1268,9 +1270,9 @@ public sealed partial class MainConfigForm : Form
         {
             var copy = Path.Combine(InvalidCopyRoot(), DateTime.Now.ToString("yyyyMMdd-HHmmss"));
             Directory.CreateDirectory(copy);
-            foreach (var name in new[] { "config.json", "secrets.bin" })
+            foreach (var (name, folder) in new[] { ("config.json", _configDir), ("secrets.bin", AppPaths.SecretsDirectoryFor(_configDir)) })
             {
-                var source = Path.Combine(_configDir, name);
+                var source = Path.Combine(folder, name);
                 if (File.Exists(source)) File.Copy(source, Path.Combine(copy, name), overwrite: true);
             }
             _loadProblem = null;
@@ -1448,7 +1450,8 @@ public sealed partial class MainConfigForm : Form
 
     private void WriteConfigFiles(string targetDir)
     {
-        ConfigurationBackupService.SaveConfiguration(targetDir, _config, _vault);
+        // For the standard folder the vault goes to this user's %LOCALAPPDATA%; the staging folder only gets config.json.
+        ConfigurationBackupService.SaveConfiguration(targetDir, _config, _vault, _configDir);
     }
 
     /// <summary>
@@ -1856,7 +1859,7 @@ public sealed partial class MainConfigForm : Form
             if (ofd.ShowDialog(this) == DialogResult.OK)
             {
                 // Checked here so the reason is shown even when the restore runs elevated.
-                ConfigurationBackupService.ValidateBackup(ofd.FileName);
+                ConfigurationBackupService.ValidateBackup(ofd.FileName, _configDir);
 
                 var confirm = CopyableMessageBox.Show(
                     this,

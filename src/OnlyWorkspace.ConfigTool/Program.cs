@@ -408,7 +408,7 @@ internal static class Program
             return 1;
         }
 
-        string secretsFile = Path.Combine(targetDir, "secrets.bin");
+        string secretsFile = Path.Combine(OnlyWorkspace.Core.AppPaths.SecretsDirectoryFor(targetDir), "secrets.bin");
         var vault = new DpapiSecretVault();
         if (File.Exists(secretsFile))
         {

@@ -7,7 +7,7 @@ L’archivio è uno specchio di Outlook: include testo integrale cifrato, con ma
 | Dato | Percorso | Protezione |
 | --- | --- | --- |
 | Configurazione | `%ProgramData%\OnlyWorkspace\config.json` | Leggibile dagli utenti, scrivibile da amministratori e SYSTEM |
-| Chiavi IA | `secrets.bin` nella stessa cartella | DPAPI LocalMachine; proteggerlo anche con ACL |
+| Chiavi IA | `%LOCALAPPDATA%\OnlyWorkspace\secrets.bin` di ogni utente | DPAPI CurrentUser, mai scritto con diritti di amministratore; un altro utente standard non lo decifra |
 | Password amministrativa | `admin-password.json` nella stessa cartella | Verificatore derivato |
 | Preferenze | `%APPDATA%\OnlyWorkspace\preferences.json` | Utente |
 | Archivio | `%LOCALAPPDATA%\OnlyWorkspace\archive\` | SQLite cifrato, chiave casuale protetta DPAPI CurrentUser; corpi integrali, testi degli allegati deduplicati, metadati, indici e fatti locali |

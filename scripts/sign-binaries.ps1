@@ -71,16 +71,39 @@ foreach ($file in $Files) {
     }
 }
 
+# signtool takes the PFX password only on its command line, where any process can read it. The PFX is imported with the
+# password as a SecureString and signtool selects the certificate by thumbprint; a certificate and key this script
+# added are removed again, one that was already in the store is left alone.
+$store = 'Cert:\CurrentUser\My'
+$securePassword = ConvertTo-SecureString -String $pfxPassword -AsPlainText -Force
+$pfxThumbprint = [Security.Cryptography.X509Certificates.X509Certificate2]::new($PfxPath, $securePassword).Thumbprint
+$alreadyImported = Test-Path -LiteralPath "$store\$pfxThumbprint"
+$imported = Import-PfxCertificate -FilePath $PfxPath -CertStoreLocation $store -Password $securePassword
+if ($imported.Thumbprint -ne $pfxThumbprint) { throw "Importazione del PFX inattesa: $($imported.Thumbprint)." }
+
+function Remove-ImportedSigningCertificate {
+    if ($alreadyImported) { return }
+    $item = Get-Item -LiteralPath "$store\$pfxThumbprint" -ErrorAction SilentlyContinue
+    if (!$item) { return }
+    try {
+        $rsa = [Security.Cryptography.X509Certificates.RSACertificateExtensions]::GetRSAPrivateKey($item)
+        if ($rsa -is [Security.Cryptography.RSACng]) { $rsa.Key.Delete() }
+        elseif ($rsa -is [Security.Cryptography.RSACryptoServiceProvider]) { $rsa.PersistKeyInCsp = $false; $rsa.Clear() }
+    } catch { Write-Warning "Chiave privata importata non rimossa: $($_.Exception.Message)" }
+    Remove-Item -LiteralPath "$store\$pfxThumbprint" -Force -ErrorAction SilentlyContinue
+}
+
+try {
 foreach ($file in $Files) {
     Write-Host "--> Firma file: $file ..." -ForegroundColor Cyan
     
-    & $signtool sign /fd SHA256 /tr $TimestampServer /td SHA256 /f $PfxPath /p $pfxPassword $file 2>&1 | Out-Null
+    & $signtool sign /fd SHA256 /tr $TimestampServer /td SHA256 /sha1 $pfxThumbprint /s My $file 2>&1 | Out-Null
     if ($LASTEXITCODE -ne 0) {
         if (!$AllowNoTimestamp) {
             throw "Firma con marca temporale fallita per file: $file (ExitCode: $LASTEXITCODE). Verificare la connessione a $TimestampServer; -AllowNoTimestamp firma senza marca solo per prove locali."
         }
         Write-Warning "Firma con marca temporale fallita per ${file}: firma senza marca (-AllowNoTimestamp)."
-        & $signtool sign /fd SHA256 /f $PfxPath /p $pfxPassword $file 2>&1 | Out-Null
+        & $signtool sign /fd SHA256 /sha1 $pfxThumbprint /s My $file 2>&1 | Out-Null
         if ($LASTEXITCODE -ne 0) {
             throw "Firma fallita per file: $file (ExitCode: $LASTEXITCODE)"
         }
@@ -93,5 +116,8 @@ foreach ($file in $Files) {
     }
     Write-Host "--> File firmato con successo: $file" -ForegroundColor Green
 }
+
+}
+finally { Remove-ImportedSigningCertificate }
 
 Write-Host "==> Tutte le firme completate con successo." -ForegroundColor Green

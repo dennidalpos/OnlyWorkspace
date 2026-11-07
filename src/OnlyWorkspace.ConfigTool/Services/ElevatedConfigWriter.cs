@@ -11,7 +11,7 @@ using OnlyWorkspace.ConfigTool.Forms;
 namespace OnlyWorkspace.ConfigTool.Services;
 
 /// <summary>
-/// config.json / secrets.bin live in %ProgramData% and are writable only by administrators.
+/// config.json lives in %ProgramData% and is writable only by administrators (the per-user secrets.bin does not).
 /// When the GUI runs unelevated, changes are staged in the user's temp folder and applied by an
 /// elevated instance of this executable (UAC prompt) through the 'apply-staged' CLI command.
 /// </summary>
@@ -23,8 +23,9 @@ public static class ElevatedConfigWriter
 
     public static bool CanWriteConfig(string configDir)
     {
+        // In the standard folder the vault is per user in %LOCALAPPDATA% and never part of the administrators' write.
         return CanWriteFile(Path.Combine(configDir, "config.json"), configDir) &&
-               CanWriteFile(Path.Combine(configDir, "secrets.bin"), configDir);
+               (OnlyWorkspace.Core.AppPaths.IsStandardConfigDirectory(configDir) || CanWriteFile(Path.Combine(configDir, "secrets.bin"), configDir));
     }
 
     private static bool CanWriteFile(string path, string dir)

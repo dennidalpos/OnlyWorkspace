@@ -48,7 +48,7 @@ public static class AppStorageUsage
             File("Preferenze utente", Path.Combine(AppPaths.PreferencesDirectory, "preferences.json"), "Profilo scelto e schermate di primo avvio già viste."),
             Folder("Copie temporanee", AppPaths.TempDirectory, "Allegati copiati per la lettura; eliminati al termine, i residui oltre un'ora all'avvio di Outlook.", ct),
             Folder("Configurazioni non leggibili", AppPaths.UnreadableConfigDirectory, "Copie di config.json o secrets.bin che il ConfigTool non è riuscito a leggere, conservate per l'amministratore.", ct),
-            Folder("Configurazione e chiavi", configDir ?? AppPaths.ConfigDirectory, "config.json, chiavi API cifrate (secrets.bin) e password amministrativa, comuni a tutti gli utenti.", ct)
+            Folder("Configurazione", configDir ?? AppPaths.ConfigDirectory, "config.json, password amministrativa, comuni a tutti gli utenti; le chiavi API cifrate (secrets.bin) sono per utente in LocalAppData.", ct)
         };
         long? free = null;
         try

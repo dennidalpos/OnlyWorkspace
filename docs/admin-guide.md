@@ -2,7 +2,7 @@
 
 ## Installation and update
 
-The managed COM add-in supports classic Outlook 2016+ x86/x64 on Windows x64 with .NET Framework 4.8 and WebView2 Evergreen. New Outlook is unsupported. Close Outlook before setup. Setup elevates, validates configuration, installs the public certificate in Root/TrustedPublisher, registers both RegAsm variants and sets Addins/OnlyWorkspace.Addin LoadBehavior=3. Root certificate installation is current behavior, not permission to trust arbitrary certificates.
+The managed COM add-in supports classic Outlook 2016+ x86/x64 on Windows x64 with .NET Framework 4.8 and WebView2 Evergreen. New Outlook is unsupported. Close Outlook before setup. Setup elevates, validates configuration, installs the public certificate in TrustedPublisher only (an earlier Root entry is removed), registers both RegAsm variants and sets Addins/OnlyWorkspace.Addin LoadBehavior=3. Root certificate installation is current behavior, not permission to trust arbitrary certificates.
 
 Missing WebView2 is downloaded only after verifying its Microsoft signature and its registration is checked again. Configuration is validated before the program files are deployed. Certificate or RegAsm failures stop setup with code 2 and leave the registered uninstaller available.
 
@@ -46,7 +46,7 @@ Unreadable config/vault blocks save and offers restore, **Nuova configurazione**
 | File | Contents / protection |
 | --- | --- |
 | %ProgramData%/OnlyWorkspace/config.json | Schema 1 config; users read, administrators/SYSTEM write. |
-| secrets.bin alongside config | DPAPI LocalMachine API-key vault; ACL protection remains necessary. |
+| secrets.bin in each user's %LOCALAPPDATA%\OnlyWorkspace | Per-user DPAPI CurrentUser API-key vault, never written elevated; another standard user cannot decrypt it. A custom config folder keeps both files together. The LocalMachine secrets.bin of earlier builds in ProgramData is no longer read: re-enter the keys and delete the file. |
 | admin-password.json alongside config | Optional admin-password verifier, excluded from backup. |
 | %APPDATA%/OnlyWorkspace/preferences.json | User wizard/archiveOff preferences. |
 
@@ -93,7 +93,7 @@ Technical authorization is not legal basis, contract, impact assessment or a com
 
 Archive is encrypted SQLite under %LOCALAPPDATA%/OnlyWorkspace/archive, key protected with CurrentUser DPAPI. History uses CurrentUser DPAPI; logs/WebView2 use user product folders. Scan copies use %TEMP%/OnlyWorkspace/scan and application cleanup. Diagnostics export system metadata/space measures, excluding configuration, logs, text, database and keys. Review exports before sharing.
 
-LocalMachine vault is machine-bound, not by itself a barrier against another local user; protect ACLs. Archive/history are user-bound. Do not transplant a vault/key expecting access under another machine/user.
+The vault, archive and history are user-bound (DPAPI CurrentUser). Do not transplant a vault/key expecting access under another machine/user.
 
 | CLI form after OnlyWorkspace.ConfigTool.exe | Effect |
 | --- | --- |

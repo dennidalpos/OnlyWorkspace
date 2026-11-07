@@ -8,8 +8,28 @@ public static class AppPaths
 {
     public const string Folder = "OnlyWorkspace";
 
-    /// <summary>%ProgramData%\OnlyWorkspace: config.json, secrets.bin, admin-password.json (administrators write).</summary>
+    /// <summary>%ProgramData%\OnlyWorkspace: config.json, admin-password.json (administrators write); secrets.bin only of earlier builds.</summary>
     public static string ConfigDirectory => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), Folder);
+
+    /// <summary>
+    /// Where secrets.bin lives for a configuration folder. The standard %ProgramData% folder is written by administrators,
+    /// possibly under another account, so the per-user DPAPI vault goes to %LOCALAPPDATA% and is never written elevated.
+    /// Any other folder (tests, provisioning to a chosen folder) keeps both files together.
+    /// </summary>
+    public static string SecretsDirectoryFor(string? configDir) => IsStandardConfigDirectory(configDir) ? LocalDirectory : configDir!;
+
+    public static bool IsStandardConfigDirectory(string? configDir)
+    {
+        if (string.IsNullOrWhiteSpace(configDir)) return true;
+        try
+        {
+            return string.Equals(Path.GetFullPath(configDir).TrimEnd('\\', '/'), Path.GetFullPath(ConfigDirectory).TrimEnd('\\', '/'), StringComparison.OrdinalIgnoreCase);
+        }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException) { return false; }
+    }
+
+    /// <summary>The LocalMachine vault of earlier builds, readable by every local user and no longer read: the administrator removes it.</summary>
+    public static string LegacySecretsFile => Path.Combine(ConfigDirectory, "secrets.bin");
 
     /// <summary>%APPDATA%\OnlyWorkspace: preferences.json of the user.</summary>
     public static string PreferencesDirectory => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), Folder);

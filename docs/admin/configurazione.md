@@ -5,7 +5,7 @@
 | File | Contenuto | Protezione |
 | --- | --- | --- |
 | `%ProgramData%\OnlyWorkspace\config.json` | Profili IA, limiti, storico, archivio, logging (schema 1) | Scrittura solo amministratori e SYSTEM |
-| `%ProgramData%\OnlyWorkspace\secrets.bin` | Chiavi API dei profili | DPAPI LocalMachine |
+| `%LOCALAPPDATA%\OnlyWorkspace\secrets.bin` (per utente) | Chiavi API dei profili di quell'utente | DPAPI CurrentUser: un altro utente non le decifra |
 | `%ProgramData%\OnlyWorkspace\admin-password.json` | Verificatore della password amministrativa facoltativa | Non è nel backup |
 | `%APPDATA%\OnlyWorkspace\preferences.json` | Procedura guidata vista, `archiveOff` | Utente |
 
@@ -55,8 +55,8 @@ Il budget Ollama deve essere positivo e non superare `numCtx − maxOutputTokens
 
 ## Segreti e password
 
-- Il file sorgente del provisioning può contenere `auth: {"type":"bearer","secret":"…"}`: `ConfigTool import` salva il segreto in `secrets.bin` e lascia in `config.json` solo `authType` e `secretRef`. Il file sorgente va protetto e rimosso a parte.
-- Il vault DPAPI LocalMachine non si porta su un altro PC: lì le chiavi si reinseriscono.
+- Il file sorgente del provisioning può contenere `auth: {"type":"bearer","secret":"…"}`: `ConfigTool import` salva il segreto nel `secrets.bin` dell'utente che lancia il comando (non in quello degli altri utenti) e lascia in `config.json` solo `authType` e `secretRef`. Il file sorgente va protetto e rimosso a parte.
+- Il vault DPAPI è per utente e per PC: non si porta su un altro PC né su un altro utente, e ognuno inserisce le proprie chiavi nella Configurazione. Il `secrets.bin` in `%ProgramData%\OnlyWorkspace` di versioni precedenti (DPAPI LocalMachine, leggibile da ogni utente locale) non viene più letto né convertito: le chiavi si reinseriscono e un amministratore elimina il file; la Configurazione lo segnala nel log di Manutenzione e backup.
 - Se `secrets.bin` scompare, il reload revoca le chiavi caricate e i client che le avevano catturate. Un file presente ma illeggibile fa invece fallire il caricamento, conservando la copia in memoria senza autorizzarne il riuso tramite la configurazione fallita; un vault valido ripristinato può essere ricaricato.
 - La password amministrativa blocca le modifiche nella GUI e chiede un prompt per `import` e `restore`; un amministratore Windows la reimposta via UAC. Non protegge i file da chi ne controlla le ACL.
 

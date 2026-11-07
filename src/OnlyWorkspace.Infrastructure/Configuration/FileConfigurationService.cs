@@ -31,7 +31,8 @@ public sealed class FileConfigurationService : IConfigurationService
         var appData = preferencesDir ?? OnlyWorkspace.Core.AppPaths.PreferencesDirectory;
 
         _configPath = Path.Combine(programData, "config.json");
-        _secretsPath = Path.Combine(programData, "secrets.bin");
+        // The standard folder keeps the vault per user in %LOCALAPPDATA%; a chosen folder keeps both files together.
+        _secretsPath = Path.Combine(OnlyWorkspace.Core.AppPaths.SecretsDirectoryFor(programData), "secrets.bin");
         _preferencesPath = Path.Combine(appData, "preferences.json");
 
         _vault = vault ?? new Security.DpapiSecretVault();
