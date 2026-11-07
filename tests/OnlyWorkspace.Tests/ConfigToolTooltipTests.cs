@@ -193,6 +193,8 @@ public sealed class ConfigToolTooltipTests
             Assert.Contains("si ferma", TipOf("_numBudget"));
             Assert.Contains("senza dati di Outlook", TipOf("_btnDetectModels"));
             Assert.Contains("senza dati di Outlook", TipOf("_btnTestProfile"));
+            Assert.Contains("chiave", TipOf("_btnDetectModels"));
+            Assert.Contains("chiave", TipOf("_btnTestProfile"));
             Assert.Contains("addebiti", TipOf("_chkProbeWeb"));
             Assert.Contains("pagamento", TipOf("_btnProbe"));
             Assert.Contains("permesso", TipOf("_cmbExposure"));
@@ -206,7 +208,20 @@ public sealed class ConfigToolTooltipTests
         OnSta(_ =>
         {
             var profile = new LlmProfileConfig { Id = "a", Type = "ollama", BaseUrl = "http://127.0.0.1:11434", Model = "m" };
-            using (var wizard = new SetupWizardForm(profile, null, archiveEnabled: true, indexAttachments: true)) AssertEveryControlHasATip(wizard, Tips(wizard));
+            using (var wizard = new SetupWizardForm(profile, null, archiveEnabled: true, indexAttachments: true))
+            {
+                AssertEveryControlHasATip(wizard, Tips(wizard));
+                // The connection test and the model list send the typed key to the chosen service before the notice: the texts must say so.
+                foreach (string field in new[] { "_btnDetect", "_txtKey" })
+                {
+                    var control = (Control)typeof(SetupWizardForm).GetField(field, Flags)!.GetValue(wizard)!;
+                    string tip = Tips(wizard).GetToolTip(control) ?? string.Empty;
+                    Assert.Contains("chiave", tip, StringComparison.OrdinalIgnoreCase);
+                    Assert.Contains("al servizio", tip);
+                }
+                var testButton = Descendants(wizard).OfType<Button>().Single(b => b.Text == "Verifica connessione");
+                Assert.Contains("Invia la chiave al servizio", Tips(wizard).GetToolTip(testButton));
+            }
             using (var archive = new ArchiveSearchForm(false, IsolatedArchive.NewPath())) AssertEveryControlHasATip(archive, Tips(archive));
             using var notice = new DataEgressConsentForm(new[] { new OnlyWorkspace.Core.Privacy.DataEgressProvider { Host = "cloud.example" } }, null);
             AssertEveryControlHasATip(notice, Tips(notice));

@@ -90,5 +90,7 @@ try {
     }
     "OK: .NET; $($psFiles.Count) PowerShell; $($jsFiles.Count) JavaScript + TaskPane; $($pythonFiles.Count) Python; $($jsonFiles.Count) JSON; $($xmlFiles.Count) XML."
 } finally {
+    # Compiler servers left running slow the test run that follows (#131).
+    try { & dotnet build-server shutdown *> $null } catch { }
     Pop-Location
 }

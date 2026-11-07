@@ -191,7 +191,7 @@ public sealed partial class MainConfigForm
         _btnDetectModels.MinimumSize = new Size(0, 23);
         _btnDetectModels.Margin = new Padding(3);
         _btnDetectModels.Click += BtnDetectModels_Click;
-        Tip(_btnDetectModels, "Elenca i modelli usando la chiave inserita, senza dati di Outlook. Per le capacità usa Avanzate; Salva applica la scelta.");
+        Tip(_btnDetectModels, "Elenca i modelli inviando la chiave inserita al servizio, senza dati di Outlook. Per le capacità usa Avanzate; Salva applica la scelta.");
         AddRow(conn, "Modello:", FillRow(new InputFrame(_txtModel), _btnDetectModels), "Nome del modello invocato.");
 
         _lblModelLimits = AddRow(conn, "", new SelectableLabel { AutoSize = true, Margin = new Padding(3, 0, 3, 6) },
@@ -357,7 +357,7 @@ public sealed partial class MainConfigForm
         _btnTestProfile = SecondaryButton("Verifica connessione");
         _btnTestProfile.MinimumSize = new Size(0, 30);
         _btnTestProfile.Click += BtnTestProfile_Click;
-        Tip(_btnTestProfile, "Controlla servizio, chiave e modello con una richiesta sintetica, senza dati di Outlook. Non salva le modifiche.");
+        Tip(_btnTestProfile, "Controlla servizio, chiave e modello con una richiesta sintetica, inviando la chiave al servizio ma senza dati di Outlook. Non salva le modifiche.");
         // AutoSize with side anchors wraps to the column: a long error grows the row instead of being clipped.
         _lblTestResult = Ui.SetFont(new OperationalStatusLabel
         {

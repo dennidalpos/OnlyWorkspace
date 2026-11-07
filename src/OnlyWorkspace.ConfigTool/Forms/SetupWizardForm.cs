@@ -151,9 +151,9 @@ public sealed class SetupWizardForm : Form
             (_cmbProvider, "Sceglie il servizio IA; la destinazione dipende anche dall'indirizzo configurato. Su loopback e senza Web Search il testo resta su questo PC. Gli invii esterni richiedono l'informativa accettata in Privacy e dati. La scelta si applica al salvataggio."),
             (_txtEndpoint, "Indirizzo a cui il modello riceve il testo. Per Ollama su questo PC è http://127.0.0.1:11434 (loopback); un indirizzo esterno richiede l'informativa accettata. Si applica al salvataggio."),
             (_txtModel, "Nome del modello da usare, come lo chiama il servizio (per esempio qwen3.5:9b). «Scegli modello…» lo fa scegliere dall'elenco del servizio. Si può cambiare dopo in Profili IA."),
-            (_btnDetect, "Chiede al servizio, con indirizzo e chiave inseriti, l'elenco dei modelli disponibili e te li fa scegliere. Non invia dati di Outlook."),
-            (_txtKey, "Chiave fornita dal servizio cloud. Viene salvata cifrata su questo PC (secrets.bin), mai in chiaro."),
-            (test, "Prova indirizzo, chiave e modello con una richiesta di prova, senza dati di Outlook. Senza modello mostra l'elenco da cui sceglierlo."),
+            (_btnDetect, "Chiede al servizio, con indirizzo e chiave inseriti, l'elenco dei modelli disponibili e te li fa scegliere. Invia la chiave al servizio all'indirizzo scelto, anche prima dell'informativa; non invia dati di Outlook."),
+            (_txtKey, "Chiave fornita dal servizio cloud. Viene salvata cifrata su questo PC (secrets.bin), mai in chiaro. «Verifica connessione» e «Scegli modello…» la inviano al servizio all'indirizzo scelto."),
+            (test, "Prova indirizzo, chiave e modello con una richiesta di prova, senza dati di Outlook. Invia la chiave al servizio all'indirizzo scelto, anche prima dell'informativa. Senza modello mostra l'elenco da cui sceglierlo."),
             (_chkArchive, "Consente a ogni utente di conservare intestazioni e corpo integrale acquisito nel proprio archivio cifrato, cercabile anche a Outlook chiuso. Richiede Applica e salva, con eventuale UAC."),
             (_chkAttachments, "Conserva nell'archivio cifrato il testo degli allegati leggibili (PDF, Office, testo) per cercarlo; i file originali non vengono archiviati. Non autorizza da solo invii cloud. Richiede Applica e salva, con eventuale UAC."),
             (_chkAutostart, "All'accesso a Windows parte l'icona OnlyWorkspace nell'area di notifica, necessaria all'archivio. Vale solo per il tuo utente."),
@@ -298,7 +298,7 @@ public sealed class SetupWizardForm : Form
         bool needsKey = caps.RequiresSecret;
         _lblKey.Text = needsKey ? "Chiave API:" : "Token (facoltativo):";
         _lblModelNote.Text = caps.IsExternal
-            ? "Cloud: le azioni IA inviano dati al servizio configurato, entro il livello di esposizione del profilo (parte da «1 · Minimo»: fatti locali con segnaposto). Puoi salvare il profilo cloud come predefinito; gli invii restano bloccati fino all'autorizzazione in Privacy e dati. La chiave è salvata cifrata in secrets.bin."
+            ? "Cloud: le azioni IA inviano dati al servizio configurato, entro il livello di esposizione del profilo (parte da «1 · Minimo»: fatti locali con segnaposto). Puoi salvare il profilo cloud come predefinito; gli invii di posta restano bloccati fino all'autorizzazione in Privacy e dati. «Verifica connessione» e «Scegli modello…» invece inviano subito la chiave a questo servizio, senza dati di Outlook. La chiave è salvata cifrata in secrets.bin."
             : "Il modello usa il server indicato. Su loopback (questo PC), senza Web Search, il testo resta sul PC. Un indirizzo esterno o Web Search possono inviare dati fuori dal PC e richiedono l'informativa accettata in Privacy e dati. Il servizio locale e il modello vanno installati a parte.";
         _presetRow.Visible = caps.Type == ProviderCatalog.OpenAICompatible;
         if (caps.Type == ProviderCatalog.OpenAICompatible && _cmbPreset.SelectedItem is CloudProviderPreset chosen)
