@@ -2,7 +2,7 @@
 
 ## Installation and update
 
-The managed COM add-in supports classic Outlook 2016+ x86/x64 on Windows x64 with .NET Framework 4.8 and WebView2 Evergreen. New Outlook is unsupported. Close Outlook before setup. Setup elevates, validates configuration, installs the public certificate in TrustedPublisher only (an earlier Root entry is removed), registers both RegAsm variants and sets Addins/OnlyWorkspace.Addin LoadBehavior=3. Root certificate installation is current behavior, not permission to trust arbitrary certificates.
+The managed COM add-in supports classic Outlook 2016+ x86/x64 on Windows x64 with .NET Framework 4.8 and WebView2 Evergreen. New Outlook is unsupported. Close Outlook before setup. Setup elevates, validates configuration, installs the public certificate in TrustedPublisher only (an earlier Root entry is removed), registers both RegAsm variants and sets Addins/OnlyWorkspace.Addin LoadBehavior=3. Trusting the public certificate does not extend to any other certificate.
 
 Missing WebView2 is downloaded only after verifying its Microsoft signature and its registration is checked again. Configuration is validated before the program files are deployed. Certificate or RegAsm failures stop setup with code 2 and leave the registered uninstaller available.
 
@@ -85,7 +85,7 @@ Notice 6, authorization key 3 and conversation policy 8 bind grants to profile, 
 
 Masking catalog revision 4 adds Italian postal addresses (`INDIRIZZO`); company names in free text are not masked. Revision 3 recognizes the whole word `euro` before or after an amount. Moving from revision 3 requires renewing the affected profile authorizations in **Privacy and data**. [Recognized forms and limits](tecnico/pseudonimizzazione.md)
 
-Catalog 2 recognizes currency symbols/codes EUR/USD/GBP, not **1234,56 euro**. Unrecognized sensitive information may remain in permitted free text. Failed masking/audit preparation blocks sending; failure after dispatch cannot retract receipt. Free-form action web queries remain blocked; capability checks use fixed synthetic requests.
+Catalog 4 recognizes currency symbols/codes EUR/USD/GBP and the word **euro** next to a number (**1234,56 euro**), plus Italian postal addresses; company names are not masked. Unrecognized sensitive information may remain in permitted free text. Failed masking/audit preparation blocks sending; failure after dispatch cannot retract receipt. Free-form action web queries remain blocked; capability checks use fixed synthetic requests.
 
 Technical authorization is not legal basis, contract, impact assessment or a compliance certificate. Legal applicability/current primary sources must be assessed separately. The dated Italian regulatory discussion is preserved as source work; this guide does not extend it to another jurisdiction/date.
 

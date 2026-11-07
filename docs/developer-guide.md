@@ -63,7 +63,7 @@ Limits: 30 MiB/file, four million extracted characters, 60 seconds extraction/fi
 
 ## Pseudonymization and policy
 
-Catalog 2 uses reversible prioritized patterns, bounded regexes, cancellation and ten-second preparation budget. Identities use a literal index per request. Cloud always masks recognized amounts/dates; local options differ. Currency symbols/codes work; the word form **1234,56 euro** remains unsupported.
+Catalog 4 uses reversible prioritized patterns, bounded regexes, cancellation and ten-second preparation budget. Identities use a literal index per request. Cloud always masks recognized amounts/dates; local options differ. Currency symbols/codes, the word form **1234,56 euro** and Italian postal addresses are masked; company names in free text are not.
 
 CloudFactsRequest keeps values/provenance local and sends embedded categories/opaque values. CloudRequestProof cannot be reconstructed from JSON/history. Audit metadata stores random ID/time/outcome/revisions/category counts with CurrentUser DPAPI, never originals/map. Preparation failure blocks sending; dispatching is an attempt, not a receipt. Policy changes prevent old-context reuse while keeping history readable.
 
