@@ -16,6 +16,14 @@ public sealed class ConfigToolRequestTests
     private const BindingFlags Flags = BindingFlags.Instance | BindingFlags.NonPublic;
     private static T Field<T>(object owner, string name) => (T)owner.GetType().GetField(name, Flags)!.GetValue(owner)!;
     private static void Set(object owner, string name, object value) => owner.GetType().GetField(name, Flags)!.SetValue(owner, value);
+    /// <summary>The control's own Visible flag; the property also needs every parent shown, which a form never shown is not.</summary>
+    private static bool SelfVisible(Control control)
+    {
+        var getState = typeof(Control).GetMethods(BindingFlags.Instance | BindingFlags.NonPublic).Single(m => m.Name == "GetState" && m.GetParameters().Length == 1 && m.GetParameters()[0].ParameterType.IsPrimitive | m.GetParameters()[0].ParameterType.IsEnum);
+        var type = getState.GetParameters()[0].ParameterType;
+        return (bool)getState.Invoke(control, new[] { type.IsEnum ? Enum.ToObject(type, 0x2) : 0x2 })!;
+    }
+
     private static object? Call(object owner, string name, params object?[] args) => owner.GetType().GetMethod(name, Flags)!.Invoke(owner, args);
     private static void Pump(Func<bool> done)
     {
@@ -110,6 +118,47 @@ public sealed class ConfigToolRequestTests
             Assert.False(task.IsCompleted);
             form.Dispose(); Pump(() => task.IsCompleted); task.GetAwaiter().GetResult();
             Assert.True(client.Token.IsCancellationRequested); Assert.True(client.Disposed);
+        });
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void WizardPointsAtCloudPresetsOnlyWithoutALocalAi(bool localAi)
+    {
+        Sta(dir =>
+        {
+            using var form = new SetupWizardForm(Profile(), null, true, true);
+            form.LocalAiProbe = _ => Task.FromResult(localAi);
+            var task = (Task)Call(form, "ProbeLocalAiAsync")!; Pump(() => task.IsCompleted); task.GetAwaiter().GetResult();
+            var label = Field<Label>(form, "_lblLocalAi");
+            Assert.Equal(!localAi, SelfVisible(label));
+            if (localAi) Assert.Empty(label.Text);
+            else { Assert.Contains("Nessuna IA locale", label.Text); Assert.Contains("Nulla viene inviato prima dello sblocco", label.Text); }
+        });
+    }
+
+    [Fact]
+    public void WizardCloudPresetFillsTheAddressAndMarksTheProfileExternal()
+    {
+        Sta(dir =>
+        {
+            using var form = new SetupWizardForm(Profile(), null, true, true);
+            var provider = Field<ComboBox>(form, "_cmbProvider");
+            var preset = Field<ComboBox>(form, "_cmbPreset");
+            Assert.False(SelfVisible(Field<Control>(form, "_presetRow")));
+            provider.SelectedItem = ProviderCatalog.Get(ProviderCatalog.OpenAICompatible);
+            Assert.True(SelfVisible(Field<Control>(form, "_presetRow")));
+            var scaleway = CloudProviderPresets.All.Single(p => p.Id == "scaleway");
+            preset.SelectedItem = scaleway;
+            Assert.Equal(scaleway.BaseUrl, Field<TextBox>(form, "_txtEndpoint").Text);
+            var edited = (LlmProfileConfig)Call(form, "Edited")!;
+            Assert.Equal(ProviderCatalog.OpenAICompatible, edited.Type);
+            Assert.Equal(scaleway.BaseUrl, edited.BaseUrl);
+            Assert.True(edited.External);
+            provider.SelectedItem = ProviderCatalog.Get(ProviderCatalog.Ollama);
+            Assert.False(SelfVisible(Field<Control>(form, "_presetRow")));
+            Assert.IsNotType<CloudProviderPreset>(preset.SelectedItem);
         });
     }
 

@@ -2,6 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using OnlyWorkspace.ConfigTool.Services;
 using OnlyWorkspace.Core.Models;
@@ -26,6 +29,9 @@ public sealed class SetupWizardForm : Form
     private readonly FlatButton _btnCancel = new() { Text = "Chiudi senza applicare", AutoSize = true, MinimumSize = new Size(96, 30) };
 
     private readonly ThemedComboBox _cmbProvider = new() { Width = 420 };
+    private readonly ThemedComboBox _cmbPreset = new() { Width = 420, DropDownStyle = ComboBoxStyle.DropDownList };
+    private Control _presetRow = null!;
+    private readonly SelectableLabel _lblLocalAi = new() { AutoSize = true, MaximumSize = new Size(560, 0), Visible = false, Margin = new Padding(0, 0, 0, 8) };
     private readonly ThemedTextBox _txtEndpoint = new() { Width = 420 };
     private readonly ThemedTextBox _txtModel = new() { Width = 260 };
     private readonly FlatButton _btnDetect = new() { Text = DetectText, AutoSize = true, MinimumSize = new Size(0, 28) };
@@ -50,6 +56,8 @@ public sealed class SetupWizardForm : Form
     internal Func<OutlookProfiles> ReadOutlookProfiles = () => OutlookProfiles.Read();
     /// <summary>Client of the model list; tests replace the service.</summary>
     internal Func<LlmProfileConfig, string?, OnlyWorkspace.Core.Interfaces.ILlmClient>? ClientFactory;
+    /// <summary>True when an Ollama answers on this PC's loopback; tests replace the probe.</summary>
+    internal Func<CancellationToken, Task<bool>> LocalAiProbe = LoopbackOllamaAnswersAsync;
 
     public LlmProfileConfig Profile { get; }
     public string? Secret { get; private set; }
@@ -98,8 +106,15 @@ public sealed class SetupWizardForm : Form
         model.Controls.Add(new InputFrame(_txtModel));
         model.Controls.Add(_btnDetect);
         // The key comes before the model: a cloud service lists its models only to a valid key.
+        _cmbPreset.Items.Add(PresetNone);
+        _cmbPreset.Items.AddRange(CloudProviderPresets.All.Cast<object>().ToArray());
+        _cmbPreset.SelectedItem = CloudProviderPresets.Match(Profile.BaseUrl) ?? (object)PresetNone;
+        _cmbPreset.SelectedIndexChanged += (_, _) => OnPresetChanged();
+        _presetRow = Row("Preset cloud:", _cmbPreset);
         _steps.Add(Page(
+            _lblLocalAi,
             Row("Servizio:", _cmbProvider),
+            _presetRow,
             Row("Indirizzo (endpoint):", new InputFrame(_txtEndpoint)),
             Row(_lblKey, new InputFrame(_txtKey)),
             Row("Modello:", model),
@@ -132,6 +147,7 @@ public sealed class SetupWizardForm : Form
 
         foreach (var (control, tip) in new (Control, string)[]
         {
+            (_cmbPreset, "Compila l'indirizzo di un servizio compatibile OpenAI con dati dichiarati nell'UE dal fornitore (non è un'attestazione di conformità) e segna il profilo come cloud. Non invia nulla: i dati escono solo dopo lo sblocco nell'informativa (Privacy)."),
             (_cmbProvider, "Sceglie il servizio IA; la destinazione dipende anche dall'indirizzo configurato. Su loopback e senza Web Search il testo resta su questo PC. Gli invii esterni richiedono l'informativa accettata in Privacy e dati. La scelta si applica al salvataggio."),
             (_txtEndpoint, "Indirizzo a cui il modello riceve il testo. Per Ollama su questo PC è http://127.0.0.1:11434 (loopback); un indirizzo esterno richiede l'informativa accettata. Si applica al salvataggio."),
             (_txtModel, "Nome del modello da usare, come lo chiama il servizio (per esempio qwen3.5:9b). «Scegli modello…» lo fa scegliere dall'elenco del servizio. Si può cambiare dopo in Profili IA."),
@@ -168,7 +184,7 @@ public sealed class SetupWizardForm : Form
 
         Ui.ScaleFromDesignDpi(this);
         DisabledControlTips.Attach(this, _tips);
-        Shown += (_, _) => { Theme.Apply(this); Theme.ApplyWindowChrome(this); };
+        Shown += (_, _) => { Theme.Apply(this); Theme.ApplyWindowChrome(this); _ = ProbeLocalAiAsync(); };
         BackColor = Theme.Colors.Window;
         ForeColor = Theme.Colors.Text;
         OnProviderChanged(keepValues: true);
@@ -231,6 +247,40 @@ public sealed class SetupWizardForm : Form
         return page;
     }
 
+    private const string PresetNone = "(indirizzo manuale)";
+
+    private static async Task<bool> LoopbackOllamaAnswersAsync(CancellationToken ct)
+    {
+        try
+        {
+            using var handler = new HttpClientHandler { AllowAutoRedirect = false, UseProxy = false };
+            using var http = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(2) };
+            using var response = await http.GetAsync(ProviderCatalog.Get(ProviderCatalog.Ollama).DefaultBaseUrl + "/api/tags", ct).ConfigureAwait(true);
+            return response.IsSuccessStatusCode;
+        }
+        catch (Exception) { return false; }
+    }
+
+    /// <summary>Without a local Ollama the wizard points at the cloud presets; it sends nothing and changes nothing.</summary>
+    private async Task ProbeLocalAiAsync()
+    {
+        bool local = await LocalAiProbe(CancellationToken.None).ConfigureAwait(true);
+        if (IsDisposed) return;
+        _lblLocalAi.Text = local ? string.Empty
+            : "Nessuna IA locale (Ollama) rilevata su questo PC. Per usare un servizio cloud scegli «Compatibile OpenAI» e un preset: prima i servizi con dati dichiarati nell'UE. Nulla viene inviato prima dello sblocco nell'informativa (Privacy).";
+        _lblLocalAi.Visible = !local;
+    }
+
+    private void OnPresetChanged()
+    {
+        if (_cmbPreset.SelectedItem is CloudProviderPreset preset)
+        {
+            _txtEndpoint.Text = preset.BaseUrl;
+            _lblTest.Text = string.Empty;
+        }
+        OnProviderChanged(keepValues: true);
+    }
+
     private ProviderCapabilities Caps => _cmbProvider.SelectedItem as ProviderCapabilities ?? ProviderCatalog.All[0];
 
     private void OnProviderChanged(bool keepValues = false)
@@ -240,6 +290,7 @@ public sealed class SetupWizardForm : Form
         {
             foreach (var legacy in _cmbProvider.Items.Cast<ProviderCapabilities>().Where(p => ProviderCatalog.IsLegacy(p.Type)).ToArray())
                 _cmbProvider.Items.Remove(legacy);
+            _cmbPreset.SelectedItem = PresetNone;
             _txtEndpoint.Text = caps.DefaultBaseUrl;
             _txtModel.Text = caps.DefaultModel;
             _lblTest.Text = string.Empty;
@@ -249,6 +300,9 @@ public sealed class SetupWizardForm : Form
         _lblModelNote.Text = caps.IsExternal
             ? "Cloud: le azioni IA inviano dati al servizio configurato, entro il livello di esposizione del profilo (parte da «1 · Minimo»: fatti locali con segnaposto). Puoi salvare il profilo cloud come predefinito; gli invii restano bloccati fino all'autorizzazione in Privacy e dati. La chiave è salvata cifrata in secrets.bin."
             : "Il modello usa il server indicato. Su loopback (questo PC), senza Web Search, il testo resta sul PC. Un indirizzo esterno o Web Search possono inviare dati fuori dal PC e richiedono l'informativa accettata in Privacy e dati. Il servizio locale e il modello vanno installati a parte.";
+        _presetRow.Visible = caps.Type == ProviderCatalog.OpenAICompatible;
+        if (caps.Type == ProviderCatalog.OpenAICompatible && _cmbPreset.SelectedItem is CloudProviderPreset chosen)
+            _lblModelNote.Text = $"{chosen.Name}: {chosen.RegionLabel} secondo il fornitore (non è un'attestazione di conformità); le azioni IA inviano dati a questo servizio entro il livello di esposizione del profilo. Documentazione: {chosen.DocsUrl}. " + _lblModelNote.Text;
         if (caps.Type == ProviderCatalog.OpenAICompatible)
             _lblModelNote.Text = "Inserisci indirizzo e modello del servizio compatibile OpenAI. Ricerca web e lettura delle capacità specifiche non sono disponibili. " + _lblModelNote.Text;
     }
@@ -261,7 +315,7 @@ public sealed class SetupWizardForm : Form
         p.Type = caps.Type;
         p.BaseUrl = _txtEndpoint.Text.Trim();
         p.Model = _txtModel.Text.Trim();
-        p.External = caps.IsExternal || (!switched && p.External);
+        p.External = caps.IsExternal || (!switched && p.External) || (caps.Type == ProviderCatalog.OpenAICompatible && _cmbPreset.SelectedItem is CloudProviderPreset);
         if (!caps.AuthTypes.Contains(p.AuthType)) p.AuthType = caps.AuthTypes[0];
         if (caps.AuthTypes.Contains("bearer") && p.AuthType == "none" && !string.IsNullOrWhiteSpace(_txtKey.Text)) p.AuthType = "bearer";
         if (switched)

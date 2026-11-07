@@ -48,10 +48,12 @@
     <!-- COM-free indexer and its seam: ArchiveIndexerInterruptionTests stand in for Outlook. -->
     <Compile Include="..\..\src\OnlyWorkspace.Outlook\Services\ArchiveIndexer.cs" Link="Outlook\ArchiveIndexer.cs" />
     <Compile Include="..\..\src\OnlyWorkspace.Outlook\Services\IArchiveMailSource.cs" Link="Outlook\IArchiveMailSource.cs" />
+    <Compile Include="..\..\src\OnlyWorkspace.Outlook\Services\IArchiveIndexer.cs" Link="Outlook\IArchiveIndexer.cs" />
     <Compile Include="..\..\src\OnlyWorkspace.Outlook\Services\ComObjects.cs" Link="Outlook\ComObjects.cs" />
     <Compile Include="..\..\src\OnlyWorkspace.Outlook\Services\WatchedArchiveMailSource.cs" Link="Outlook\WatchedArchiveMailSource.cs" />
     <Compile Include="..\..\src\OnlyWorkspace.Outlook\Services\StoreListCache.cs" Link="Outlook\StoreListCache.cs" />
     <Compile Include="..\..\src\OnlyWorkspace.Outlook\Services\UiSlice.cs" Link="Outlook\UiSlice.cs" />
+    <Compile Include="..\..\src\OnlyWorkspace.Outlook\Services\PaneWidthPolicy.cs" Link="Outlook\PaneWidthPolicy.cs" />
     <Compile Include="..\..\src\OnlyWorkspace.Outlook\Services\KnownFolders.cs" Link="Outlook\KnownFolders.cs" />
     <Compile Include="..\..\src\OnlyWorkspace.Outlook\Services\ArchiveColumnProbe.cs" Link="Outlook\ArchiveColumnProbe.cs" />
     <Compile Include="..\..\src\OnlyWorkspace.Outlook\Services\AttachmentCopies.cs" Link="Outlook\AttachmentCopies.cs" />
@@ -61,6 +63,9 @@
     <Compile Include="..\..\src\OnlyWorkspace.Outlook\SessionStart.cs" Link="Outlook\SessionStart.cs" />
     <!-- COM-free part of TaskPaneCoordinator's dispatch: PaneDispatchConsentTests drive it with the real indexer. -->
     <Compile Include="..\..\src\OnlyWorkspace.Outlook\UI\PaneArchiveCommands.cs" Link="Outlook\PaneArchiveCommands.cs" />
+    <Compile Include="..\..\src\OnlyWorkspace.Outlook\UI\MailInputTracker.cs" Link="Outlook\MailInputTracker.cs" />
+    <Compile Include="..\..\src\OnlyWorkspace.Outlook\UI\ArchivedOriginalCache.cs" Link="Outlook\ArchivedOriginalCache.cs" />
+    <Compile Include="..\..\src\OnlyWorkspace.Outlook\UI\ArchiveStatusMessages.cs" Link="Outlook\ArchiveStatusMessages.cs" />
     <!-- Interrompi against the other cancels of the pane: PaneOperationsTests. -->
     <Compile Include="..\..\src\OnlyWorkspace.Outlook\UI\PaneOperations.cs" Link="Outlook\PaneOperations.cs" />
     <Compile Include="..\..\src\OnlyWorkspace.Outlook\UI\TurnWebSources.cs" Link="Outlook\TurnWebSources.cs" />

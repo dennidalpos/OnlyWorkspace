@@ -316,8 +316,28 @@ public sealed partial class MainConfigForm
         InvalidateWebSupport();
     }
 
+    private const string CloudPresetNone = "(indirizzo manuale)";
+
+    /// <summary>The preset row exists only for «Compatibile OpenAI»; it shows the preset the address matches.</summary>
+    private void SyncCloudPreset(ProviderCapabilities caps)
+    {
+        if (_cmbCloudPreset == null) return;
+        SetRowVisible(_cmbCloudPreset, caps.Type == ProviderCatalog.OpenAICompatible);
+        _syncingPreset = true;
+        try { _cmbCloudPreset.SelectedItem = CloudProviderPresets.Match(_txtEndpoint.Text) ?? (object)CloudPresetNone; }
+        finally { _syncingPreset = false; }
+    }
+
+    private void OnCloudPresetChosen()
+    {
+        if (_syncingPreset || _isLoading || _cmbCloudPreset.SelectedItem is not CloudProviderPreset preset) return;
+        _txtEndpoint.Text = preset.BaseUrl;
+        _chkExternal.Checked = true;
+    }
+
     private void FillProviderLists(ProviderCapabilities caps)
     {
+        SyncCloudPreset(caps);
         _cmbAuthType.Items.Clear();
         _cmbAuthType.Items.AddRange(caps.AuthTypes.Cast<object>().ToArray());
 

@@ -113,7 +113,7 @@ public partial class TaskPaneCoordinator
         var email = selectedScope != "none" && _dataService.CanActOnSelectedEmail(_contextWindow)
             ? _dataService.GetSelectedEmailHeader(_contextWindow) : null;
         var folder = selectedScope == "folder" && email != null ? _dataService.GetFolderOf(email.EntryId, email.StoreId) : null;
-        var archiveStore = ArchiveIndexer.Current is { } indexer ? await indexer.OpenForSearchAsync() : null;
+        var archiveStore = CurrentArchive is { } indexer ? await indexer.OpenForSearchAsync() : null;
         if (_isDisposed) return;
         var profile = GetActiveProfile();
         _control.PostMessage(new
@@ -356,7 +356,7 @@ public partial class TaskPaneCoordinator
     /// <summary>Header row of Cerca e analizza as a list item, with local facts when the email has an archive row.</summary>
     private async Task<List<ChatMailItem>> AnalysisItemsAsync(IReadOnlyList<AnalysisEmail> emails, CancellationToken ct)
     {
-        var indexer = ArchiveIndexer.Current;
+        var indexer = CurrentArchive;
         var db = indexer != null && emails.Any(e => e.ArchiveId > 0) ? await indexer.OpenForSearchAsync() : null;
         var archived = emails.Where(e => e.ArchiveId > 0).Select(e => e.ArchiveId).Distinct().ToList();
         var facts = db != null && archived.Count > 0 ? await db.SearchAsync(new ArchiveQuery { EmailIds = archived, AllowedStoreIds = await indexer!.GetAllowedSearchStoresAsync(), IncludeFacts = true, IncludeAttachmentText = false, Max = 500 }, ct) : new List<ArchiveHit>();
@@ -384,7 +384,7 @@ public partial class TaskPaneCoordinator
     private async Task<List<ChatMailItem>?> FindChatMailInArchiveAsync(EmailSearchQuery query, int latest, bool attachments,
         MailSearchCoverage coverage, int turn, CancellationToken ct)
     {
-        var db = ArchiveIndexer.Current is { } indexer ? await indexer.OpenForSearchAsync() : null;
+        var db = CurrentArchive is { } indexer ? await indexer.OpenForSearchAsync() : null;
         if (db == null) return null;
 
         bool hasText = !string.IsNullOrWhiteSpace(query.Keywords);
@@ -615,7 +615,7 @@ public partial class TaskPaneCoordinator
     private async Task<List<AnalysisEmail>> ResolveArchiveEmailsAsync(AnalysisRequest r, MailSearchCoverage coverage, CancellationToken ct)
     {
         var result = new List<AnalysisEmail>();
-        var db = ArchiveIndexer.Current is { } indexer ? await indexer.OpenForSearchAsync() : null;
+        var db = CurrentArchive is { } indexer ? await indexer.OpenForSearchAsync() : null;
         if (db == null) return result;
 
         var query = new ArchiveQuery
@@ -654,7 +654,7 @@ public partial class TaskPaneCoordinator
     private async Task<List<ArchiveHit>> SearchArchiveAsync(ArchiveClient db, ArchiveQuery query, bool attachments,
         MailSearchCoverage coverage, CancellationToken ct, int latest = 0)
     {
-        query.AllowedStoreIds = ArchiveIndexer.Current is { } scopeIndexer
+        query.AllowedStoreIds = CurrentArchive is { } scopeIndexer
             ? await scopeIndexer.GetAllowedSearchStoresAsync() : new List<string>();
         if (query.FactFilters.Count == 0) query.Text = ArchiveSearchText.Parse(query.Text, query.FactFilters);
         string queryText = query.Text ?? string.Empty;
@@ -846,7 +846,7 @@ public partial class TaskPaneCoordinator
                         request.Attachments, contentAllowed, budget, stats, coverage, ExposurePolicy.Of(activeProfile), turn, ct);
                     if (!reading.Stopped && reading.Pack.Count > 0)
                         _analysisRead = new AnalysisRead { Key = analysisKey, ReadUtc = _sourceReadUtc, Found = found, Coverage = coverage, Items = items,
-                            Reading = reading, Documents = stats.Documents.ToList(), Inputs = _inputSourcesForTurn.ToList() };
+                            Reading = reading, Documents = stats.Documents.ToList(), Inputs = Inputs.Sources.ToList() };
                 }
                 stats.TooLong.AddRange(reading.TooLong);
                 stats.NotExposed.AddRange(reading.NoFacts.Concat(reading.OverBudget));
@@ -968,7 +968,7 @@ public partial class TaskPaneCoordinator
         IReadOnlyList<AnalysisEmail> emails, int missing, List<string> missingFlowMail)
     {
         var footer = "\n\n---\n" + AnalysisReport.BuildFooter(stats) + "\n" + coverage.Explain();
-        if (request.Kind == "archive" && ArchiveIndexer.Current?.Db is { } resultArchive && (await resultArchive.GetStatsAsync()).BodiesPending is int pendingBodies && pendingBodies > 0)
+        if (request.Kind == "archive" && CurrentArchive?.Db is { } resultArchive && (await resultArchive.GetStatsAsync()).BodiesPending is int pendingBodies && pendingBodies > 0)
         {
             footer += $"\nArchivio ancora in costruzione: {pendingBodies} email sono trovate solo per oggetto e mittente, non per testo e destinatari.";
         }
@@ -976,7 +976,7 @@ public partial class TaskPaneCoordinator
             footer += "\nOutlook ha restituito solo i 20 messaggi più recenti della conversazione visibile. L'archivio può mostrarne altri; la copertura del flusso resta incerta.";
         if (missing > 0)
         {
-            if (emails.Any(e => e.ArchiveId > 0) && ArchiveIndexer.Current is { } missingIndexer) await missingIndexer.ReportMissingAsync();
+            if (emails.Any(e => e.ArchiveId > 0) && CurrentArchive is { } missingIndexer) await missingIndexer.ReportMissingAsync();
             footer += request.Kind == "flow"
                 ? FlowAnalysisReport.MissingOriginals(missing, missingFlowMail)
                 : missing == 1

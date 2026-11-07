@@ -318,7 +318,7 @@ public partial class TaskPaneCoordinator
     private async Task<Dictionary<string, string>> ActionFactsAsync(List<ArchiveEmailRef> copies, bool attachmentsAllowed, CancellationToken ct)
     {
         var result = new Dictionary<string, string>(StringComparer.Ordinal);
-        if (copies.Count == 0 || ArchiveIndexer.Current is not { } indexer) return result;
+        if (copies.Count == 0 || CurrentArchive is not { } indexer) return result;
         var db = await indexer.OpenForSearchAsync();
         if (db == null) return result;
         var stores = await indexer.GetAllowedSearchStoresAsync();

@@ -34,6 +34,8 @@ public partial class TaskPaneCoordinator : IDisposable
 {
     private readonly TaskPaneControl _control;
     private readonly IOutlookDataService _dataService;
+    private readonly Func<IArchiveIndexer?> _archiveSource;
+    private IArchiveIndexer? CurrentArchive => _archiveSource();
     private readonly object? _contextWindow;
     private readonly IConfigurationService _configService;
     private readonly IContextBuilder _contextBuilder;
@@ -67,8 +69,10 @@ public partial class TaskPaneCoordinator : IDisposable
         object? contextWindow = null,
         IConfigurationService? configService = null,
         IContextBuilder? contextBuilder = null,
-        IHistoryStorageService? historyStorage = null)
+        IHistoryStorageService? historyStorage = null,
+        Func<IArchiveIndexer?>? archiveSource = null)
     {
+        _archiveSource = archiveSource ?? ArchiveIndexerAccess.Current;
         _control = control ?? throw new ArgumentNullException(nameof(control));
         _dataService = dataService ?? throw new ArgumentNullException(nameof(dataService));
         _contextWindow = contextWindow;
@@ -1700,10 +1704,10 @@ public partial class TaskPaneCoordinator : IDisposable
     private CancellationTokenSource BeginOperation()
     {
         _sourceReadUtc = DateTime.UtcNow;
-        _inputSourcesForTurn.Clear();
+        Inputs.Clear();
         _actionFactsForTurn.Clear();
         _documentsForTurn.Clear();
-        _lastOriginal = null;
+        _originals.Clear();
         _turn++;
         _webActionForTurn = _pendingWebAction;
         _pendingWebAction = null;

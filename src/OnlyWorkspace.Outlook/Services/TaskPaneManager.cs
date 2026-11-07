@@ -18,7 +18,7 @@ public sealed class TaskPaneEntry : IDisposable
     private readonly WinFormsTimer _selectionDebounce;
     private readonly WinFormsTimer _configCheck;
     private const int WidthCheckMs = 300;
-    private const int MaxWidthAttempts = 4;
+    private const int MaxWidthAttempts = PaneWidthPolicy.MaxAttempts;
     private const int VkLButton = 0x01;
     private const int VkRButton = 0x02;
 
@@ -340,8 +340,8 @@ public sealed class TaskPaneManager : IDisposable
             // 380 px at 100%, in system-DPI pixels (see SystemDpi). Never narrower than 360 px (TaskPaneEntry.KeepMinimumWidth):
             // with the pane's frame and scroll bar the page still gets the 340 px of its one-row layout.
             int dpi = SystemDpi();
-            taskPane.Width = 380 * dpi / 96;
-            int minimumWidth = 360 * dpi / 96;
+            taskPane.Width = PaneWidthPolicy.DefaultWidth(dpi);
+            int minimumWidth = PaneWidthPolicy.MinimumWidth(dpi);
             OnlyWorkspaceLog.Logger.Information("TaskPane width {Width} Office units at system DPI {Dpi}", taskPane.Width, dpi);
 
             phase.Restart();

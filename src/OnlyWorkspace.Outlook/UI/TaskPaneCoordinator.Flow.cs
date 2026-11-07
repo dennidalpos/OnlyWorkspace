@@ -56,7 +56,7 @@ public partial class TaskPaneCoordinator
             if (visible == null && !flow.Timeline.Any(m => m.StoreId == seed.StoreId && m.EntryId == seed.EntryId ||
                 m.Copies.Any(c => c.StoreId == seed.StoreId && c.EntryId == seed.EntryId)))
                 throw new ReconstructionUnavailableException("L'email di partenza non è più disponibile. Seleziona un'email e riprova.");
-            var coverage = ArchiveIndexer.Current?.Db is { } coverageDb
+            var coverage = CurrentArchive?.Db is { } coverageDb
                 // Possible links too: without their mailbox the pane labelled them «Cassetta non inventariata».
                 ? (await coverageDb.GetStoreCoverageAsync()).Where(c => flow.Timeline.Concat(flow.PossibleLinks).Any(m => string.Equals(m.StoreId, c.StoreId, StringComparison.OrdinalIgnoreCase))).ToList()
                 : new List<ArchiveStoreCoverage>();
@@ -91,7 +91,7 @@ public partial class TaskPaneCoordinator
     private async Task<ArchiveFlow> ReadFlowAsync(ArchiveFlowSeed seed, SelectedEmailInfo? visible = null,
         bool complete = false, CancellationToken ct = default, bool localReconstruction = false)
     {
-        var indexer = ArchiveIndexer.Current;
+        var indexer = CurrentArchive;
         var db = indexer == null ? null : await indexer.OpenForSearchAsync();
         var allowed = indexer == null ? new List<string>() : await indexer.GetAllowedSearchStoresAsync();
         var chosen = allowed == null ? null : new HashSet<string>(allowed, StringComparer.OrdinalIgnoreCase);

@@ -68,6 +68,29 @@ public sealed class MainConfigFormTests
     }
 
     [Fact]
+    public void CloudPresetRow_AppearsOnlyForOpenAICompatible_AndFillsAddressAsExternal()
+    {
+        OnSta(directory =>
+        {
+            var local = Local("local");
+            Write(directory, new WorkspaceConfig { DefaultProfile = local.Id, Profiles = new() { local } }, new());
+            using var form = new MainConfigForm(directory, null, directory);
+            var preset = Field<ComboBox>(form, "_cmbCloudPreset");
+            Assert.False(OwnVisible(GridCell(preset)));
+            Field<ComboBox>(form, "_cmbProvider").SelectedItem = ProviderCatalog.Get(ProviderCatalog.OpenAICompatible);
+            Assert.True(OwnVisible(GridCell(preset)));
+            var ionos = CloudProviderPresets.All.Single(p => p.Id == "ionos");
+            preset.SelectedItem = ionos;
+            Assert.Equal(ionos.BaseUrl, Field<TextBox>(form, "_txtEndpoint").Text);
+            Assert.True(Field<CheckBox>(form, "_chkExternal").Checked);
+            Field<TextBox>(form, "_txtEndpoint").Text = "https://example.test/v1";
+            Assert.IsNotType<CloudProviderPreset>(preset.SelectedItem);
+            Field<ComboBox>(form, "_cmbProvider").SelectedItem = ProviderCatalog.Get("ollama");
+            Assert.False(OwnVisible(GridCell(preset)));
+        });
+    }
+
+    [Fact]
     public void GenericWizard_UsesTypedBearerAndPreservesExplicitExternalFlag()
     {
         OnSta(directory =>
@@ -315,6 +338,9 @@ public sealed class MainConfigFormTests
     }
 
     /// <summary>The control's own Visible flag: the getter also reflects hidden ancestors, as in a form never shown.</summary>
+    /// <summary>The grid cell that holds a field (the field itself may sit inside a frame).</summary>
+    private static Control GridCell(Control field) { while (field.Parent is not TableLayoutPanel && field.Parent != null) field = field.Parent; return field; }
+
     private static bool OwnVisible(Control control)
     {
         var getState = typeof(Control).GetMethod("GetState", BindingFlags.NonPublic | BindingFlags.Instance)!;

@@ -53,7 +53,7 @@ public partial class TaskPaneCoordinator
                 },
                 GetArchivedBodyAsync = async (reference, token) =>
                 {
-                    var archive = ArchiveIndexer.Current?.Db;
+                    var archive = CurrentArchive?.Db;
                     var stored = archive == null ? null : await archive.GetOriginalAsync(reference.EntryId, reference.StoreId ?? "", token);
                     if (stored == null) return null;
                     TrackMailInput(reference.EntryId, reference.StoreId ?? "", stored.MessageId);
@@ -104,7 +104,7 @@ public partial class TaskPaneCoordinator
 
     private async Task<FollowUpArchiveResult?> SearchFollowUpArchiveAsync(FollowUpMail email, CancellationToken ct)
     {
-        var archive = ArchiveIndexer.Current is { } indexer ? await indexer.OpenForSearchAsync() : null;
+        var archive = CurrentArchive is { } indexer ? await indexer.OpenForSearchAsync() : null;
         if (archive == null) return null;
 
         var party = await archive.CounterpartyOfEmailAsync(email.EntryId, email.StoreId, ct);

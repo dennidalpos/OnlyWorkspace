@@ -163,9 +163,16 @@ public sealed partial class MainConfigForm
         _cmbProvider.Items.AddRange(ProviderCatalog.All.Cast<object>().ToArray());
         _cmbProvider.SelectedIndexChanged += (s, e) => OnProviderChanged();
 
+        _cmbCloudPreset = AddRow(conn, "Preset cloud:", Combo(240),
+            "Compila l'indirizzo di un servizio compatibile OpenAI con dati dichiarati nell'UE (dichiarazione del fornitore, non attestazione di conformità) e lo segna come cloud: le azioni IA inviano dati al servizio, entro il livello di esposizione del profilo. Si applica con Salva.");
+        _cmbCloudPreset.Items.Add(CloudPresetNone);
+        _cmbCloudPreset.Items.AddRange(CloudProviderPresets.All.Cast<object>().ToArray());
+        _cmbCloudPreset.SelectedIndex = 0;
+        _cmbCloudPreset.SelectedIndexChanged += (s, e) => OnCloudPresetChosen();
+
         _txtEndpoint = AddRow(conn, "Indirizzo del servizio:", StretchTextBox(),
             "Indirizzo del servizio: HTTP solo su loopback (127.0.0.1), HTTPS per rete e cloud. Si applica con Salva.");
-        _txtEndpoint.TextChanged += (s, e) => { OnProfileFieldChanged(); ApplyCapabilities(); InvalidateWebSupport(); };
+        _txtEndpoint.TextChanged += (s, e) => { SyncCloudPreset(CurrentCaps()); OnProfileFieldChanged(); ApplyCapabilities(); InvalidateWebSupport(); };
 
         _txtModel = new ThemedTextBox { Anchor = AnchorStyles.Left | AnchorStyles.Right };
         _txtModel.TextChanged += (s, e) =>

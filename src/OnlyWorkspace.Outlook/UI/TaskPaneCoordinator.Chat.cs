@@ -222,7 +222,7 @@ public partial class TaskPaneCoordinator
                     listing = evidence.Listing;
                     mailPack = evidence.Pack;
                     messages = PromptCatalog.CreateMailAnswerPrompt(userInstruction, mailPack.Render());
-                    _readEvidence = new ReadEvidence { Key = evidenceKey, ReadUtc = _sourceReadUtc, Pack = mailPack, Notice = notice, Listing = listing, Inputs = _inputSourcesForTurn.ToList(), Documents = DocumentSnapshot() };
+                    _readEvidence = new ReadEvidence { Key = evidenceKey, ReadUtc = _sourceReadUtc, Pack = mailPack, Notice = notice, Listing = listing, Inputs = Inputs.Sources.ToList(), Documents = DocumentSnapshot() };
                 }
             }
 

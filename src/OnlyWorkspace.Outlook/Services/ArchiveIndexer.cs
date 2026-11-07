@@ -42,7 +42,7 @@ public sealed class ArchiveStatus
 /// thread from a timer, in slices of a few tens of milliseconds, and only while the user is not typing
 /// or clicking and no pane operation is running.
 /// </summary>
-public sealed class ArchiveIndexer : IDisposable
+public sealed class ArchiveIndexer : IArchiveIndexer, IDisposable
 {
     private const int StartDelayMs = 60000;
     private const int WorkIntervalMs = 250;

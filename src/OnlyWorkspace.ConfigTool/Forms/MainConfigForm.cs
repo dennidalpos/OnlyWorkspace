@@ -85,6 +85,8 @@ public sealed partial class MainConfigForm : Form
     private TextBox _txtProfileId = null!;
     private TextBox _txtDisplayName = null!;
     private ComboBox _cmbProvider = null!;
+    private ComboBox _cmbCloudPreset = null!;
+    private bool _syncingPreset;
     private TextBox _txtEndpoint = null!;
     private TextBox _txtModel = null!;
     private Button _btnDetectModels = null!;

@@ -14,7 +14,7 @@ namespace OnlyWorkspace.Outlook.UI;
 internal static class PaneArchiveCommands
 {
     /// <returns>Message for the user, or null when nothing needs saying.</returns>
-    public static async Task<string?> ApplyAsync(ArchiveIndexer indexer, string type, JsonElement message)
+    public static async Task<string?> ApplyAsync(IArchiveIndexer indexer, string type, JsonElement message)
     {
         switch (type)
         {

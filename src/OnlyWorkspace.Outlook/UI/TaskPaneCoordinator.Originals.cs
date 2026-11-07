@@ -11,18 +11,11 @@ namespace OnlyWorkspace.Outlook.UI;
 
 public partial class TaskPaneCoordinator
 {
-    private readonly System.Collections.Generic.List<HistoryContextReference> _inputSourcesForTurn = new();
-    private void TrackMailInput(string entryId, string storeId, string messageId = "")
-    {
-        if (entryId.Length == 0) return;
-        var existing = _inputSourcesForTurn.FirstOrDefault(s => s.EntryId == entryId && s.StoreId == storeId);
-        if (existing != null) { if (messageId.Length > 0) existing.MessageId = messageId; return; }
-        if (messageId.Length == 0) messageId = _dataService.GetEmailMessageId(entryId, storeId);
-        var source = new HistoryContextReference { EntryId = entryId, StoreId = storeId,
-            OutlookProfile = _dataService.GetProfileName(), MessageId = messageId, CapturedUtc = _sourceReadUtc };
-        _inputSourcesForTurn.Add(source);
-        _currentConversation.ContextReferences.Add(source);
-    }
+    private MailInputTracker? _inputs;
+    private MailInputTracker Inputs => _inputs ??= new MailInputTracker(
+        (entryId, storeId) => _dataService.GetEmailMessageId(entryId, storeId), _dataService.GetProfileName,
+        () => _sourceReadUtc, source => _currentConversation.ContextReferences.Add(source));
+    private void TrackMailInput(string entryId, string storeId, string messageId = "") => Inputs.Track(entryId, storeId, messageId);
 
     private void PreserveInputSources()
     {
@@ -31,22 +24,14 @@ public partial class TaskPaneCoordinator
             source.OutlookProfile = _dataService.GetProfileName();
             source.CapturedUtc = _sourceReadUtc;
         }
-        foreach (var source in _inputSourcesForTurn)
+        foreach (var source in Inputs.Sources)
             if (!_currentConversation.ContextReferences.Contains(source)) _currentConversation.ContextReferences.Add(source);
     }
 
-    // The archived original last read for a body: its attachments are read right after, and the same original (body
-    // and attachment texts, which can be large) crossed the pipe twice.
-    private (string EntryId, string StoreId, ArchiveBody? Original)? _lastOriginal;
+    private readonly ArchivedOriginalCache _originals = new();
 
-    private async Task<ArchiveBody?> ArchivedOriginalAsync(string entryId, string storeId, CancellationToken ct)
-    {
-        if (_lastOriginal is { } last && last.EntryId == entryId && last.StoreId == storeId) return last.Original;
-        var db = ArchiveIndexer.Current?.Db;
-        var stored = db == null ? null : await db.GetOriginalAsync(entryId, storeId, ct);
-        _lastOriginal = (entryId, storeId, stored);
-        return stored;
-    }
+    private Task<ArchiveBody?> ArchivedOriginalAsync(string entryId, string storeId, CancellationToken ct) =>
+        _originals.GetAsync(entryId, storeId, () => CurrentArchive?.Db?.GetOriginalAsync(entryId, storeId, ct));
 
     private async Task<string?> ReadMailBodyAsync(string entryId, string storeId, CancellationToken ct = default)
     {

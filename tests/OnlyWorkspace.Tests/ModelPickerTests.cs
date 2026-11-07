@@ -84,9 +84,9 @@ public sealed class ModelPickerTests
             var model = (Control)typeof(SetupWizardForm).GetField("_txtModel", Flags)!.GetValue(wizard)!;
             var detect = (Control)typeof(SetupWizardForm).GetField("_btnDetect", Flags)!.GetValue(wizard)!;
             int Row(Control c) => rows.FindIndex(r => Contains(r, c));
-            Assert.Equal(2, Row(key));
-            Assert.Equal(3, Row(model));
-            Assert.Equal(3, Row(detect));
+            Assert.Equal(3, Row(key));
+            Assert.Equal(4, Row(model));
+            Assert.Equal(4, Row(detect));
         });
     }
 

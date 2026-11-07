@@ -34,7 +34,7 @@ public partial class TaskPaneCoordinator
     {
         UiSync.Ensure();
         var result = new List<PrivacyEntity>(await _dataService.ReadPrivacyEntitiesAsync(ct));
-        var indexer = ArchiveIndexer.Current;
+        var indexer = CurrentArchive;
         if (_config?.Archive?.Enabled == true)
         {
             if (indexer == null) throw new DataEgressBlockedException("Dizionario locale dell'archivio non disponibile: nessun dato inviato.");
