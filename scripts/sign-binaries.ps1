@@ -20,6 +20,13 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+# The NSIS uninstaller hook starts Windows PowerShell 5.1 from a pwsh session: the inherited PSModulePath then hides its
+# own Security and PKI modules, so they are loaded from $PSHOME (absent in pwsh 7, which finds them by itself).
+foreach ($module in 'Microsoft.PowerShell.Security', 'PKI') {
+    $manifest = Join-Path $PSHOME "Modules\$module\$module.psd1"
+    if ([IO.File]::Exists($manifest)) { Import-Module $manifest }
+}
+
 $pfxPassword = $env:ONLYAPPS_PFX_PASSWORD
 if ([string]::IsNullOrWhiteSpace($pfxPassword)) {
     throw "Password del PFX mancante: impostare la variabile d'ambiente ONLYAPPS_PFX_PASSWORD."

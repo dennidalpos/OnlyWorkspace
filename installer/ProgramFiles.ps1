@@ -122,10 +122,7 @@ function Rename-LegacyUninstaller($Legacy, [string]$CurrentRoot) {
                 Import-Module (Join-Path $PSHOME 'Modules\Microsoft.PowerShell.Security\Microsoft.PowerShell.Security.psd1')
                 $signature = Microsoft.PowerShell.Security\Get-AuthenticodeSignature -LiteralPath $snapshot
                 $version = [Diagnostics.FileVersionInfo]::GetVersionInfo($snapshot)
-                # The certificate is trusted as a publisher only, not as a root: the chain then ends in an untrusted root
-                # (UnknownError). Hash, signer thumbprint and product metadata are still checked; HashMismatch, NotSigned and
-                # the other statuses stay refused.
-                if ($signature.Status -notin @('Valid', 'UnknownError') -or $signature.SignerCertificate.Thumbprint -ne $expected.Thumbprint -or
+                if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Thumbprint -ne $expected.Thumbprint -or
                     $version.ProductName -cne 'OnlyWorkspace' -or $version.CompanyName -cne 'OnlyApps') {
                     throw "Identita' o firma del disinstallatore precedente non verificata: $source"
                 }
