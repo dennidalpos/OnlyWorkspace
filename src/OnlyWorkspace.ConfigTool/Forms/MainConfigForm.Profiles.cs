@@ -249,6 +249,7 @@ public sealed partial class MainConfigForm
             _isLoading = wasLoading;
         }
 
+        ApplyModelHint();
         ShowModelLimits();
         ResetWebSupport();
         _ = LoadModelLimitsAsync(item.Profile);
@@ -263,6 +264,20 @@ public sealed partial class MainConfigForm
         _capabilityRefresh?.Cancel();
         UpdateSelectedProfileFromUi();
         MarkDirty();
+    }
+
+    private const int EmSetCueBanner = 0x1501;
+
+    [System.Runtime.InteropServices.DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
+    private static extern IntPtr SendMessage(IntPtr window, int message, IntPtr wParam, string text);
+
+    /// <summary>What an empty model box says: providers without a default model have no suggestion to fill in.</summary>
+    private string ModelHint => string.IsNullOrWhiteSpace(_txtModel.Text) && CurrentCaps().DefaultModel.Length == 0
+        ? "Scegli il modello con «Scegli modello…»" : string.Empty;
+
+    private void ApplyModelHint()
+    {
+        if (_txtModel.IsHandleCreated) SendMessage(_txtModel.Handle, EmSetCueBanner, IntPtr.Zero, ModelHint);
     }
 
     /// <summary>Provider switch: propose its defaults where the field still holds the old provider's default.</summary>
@@ -311,6 +326,7 @@ public sealed partial class MainConfigForm
 
         UpdateSelectedProfileFromUi();
         ApplyCapabilities();
+        ApplyModelHint();
         // The limits under the model belong to the old provider's model: re-read from the (now cleared) cache.
         ShowModelLimits();
         UpdateBudgetHint();

@@ -225,6 +225,47 @@ public sealed class MainConfigFormTests
         });
     }
 
+    private static OnlyWorkspace.Core.Privacy.ExposureLevel ShownExposure(MainConfigForm form)
+    {
+        object item = Field<ComboBox>(form, "_cmbExposure").SelectedItem!;
+        return (OnlyWorkspace.Core.Privacy.ExposureLevel)item.GetType().GetProperty("Level")!.GetValue(item)!;
+    }
+
+    /// <summary>A new profile is local and Minimal; each provider then brings its own address, model hint and cloud flag, nothing of the previous one.</summary>
+    [Fact]
+    public void NewProfile_StartsLocalMinimal_AndEveryProviderSwitchLeavesNothingOfThePreviousOne()
+    {
+        OnSta(directory =>
+        {
+            var local = Local("a");
+            local.Exposure = OnlyWorkspace.Core.Privacy.ExposureLevel.Extended;
+            Write(directory, new WorkspaceConfig { DefaultProfile = "a", Profiles = new() { local } }, new());
+            using var form = new MainConfigForm(directory, null, directory);
+            typeof(MainConfigForm).GetMethod("BtnAddProfile_Click", Flags)!.Invoke(form, new object?[] { null, EventArgs.Empty });
+            var added = Field<WorkspaceConfig>(form, "_config").Profiles.Last();
+            Assert.NotSame(local, added);
+            Assert.False(added.IsExternal);
+            Assert.Equal(OnlyWorkspace.Core.Privacy.ExposureLevel.Minimal, added.Exposure);
+            Assert.Equal(OnlyWorkspace.Core.Privacy.ExposureLevel.Minimal, ShownExposure(form));
+            Assert.False(Field<CheckBox>(form, "_chkExternal").Checked);
+
+            var providers = Field<ComboBox>(form, "_cmbProvider");
+            var model = Field<TextBox>(form, "_txtModel");
+            foreach (var caps in ProviderCatalog.All.Concat(ProviderCatalog.All.Reverse()))
+            {
+                providers.SelectedItem = caps;
+                Application.DoEvents();
+                Assert.Equal(caps.DefaultBaseUrl, Field<TextBox>(form, "_txtEndpoint").Text);
+                Assert.Equal(caps.DefaultModel, model.Text);
+                // A model left empty says what to do instead of staying a blank box.
+                string hint = (string)typeof(MainConfigForm).GetProperty("ModelHint", Flags)!.GetValue(form)!;
+                Assert.True(model.Text.Length > 0 ? hint.Length == 0 : hint.Contains("Scegli modello"), caps.DisplayName);
+                Assert.Equal(caps.IsExternal, added.IsExternal);
+                Assert.Equal(OnlyWorkspace.Core.Privacy.ExposureLevel.Minimal, added.Exposure);
+            }
+        });
+    }
+
     [Fact]
     public void SwitchingCloudConnectorBackToLoopback_DoesNotKeepTheForcedCloudFlag()
     {

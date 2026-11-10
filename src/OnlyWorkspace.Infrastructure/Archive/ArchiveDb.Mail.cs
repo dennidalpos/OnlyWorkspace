@@ -534,10 +534,11 @@ public sealed partial class ArchiveDb
                 throw new InvalidOperationException("Il testo degli allegati proviene da una revisione del lettore superata; rileggere gli originali.");
             if (Scalar<long>("select count(*) from emails where id=$id and body_state<>3", tx, ("$id", emailId)) == 0) return false;
             // Without a body (headers only, encrypted) subject and preview stay searchable.
+            string? version = null;
             if (!body.Unavailable)
             {
                 using var hash = SHA256.Create();
-                var version = Convert.ToBase64String(hash.ComputeHash(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new
+                version = Convert.ToBase64String(hash.ComputeHash(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new
                 {
                     body.Text,
                     body.ModifiedUtc,
@@ -550,16 +551,10 @@ public sealed partial class ArchiveDb
                         ? new ArchiveAttachment { SourceId = a.SourceId, Name = a.Name, State = "excluded", Problem = "inline-or-receipt", ReaderRevision = a.ReaderRevision }
                         : a)
                 }))));
-                var previous = Scalar<string?>("select body_version from emails where id=$id", tx, ("$id", emailId));
-                Exec("update emails set body_version=$v,text_limited=$limited,full_body=$body,source_version=$source,modified_utc=$modified where id=$id", tx,
-                    ("$id", emailId), ("$v", version), ("$body", body.Text), ("$source", body.SourceVersion), ("$modified", body.ModifiedUtc?.Ticks),
-                    ("$limited", body.Text.Length > Security.AttachmentTextExtractor.WholeDocumentChars ? 1 : 0));
                 var subject = Scalar<string?>("select subject from emails where id=$id", tx, ("$id", emailId)) ?? string.Empty;
                 var text = body.Text;
                 Exec("delete from body_fts where rowid=$id", tx, ("$id", emailId));
                 Exec("insert into body_fts(rowid, subject, body) values($id,$s,$b)", tx, ("$id", emailId), ("$s", subject), ("$b", text));
-                // A short opening for the result list, separate from the full encrypted original.
-                Exec("update emails set preview=$p where id=$id", tx, ("$p", text.Length > PreviewChars ? text.Substring(0, PreviewChars) : text), ("$id", emailId));
             }
 
             Exec("delete from email_addr where email_id=$id and role<>0", tx, ("$id", emailId));
@@ -596,9 +591,22 @@ public sealed partial class ArchiveDb
             }
             PruneAttachmentContents(tx);
             bool again = retry && !giveUp;
-            Exec("update emails set body_state=$s,recipients_limited=$r,attachments_limited=$a,retry_utc=$retry,retry_count=$n where id=$id", tx,
+            // One update for the whole row: version, full text, preview (a short opening for the result list, apart from the full encrypted original) and state.
+            // Without a body (headers only, encrypted) the version, text and preview columns stay as they are.
+            string bodyColumns = body.Unavailable ? string.Empty : "body_version=$v,text_limited=$limited,full_body=$body,source_version=$source,modified_utc=$modified,preview=$p,";
+            var args = new List<(string Name, object? Value)>
+            {
                 ("$s", (int)(body.Unavailable ? body.Retryable && !giveUp ? ArchiveBodyState.Retryable : ArchiveBodyState.Unavailable : ArchiveBodyState.Indexed)),
-                ("$r", body.RecipientsLimited ? 1 : 0), ("$a", body.AttachmentsLimited ? 1 : 0), ("$retry", again ? NextRetry(attempts) : null), ("$n", again ? attempts + 1 : 0), ("$id", emailId));
+                ("$r", body.RecipientsLimited ? 1 : 0), ("$a", body.AttachmentsLimited ? 1 : 0), ("$retry", again ? NextRetry(attempts) : null), ("$n", again ? attempts + 1 : 0), ("$id", emailId),
+            };
+            if (!body.Unavailable)
+                args.AddRange(new (string, object?)[]
+                {
+                    ("$v", version), ("$body", body.Text), ("$source", body.SourceVersion), ("$modified", body.ModifiedUtc?.Ticks),
+                    ("$limited", body.Text.Length > Security.AttachmentTextExtractor.WholeDocumentChars ? 1 : 0),
+                    ("$p", body.Text.Length > PreviewChars ? body.Text.Substring(0, PreviewChars) : body.Text),
+                });
+            Exec("update emails set " + bodyColumns + "body_state=$s,recipients_limited=$r,attachments_limited=$a,retry_utc=$retry,retry_count=$n where id=$id", tx, args.ToArray());
             return true;
         }
     }

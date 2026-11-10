@@ -186,6 +186,7 @@ public sealed partial class MainConfigForm
             OnProfileFieldChanged();
             if (!_isLoading) { ShowModelLimits(); InvalidateWebSupport(); }
         };
+        _txtModel.HandleCreated += (s, e) => ApplyModelHint();
         Tip(_txtModel, "Nome esatto del modello. Per il cloud inserisci prima la chiave, poi usa «Scegli modello…». Si applica con Salva.");
         _btnDetectModels = SecondaryButton(DetectModelsText);
         _btnDetectModels.MinimumSize = new Size(0, 23);

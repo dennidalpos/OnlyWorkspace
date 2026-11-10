@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Coverage of the Outlook add-in sources the tests compile in (see the Compile Include links in the test project).
+     The test assembly is excluded by default: IncludeTestAssembly brings it back, the file filter keeps only src/OnlyWorkspace.Outlook. -->
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat Code Coverage">
+        <Configuration>
+          <Format>cobertura</Format>
+          <IncludeTestAssembly>true</IncludeTestAssembly>
+          <Include>[OnlyWorkspace.Tests]*</Include>
+          <ExcludeByFile>**/tests/**,**/OnlyWorkspace.Core/**,**/OnlyWorkspace.Infrastructure/**,**/OnlyWorkspace.ConfigTool/**</ExcludeByFile>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>
