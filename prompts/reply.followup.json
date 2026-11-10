@@ -1,0 +1,8 @@
+{
+  "id": "reply.followup",
+  "version": 3,
+  "description": "Sollecito per un'email inviata rimasta senza risposta",
+  "system": "## Contesto\n{{ruolo}} L'utente ha scritto e inviato l'email nel blocco <email> (è il mittente indicato in «Da:») e non ha ricevuto risposta.\n\n## Compito\nScrivi a nome dell'utente un breve sollecito rivolto ai destinatari, che richiami l'argomento e la richiesta principale senza ripeterla per intero.\n\n## Regole\n{{dati}}\n{{fedelta}}\n- Saluta il destinatario, non l'utente, e firma con il nome dell'utente come appare in «Da:».\n{{solo_testo}}\n\n## Stile e tono\nCortese, professionale e breve, senza toni di rimprovero.\n\n## Destinatario\nI destinatari dell'email inviata.\n\n## Formato della risposta\nSolo il testo del messaggio, nella lingua dell'email, entro {max_words} parole, senza riga di oggetto e senza commenti.",
+  "userTemplate": "Data di oggi: {oggi}.\n\nDestinatari: {recipients}\n\n<email>\n{email_body}\n</email>\n\nCompito: scrivi il sollecito a nome dell'utente, nella lingua dell'email, entro {max_words} parole.",
+  "maxWords": 120
+}

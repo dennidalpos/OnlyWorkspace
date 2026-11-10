@@ -1,0 +1,106 @@
+{
+  "Version": 1,
+  "Cases": [
+    {
+      "Id": "it-restraint",
+      "Language": "it",
+      "Tags": [
+        "semantic",
+        "speech-act"
+      ],
+      "Thread": "it-restraint",
+      "Subject": "Synthetic speech act review",
+      "Sender": "fixture@example.test",
+      "ReceivedUtc": "2026-10-23T12:00:00Z",
+      "Sources": [
+        {
+          "Id": "",
+          "Name": "body",
+          "Text": "Controllate il prospetto e chiedete il saldo, senza autorizzare addebiti.",
+          "Expected": []
+        }
+      ],
+      "Review": [
+        "La verifica del prospetto e la richiesta di saldo restano azioni richieste.",
+        "Il vincolo senza autorizzare addebiti resta collegato alla richiesta, non diventa assenza di addebiti gia autorizzati.",
+        "Sintesi nella lingua del corpo; citazioni e fonti letterali."
+      ]
+    },
+    {
+      "Id": "en-restraint",
+      "Language": "en",
+      "Tags": [
+        "semantic",
+        "speech-act"
+      ],
+      "Thread": "en-restraint",
+      "Subject": "Synthetic speech act review",
+      "Sender": "fixture@example.test",
+      "ReceivedUtc": "2026-10-23T12:00:00Z",
+      "Sources": [
+        {
+          "Id": "",
+          "Name": "body",
+          "Text": "Review the statement and request the balance, without authorizing charges.",
+          "Expected": []
+        }
+      ],
+      "Review": [
+        "Review and balance request remain requested actions.",
+        "Without authorizing charges remains a constraint, not a statement that no charges have been authorized.",
+        "Sintesi nella lingua del corpo; citazioni e fonti letterali."
+      ]
+    },
+    {
+      "Id": "it-completed",
+      "Language": "it",
+      "Tags": [
+        "semantic",
+        "speech-act"
+      ],
+      "Thread": "it-completed",
+      "Subject": "Synthetic speech act review",
+      "Sender": "fixture@example.test",
+      "ReceivedUtc": "2026-10-23T12:00:00Z",
+      "Sources": [
+        {
+          "Id": "",
+          "Name": "body",
+          "Text": "Il prospetto è stato controllato. Nessun addebito è stato autorizzato.",
+          "Expected": []
+        }
+      ],
+      "Review": [
+        "Controllo del prospetto e mancata autorizzazione sono stati dichiarati, non richieste.",
+        "Nessun request o commitment inventato.",
+        "Sintesi nella lingua del corpo; citazioni e fonti letterali."
+      ]
+    },
+    {
+      "Id": "en-completed",
+      "Language": "en",
+      "Tags": [
+        "semantic",
+        "speech-act"
+      ],
+      "Thread": "en-completed",
+      "Subject": "Synthetic speech act review",
+      "Sender": "fixture@example.test",
+      "ReceivedUtc": "2026-10-23T12:00:00Z",
+      "Sources": [
+        {
+          "Id": "",
+          "Name": "body",
+          "Text": "The statement has been reviewed. No charge has been authorized.",
+          "Expected": []
+        }
+      ],
+      "Review": [
+        "Review and nonauthorization are declared states, not requests.",
+        "No invented request or commitment.",
+        "Sintesi nella lingua del corpo; citazioni e fonti letterali."
+      ]
+    }
+  ],
+  "Scenarios": []
+}

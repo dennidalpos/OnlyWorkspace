@@ -1,0 +1,130 @@
+{
+  "Version": 1,
+  "Cases": [
+    {
+      "Id": "it-body-en-attachment",
+      "Language": "it",
+      "Tags": [
+        "semantic",
+        "language"
+      ],
+      "Thread": "it-body-en-attachment",
+      "Subject": "Lingua metadati non autorevole / metadata is not source language",
+      "Sender": "fixture@example.test",
+      "ReceivedUtc": "2026-10-23T12:00:00Z",
+      "Sources": [
+        {
+          "Id": "",
+          "Name": "body",
+          "Text": "La consegna è rinviata a venerdì. Attendete la conferma prima di spedire.",
+          "Expected": []
+        },
+        {
+          "Id": "support",
+          "Name": "document.txt",
+          "Text": "The delivery location is the northern warehouse. The reference contact is the receiving office. This document provides background about the delivery procedure; it does not authorize dispatch.",
+          "Expected": []
+        }
+      ],
+      "Review": [
+        "bodyLanguage it e summary italiana, anche se il testo allegato inglese è più lungo.",
+        "Rinvio dichiarato e attesa richiesta restano distinti; nessuna spedizione inventata.",
+        "Fatti e vincoli degli allegati restano fedeli e attribuiti alla fonte letterale."
+      ]
+    },
+    {
+      "Id": "en-body-it-attachment",
+      "Language": "en",
+      "Tags": [
+        "semantic",
+        "language"
+      ],
+      "Thread": "en-body-it-attachment",
+      "Subject": "Lingua metadati non autorevole / metadata is not source language",
+      "Sender": "fixture@example.test",
+      "ReceivedUtc": "2026-10-23T12:00:00Z",
+      "Sources": [
+        {
+          "Id": "",
+          "Name": "body",
+          "Text": "Delivery is postponed until Friday. Wait for confirmation before shipping.",
+          "Expected": []
+        },
+        {
+          "Id": "support",
+          "Name": "document.txt",
+          "Text": "La sede di consegna è il magazzino nord. Il contatto di riferimento è l’ufficio ricevimento. Il documento descrive la procedura di consegna; non autorizza la spedizione.",
+          "Expected": []
+        }
+      ],
+      "Review": [
+        "bodyLanguage en e summary inglese, anche se allegato, oggetto e istruzioni sono italiani.",
+        "Postponement is declared; waiting is requested. Do not claim that shipping happened.",
+        "Keep literal facts and attachment attribution."
+      ]
+    },
+    {
+      "Id": "mixed-body",
+      "Language": "it",
+      "Tags": [
+        "semantic",
+        "language"
+      ],
+      "Thread": "mixed-body",
+      "Subject": "Lingua metadati non autorevole / metadata is not source language",
+      "Sender": "fixture@example.test",
+      "ReceivedUtc": "2026-10-23T12:00:00Z",
+      "Sources": [
+        {
+          "Id": "",
+          "Name": "body",
+          "Text": "Please review the draft. La bozza è da verificare.",
+          "Expected": []
+        },
+        {
+          "Id": "support",
+          "Name": "document.txt",
+          "Text": "The supporting file contains background information only.",
+          "Expected": []
+        }
+      ],
+      "Review": [
+        "Nessuna lingua prevalente nel corpo bilingue: bodyLanguage und e summary italiana.",
+        "Conservare richiesta di revisione e stato della bozza senza inventare approvazione.",
+        "Non usare allegato o metadati per scegliere inglese."
+      ]
+    },
+    {
+      "Id": "empty-body",
+      "Language": "it",
+      "Tags": [
+        "semantic",
+        "language"
+      ],
+      "Thread": "empty-body",
+      "Subject": "Lingua metadati non autorevole / metadata is not source language",
+      "Sender": "fixture@example.test",
+      "ReceivedUtc": "2026-10-23T12:00:00Z",
+      "Sources": [
+        {
+          "Id": "",
+          "Name": "body",
+          "Text": "",
+          "Expected": []
+        },
+        {
+          "Id": "support",
+          "Name": "document.txt",
+          "Text": "The delivery is postponed. Wait for confirmation before shipping.",
+          "Expected": []
+        }
+      ],
+      "Review": [
+        "Corpo vuoto: bodyLanguage und e summary italiana per default esplicito.",
+        "I fatti provengono soltanto dall’allegato; non inventare testo nel corpo.",
+        "Conservare rinvio e attesa richiesta senza inventare spedizione."
+      ]
+    }
+  ],
+  "Scenarios": []
+}

@@ -1,0 +1,634 @@
+# Isolated fixtures and command doubles; no real signing, build, or certificate-store changes.
+$ErrorActionPreference = 'Stop'
+$repoRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
+. (Join-Path $repoRoot 'scripts/build-paths.ps1')
+Set-OnlyWorkspaceVerificationEnvironment -RepositoryRoot $repoRoot
+$coreOutput = Get-OnlyWorkspaceOutputDirectory -RepositoryRoot $repoRoot -Project OnlyWorkspace.Core
+$scratchRoot = Join-Path ([IO.Path]::GetTempPath()) ('OnlyWorkspace-packaging-' + [guid]::NewGuid())
+$savedPassword = $env:ONLYAPPS_PFX_PASSWORD
+$savedExitCode = $global:LASTEXITCODE
+$env:ONLYAPPS_PFX_PASSWORD = 'test-placeholder'
+$rsa = [Security.Cryptography.RSA]::Create(2048)
+$request = [Security.Cryptography.X509Certificates.CertificateRequest]::new(
+    'CN=Packaging fixture', $rsa, [Security.Cryptography.HashAlgorithmName]::SHA256,
+    [Security.Cryptography.RSASignaturePadding]::Pkcs1)
+$certificate = $request.CreateSelfSigned([DateTimeOffset]::UtcNow.AddDays(-1), [DateTimeOffset]::UtcNow.AddDays(1))
+$global:packagingfixtureThumbprint = $certificate.Thumbprint
+
+try {
+    New-Item -ItemType Directory -Path $scratchRoot | Out-Null
+    foreach ($global:packagingscenario in @('build', 'tests', 'certificate', 'binary', 'binary-signature', 'wrong-signer', 'nsis', 'setup', 'setup-signature', 'success')) {
+        & {
+            $global:packagingfixture = Join-Path $scratchRoot $global:packagingscenario
+            foreach ($folder in @('scripts', 'certs', 'installer', 'src\OnlyWorkspace.Outlook\bin\Release\net48', 'src\OnlyWorkspace.ConfigTool\bin\Release\net48', 'src\OnlyWorkspace.AttachmentExtractor\bin\Release\net48')) {
+                New-Item -ItemType Directory -Path (Join-Path $global:packagingfixture $folder) -Force | Out-Null
+            }
+            Copy-Item -LiteralPath (Join-Path $repoRoot 'scripts\build-installer.ps1') -Destination (Join-Path $global:packagingfixture 'scripts')
+            Copy-Item -LiteralPath (Join-Path $repoRoot 'scripts\build-paths.ps1') -Destination (Join-Path $global:packagingfixture 'scripts')
+            [IO.File]::WriteAllText((Join-Path $global:packagingfixture 'Directory.Build.props'), '<Project><PropertyGroup><Version>1.0.0</Version></PropertyGroup></Project>')
+            foreach ($file in @('src\OnlyWorkspace.Outlook\bin\Release\net48\OnlyWorkspace.Outlook.dll', 'src\OnlyWorkspace.Outlook\bin\Release\net48\fixture.pdb', 'src\OnlyWorkspace.ConfigTool\bin\Release\net48\OnlyWorkspace.ConfigTool.exe', 'src\OnlyWorkspace.AttachmentExtractor\bin\Release\net48\OnlyWorkspace.AttachmentExtractor.exe')) {
+                if ($file.EndsWith('.pdb')) { [IO.File]::WriteAllText((Join-Path $global:packagingfixture $file), 'fixture') }
+                else { Copy-Item -LiteralPath (Join-Path $coreOutput 'OnlyWorkspace.Core.dll') -Destination (Join-Path $global:packagingfixture $file) }
+            }
+            [IO.File]::WriteAllText((Join-Path $global:packagingfixture 'src\OnlyWorkspace.Outlook\bin\Release\net48\Microsoft.Office.Interop.Outlook.dll'), 'stale PIA')
+            if ($global:packagingscenario -ne 'certificate') {
+                [IO.File]::WriteAllBytes((Join-Path $global:packagingfixture 'certs\OnlyApps.cer'), $certificate.RawData)
+                [IO.File]::WriteAllText((Join-Path $global:packagingfixture 'certs\OnlyApps.pfx'), 'fixture')
+            }
+            $global:packagingcalls = [Collections.Generic.List[string]]::new()
+            $global:packagingmessages = [Collections.Generic.List[string]]::new()
+            function Write-Host { param($Object, $ForegroundColor) $global:packagingmessages.Add([string]$Object) }
+            function Test-Path {
+                param($Path, $LiteralPath, $PathType)
+                if ($Path -eq 'C:\Program Files (x86)\NSIS\makensis.exe') { return $true }
+                if ($LiteralPath) { Microsoft.PowerShell.Management\Test-Path -LiteralPath $LiteralPath }
+                else { Microsoft.PowerShell.Management\Test-Path -Path $Path }
+            }
+            function dotnet {
+                if ($args[0] -eq 'msbuild') {
+                    $project = [IO.Path]::GetFileNameWithoutExtension([string]$args[1])
+                    $extension = if ($project -eq 'OnlyWorkspace.Outlook') { '.dll' } else { '.exe' }
+                    $target = Join-Path $global:packagingfixture "src/$project/bin/Release/net48/$project$extension"
+                    @{ Properties = @{ TargetPath = $target; TargetDir = (Split-Path $target -Parent); ArtifactsPath = '' } } | ConvertTo-Json -Depth 3
+                    $global:LASTEXITCODE = 0
+                    return
+                }
+                $stage = if ($args[0] -eq 'build') { 'build' } else { 'tests' }
+                $global:packagingcalls.Add($stage)
+                $global:LASTEXITCODE = if ($global:packagingscenario -eq $stage) { 23 } else { 0 }
+            }
+            function pwsh {
+                param($ExecutionPolicy, $File, $Files)
+                $stage = if ($File.EndsWith('create-code-signing-cert.ps1')) { 'certificate' }
+                    elseif ([string]$Files -like '*OnlyWorkspaceSetup.exe') { 'setup' } else { 'binary' }
+                $global:packagingcalls.Add($stage)
+                $global:LASTEXITCODE = if ($global:packagingscenario -eq $stage) { 23 } else { 0 }
+            }
+            function Get-AuthenticodeSignature {
+                param($LiteralPath)
+                $stage = if ($LiteralPath.EndsWith('OnlyWorkspaceSetup.exe')) { 'setup-signature' } else { 'binary-signature' }
+                $global:packagingcalls.Add($stage)
+                [pscustomobject]@{
+                    Status = if ($global:packagingscenario -eq $stage) { 'NotSigned' } else { 'Valid' }
+                    SignerCertificate = [pscustomobject]@{ Thumbprint = if ($global:packagingscenario -eq 'wrong-signer') { 'OTHER' } else { $global:packagingfixtureThumbprint } }
+                }
+            }
+            Set-Item -Path 'Function:local:C:\Program Files (x86)\NSIS\makensis.exe' -Value {
+                $global:packagingcalls.Add('nsis')
+                $global:LASTEXITCODE = if ($global:packagingscenario -eq 'nsis') { 23 } else { 0 }
+                $destination = ([string]($args | Where-Object { $_ -like '/DINSTALLER_PATH=*' })).Substring('/DINSTALLER_PATH='.Length)
+                [IO.File]::WriteAllText($destination, 'fixture')
+            }
+            $failure = $null
+            try { & (Join-Path $global:packagingfixture 'scripts\build-installer.ps1') -OutputDirectory (Join-Path $global:packagingfixture 'package') }
+            catch { $failure = $_ }
+            if ($global:packagingscenario -eq 'success') {
+                if ($failure -or $global:packagingcalls[-1] -ne 'setup-signature') { throw "Success path failed: $failure" }
+                if (Test-Path -LiteralPath (Join-Path $global:packagingfixture 'package\publish\Microsoft.Office.Interop.Outlook.dll')) { throw 'Stale PIA packaged despite No-PIA verification' }
+            }
+            else {
+                # A missing certificate pair stops the build before signing, without generating a new identity.
+                $expected = if ($global:packagingscenario -eq 'wrong-signer') { 'binary-signature' } elseif ($global:packagingscenario -eq 'certificate') { 'tests' } else { $global:packagingscenario }
+                if (!$failure -or $global:packagingcalls[-1] -ne $expected) { throw "Failure did not stop at ${expected}: $failure; calls=$global:packagingcalls" }
+                if ($global:packagingscenario -eq 'certificate' -and ($global:packagingcalls -contains 'certificate' -or $failure.ToString() -notlike '*certs\OnlyApps.cer*')) { throw "Missing certificate handled wrongly: $failure; calls=$global:packagingcalls" }
+                if ($global:packagingmessages -match 'completato con successo') { throw 'Pipeline reported success after failure.' }
+            }
+        }
+        Write-Output "PASS pipeline: $global:packagingscenario"
+    }
+
+    # Run the real signing script with a fake SDK tool and isolated input files. The PFX is a real, throwaway one:
+    # the script imports it with the password as a SecureString and must leave neither the password on the signtool
+    # command line nor the certificate in the store.
+    $fixtureCertificate = New-SelfSignedCertificate -Subject 'CN=OnlyWorkspace packaging test' -Type CodeSigningCert -CertStoreLocation Cert:\CurrentUser\My
+    $fixturePfx = Join-Path $scratchRoot 'fixture-real.pfx'
+    $fixtureThumbprint = $fixtureCertificate.Thumbprint
+    $null = Export-PfxCertificate -Cert $fixtureCertificate -FilePath $fixturePfx -Password (ConvertTo-SecureString -String $env:ONLYAPPS_PFX_PASSWORD -AsPlainText -Force)
+    Remove-Item -LiteralPath "Cert:\CurrentUser\My\$fixtureThumbprint" -Force
+    foreach ($global:packagingscenario in @('missing', 'sign', 'timestamp', 'timestamp-allowed', 'verify', 'success')) {
+        & {
+            $global:packagingcalls = [Collections.Generic.List[string]]::new()
+            $inputPath = Join-Path $scratchRoot 'signing-input.exe'
+            [IO.File]::WriteAllText($inputPath, 'fixture')
+            if ($global:packagingscenario -eq 'missing') { $inputPath = Join-Path $scratchRoot 'absent.exe' }
+            $pfxPath = $fixturePfx
+            $global:packagingarguments = [Collections.Generic.List[string]]::new()
+            function Test-Path {
+                param($Path, $LiteralPath, $PathType)
+                if ($Path -like '*\signtool.exe') { return $true }
+                if ($LiteralPath) { Microsoft.PowerShell.Management\Test-Path -LiteralPath $LiteralPath }
+                else { Microsoft.PowerShell.Management\Test-Path -Path $Path }
+            }
+            function Write-Host { }
+            function Write-Warning { }
+            Set-Item -Path 'Function:local:C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64\signtool.exe' -Value {
+                $global:packagingcalls.Add($args[0])
+                $global:packagingarguments.Add($args -join ' ')
+                $timestampFails = $global:packagingscenario -like 'timestamp*' -and $args -contains '/tr'
+                $global:LASTEXITCODE = if ($global:packagingscenario -eq $args[0] -or $timestampFails) { 23 } else { 0 }
+                if ($global:packagingscenario -eq 'verify' -and $args[0] -eq 'verify') { 'Fixture: untrusted root' }
+            }
+            $failure = $null
+            $allow = @{ AllowNoTimestamp = $global:packagingscenario -eq 'timestamp-allowed' }
+            try { & (Join-Path $repoRoot 'scripts\sign-binaries.ps1') -Files $inputPath -PfxPath $pfxPath @allow }
+            catch { $failure = $_ }
+            if (($global:packagingscenario -in @('success', 'timestamp-allowed')) -eq [bool]$failure) { throw "Unexpected signing outcome: $global:packagingscenario; $failure" }
+            if ($global:packagingscenario -eq 'missing' -and $global:packagingcalls.Count -ne 0) { throw 'Missing file reached signtool.' }
+            if (Test-Path -LiteralPath "Cert:\CurrentUser\My\$fixtureThumbprint") { throw "The imported signing certificate stayed in the store: $global:packagingscenario" }
+            foreach ($line in @($global:packagingarguments | Where-Object { $_ -like 'sign *' })) {
+                if ($line -match '(^|\s)/p(\s|$)' -or $line.Contains($env:ONLYAPPS_PFX_PASSWORD) -or $line -notmatch "/sha1 $fixtureThumbprint /s My") { throw "signtool did not select the certificate by thumbprint without a password: $line" }
+            }
+            if ($global:packagingscenario -in @('sign', 'timestamp') -and ($global:packagingcalls -join ',') -ne 'sign') { throw "A signature without timestamp was attempted or verified: $($global:packagingcalls -join ',') $failure" }
+            if ($global:packagingscenario -eq 'timestamp-allowed' -and ($global:packagingcalls -join ',') -ne 'sign,sign,verify') { throw 'The explicit option did not sign without timestamp.' }
+            if ($global:packagingscenario -in @('verify', 'success') -and ($global:packagingcalls -join ',') -ne 'sign,verify') { throw 'Signature verification was not executed.' }
+            if ($global:packagingscenario -eq 'verify' -and $failure.ToString() -notlike '*Fixture: untrusted root*') { throw 'Verification diagnostics were hidden.' }
+        }
+        Write-Output "PASS signing: $global:packagingscenario"
+    }
+
+    # The PFX password comes only from the environment: no parameter, and a missing variable stops both scripts before any work.
+    foreach ($name in @('sign-binaries.ps1', 'create-code-signing-cert.ps1')) {
+        $scriptPath = Join-Path $repoRoot "scripts\$name"
+        $ast = [Management.Automation.Language.Parser]::ParseFile($scriptPath, [ref]$null, [ref]$null)
+        $parameterNames = @($ast.ParamBlock.Parameters | ForEach-Object { $_.Name.VariablePath.UserPath })
+        if ($parameterNames -match 'Password') { throw "$name still accepts the PFX password as a parameter." }
+        $env:ONLYAPPS_PFX_PASSWORD = ''
+        $failure = $null
+        $arguments = if ($name -eq 'sign-binaries.ps1') { @{ Files = @((Join-Path $scratchRoot 'absent.exe')) } } else { @{ OutputDir = (Join-Path $scratchRoot 'no-password-certs') } }
+        try { & $scriptPath @arguments }
+        catch { $failure = $_ }
+        $env:ONLYAPPS_PFX_PASSWORD = 'test-placeholder'
+        if (!$failure -or $failure.ToString() -notlike '*ONLYAPPS_PFX_PASSWORD*') { throw "$name did not report the missing PFX password: $failure" }
+        if (Test-Path -LiteralPath (Join-Path $scratchRoot 'no-password-certs')) { throw "$name worked before checking the PFX password." }
+        Write-Output "PASS password: $name"
+    }
+
+    # Compile the production uninstaller hook with an actual failing child process.
+    $nsis = 'C:\Program Files (x86)\NSIS\makensis.exe'
+    $hook = Get-Content (Join-Path $repoRoot 'installer\OnlyWorkspaceSetup.nsi') | Where-Object { $_ -like '!uninstfinalize *' }
+    $nsisFixture = Join-Path $scratchRoot 'nsis'
+    New-Item -ItemType Directory -Path (Join-Path $nsisFixture 'scripts') -Force | Out-Null
+    New-Item -ItemType Directory -Path (Join-Path $nsisFixture 'installer') -Force | Out-Null
+    [IO.File]::WriteAllText((Join-Path $nsisFixture 'scripts\sign-binaries.ps1'), 'exit 23')
+    $nsiPath = Join-Path $nsisFixture 'installer\fixture.nsi'
+    [IO.File]::WriteAllText($nsiPath, "Name 'Fixture'`nOutFile '..\fixture.exe'`n$hook`nSection`nWriteUninstaller '`$TEMP\fixture-uninstall.exe'`nSectionEnd`nSection 'Uninstall'`nSectionEnd`n")
+    & $nsis /V2 $nsiPath 2>&1 | Out-Null
+    if ($LASTEXITCODE -eq 0) { throw 'NSIS ignored the failed uninstaller signing process.' }
+    Write-Output 'PASS NSIS: failed uninstaller signature stops compilation'
+
+    # Every critical setup command is checked, and WebView2 counts only through the documented pv keys.
+    $setupLines = @(Get-Content (Join-Path $repoRoot 'installer\OnlyWorkspaceSetup.nsi'))
+    if ($setupLines -match 'EdgeWebView\\Application') { throw 'The WebView2 folder alone still counts as an installed runtime.' }
+    $criticalCommands = 0
+    for ($i = 0; $i -lt $setupLines.Count; $i++) {
+        if ($setupLines[$i] -notmatch "nsExec::ExecToLog '.*(certutil\.exe -addstore|regasm\.exe`" /codebase|icacls\.exe)") { continue }
+        $criticalCommands++
+        if ($setupLines[$i + 1] -notmatch '^\s*!insertmacro CheckExecResult ') { throw "Unchecked setup command: $($setupLines[$i].Trim())" }
+    }
+    if ($criticalCommands -ne 5) { throw "Expected 5 critical setup commands, found $criticalCommands." }
+    if ($setupLines -match 'addstore.*"Root"') { throw 'The setup adds the certificate to Root.' }
+    # Shared config.json: inheritance cut, Administrators/SYSTEM full control, Users read-only; files are reset to inherit it (#164).
+    $aclLine = @($setupLines | Where-Object { $_.Contains('/inheritance:r') })
+    if ($aclLine.Count -ne 1 -or !$aclLine[0].Contains('icacls.exe "$ProgramDataDir\OnlyWorkspace"')) { throw 'The setup does not set a single explicit ACL on ProgramData\OnlyWorkspace.' }
+    $aclGrants = @(($aclLine[0] -split ' ') | Where-Object { $_ -like '`*S-1-*' } | ForEach-Object { $_.TrimEnd("'") } | Sort-Object)
+    $expectedGrants = @('*S-1-5-18:(OI)(CI)F', '*S-1-5-32-544:(OI)(CI)F', '*S-1-5-32-545:(OI)(CI)RX') | Sort-Object
+    if (($aclGrants -join '|') -ne ($expectedGrants -join '|')) { throw "Unexpected ProgramData ACL grants: $($aclGrants -join ' ')" }
+    if (@($setupLines | Where-Object { $_.Contains('\OnlyWorkspace\*" /reset /T') }).Count -lt 1) { throw 'The setup does not reset the ACL of existing ProgramData files.' }
+    Write-Output 'PASS NSIS: ProgramData ACL is Administrators/SYSTEM full, Users read-only'
+    # Uninstall: every command result is read and logged; the 64-bit regasm runs only on a 64-bit system.
+    $uninstall = [array]::FindIndex([string[]]$setupLines, [Predicate[string]] { param($line) $line -like 'Section "Uninstall"*' })
+    $uninstallCommands = 0
+    for ($i = $uninstall; $i -lt $setupLines.Count -and $setupLines[$i] -notlike 'SectionEnd*'; $i++) {
+        if ($setupLines[$i] -notmatch "nsExec::ExecToLog") { continue }
+        $uninstallCommands++
+        if ($setupLines[$i + 1] -notmatch '^\s*!insertmacro LogExecResult ') { throw "Unlogged uninstall command: $($setupLines[$i].Trim())" }
+        if ($setupLines[$i] -match 'Framework64' -and $setupLines[$i - 1] -notmatch '\$\{If\} \$\{RunningX64\}') { throw 'The 64-bit regasm runs on 32-bit systems too.' }
+    }
+    if ($uninstallCommands -ne 4) { throw "Expected 4 uninstall commands, found $uninstallCommands." }
+    if ($setupLines -match '^\s*RMDir\s+/r\b') { throw 'Setup still uses recursive NSIS deletion.' }
+    $bootstrapper = [array]::FindIndex([string[]]$setupLines, [Predicate[string]] { param($line) $line -like '*MicrosoftEdgeWebview2Setup.exe" /silent /install*' })
+    if ($bootstrapper -lt 0 -or -not ($setupLines[($bootstrapper + 1)..($bootstrapper + 4)] -match 'Call WebView2RuntimeInstalled')) { throw 'The WebView2 bootstrapper result is not followed by a new runtime check.' }
+    Write-Output 'PASS NSIS: critical setup commands are checked'
+
+    # Shared setup checks (installer\SetupChecks.nsh) in a user-level silent fixture with synthetic data only.
+    $checksFixture = Join-Path $scratchRoot 'setupchecks'
+    New-Item -ItemType Directory -Path $checksFixture -Force | Out-Null
+    $checksNsi = Join-Path $checksFixture 'setupchecks.nsi'
+    [IO.File]::WriteAllText($checksNsi, @'
+Unicode True
+RequestExecutionLevel user
+SilentInstall silent
+SilentUnInstall silent
+Name "Setup checks fixture"
+OutFile "setupchecks.exe"
+!include "MUI2.nsh"
+VIProductVersion "1.0.0.0"
+VIAddVersionKey "ProductName" "OnlyWorkspace"
+VIAddVersionKey "CompanyName" "OnlyApps"
+VIAddVersionKey "FileDescription" "Setup checks fixture"
+VIAddVersionKey "FileVersion" "1.0.0.0"
+VIAddVersionKey "LegalCopyright" "Synthetic fixture"
+!insertmacro MUI_PAGE_INSTFILES
+!insertmacro MUI_UNPAGE_INSTFILES
+!insertmacro MUI_LANGUAGE "Italian"
+!include "LogicLib.nsh"
+!include "x64.nsh"
+!include "FileFunc.nsh"
+!include "@CHECKS@"
+!insertmacro DefinePurgeTree ""
+!insertmacro DefinePurgeTree "un."
+Var Out
+Var Case
+Var Arg
+!macro Record TEXT
+    FileOpen $9 $Out a
+    FileSeek $9 0 END
+    FileWrite $9 "${TEXT}$\r$\n"
+    FileClose $9
+!macroend
+Function FixtureCleanup
+    !insertmacro Record "cleanup"
+FunctionEnd
+Section
+    ${GetParameters} $R0
+    ${GetOptions} $R0 "/OUT=" $Out
+    ${GetOptions} $R0 "/CASE=" $Case
+    ${GetOptions} $R0 "/ARG=" $Arg
+    ${If} $Case == "version"
+        Push $Arg
+        Call WebView2VersionUsable
+        Pop $1
+        !insertmacro Record "version=$1"
+    ${ElseIf} $Case == "exec"
+        ${If} $Arg == "missing"
+            nsExec::ExecToLog '"$EXEDIR\missing-command.exe"'
+            !insertmacro CheckExecResult "Fixture" "" ""
+        ${Else}
+            ${If} $Arg == "ok"
+                nsExec::ExecToLog '"$SYSDIR\cmd.exe" /c exit 0'
+            ${ElseIf} $Arg == "fail"
+                nsExec::ExecToLog '"$SYSDIR\cmd.exe" /c exit 5'
+            ${Else}
+                nsExec::ExecToLog /TIMEOUT=300 '"$SYSDIR\cmd.exe" /c ping -n 4 127.0.0.1 >nul'
+            ${EndIf}
+            !insertmacro CheckExecResult "Fixture" "" FixtureCleanup
+        ${EndIf}
+        !insertmacro Record "reached"
+    ${ElseIf} $Case == "purge"
+        !insertmacro PurgeRequested $R0 $1
+        !insertmacro Record "purge=$1"
+        !insertmacro PurgeUserData "" $1 "$Arg\pd" "$Arg\lad"
+        !insertmacro Record "done"
+    ${ElseIf} $Case == "logexec"
+        Push "sentinel"
+        ${If} $Arg == "missing"
+            nsExec::ExecToLog '"$EXEDIR\missing-command.exe"'
+        ${Else}
+            nsExec::ExecToLog '"$SYSDIR\cmd.exe" /c exit 5'
+        ${EndIf}
+        !insertmacro LogExecResult "Fixture"
+        Pop $1
+        !insertmacro Record "stack=$1"
+    ${ElseIf} $Case == "resiliency"
+        !insertmacro RemoveAddinResiliency $Arg
+        !insertmacro Record "done"
+    ${ElseIf} $Case == "make-uninstaller"
+        WriteUninstaller "$EXEDIR\uninstall-fixture.exe"
+    ${EndIf}
+SectionEnd
+Section "Uninstall"
+    ${GetParameters} $R0
+    ${GetOptions} $R0 "/ARG=" $Arg
+    ${GetOptions} $R0 "/SHORTCUTS" $1
+    ${Unless} ${Errors}
+        StrCpy $PurgeFailure 0
+        !insertmacro RemoveProgramShortcut "$Arg\OnlyWorkspace"
+        !insertmacro ReportProgramCleanup
+    ${EndUnless}
+    !insertmacro PurgeRequested $R0 $1
+    !insertmacro PurgeUserData "un." $1 "$Arg\pd" "$Arg\lad"
+SectionEnd
+'@.Replace('@CHECKS@', (Join-Path $repoRoot 'installer\SetupChecks.nsh')))
+    & $nsis /V2 $checksNsi 2>&1 | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw 'The setup checks fixture did not compile.' }
+    $checksExe = Join-Path $checksFixture 'setupchecks.exe'
+    function Invoke-SetupChecks([string]$Arguments) {
+        $out = Join-Path $checksFixture ('out-' + [guid]::NewGuid().ToString('N') + '.txt')
+        $process = Start-Process -FilePath $checksExe -ArgumentList "$Arguments /OUT=`"$out`"" -PassThru -WindowStyle Hidden
+        if (-not $process.WaitForExit(30000)) { $process.Kill(); throw "Setup checks fixture timed out: $Arguments" }
+        [pscustomobject]@{ ExitCode = $process.ExitCode; Lines = @(if (Test-Path -LiteralPath $out) { Get-Content -LiteralPath $out }) }
+    }
+
+    foreach ($case in @(@('', '0'), @('0.0.0.0', '0'), @('abc', '0'), @('.1', '0'), @('1.x.0.0', '0'), @('130.0.2849.80', '1'), @('155.0.4283.62', '1'))) {
+        $result = Invoke-SetupChecks "/CASE=version /ARG=$($case[0])"
+        if ($result.ExitCode -ne 0 -or ($result.Lines -join ',') -ne "version=$($case[1])") { throw "WebView2 pv '$($case[0])': exit $($result.ExitCode), $($result.Lines -join ',')" }
+    }
+    Write-Output 'PASS setup checks: WebView2 pv validation'
+
+    foreach ($case in @(@('ok', 0, 'reached'), @('fail', 2, 'cleanup'), @('missing', 2, ''), @('timeout', 2, 'cleanup'))) {
+        $result = Invoke-SetupChecks "/CASE=exec /ARG=$($case[0])"
+        if ($result.ExitCode -ne $case[1] -or ($result.Lines -join ',') -ne $case[2]) { throw "Command '$($case[0])': exit $($result.ExitCode), $($result.Lines -join ',')" }
+    }
+    Write-Output 'PASS setup checks: failed, missing and timed-out commands stop the setup'
+
+    foreach ($case in @('fail', 'missing')) {
+        $result = Invoke-SetupChecks "/CASE=logexec /ARG=$case"
+        if ($result.ExitCode -ne 0 -or ($result.Lines -join ',') -ne 'stack=sentinel') { throw "Uninstall command '$case': exit $($result.ExitCode), $($result.Lines -join ',')" }
+    }
+    Write-Output 'PASS setup checks: a failed uninstall command is logged and leaves the stack clean'
+
+    $purgeFiles = @('pd\OnlyWorkspace\config.json', 'pd\OnlyWorkspace\secrets.bin', 'pd\Other\keep.txt', 'lad\OnlyWorkspace\archive\Outlook.engine.db', 'lad\OnlyWorkspace\config-non-leggibile\secrets.bin', 'lad\OnlyWorkspace\logs\addin.log', 'lad\Microsoft\Outlook\mail.ost', 'otheruser\OnlyWorkspace\archive\Outlook.engine.db', 'outside\OnlyWorkspace\config.json')
+    $purgedFiles = @('pd\OnlyWorkspace\config.json', 'pd\OnlyWorkspace\secrets.bin', 'lad\OnlyWorkspace\archive\Outlook.engine.db', 'lad\OnlyWorkspace\config-non-leggibile\secrets.bin')
+    $purgeCaseNumber = 0
+    foreach ($case in @(@('/S', '0'), @('/S /PURGE', '1'), @('/PURGE /S', '1'), @('/S /PURGE=1', '0'), @('/S /PURGEALL', '0'), @('/CONFIG=x.json /PURGE /S', '1'))) {
+        # The scratch root is already unique. Keep NSIS paths below MAX_PATH and exercise quoting.
+        $data = Join-Path $checksFixture ('p ' + (++$purgeCaseNumber))
+        foreach ($file in $purgeFiles) {
+            $path = Join-Path $data $file
+            if ($path.Length -ge 260) { throw "NSIS purge fixture path exceeds 259 characters. Use a shorter test temporary root: $path" }
+        }
+        foreach ($file in $purgeFiles) {
+            New-Item -ItemType Directory -Path (Split-Path (Join-Path $data $file)) -Force | Out-Null
+            [IO.File]::WriteAllText((Join-Path $data $file), $file)
+        }
+        $result = Invoke-SetupChecks "$($case[0]) /CASE=purge /ARG=`"$data`""
+        if ($result.ExitCode -ne 0 -or ($result.Lines -join ',') -ne "purge=$($case[1]),done") { throw "Purge '$($case[0])': exit $($result.ExitCode), $($result.Lines -join ',')" }
+        foreach ($file in $purgeFiles) {
+            $path = Join-Path $data $file
+            $expectedGone = $case[1] -eq '1' -and $purgedFiles -contains $file
+            if ((Test-Path -LiteralPath $path) -eq $expectedGone) { throw "Purge '$($case[0])': unexpected state of $file" }
+            if (!$expectedGone -and [IO.File]::ReadAllText($path) -cne $file) { throw "Purge '$($case[0])': content changed in $file" }
+        }
+        if ($case[1] -eq '1' -and (Test-Path -LiteralPath (Join-Path $data 'pd\OnlyWorkspace'))) { throw "Purge '$($case[0])': ProgramData folder kept" }
+    }
+    Write-Output 'PASS setup checks: /PURGE removes only the documented data'
+
+    $longRoot = Join-Path $checksFixture 'long path '
+    $longRoot = $longRoot.PadRight(229, 'x')
+    $localData = Join-Path $longRoot 'lad\OnlyWorkspace'
+    $archive = Join-Path $localData 'archive'
+    $vaultCopy = Join-Path $localData 'config-non-leggibile\secrets.bin'
+    $outside = Join-Path $checksFixture 'junction target'
+    $sentinel = Join-Path $outside 'keep.txt'
+    $db = Join-Path $archive 'Outlook.engine.db'
+    foreach ($file in @($db, $vaultCopy, $sentinel)) {
+        [void][IO.Directory]::CreateDirectory((Split-Path -LiteralPath $file))
+        [IO.File]::WriteAllText($file, 'synthetic')
+    }
+    if ($db.Length -le 260 -or $vaultCopy.Length -le 260) { throw 'Long purge fixture does not exceed MAX_PATH.' }
+    New-Item -ItemType Junction -Path (Join-Path $archive 'linked') -Target $outside | Out-Null
+    $result = Invoke-SetupChecks "/S /CASE=purge /ARG=`"$longRoot`""
+    if ($result.ExitCode -ne 0 -or (Get-Content -Raw -LiteralPath $db) -cne 'synthetic' -or (Get-Content -Raw -LiteralPath $vaultCopy) -cne 'synthetic') {
+        throw 'Silent uninstall without PURGE changed long-path data.'
+    }
+    $result = Invoke-SetupChecks "/S /PURGE /CASE=purge /ARG=`"$longRoot`""
+    if ($result.ExitCode -ne 0 -or (Test-Path -LiteralPath $archive) -or (Test-Path -LiteralPath $vaultCopy)) {
+        throw "Long-path purge left data behind: exit $($result.ExitCode)."
+    }
+    if ((Get-Content -Raw -LiteralPath $sentinel) -cne 'synthetic') { throw 'Purge followed a junction to unrelated data.' }
+
+    $blocked = Join-Path $checksFixture 'blocked data'
+    $blockedParent = Join-Path $blocked 'lad\OnlyWorkspace'
+    [void][IO.Directory]::CreateDirectory((Split-Path -LiteralPath $blockedParent))
+    New-Item -ItemType Junction -Path $blockedParent -Target $outside | Out-Null
+    $result = Invoke-SetupChecks "/S /PURGE /CASE=purge /ARG=`"$blocked`""
+    if ($result.ExitCode -ne 3 -or (Get-Content -Raw -LiteralPath $sentinel) -cne 'synthetic') {
+        throw "Purge did not safely refuse a redirected data parent: exit $($result.ExitCode)."
+    }
+
+    $unexpectedRoot = Join-Path $checksFixture 'unexpected data'
+    $unexpected = Join-Path $unexpectedRoot 'pd\OnlyWorkspace'
+    [void][IO.Directory]::CreateDirectory((Split-Path -LiteralPath $unexpected))
+    [IO.File]::WriteAllText($unexpected, 'unexpected file at directory path')
+    $result = Invoke-SetupChecks "/S /PURGE /CASE=purge /ARG=`"$unexpectedRoot`""
+    if ($result.ExitCode -ne 3 -or (Get-Content -Raw -LiteralPath $unexpected) -cne 'unexpected file at directory path') {
+        throw "Purge touched a file where a data directory was expected: exit $($result.ExitCode)."
+    }
+
+    [void][IO.Directory]::CreateDirectory($archive)
+    $result = Invoke-SetupChecks '/CASE=make-uninstaller'
+    $uninstaller = Join-Path $checksFixture 'uninstall-fixture.exe'
+    if ($result.ExitCode -ne 0 -or !(Test-Path -LiteralPath $uninstaller -PathType Leaf)) { throw 'Could not create the synthetic uninstaller.' }
+    $heldFile = [IO.File]::Open($db, [IO.FileMode]::CreateNew, [IO.FileAccess]::Write, [IO.FileShare]::Read)
+    try {
+        # _?= runs the uninstaller directly, so the caller can observe its own error level.
+        $uninstallArgs = "/S /PURGE /ARG=`"$longRoot`" _?=$checksFixture"
+        $process = Start-Process -FilePath $uninstaller -ArgumentList $uninstallArgs -WindowStyle Hidden -PassThru
+        if (!$process.WaitForExit(30000) -or $process.ExitCode -ne 3 -or !(Test-Path -LiteralPath $db -PathType Leaf)) { throw 'The direct uninstaller did not report locked data with exit 3.' }
+    } finally { $heldFile.Dispose() }
+    $result = Invoke-SetupChecks "/S /PURGE /CASE=purge /ARG=`"$longRoot`""
+    if ($result.ExitCode -ne 0 -or (Test-Path -LiteralPath $archive)) { throw "Purge retry after unlocking failed: exit $($result.ExitCode)." }
+    Write-Output 'PASS setup checks: long paths, junction boundaries, and locked data'
+
+    $menuRoot = Join-Path $checksFixture 'menu'
+    $menu = Join-Path $menuRoot 'OnlyWorkspace'
+    [void][IO.Directory]::CreateDirectory($menu)
+    $shortcut = Join-Path $menu 'Configurazione OnlyWorkspace.lnk'
+    $otherShortcut = Join-Path $menu 'other.lnk'
+    [IO.File]::WriteAllText($shortcut, 'product')
+    [IO.File]::WriteAllText($otherShortcut, 'foreign')
+    $arguments = "/S /SHORTCUTS /ARG=`"$menuRoot`" _?=$checksFixture"
+    $process = Start-Process -FilePath $uninstaller -ArgumentList $arguments -WindowStyle Hidden -PassThru
+    if (!$process.WaitForExit(30000)) { $process.Kill(); throw 'Shortcut cleanup fixture timed out.' }
+    if ($process.ExitCode -ne 0 -or (Test-Path -LiteralPath $shortcut) -or [IO.File]::ReadAllText($otherShortcut) -cne 'foreign') {
+        throw 'Shortcut cleanup did not preserve the foreign shortcut.'
+    }
+    Write-Output 'PASS setup checks: uninstall removes only the product shortcut'
+
+    # Use the shipped helper in Windows PowerShell 5.1, with only its registry identity changed.
+    $registryName = 'Software\OnlyWorkspace-ProgramFilesTest-' + [guid]::NewGuid().ToString('N')
+    $registryFixture = "HKCU:\$registryName"
+    $programSource = [IO.File]::ReadAllText((Join-Path $repoRoot 'installer\ProgramFiles.ps1')).
+        Replace('Software\Microsoft\Windows\CurrentVersion\Uninstall\OnlyWorkspace', $registryName).
+        Replace('[Microsoft.Win32.RegistryHive]::LocalMachine', '[Microsoft.Win32.RegistryHive]::CurrentUser')
+    $programRoot = Join-Path $checksFixture 'program files'
+    $oldRoot = Join-Path $checksFixture 'old install'
+    $retired = 'prompts\retired.json'
+    $foreignFile = 'prompts\foreign.txt'
+    $outlookDll = 'OnlyWorkspace.Outlook.dll'
+    $programUninstaller = Join-Path $programRoot 'Uninstall.exe'
+    $windowsPowerShell = Join-Path $env:WINDIR 'System32\WindowsPowerShell\v1.0\powershell.exe'
+    $nsisSystem = Join-Path (Split-Path -LiteralPath $nsis) 'Plugins\x86-unicode\System.dll'
+    Copy-Item -LiteralPath $nsisSystem -Destination $checksFixture
+    function New-ProgramStage([string]$Name, [hashtable]$Files) {
+        $stage = Join-Path $checksFixture $Name
+        [void][IO.Directory]::CreateDirectory($stage)
+        foreach ($relative in $Files.Keys) {
+            $target = Join-Path $stage "payload\$relative"
+            [void][IO.Directory]::CreateDirectory((Split-Path -LiteralPath $target))
+            [IO.File]::WriteAllText($target, $Files[$relative])
+        }
+        $helper = Join-Path $stage 'ProgramFiles.ps1'
+        [IO.File]::WriteAllText($helper, $programSource)
+        $helper
+    }
+    function Assert-ProgramOperation([string]$Helper, [string]$Operation, [string]$Destination, [int]$Expected) {
+        $log = Join-Path $checksFixture ('program-' + [guid]::NewGuid().ToString('N') + '.log')
+        $arguments = "-NoProfile -NonInteractive -ExecutionPolicy Bypass -File `"$Helper`" -Operation $Operation -Destination `"$Destination\.`""
+        $runner = if ($Operation -eq 'RetireLegacy' -and [Environment]::Is64BitOperatingSystem) {
+            Join-Path $env:WINDIR 'SysWOW64\WindowsPowerShell\v1.0\powershell.exe'
+        } else { $windowsPowerShell }
+        $process = Start-Process -FilePath $runner -ArgumentList $arguments -WorkingDirectory $checksFixture -RedirectStandardError $log -WindowStyle Hidden -PassThru
+        if (!$process.WaitForExit(30000)) { $process.Kill(); throw "Program operation '$Operation' timed out." }
+        if ($process.ExitCode -ne $Expected) {
+            throw "Program operation '$Operation' returned $($process.ExitCode), expected ${Expected}: $(Get-Content -Raw -LiteralPath $log)"
+        }
+    }
+    try {
+        [void][IO.Directory]::CreateDirectory($oldRoot)
+        [IO.File]::WriteAllText((Join-Path $oldRoot $outlookDll), 'legacy')
+        $oldUninstaller = Join-Path $oldRoot 'Uninstall.exe'
+        $disabled = "$oldUninstaller.disabled"
+        [IO.File]::Copy($uninstaller, $oldUninstaller)
+        $oldHash = (Get-FileHash -LiteralPath $oldUninstaller).Hash
+        $null = New-Item -Path $registryFixture
+        $null = New-ItemProperty -LiteralPath $registryFixture -Name InstallLocation -Value $oldRoot
+        $null = New-ItemProperty -LiteralPath $registryFixture -Name UninstallString -Value ('"' + $oldUninstaller + '"')
+        $first = New-ProgramStage 'stage first' @{ $outlookDll='first'; $retired='old'; 'Uninstall.exe'='first uninstaller' }
+        Assert-ProgramOperation $first Check $oldRoot 2
+        Assert-ProgramOperation $first Check $programRoot 0
+        $failedFirst = New-ProgramStage 'stage failed first' @{ 'Uninstall.exe'='fixture'; 'zzz.dll'='unreadable' }
+        $heldSource = [IO.File]::Open((Join-Path (Split-Path -LiteralPath $failedFirst) 'payload\zzz.dll'), 'Open', 'Read', 'None')
+        try { Assert-ProgramOperation $failedFirst Deploy $programRoot 2 } finally { $heldSource.Dispose() }
+        if (Test-Path -LiteralPath $programRoot) { throw 'Failed first installation left its new program directory.' }
+        Assert-ProgramOperation $first Deploy $programRoot 0
+        if ([IO.File]::ReadAllText((Join-Path $oldRoot $outlookDll)) -cne 'legacy') { throw 'Transition changed the old installation.' }
+        Assert-ProgramOperation $first RetireLegacy $programRoot 3
+        $registeredProgramRoot = $programRoot + '\'
+        Set-ItemProperty -LiteralPath $registryFixture -Name InstallLocation -Value $registeredProgramRoot
+        Set-ItemProperty -LiteralPath $registryFixture -Name UninstallString -Value ('"' + $programUninstaller + '"')
+
+        function New-LegacyRetirementStage([string]$Name, [switch]$TrustedFixture) {
+            $stage = New-ProgramStage $Name @{}
+            $stagePayload = Join-Path (Split-Path -LiteralPath $stage) 'payload'
+            [void][IO.Directory]::CreateDirectory($stagePayload)
+            [IO.File]::WriteAllBytes((Join-Path $stagePayload 'OnlyApps.cer'), $certificate.RawData)
+            if ($TrustedFixture) {
+                # Use a signature double only. The PE metadata, locked handle and Win32 rename are real.
+                $trusted = $programSource.Replace('Microsoft.PowerShell.Security\Get-AuthenticodeSignature -LiteralPath $snapshot',
+                    "[pscustomobject]@{ Status='Valid'; SignerCertificate=@{ Thumbprint='$($certificate.Thumbprint)' } }")
+                [IO.File]::WriteAllText($stage, $trusted)
+            }
+            $stage
+        }
+
+        $unsigned = New-LegacyRetirementStage 'retire unsigned'
+        Assert-ProgramOperation $unsigned RetireLegacy $programRoot 3
+        if ((Get-FileHash -LiteralPath $oldUninstaller).Hash -ne $oldHash) { throw 'Unsigned legacy file was changed.' }
+        $retire = New-LegacyRetirementStage 'retire locked' -TrustedFixture
+        $heldLegacy = [IO.File]::Open($oldUninstaller, 'Open', 'Read', 'Read')
+        try { Assert-ProgramOperation $retire RetireLegacy $programRoot 3 } finally { $heldLegacy.Dispose() }
+
+        [IO.File]::WriteAllText($disabled, 'foreign collision')
+        $retire = New-LegacyRetirementStage 'retire collision' -TrustedFixture
+        Assert-ProgramOperation $retire RetireLegacy $programRoot 3
+        if ([IO.File]::ReadAllText($disabled) -cne 'foreign collision' -or
+            (Get-FileHash -LiteralPath $oldUninstaller).Hash -ne $oldHash) { throw 'Legacy retirement overwrote a file.' }
+        [IO.File]::Move($disabled, (Join-Path $oldRoot 'foreign-copy.txt'))
+
+        $retry = New-ProgramStage 'stage retry' @{ $outlookDll='first'; $retired='old'; 'Uninstall.exe'='first uninstaller' }
+        Assert-ProgramOperation $retry Deploy $programRoot 0
+        $retire = New-LegacyRetirementStage 'retire verified' -TrustedFixture
+        Assert-ProgramOperation $retire RetireLegacy $programRoot 0
+        Assert-ProgramOperation $retire RetireLegacy $programRoot 0
+        $currentRegistry = Get-ItemProperty -LiteralPath $registryFixture
+        if ((Test-Path -LiteralPath $oldUninstaller) -or (Get-FileHash -LiteralPath $disabled).Hash -ne $oldHash -or
+            [IO.File]::ReadAllText((Join-Path $oldRoot $outlookDll)) -cne 'legacy' -or
+            [IO.File]::ReadAllText($programUninstaller) -cne 'first uninstaller' -or
+            $currentRegistry.InstallLocation -cne $registeredProgramRoot -or $currentRegistry.UninstallString -cne ('"' + $programUninstaller + '"') -or
+            ($currentRegistry.ProgramInventory | ConvertFrom-Json).legacyUninstaller) {
+            throw 'Retirement changed files or registrations outside the verified legacy executable.'
+        }
+        Write-Output 'PASS legacy uninstaller: signature check, locked file, no overwrite, rename and idempotent retry'
+
+        $foreignPath = Join-Path $programRoot $foreignFile
+        [IO.File]::WriteAllText($foreignPath, 'keep')
+        $conflict = New-ProgramStage 'stage conflict' @{ $foreignFile='collision'; 'Uninstall.exe'='conflict' }
+        Assert-ProgramOperation $conflict Check $programRoot 2
+        if ([IO.File]::ReadAllText($foreignPath) -cne 'keep') { throw 'A package collision modified a foreign file.' }
+
+        $broken = New-ProgramStage 'stage rollback' @{ $outlookDll='broken'; 'Uninstall.exe'='broken'; 'zzz.dll'='unreadable' }
+        $heldSource = [IO.File]::Open((Join-Path (Split-Path -LiteralPath $broken) 'payload\zzz.dll'), 'Open', 'Read', 'None')
+        try { Assert-ProgramOperation $broken Deploy $programRoot 2 } finally { $heldSource.Dispose() }
+        if ([IO.File]::ReadAllText((Join-Path $programRoot $outlookDll)) -cne 'first' -or
+            [IO.File]::ReadAllText((Join-Path $programRoot $retired)) -cne 'old' -or
+            [IO.File]::ReadAllText($programUninstaller) -cne 'first uninstaller' -or [IO.File]::ReadAllText($foreignPath) -cne 'keep') {
+            throw 'Rollback did not restore the previous payload and preserve foreign files.'
+        }
+
+        $update = New-ProgramStage 'stage update' @{ $outlookDll='updated'; 'Uninstall.exe'='updated'; 'runtimes\new.dll'='new' }
+        Assert-ProgramOperation $update Deploy $programRoot 0
+        $newDll = Join-Path $programRoot 'runtimes\new.dll'
+        if ([IO.File]::ReadAllText((Join-Path $programRoot $outlookDll)) -cne 'updated' -or
+            (Test-Path -LiteralPath (Join-Path $programRoot $retired)) -or [IO.File]::ReadAllText($foreignPath) -cne 'keep') {
+            throw 'An in-place update did not replace only the inventoried files.'
+        }
+
+        Assert-ProgramOperation $update CheckUninstall $programRoot 0
+        $heldProgram = [IO.File]::Open($newDll, 'Open', 'Read', 'Read')
+        try { Assert-ProgramOperation $update Uninstall $programRoot 3 } finally { $heldProgram.Dispose() }
+        if (!(Test-Path -LiteralPath $programUninstaller)) { throw 'Partial uninstall removed its retry entry point.' }
+        Assert-ProgramOperation $update Uninstall $programRoot 0
+        if ((Test-Path -LiteralPath $newDll) -or (Test-Path -LiteralPath $programUninstaller) -or
+            [IO.File]::ReadAllText($foreignPath) -cne 'keep') { throw 'Uninstall retry left payload or touched a foreign file.' }
+
+        $redirect = Join-Path $checksFixture 'program redirect'
+        New-Item -ItemType Junction -Path $redirect -Target $outside | Out-Null
+        Assert-ProgramOperation $first Check (Join-Path $redirect 'child') 2
+        if ([IO.File]::ReadAllText($sentinel) -cne 'synthetic') { throw 'A redirected path touched external data.' }
+        [IO.Directory]::Delete($redirect)
+
+        Remove-ItemProperty -LiteralPath $registryFixture -Name ProgramInventory
+        Set-ItemProperty -LiteralPath $registryFixture -Name InstallLocation -Value $oldRoot
+        $longProgramRoot = (Join-Path $checksFixture 'long program path ').PadRight(220, 'x')
+        $longRelative = 'runtimes\' + ('x' * 50) + '.dll'
+        $longProgramFile = Join-Path $longProgramRoot $longRelative
+        $longStage = New-ProgramStage 'stage long' @{ $longRelative='long'; 'Uninstall.exe'='uninstaller' }
+        if ($longProgramFile.Length -le 260) { throw 'The program path fixture does not exceed MAX_PATH.' }
+        Assert-ProgramOperation $longStage Deploy $longProgramRoot 0
+        if ([IO.File]::ReadAllText($longProgramFile) -cne 'long') { throw 'The long package path was not deployed.' }
+        Assert-ProgramOperation $longStage Uninstall $longProgramRoot 0
+        if (Test-Path -LiteralPath $longProgramRoot) { throw 'Uninstall left an owned long program path.' }
+    } finally { Remove-Item -LiteralPath $registryFixture -ErrorAction SilentlyContinue }
+    Write-Output 'PASS program inventory: legacy transition, collisions, rollback, update, locked uninstall and junctions'
+
+    # A126: uninstall removes only our DoNotDisableAddinList value, on a synthetic HKCU key.
+    $resiliency = 'Software\OnlyWorkspace-PackagingTest-' + [guid]::NewGuid().ToString('N')
+    $keep = New-Item -Path "HKCU:\$resiliency\DoNotDisableAddinList" -Force
+    try {
+        New-ItemProperty -Path $keep.PSPath -Name 'OnlyWorkspace.Addin' -Value 1 -PropertyType DWord | Out-Null
+        New-ItemProperty -Path $keep.PSPath -Name 'Other.Addin' -Value 1 -PropertyType DWord | Out-Null
+        $result = Invoke-SetupChecks "/CASE=resiliency /ARG=$resiliency"
+        $names = @((Get-Item -Path $keep.PSPath).Property)
+        if ($result.ExitCode -ne 0 -or ($names -join ',') -ne 'Other.Addin') { throw "Resiliency entry: exit $($result.ExitCode), values $($names -join ',')" }
+    }
+    finally { Remove-Item -Path "HKCU:\$resiliency" -Recurse -Force -ErrorAction SilentlyContinue }
+    Write-Output 'PASS setup checks: uninstall removes only the add-in resiliency entry'
+
+    # block-new-outlook.ps1 on a synthetic HKCU root: Revert removes only the values Apply created.
+    $policyRoot = 'Software\OnlyWorkspace-PolicyTest-' + [guid]::NewGuid().ToString('N')
+    $policyScript = Join-Path $repoRoot 'scripts\block-new-outlook.ps1'
+    $preexisting = "HKCU:\$policyRoot\HKCU\Software\Microsoft\Office\16.0\Outlook\Preferences"
+    try {
+        New-Item -Path $preexisting -Force | Out-Null
+        New-ItemProperty -Path $preexisting -Name 'UseNewOutlook' -Value 0 -PropertyType DWord | Out-Null
+        & pwsh -NoProfile -File $policyScript -Action Apply -RegistryRoot $policyRoot | Out-Null
+        & pwsh -NoProfile -File $policyScript -Action Check -RegistryRoot $policyRoot | Out-Null
+        if ($LASTEXITCODE -ne 0) { throw "Policy check after Apply: exit $LASTEXITCODE" }
+        & pwsh -NoProfile -File $policyScript -Action Revert -RegistryRoot $policyRoot | Out-Null
+        $left = @(Get-ChildItem -Path "HKCU:\$policyRoot" -Recurse | ForEach-Object { foreach ($name in $_.Property) { $_.PSPath.Split('::')[-1].Replace("HKEY_CURRENT_USER\$policyRoot\", '') + '\' + $name } })
+        if (($left -join ',') -ne 'HKCU\Software\Microsoft\Office\16.0\Outlook\Preferences\UseNewOutlook') { throw "Policy values after Revert: $($left -join ', ')" }
+    }
+    finally { Remove-Item -Path "HKCU:\$policyRoot" -Recurse -Force -ErrorAction SilentlyContinue }
+    Write-Output 'PASS policy script: Revert removes only the values Apply created'
+}
+finally {
+    $certificate.Dispose()
+    $rsa.Dispose()
+    $env:ONLYAPPS_PFX_PASSWORD = $savedPassword
+    $global:LASTEXITCODE = $savedExitCode
+    $resolvedScratch = [IO.Path]::GetFullPath($scratchRoot)
+    if ($resolvedScratch.StartsWith([IO.Path]::GetFullPath([IO.Path]::GetTempPath()), [StringComparison]::OrdinalIgnoreCase) -and [IO.Path]::GetFileName($resolvedScratch).StartsWith('OnlyWorkspace-packaging-')) {
+        if (!(Test-Path Env:ONLYWORKSPACE_TEST_ARTIFACTS)) { Remove-Item -LiteralPath $resolvedScratch -Recurse -Force }
+    }
+}

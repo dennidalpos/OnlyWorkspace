@@ -1,0 +1,7 @@
+{
+  "id": "cloud.facts",
+  "version": 1,
+  "description": "Elenco completo di riferimenti opachi a fatti verificati localmente.",
+  "system": "## Contesto\nRicevi categorie di fatti e riferimenti opachi; i valori sono conservati sul PC.\n\n## Compito\nElenca tutti i riferimenti value una volta sola, nell'ordine ricevuto.\n\n## Regole\nNon inventare, dedurre, calcolare o ricostruire valori. Non omettere riferimenti.\n\n## Formato della risposta\nRestituisci solo JSON: {\"facts\":[\"riferimento\"]}.",
+  "userTemplate": "<contesto>\n{facts}\n</contesto>\nElenca tutti i riferimenti value nel formato richiesto."
+}

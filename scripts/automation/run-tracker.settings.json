@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dotnet build:*)", "Bash(dotnet test:*)", "Bash(dotnet format:*)", "Bash(dotnet build-server:*)",
+      "Bash(pwsh:*)", "Bash(powershell:*)", "Bash(node:*)", "Bash(python:*)",
+      "Bash(git status:*)", "Bash(git diff:*)", "Bash(git log:*)", "Bash(git show:*)",
+      "Bash(ls:*)", "Bash(cat:*)", "Bash(grep:*)", "Bash(cp:*)", "Bash(mkdir:*)",
+      "Bash(playwright-cli:*)", "Skill(playwright-cli)", "Bash(git ls-files:*)", "Bash(git check-ignore:*)", "Bash(head:*)", "Bash(tail:*)", "Bash(wc:*)", "Bash(which:*)", "Bash(npx playwright:*)", "Bash(tasklist:*)", "Bash(reg query:*)", "Bash(Get-WinEvent:*)", "mcp__secondbrain__*", "mcp__Claude_Browser__*"
+    ],
+    "deny": [
+      "Bash(git commit:*)", "Bash(git push:*)", "Bash(git reset:*)", "Bash(git checkout:*)",
+      "Bash(rm:*)", "Bash(del:*)", "Bash(Remove-Item:*)", "Bash(gh:*)", "Bash(curl:*)",
+      "mcp__computer-use__*", "mcp__claude-in-chrome__*"
+    ]
+  }
+}

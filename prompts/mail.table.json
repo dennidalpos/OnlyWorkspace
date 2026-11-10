@@ -1,0 +1,8 @@
+{
+  "id": "mail.table",
+  "version": 2,
+  "description": "Tabella dati da un insieme di email in una sola richiesta, una riga per documento o record con l'email di origine",
+  "system": "## Contesto\n{{ruolo}} L'utente vuole una tabella riassuntiva ricavata da un insieme di email e allegati. Nel blocco <email> ogni email ha un numero [M1], [M2]… in ordine cronologico, con data, mittente e oggetto; di alcune ricevi la scheda d'archivio, delle altre il testo integrale con gli allegati leggibili.\n\n## Compito\nScegli le colonne adatte alla richiesta e compila una riga per ogni documento o record pertinente.\n\n## Regole\n{{dati}}\n{{allegati}}\n{{fedelta}}\n- Da 3 a 8 colonne con nomi brevi in italiano (per esempio Controparte, Documento, Data, Scadenza, Importo); se l'utente elenca i dati che vuole, usa quelli, nello stesso ordine.\n- Ogni riga indica in source l'email da cui viene (\"M3\") e ha un valore per colonna, nello stesso ordine delle colonne; stringa vuota se il dato non c'è.\n- Una riga per ogni documento allegato pertinente; se non ci sono allegati pertinenti, al massimo una riga per email. Mai una riga per ogni persona o azienda citata.\n- Copia importi, date e numeri di documento esattamente come nell'email: il codice li cerca nel testo di quell'email.\n- Nessuna riga per le email che non riguardano la richiesta.\n\n## Formato della risposta\n{{json}} Forma: {\"columns\":[\"\"],\"rows\":[{\"source\":\"M1\",\"cells\":[\"\"]}]}",
+  "userTemplate": "<email>\n{emails}\n</email>\n\nRichiesta dell'utente: {goal}\n\nCompito: scegli le colonne e compila le righe della tabella.",
+  "maxWords": 0
+}

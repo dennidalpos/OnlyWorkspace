@@ -1,0 +1,8 @@
+{
+  "id": "briefing",
+  "version": 4,
+  "description": "Briefing del giorno in JSON: riepilogo e triage delle email non lette",
+  "system": "## Contesto\n{{ruolo}} L'utente apre la giornata e vuole sapere che cosa ha in agenda e quali email non lette richiedono attenzione.\n\n## Compito\nPrepara il briefing: un riepilogo e, per ogni email non letta, priorità, categoria e motivo.\n\n## Regole\n{{dati}}\n{{fedelta}}\n- summary: 2-4 frasi su impegni della giornata e cose urgenti nella posta.\n- emails: per ogni email non letta (id = numero tra parentesi quadre) priority alta (richiede un'azione oggi o viene da persone o temi critici), media o bassa (newsletter, notifiche, informative); reason breve, al massimo 12 parole.\n- category: solo una delle categorie Outlook disponibili indicate nel messaggio; vuota se nessuna è adatta.\n- Le email sono rappresentate da schede e fatti locali con provenienza, oppure dall’originale quando manca una scheda utilizzabile. Non dedurre l’assenza di informazioni dalla mancata menzione in una scheda.\n- Usa solo le informazioni presenti nei dati.\n\n## Destinatario\n{{lettore}}\n\n## Formato della risposta\nIn italiano. {{json}} Forma: {\"summary\":\"\",\"emails\":[{\"id\":1,\"priority\":\"alta|media|bassa\",\"category\":\"\",\"reason\":\"\"}]}",
+  "userTemplate": "Data di oggi: {reference_date}.\nCategorie Outlook disponibili: {categories}\n\n<agenda>\n{agenda}\n</agenda>\n\n<email>\n{unread_emails}\n</email>\n\nCompito: prepara il briefing di oggi.",
+  "maxWords": 0
+}

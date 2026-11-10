@@ -1,0 +1,17 @@
+<Project>
+  <Target Name="GetOnlyWorkspaceBuildInfo" Returns="@(_OnlyWorkspaceBuildInfo)">
+    <ItemGroup>
+      <_OnlyWorkspaceBuildInfo Include="$(TargetPath)">
+        <AssetsFile>$(ProjectAssetsFile)</AssetsFile>
+        <ProjectName>$(MSBuildProjectName)</ProjectName>
+      </_OnlyWorkspaceBuildInfo>
+    </ItemGroup>
+  </Target>
+  <Target Name="ValidateOnlyWorkspaceRuntime" BeforeTargets="PrepareForBuild;_GenerateRestoreGraphProjectEntry;VSTest"
+          Condition="'$(ONLYWORKSPACE_RUNTIME_ROOT)' != ''">
+    <Error Condition="!$([System.IO.Path]::IsPathRooted('$(ONLYWORKSPACE_RUNTIME_ROOT)'))"
+           Text="ONLYWORKSPACE_RUNTIME_ROOT must be an absolute directory." />
+    <Error Condition="!$([System.IO.Directory]::Exists('$(ONLYWORKSPACE_RUNTIME_ROOT)'))"
+           Text="ONLYWORKSPACE_RUNTIME_ROOT does not exist. Configure the workstation before building." />
+  </Target>
+</Project>

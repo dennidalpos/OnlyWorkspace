@@ -1,0 +1,217 @@
+OnlyWorkspace — Third-Party Notices & Licenses
+Author: Danny Perondi · OnlyApps (https://github.com/dennidalpos)
+===================================================
+
+This distribution of OnlyWorkspace includes open-source and third-party software components.
+The following notices and license texts describe the terms under which these components are distributed.
+
+--------------------------------------------------------------------------------
+1. Microsoft.Web.WebView2
+--------------------------------------------------------------------------------
+Version: 1.0.4314.35
+License: LICENSE.txt from this exact restored NuGet package, reproduced in full below.
+The Evergreen Runtime is a separate prerequisite; OnlyWorkspace downloads the
+Microsoft installer when the runtime is absent. The SDK package is not the runtime.
+
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+   * Redistributions of source code must retain the above copyright
+notice, this list of conditions and the following disclaimer.
+   * Redistributions in binary form must reproduce the above
+copyright notice, this list of conditions and the following disclaimer
+in the documentation and/or other materials provided with the
+distribution.
+   * The name of Microsoft Corporation, or the names of its contributors
+may not be used to endorse or promote products derived from this
+software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+--------------------------------------------------------------------------------
+2. System.Text.Json, System.Text.Encodings.Web, System.IO.Pipelines, Microsoft.Bcl.AsyncInterfaces,
+   System.Diagnostics.DiagnosticSource, System.Threading.Channels, System.Security.Cryptography.ProtectedData,
+   System.Memory, System.Buffers, Microsoft.Bcl.HashCode,
+   System.Numerics.Vectors, System.Runtime.CompilerServices.Unsafe, System.Threading.Tasks.Extensions
+--------------------------------------------------------------------------------
+Copyright (c) .NET Foundation and Contributors.
+License: MIT License
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+--------------------------------------------------------------------------------
+3. Serilog and Serilog.Sinks.File
+--------------------------------------------------------------------------------
+Copyright (c) 2013-2024 Serilog Contributors
+License: Apache License, Version 2.0
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+--------------------------------------------------------------------------------
+4. Microsoft Office 2013 Primary Interop Assemblies (PIA)
+--------------------------------------------------------------------------------
+Copyright (c) Microsoft Corporation. All rights reserved.
+Outlook and Word interop types are embedded in the add-in (No-PIA).
+The packaging gate checks every managed product assembly for runtime PIA
+references before excluding both interop DLLs from the installer.
+Implementation: https://learn.microsoft.com/en-us/nuget/create-packages/author-packages-with-com-interop-assemblies
+Build-time packages Microsoft.Office.Interop.Outlook and Microsoft.Office.Interop.Word
+15.0.4797.1004 are community repackagings of the Microsoft-signed assemblies; their
+NuGet metadata declares no license. A test checks that the restored DLLs keep
+Microsoft's strong name and a valid Microsoft Authenticode signature. These
+checks establish authenticity, not a license or permission to redistribute
+the standalone DLLs; the installer does not redistribute them.
+
+--------------------------------------------------------------------------------
+5. Nullsoft Scriptable Install System (NSIS)
+--------------------------------------------------------------------------------
+Copyright (C) 1999-2024 Contributors (Nullsoft / NSIS Project)
+License: zlib/libpng license
+Used solely to package the installer executable.
+
+--------------------------------------------------------------------------------
+6. PdfPig (UglyToad.PdfPig)
+--------------------------------------------------------------------------------
+Copyright (c) UglyToad and PdfPig contributors
+License: Apache License 2.0 (https://www.apache.org/licenses/LICENSE-2.0)
+Used by the attachment extractor helper (extractor\) to read PDF text.
+
+--------------------------------------------------------------------------------
+7. Open XML SDK (DocumentFormat.OpenXml, DocumentFormat.OpenXml.Framework 3.5.1)
+--------------------------------------------------------------------------------
+Copyright (c) .NET Foundation and Contributors
+License: MIT (https://licenses.nuget.org/MIT)
+Used by the attachment extractor helper (extractor\) to read Word/Excel/PowerPoint files.
+
+--------------------------------------------------------------------------------
+8. OpenMcdf
+--------------------------------------------------------------------------------
+Copyright (c) Federico Blaseotto and OpenMcdf contributors
+License: Mozilla Public License 2.0 (https://www.mozilla.org/MPL/2.0/)
+Unmodified library; source available at https://github.com/openmcdf/openmcdf.
+Used by the attachment extractor helper (extractor\) to read .msg emails and
+detect VBA macros in legacy Office files.
+
+--------------------------------------------------------------------------------
+9. MimeKit (MimeKitLite)
+--------------------------------------------------------------------------------
+Copyright (c) .NET Foundation and Contributors
+License: MIT (https://licenses.nuget.org/MIT)
+Used by the attachment extractor helper (extractor\) to read attached .eml emails,
+and by Core email security checks to parse MIME headers and HTML.
+
+--------------------------------------------------------------------------------
+10. Microsoft.Data.Sqlite (Microsoft.Data.Sqlite.Core 10.0.14)
+--------------------------------------------------------------------------------
+Copyright (c) Microsoft Corporation. All rights reserved.
+License: MIT (https://licenses.nuget.org/MIT)
+Used by the mail archive (encrypted local index).
+
+--------------------------------------------------------------------------------
+11. SQLite3 Multiple Ciphers (SQLite3MC.PCLRaw.bundle, SQLite3MC.PCLRaw.lib, SQLite3MC.PCLRaw.provider, sqlite3mc.dll)
+--------------------------------------------------------------------------------
+Copyright (c) 2023-2026 Ulrich Telle, et al.
+License: MIT (https://licenses.nuget.org/MIT)
+Includes SQLite (public domain, https://www.sqlite.org/copyright.html).
+Native library of the mail archive, in runtimes\win-x64\native and runtimes\win-x86\native.
+
+--------------------------------------------------------------------------------
+12. SQLitePCLRaw
+--------------------------------------------------------------------------------
+Copyright 2014-2025 SourceGear, LLC
+Version: SQLitePCLRaw.core 3.0.2 (transitive)
+License: Apache License, Version 2.0 (https://www.apache.org/licenses/LICENSE-2.0)
+Used by the mail archive.
+
+--------------------------------------------------------------------------------
+13. Nager.PublicSuffix 3.8.0
+--------------------------------------------------------------------------------
+Copyright (c) 2016 nager.at
+License: MIT (https://licenses.nuget.org/MIT)
+Source: https://github.com/nager/Nager.PublicSuffix
+Used by Core email security checks with a bundled, offline Public Suffix List.
+Transitive Microsoft.Extensions.Configuration.Abstractions,
+Microsoft.Extensions.DependencyInjection.Abstractions,
+Microsoft.Extensions.Logging.Abstractions and Microsoft.Extensions.Primitives
+10.0.3: copyright (c) .NET Foundation
+and Contributors, MIT (https://licenses.nuget.org/MIT).
+
+--------------------------------------------------------------------------------
+14. Public Suffix List
+--------------------------------------------------------------------------------
+License: Mozilla Public License 2.0 (https://mozilla.org/MPL/2.0/)
+Unmodified source, including ICANN and PRIVATE sections and the original notice:
+src/OnlyWorkspace.Core/Security/public_suffix_list.dat
+Origin: https://publicsuffix.org/list/public_suffix_list.dat
+Downloaded: 2026-10-12
+VERSION: 2026-10-07_07-28-19_UTC
+COMMIT: 3929462652695bad04f0a27afb600974014a3c8b
+SHA-256: BA7D836C0EA57A8BCF9F1FCB868066A7554BED029B441ECC6204AD8494A32612
+Embedded in Core; comparisons do not access the network.
+Update the entire official list together with dependencies and record its new
+version, date and hash here; do not edit its rules.
+
+--------------------------------------------------------------------------------
+15. ExcelDataReader 3.9.0
+--------------------------------------------------------------------------------
+https://github.com/ExcelDataReader/ExcelDataReader/tree/v3.9.0
+The MIT License (MIT)
+
+Copyright (c) 2014 ExcelDataReader
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

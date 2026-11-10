@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net48;net10.0</TargetFrameworks>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <RootNamespace>OnlyWorkspace.Core</RootNamespace>
+    <AssemblyName>OnlyWorkspace.Core</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MimeKitLite" />
+    <PackageReference Include="Nager.PublicSuffix" />
+    <EmbeddedResource Include="Security\public_suffix_list.dat" />
+    <EmbeddedResource Include="Privacy\strategies.json" />
+    <EmbeddedResource Include="..\..\prompts\cloud.facts.json" LogicalName="OnlyWorkspace.Core.Prompts.cloud.facts.json" />
+    <InternalsVisibleTo Include="OnlyWorkspace.Tests" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+    <Reference Include="System.Web" />
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" PrivateAssets="All" />
+    <PackageReference Include="System.Text.Json" />
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" />
+  </ItemGroup>
+</Project>

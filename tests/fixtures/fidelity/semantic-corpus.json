@@ -1,0 +1,236 @@
+{
+  "Version": 1,
+  "Cases": [
+    {
+      "Id": "it-replacement",
+      "Language": "it",
+      "Tags": [
+        "semantic"
+      ],
+      "Thread": "it-replacement",
+      "Subject": "Synthetic semantic replacement",
+      "Sender": "fixture@example.test",
+      "ReceivedUtc": "2026-10-23T12:00:00Z",
+      "Sources": [
+        {
+          "Id": "",
+          "Name": "body",
+          "Text": "Il preventivo Q-51 sostituisce il precedente Q-50.",
+          "Expected": []
+        }
+      ],
+      "Review": [
+        "Solo reference Q-51/Q-50; aggiornamento nella sintesi, nessun request/commitment.",
+        "Lingua della sintesi conforme al corpo; fatti e citazioni letterali con fonte corretta."
+      ]
+    },
+    {
+      "Id": "en-replacement",
+      "Language": "en",
+      "Tags": [
+        "semantic"
+      ],
+      "Thread": "en-replacement",
+      "Subject": "Synthetic semantic replacement",
+      "Sender": "fixture@example.test",
+      "ReceivedUtc": "2026-10-23T12:00:00Z",
+      "Sources": [
+        {
+          "Id": "",
+          "Name": "body",
+          "Text": "Quotation Q-51 replaces the previous Q-50.",
+          "Expected": []
+        }
+      ],
+      "Review": [
+        "Solo reference Q-51/Q-50; aggiornamento nella sintesi, nessun request/commitment.",
+        "Lingua della sintesi conforme al corpo; fatti e citazioni letterali con fonte corretta."
+      ]
+    },
+    {
+      "Id": "it-sending",
+      "Language": "it",
+      "Tags": [
+        "semantic"
+      ],
+      "Thread": "it-sending",
+      "Subject": "Synthetic semantic sending",
+      "Sender": "fixture@example.test",
+      "ReceivedUtc": "2026-10-23T12:00:00Z",
+      "Sources": [
+        {
+          "Id": "",
+          "Name": "body",
+          "Text": "Vi invio la richiesta ricevuta da Alfa.",
+          "Expected": []
+        }
+      ],
+      "Review": [
+        "Narrazione di invio e parte nominata; nessun request/commitment.",
+        "Lingua della sintesi conforme al corpo; fatti e citazioni letterali con fonte corretta."
+      ]
+    },
+    {
+      "Id": "en-sending",
+      "Language": "en",
+      "Tags": [
+        "semantic"
+      ],
+      "Thread": "en-sending",
+      "Subject": "Synthetic semantic sending",
+      "Sender": "fixture@example.test",
+      "ReceivedUtc": "2026-10-23T12:00:00Z",
+      "Sources": [
+        {
+          "Id": "",
+          "Name": "body",
+          "Text": "I am sending the request received from Alpha.",
+          "Expected": []
+        }
+      ],
+      "Review": [
+        "Narrazione di invio e parte nominata; nessun request/commitment.",
+        "Lingua della sintesi conforme al corpo; fatti e citazioni letterali con fonte corretta."
+      ]
+    },
+    {
+      "Id": "it-negation",
+      "Language": "it",
+      "Tags": [
+        "semantic"
+      ],
+      "Thread": "it-negation",
+      "Subject": "Synthetic semantic negation",
+      "Sender": "fixture@example.test",
+      "ReceivedUtc": "2026-10-23T12:00:00Z",
+      "Sources": [
+        {
+          "Id": "",
+          "Name": "body",
+          "Text": "Non confermo il pagamento e non prometto la consegna.",
+          "Expected": []
+        }
+      ],
+      "Review": [
+        "Negazioni conservate, nessuna richiesta né impegno positivo.",
+        "Lingua della sintesi conforme al corpo; fatti e citazioni letterali con fonte corretta."
+      ]
+    },
+    {
+      "Id": "en-negation",
+      "Language": "en",
+      "Tags": [
+        "semantic"
+      ],
+      "Thread": "en-negation",
+      "Subject": "Synthetic semantic negation",
+      "Sender": "fixture@example.test",
+      "ReceivedUtc": "2026-10-23T12:00:00Z",
+      "Sources": [
+        {
+          "Id": "",
+          "Name": "body",
+          "Text": "I do not confirm payment and I do not promise delivery.",
+          "Expected": []
+        }
+      ],
+      "Review": [
+        "Negazioni conservate, nessuna richiesta né impegno positivo.",
+        "Lingua della sintesi conforme al corpo; fatti e citazioni letterali con fonte corretta."
+      ]
+    },
+    {
+      "Id": "it-request",
+      "Language": "it",
+      "Tags": [
+        "semantic"
+      ],
+      "Thread": "it-request",
+      "Subject": "Synthetic semantic request",
+      "Sender": "fixture@example.test",
+      "ReceivedUtc": "2026-10-23T12:00:00Z",
+      "Sources": [
+        {
+          "Id": "",
+          "Name": "body",
+          "Text": "Non spedire prima della conferma scritta. Verificate entrambe le fatture INV-71 e INV-72.",
+          "Expected": []
+        }
+      ],
+      "Review": [
+        "Due request complete, divieto preservato ed entrambe le fatture citate; nessun commitment.",
+        "Lingua della sintesi conforme al corpo; fatti e citazioni letterali con fonte corretta."
+      ]
+    },
+    {
+      "Id": "en-request",
+      "Language": "en",
+      "Tags": [
+        "semantic"
+      ],
+      "Thread": "en-request",
+      "Subject": "Synthetic semantic request",
+      "Sender": "fixture@example.test",
+      "ReceivedUtc": "2026-10-23T12:00:00Z",
+      "Sources": [
+        {
+          "Id": "",
+          "Name": "body",
+          "Text": "Do not ship before written confirmation. Please check both invoices INV-71 and INV-72.",
+          "Expected": []
+        }
+      ],
+      "Review": [
+        "Due request complete, divieto preservato ed entrambe le fatture citate; nessun commitment.",
+        "Lingua della sintesi conforme al corpo; fatti e citazioni letterali con fonte corretta."
+      ]
+    },
+    {
+      "Id": "it-commitment",
+      "Language": "it",
+      "Tags": [
+        "semantic"
+      ],
+      "Thread": "it-commitment",
+      "Subject": "Synthetic semantic commitment",
+      "Sender": "fixture@example.test",
+      "ReceivedUtc": "2026-10-23T12:00:00Z",
+      "Sources": [
+        {
+          "Id": "",
+          "Name": "body",
+          "Text": "Ci impegniamo a consegnare il verbale entro il 2026-11-30, se riceveremo la conferma.",
+          "Expected": []
+        }
+      ],
+      "Review": [
+        "Un commitment con condizione e termine; nessun request al destinatario, deadline letterale.",
+        "Lingua della sintesi conforme al corpo; fatti e citazioni letterali con fonte corretta."
+      ]
+    },
+    {
+      "Id": "en-commitment",
+      "Language": "en",
+      "Tags": [
+        "semantic"
+      ],
+      "Thread": "en-commitment",
+      "Subject": "Synthetic semantic commitment",
+      "Sender": "fixture@example.test",
+      "ReceivedUtc": "2026-10-23T12:00:00Z",
+      "Sources": [
+        {
+          "Id": "",
+          "Name": "body",
+          "Text": "We commit to deliver the minutes by 2026-11-30, if we receive confirmation.",
+          "Expected": []
+        }
+      ],
+      "Review": [
+        "Un commitment con condizione e termine; nessun request al destinatario, deadline letterale.",
+        "Lingua della sintesi conforme al corpo; fatti e citazioni letterali con fonte corretta."
+      ]
+    }
+  ],
+  "Scenarios": []
+}

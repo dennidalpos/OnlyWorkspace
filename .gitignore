@@ -1,0 +1,29 @@
+## Visual Studio / .NET
+.vs/
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+## Build & Artifacts
+artifacts/
+publish/
+dist/
+tmp/
+logs/
+
+## OS & Secrets
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.bin
+*.owbak
+*.pfx
+.local-secrets/
+
+## Local tooling (workstation-specific)
+.secondbrain/
+.playwright-cli/
