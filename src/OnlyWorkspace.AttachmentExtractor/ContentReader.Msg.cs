@@ -136,7 +136,7 @@ internal static partial class ContentReader
         }
         finally
         {
-            try { File.Delete(path); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+            try { File.Delete(path); } catch (IOException) { } catch (UnauthorizedAccessException) { } // temp copy: a leftover is cleaned with %TEMP%
         }
     }
 

@@ -30,7 +30,7 @@ public static class AtomicFile
         }
         finally
         {
-            try { if (File.Exists(tmp)) File.Delete(tmp); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+            try { if (File.Exists(tmp)) File.Delete(tmp); } catch (IOException) { } catch (UnauthorizedAccessException) { } // temp file of a failed write: must not mask the original error
         }
     }
 

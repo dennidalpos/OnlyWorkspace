@@ -266,7 +266,7 @@ public sealed partial class ArchiveDb : IDisposable
         foreach (var file in Directory.GetFiles(Path.GetDirectoryName(engine)!, Path.GetFileName(engine) + "*" + StagingMarker + "*"))
         {
             try { File.Delete(file); }
-            catch (IOException) { }
+            catch (IOException) { } // staging file still in use: removed at the next start
             catch (UnauthorizedAccessException) { }
         }
     }

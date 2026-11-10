@@ -322,7 +322,7 @@ public static class MailAnswerVerifier
         private static void Scan(Action scan)
         {
             try { scan(); }
-            catch (RegexMatchTimeoutException) { }
+            catch (RegexMatchTimeoutException) { } // fact extraction is best effort: a slow text adds no facts
         }
 
         public bool Contains(string value)

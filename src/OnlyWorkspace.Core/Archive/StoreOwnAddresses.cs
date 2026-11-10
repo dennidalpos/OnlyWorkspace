@@ -53,7 +53,7 @@ public static class StoreOwnAddresses
                 foreach (var pair in parsed)
                     if (pair.Key.Length > 0 && pair.Value != null) result[pair.Key] = pair.Value;
         }
-        catch (JsonException) { }
+        catch (JsonException) { } // damaged meta value: treated as not stored, the indexer recomputes it
         return result;
     }
 
