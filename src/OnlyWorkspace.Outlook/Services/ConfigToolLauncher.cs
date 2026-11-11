@@ -14,16 +14,21 @@ public static class ConfigToolLauncher
 
     public static bool TryLaunch(bool startMinimized = false, bool mailboxes = false)
     {
+        string addinDir = Path.GetDirectoryName(typeof(ConfigToolLauncher).Assembly.Location) ?? string.Empty;
+        string[] candidates =
+        {
+            Path.Combine(addinDir, ExeName),
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "OnlyWorkspace", ExeName),
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "OnlyWorkspace", ExeName)
+        };
+        return TryLaunch(candidates, addinDir, startMinimized, mailboxes);
+    }
+
+    /// <summary>Starts the first existing candidate; false when none exists or it cannot be started.</summary>
+    internal static bool TryLaunch(string[] candidates, string addinDir, bool startMinimized, bool mailboxes)
+    {
         try
         {
-            string addinDir = Path.GetDirectoryName(typeof(ConfigToolLauncher).Assembly.Location) ?? string.Empty;
-            string[] candidates =
-            {
-                Path.Combine(addinDir, ExeName),
-                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "OnlyWorkspace", ExeName),
-                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "OnlyWorkspace", ExeName)
-            };
-
             foreach (var configExe in candidates)
             {
                 if (!File.Exists(configExe)) continue;
