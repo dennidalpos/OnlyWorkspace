@@ -288,8 +288,13 @@ public sealed class OpenAIClient : ILlmClient, IReasoningObserver, IDisposable
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, bool> NoTemperature = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>Drops the rejected parameter; true when the request is worth one more attempt.</summary>
-    private bool TryAdapt(LlmRequestException ex) =>
-        ex.Status == 400 && ex.Param == "temperature" && NoTemperature.TryAdd(_profile.Model, true);
+    private bool TryAdapt(LlmRequestException ex)
+    {
+        bool learned = ex.Status == 400 && ex.Param == "temperature" && NoTemperature.TryAdd(_profile.Model, true);
+        // Fallback only: a model the catalog does not know (#199) is logged so it can be added.
+        if (learned) Logging.OnlyWorkspaceLog.Logger.Information("Model {Model} rejected temperature: learned at runtime, add it to ModelTraits", _profile.Model);
+        return learned;
+    }
 
     private async Task<StreamLineReader> OpenStreamAsync(List<ChatMessage> messages, string? jsonSchema, CancellationToken cancellationToken)
     {
@@ -325,9 +330,10 @@ public sealed class OpenAIClient : ILlmClient, IReasoningObserver, IDisposable
             ["messages"] = msgList
         };
 
-        if (!NoTemperature.ContainsKey(_profile.Model))
+        // Structured answers are deterministic (0); the profile value is for drafts, rewrites and free chat (#198).
+        if (!ModelTraits.For(_profile.Type, _profile.Model).NoTemperature && !NoTemperature.ContainsKey(_profile.Model))
         {
-            payload["temperature"] = _profile.Temperature;
+            payload["temperature"] = jsonSchema != null ? 0.0 : _profile.Temperature;
         }
 
         // Qwen 3.5-3.8 think by default and bill it as output (model-studio/deep-thinking): 13,000 tokens for one chat

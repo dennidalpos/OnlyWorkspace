@@ -1803,7 +1803,7 @@ public partial class TaskPaneCoordinator : IDisposable
         if (type == "stream_end" || type == "stream_error")
         {
             fields["webSources"] = WebCitations.Used(_turnText.ToString(), _webForTurn.Sources);
-            if (type == "stream_end" && _webForTurn.InputCut) fields["webNotice"] = WebSearchService.InputCutNotice;
+            if (type == "stream_end" && _webForTurn.Notice() is { } webNotice) fields["webNotice"] = webNotice;
             // A flow analysis brings its own [Mn] sources: the chat's empty list hid them (17/10/2026).
             if (!fields.TryGetValue("mailSources", out var own) || own == null) fields["mailSources"] = _mailSourcesForTurn;
             _control.PostMessage(fields);
@@ -1875,6 +1875,7 @@ public partial class TaskPaneCoordinator : IDisposable
         catch (WebSearchSkippedException)
         {
             OnlyWorkspaceLog.Logger.Information("Web search skipped by the model for profile {Profile}", profile.Id);
+            _webForTurn.MarkSkipped(turn);
             return string.Empty;
         }
         catch (Exception ex)
@@ -1910,6 +1911,7 @@ public partial class TaskPaneCoordinator : IDisposable
     {
         var list = ModelRequestContext.Prepare(profile, messages, jsonSchema);
         WebSearchResult? web;
+        int turn = _turn;
         var searchWatch = Stopwatch.StartNew();
         try
         {
@@ -1921,6 +1923,7 @@ public partial class TaskPaneCoordinator : IDisposable
             timings?.AddWeb(searchWatch.ElapsedMilliseconds);
             // The model judged the web useless for this request (e.g. a contact lookup): answer from Outlook data only.
             OnlyWorkspaceLog.Logger.Information("Web search skipped by the model for profile {Profile}", profile.Id);
+            _webForTurn.MarkSkipped(turn);
             return list;
         }
         catch (Exception ex) when (!ct.IsCancellationRequested && ex is not ContextTooLongException && ex is not DataEgressBlockedException && ex is not OperationCanceledException)

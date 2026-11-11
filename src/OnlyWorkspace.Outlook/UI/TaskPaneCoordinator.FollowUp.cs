@@ -68,6 +68,7 @@ public partial class TaskPaneCoordinator
                 SaveHistoryAsync = async result =>
                 {
                     _webForTurn.Take(turn, result.WebSources);
+                    if (result.WebSkipped) _webForTurn.MarkSkipped(turn);
                     _mailSourcesForTurn = result.MailSources;
                     await RecordActionInHistoryAsync(profile, "Follow-up: " + result.Email!.Subject, result.Answer, ct, HistoryRefOf(selected), "Follow-up");
                 }

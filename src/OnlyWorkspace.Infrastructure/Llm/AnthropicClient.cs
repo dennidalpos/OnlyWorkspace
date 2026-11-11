@@ -298,7 +298,18 @@ public sealed class AnthropicClient : ILlmClient, IDisposable
     /// </summary>
     private static readonly ConcurrentDictionary<string, ModelQuirks> Quirks = new(StringComparer.OrdinalIgnoreCase);
 
-    private ModelQuirks KnownQuirks => Quirks.TryGetValue(_profile.Model, out var q) ? q : ModelQuirks.None;
+    /// <summary>Catalog first (ModelTraits, #199), then what this run learned from an HTTP 400.</summary>
+    private ModelQuirks KnownQuirks
+    {
+        get
+        {
+            var quirks = Quirks.TryGetValue(_profile.Model, out var q) ? q : ModelQuirks.None;
+            var traits = ModelTraits.For(_profile.Type, _profile.Model);
+            if (traits.NoTemperature) quirks |= ModelQuirks.NoTemperature;
+            if (traits.NoOutputFormat) quirks |= ModelQuirks.NoOutputFormat;
+            return quirks;
+        }
+    }
 
     // max_tokens is mandatory; thinking tokens count against the streaming allowance.
     private const int StreamMaxTokens = 64000;
@@ -309,7 +320,9 @@ public sealed class AnthropicClient : ILlmClient, IDisposable
 
     private int MaxTokens()
     {
-        return OutputCaps.TryGetValue(_profile.Model, out var cap) ? Math.Min(cap, StreamMaxTokens) : StreamMaxTokens;
+        int known = ModelTraits.For(_profile.Type, _profile.Model).MaxOutputTokens;
+        int ceiling = known > 0 ? Math.Min(known, StreamMaxTokens) : StreamMaxTokens;
+        return OutputCaps.TryGetValue(_profile.Model, out var cap) ? Math.Min(cap, ceiling) : ceiling;
     }
 
     /// <summary>Drops the rejected parameter; true when the request is worth one more attempt.</summary>
@@ -334,6 +347,8 @@ public sealed class AnthropicClient : ILlmClient, IDisposable
         var quirks = KnownQuirks;
         if (quirk == ModelQuirks.None || (quirks & quirk) != 0) return false;
         Quirks[_profile.Model] = quirks | quirk;
+        // Fallback only: a model the catalog does not know (#199) is logged so it can be added.
+        Logging.OnlyWorkspaceLog.Logger.Information("Model {Model} rejected {Quirk}: learned at runtime, add it to ModelTraits", _profile.Model, quirk);
         return true;
     }
 
@@ -399,7 +414,8 @@ public sealed class AnthropicClient : ILlmClient, IDisposable
 
         if ((quirks & ModelQuirks.NoTemperature) == 0)
         {
-            payload["temperature"] = Math.Min(1.0, Math.Max(0.0, _profile.Temperature));
+            // Structured answers are deterministic (0); the profile value is for drafts, rewrites and free chat (#198).
+            payload["temperature"] = jsonSchema != null ? 0.0 : Math.Min(1.0, Math.Max(0.0, _profile.Temperature));
         }
 
         if (systemBuilder.Length > 0)

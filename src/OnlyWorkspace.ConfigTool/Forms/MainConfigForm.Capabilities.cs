@@ -246,7 +246,7 @@ public sealed partial class MainConfigForm
         var copy = JsonSerializer.Deserialize<LlmProfileConfig>(JsonSerializer.Serialize(p))!;
         copy.ModelCapabilities = null;
         copy.DisableThinking = !reasoning;
-        copy.Temperature = 0;
+        // Same temperature as real use: the profile's for text and reasoning, 0 for the structured probe (set by the client).
         return copy;
     }
 

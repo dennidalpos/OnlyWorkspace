@@ -416,6 +416,42 @@ public sealed class WebSearchServiceTests
         Assert.Throws<WebSearchSkippedException>(() => WebSearchService.ParseResult(mode, document.RootElement));
     }
 
+    private const string QwenUrl = "https://token-plan.maas.qwencloudapi.com/compatible-mode/v1";
+
+    [Fact]
+    public async Task QwenCloud_SearchForcesTheWebSearchTool_WithoutMaxToolCalls()
+    {
+        string? body = null;
+        using var http = new HttpClient(new Handler(async (req, _) => { body = await req.Content!.ReadAsStringAsync(); return Json(OpenAiAnswer("ok")); }));
+        var profile = new LlmProfileConfig { Type = "qwen", Model = "qwen3.7-plus", BaseUrl = QwenUrl, External = true, Exposure = OnlyWorkspace.Core.Privacy.ExposureLevel.Extended };
+        using var search = new WebSearchService(profile, "secret", httpClient: http);
+        var mask = new OnlyWorkspace.Core.Privacy.Pseudonymizer(maskAmounts: true, maskDates: true);
+
+        await search.SearchAsync(new[] { ChatMessage.User("Synthetic") }, default, "chat", mask, TestPrivacyAudit.Store);
+
+        using var doc = JsonDocument.Parse(body!);
+        Assert.Equal("web_search", doc.RootElement.GetProperty("tool_choice").GetProperty("type").GetString());
+        Assert.False(doc.RootElement.TryGetProperty("max_tool_calls", out _));
+        Assert.False(doc.RootElement.TryGetProperty("include", out _));
+    }
+
+    [Fact]
+    public async Task QwenCloud_CapabilityProbeForcesTheTool_AndNamesAModelThatStillDoesNotSearch()
+    {
+        string? body = null;
+        using var http = new HttpClient(new Handler(async (req, _) =>
+        {
+            body = await req.Content!.ReadAsStringAsync();
+            return Json("{\"output\":[{\"type\":\"message\",\"content\":[{\"type\":\"output_text\",\"text\":\"Fonte: example.org\"}]}]}");
+        }));
+        using var search = new WebSearchService(new LlmProfileConfig { Type = "qwen", Model = "qwen3.6-flash", BaseUrl = QwenUrl }, "secret", httpClient: http);
+
+        Assert.Equal(WebSearchSupport.Unverified, await search.CheckSupportAsync());
+
+        Assert.Contains("\"tool_choice\":{\"type\":\"web_search\"}", body);
+        Assert.Contains("nemmeno quando lo strumento è forzato", search.LastCheckError);
+    }
+
     /// <summary>Where the tool is forced, a missing search is still an error.</summary>
     [Fact]
     public void OpenAI_AnswerWithoutSearch_IsAnError()

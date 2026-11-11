@@ -183,7 +183,7 @@ public class GeminiClientTests
     }
 
     [Fact]
-    public async Task CompleteStructuredAsync_SendsTemperature_ToGemini2()
+    public async Task CompleteStructuredAsync_SendsTemperatureZero_ToGemini2()
     {
         string? body = null;
         using var gemini = Create("gemini-2.5-flash", req =>
@@ -194,9 +194,9 @@ public class GeminiClientTests
 
         await gemini.CompleteProtocolAsync(new[] { ChatMessage.User("Analizza") }, "{}");
 
-        // The value, not its text: System.Text.Json on net48 writes 0.3 as 0.29999999999999999.
+        // Structured answers are deterministic whatever the profile says (0.3 here), #198.
         using var json = JsonDocument.Parse(body!);
-        Assert.Equal(0.3, json.RootElement.GetProperty("generationConfig").GetProperty("temperature").GetDouble());
+        Assert.Equal(0.0, json.RootElement.GetProperty("generationConfig").GetProperty("temperature").GetDouble());
     }
 
     [Fact]

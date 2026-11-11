@@ -255,7 +255,8 @@ public sealed class OllamaClient : ILlmClient, IReasoningObserver, IDisposable
 
         // Ollama Cloud runs models at full context: only a local server takes num_ctx, num_predict and keep_alive.
         var caps = ProviderCatalog.Get(_profile.Type);
-        var options = new Dictionary<string, object> { ["temperature"] = _profile.Temperature };
+        // Structured answers are deterministic (0); the profile value is for drafts, rewrites and free chat (#198).
+        var options = new Dictionary<string, object> { ["temperature"] = format != null ? 0.0 : _profile.Temperature };
         if (caps.SupportsNumCtx)
         {
             options["num_ctx"] = _profile.NumCtx;

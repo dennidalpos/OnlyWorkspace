@@ -299,7 +299,7 @@ public sealed class GeminiClient : ILlmClient, IDisposable
         var model = StripModelsPrefix(_profile.Model);
         if (model.StartsWith("gemini-1", StringComparison.OrdinalIgnoreCase) || model.StartsWith("gemini-2", StringComparison.OrdinalIgnoreCase))
         {
-            genConfig["temperature"] = _profile.Temperature;
+            genConfig["temperature"] = jsonSchema != null ? 0.0 : _profile.Temperature;
         }
 
         // No maxOutputTokens: the provider applies the model's own limit.

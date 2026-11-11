@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using OnlyWorkspace.Core.Models;
+using OnlyWorkspace.Infrastructure.Llm;
 
 namespace OnlyWorkspace.Outlook.UI;
 
@@ -15,11 +16,30 @@ internal sealed class TurnWebSources
 
     public bool InputCut { get; private set; }
 
+    /// <summary>A search was requested but the model answered without running it (#200).</summary>
+    public bool Skipped { get; private set; }
+
     public void Begin(int turn)
     {
         _turn = turn;
         Sources = new List<WebSource>();
         InputCut = false;
+        Skipped = false;
+    }
+
+    /// <summary>False, and nothing changes, when the turn already ended.</summary>
+    public bool MarkSkipped(int turn)
+    {
+        if (turn != _turn) return false;
+        Skipped = true;
+        return true;
+    }
+
+    /// <summary>Note shown under the answer for this turn, or null.</summary>
+    public string? Notice()
+    {
+        if (InputCut && Skipped) return WebSearchService.InputCutNotice + "\n" + WebSearchService.SkippedNotice;
+        return InputCut ? WebSearchService.InputCutNotice : Skipped ? WebSearchService.SkippedNotice : null;
     }
 
     /// <summary>False, and nothing changes, when the result belongs to a turn that already ended.</summary>

@@ -47,6 +47,8 @@ public sealed class FollowUpActionResult
     public FollowUpMail? Email { get; set; }
     public string Answer { get; set; } = string.Empty;
     public List<WebSource> WebSources { get; set; } = new();
+    /// <summary>The model answered without running the requested web search.</summary>
+    public bool WebSkipped { get; set; }
     public List<HistoryContextReference> MailSources { get; set; } = new();
 }
 
@@ -157,7 +159,8 @@ public sealed class FollowUpCoordinator
             }
             catch (WebSearchSkippedException)
             {
-                // The model saw no use for the web here: the follow-up rests on the emails alone.
+                // The model saw no use for the web here: the follow-up rests on the emails alone, and the pane says so.
+                result.WebSkipped = true;
             }
             catch (Exception ex) when (!ct.IsCancellationRequested)
             {

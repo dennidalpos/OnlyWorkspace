@@ -37,14 +37,17 @@ public sealed class ProviderCapabilities
     public string ChatPath { get; }
     public CapabilitySource Capabilities { get; }
     public WebSearchMode WebSearch { get; }
+    /// <summary>Basic Responses provider that accepts tool_choice {"type":"web_search"} (QwenCloud, proved 11/11/2026).</summary>
+    public bool ForcesWebTool { get; }
     /// <summary>Official API reference, shown as tooltip.</summary>
     public string DocsUrl { get; }
 
     internal ProviderCapabilities(string type, string name, ApiFamily family, string baseUrl, bool external, string[] authTypes,
         string docsUrl, string model = "", string apiKeyHeader = "", string chatPath = "chat/completions",
         CapabilitySource capabilities = CapabilitySource.None, WebSearchMode webSearch = WebSearchMode.None,
-        bool numCtx = false, bool keepAlive = false, bool thinkToggle = false)
+        bool numCtx = false, bool keepAlive = false, bool thinkToggle = false, bool forcesWebTool = false)
     {
+        ForcesWebTool = forcesWebTool;
         Type = type;
         DisplayName = name;
         Family = family;
@@ -115,7 +118,7 @@ public static class ProviderCatalog
             "https://developers.openai.com/api/reference", webSearch: WebSearchMode.OpenAIResponses),
         new ProviderCapabilities("qwen", "QwenCloud", ApiFamily.OpenAI, "https://token-plan.maas.qwencloudapi.com/compatible-mode/v1", true, Bearer,
             "https://www.alibabacloud.com/help/en/model-studio/compatibility-of-openai-with-dashscope", webSearch: WebSearchMode.BasicResponses,
-            thinkToggle: true),
+            thinkToggle: true, forcesWebTool: true),
         new ProviderCapabilities(OpenAICompatible, "Compatibile OpenAI", ApiFamily.OpenAI, "", false, None,
             "https://developers.openai.com/api/reference")
     };

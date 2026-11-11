@@ -87,6 +87,17 @@ public sealed class WebSearchService : IDisposable
     /// <summary>Responses API without OpenAI-only controls (tool_choice, max_tool_calls, include): QwenCloud, xAI.</summary>
     private bool Basic => Caps.WebSearch == WebSearchMode.BasicResponses;
 
+    /// <summary>
+    /// Basic Responses request: QwenCloud gets tool_choice forced to web_search (without it qwen3.7-plus never searches);
+    /// max_tool_calls stays out (qwen3.8-flash then did not search at all).
+    /// </summary>
+    private object BasicRequest(string input) => Caps.ForcesWebTool
+        ? new { model = _profile.Model, input, tools = new[] { new { type = "web_search" } }, tool_choice = new { type = "web_search" }, store = false }
+        : new { model = _profile.Model, input, tools = new[] { new { type = "web_search" } }, store = false };
+
+    /// <summary>Shown under the answer when the model answered without running the search it was asked for (#200).</summary>
+    public const string SkippedNotice = "Il modello non ha eseguito la ricerca web: la risposta non contiene fonti web.";
+
     public WebSearchService(LlmProfileConfig profile, string? modelSecret, string? webSecret = null, HttpClient? httpClient = null,
         Action? externalRequestStarting = null)
     {
@@ -206,7 +217,7 @@ public sealed class WebSearchService : IDisposable
                 bool responses = mode != WebSearchMode.GeminiGrounding;
                 object payload = responses
                     ? Basic
-                        ? new { model = _profile.Model, input = "Usa web_search per trovare una fonte pubblica sulla data odierna UTC e cita la fonte.", tools = new[] { new { type = "web_search" } }, store = false }
+                        ? BasicRequest("Usa web_search per trovare una fonte pubblica sulla data odierna UTC e cita la fonte.")
                         : new { model = _profile.Model, input = "Cerca sul web una fonte pubblica per la data odierna UTC.", max_output_tokens = 256, tools = new[] { new { type = "web_search", search_context_size = "low" } }, tool_choice = "required", max_tool_calls = 1 }
                     : new { contents = new[] { new { parts = new[] { new { text = "Cerca con Google una fonte pubblica per la data odierna UTC." } } } }, tools = new[] { new { google_search = new { } } }, generationConfig = new { maxOutputTokens = 256 } };
                 using var probe = await SendAsync(HttpMethod.Post,
@@ -241,6 +252,13 @@ public sealed class WebSearchService : IDisposable
             return WebSearchSupport.Unsupported;
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
+        catch (WebSearchSkippedException)
+        {
+            LastCheckError = Caps.ForcesWebTool
+                ? "Il modello non esegue la ricerca web nemmeno quando lo strumento è forzato: scegli un altro modello."
+                : "Il modello ha risposto senza eseguire la ricerca web: la verifica non è riuscita, riprova o scegli un altro modello.";
+            return WebSearchSupport.Unverified;
+        }
         catch (Exception ex) { LastCheckError = ex.Message; return WebSearchSupport.Unverified; }
         LastCheckError = "La sonda non ha restituito una ricerca web eseguita.";
         return WebSearchSupport.Unverified;
@@ -310,7 +328,7 @@ public sealed class WebSearchService : IDisposable
                 case WebSearchMode.OpenAIResponses:
                 case WebSearchMode.BasicResponses:
                     response = await SendAsync(HttpMethod.Post, ProviderUrl("responses"), Basic
-                        ? new { model = _profile.Model, input = "Usa web_search per questa richiesta e cita le fonti.\n" + input, tools = new[] { new { type = "web_search" } }, store = false }
+                        ? BasicRequest("Usa web_search per questa richiesta e cita le fonti.\n" + input)
                         : (object)new { model = _profile.Model, input, tools = new[] { new { type = "web_search", search_context_size = "low" } }, tool_choice = "required", max_tool_calls = 2, include = new[] { "web_search_call.action.sources" } }, false, ct).ConfigureAwait(false);
                     break;
                 case WebSearchMode.AnthropicTool:

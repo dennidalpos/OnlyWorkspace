@@ -161,6 +161,24 @@ public sealed class PaneOperationsTests
     }
 
     [Fact]
+    public void TurnWebSources_SayWhenTheModelSkippedTheSearch_OnlyForTheTurnItBelongsTo()
+    {
+        var web = new TurnWebSources();
+        web.Begin(5);
+        Assert.Null(web.Notice());
+        Assert.False(web.MarkSkipped(4));
+        Assert.Null(web.Notice());
+
+        Assert.True(web.MarkSkipped(5));
+        Assert.Equal(OnlyWorkspace.Infrastructure.Llm.WebSearchService.SkippedNotice, web.Notice());
+        web.Take(5, new List<WebSource>(), inputCut: true);
+        Assert.Equal(OnlyWorkspace.Infrastructure.Llm.WebSearchService.InputCutNotice + "\n" + OnlyWorkspace.Infrastructure.Llm.WebSearchService.SkippedNotice, web.Notice());
+
+        web.Begin(6);
+        Assert.Null(web.Notice());
+    }
+
+    [Fact]
     public void TurnWebSources_KeepTheCutNoticeAcrossSearchesOfTheTurn()
     {
         var web = new TurnWebSources();
