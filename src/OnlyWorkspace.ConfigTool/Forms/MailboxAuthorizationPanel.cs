@@ -42,7 +42,7 @@ internal sealed class MailboxAuthorizationPanel : TableLayoutPanel
     private readonly System.Windows.Forms.Timer _poll = new() { Interval = 5000 };
     private bool _building;
     private bool _scopeUnknown;
-    private IReadOnlyList<string> _persistedStores = Array.Empty<string>();
+    private StoreScope _persistedStores = StoreScope.All();
     internal Func<ArchiveClient, string, CancellationToken, Task>? WriteStores;
     internal Func<ArchiveClient, CancellationToken, Task<string?>>? ReadStores;
     // Defaults: the engine's coverage and a message box; tests replace them (#207).
@@ -50,23 +50,17 @@ internal sealed class MailboxAuthorizationPanel : TableLayoutPanel
     internal Func<string, bool>? ConfirmExclusion;
     private readonly Dictionary<string, string> _names = new(StringComparer.Ordinal);
 
-    private static IReadOnlyList<string> ParseSavedStores(string? json)
-    {
-        if (string.IsNullOrEmpty(json)) return Array.Empty<string>();
-        using var doc = JsonDocument.Parse(json!);
-        if (doc.RootElement.ValueKind != JsonValueKind.Array || doc.RootElement.EnumerateArray().Any(v => v.ValueKind != JsonValueKind.String || string.IsNullOrWhiteSpace(v.GetString())))
-            throw new JsonException("Selezione delle cassette non valida.");
-        return doc.RootElement.EnumerateArray().Select(v => v.GetString()!).ToList();
-    }
-    private void ApplySavedStores(IReadOnlyList<string> chosen)
+    private static StoreScope ParseSavedStores(string? json) => StoreScope.ParseStrict(json);
+
+    private void ApplySavedStores(StoreScope chosen)
     {
         _building = true;
         try
         {
-            _persistedStores = chosen.ToArray();
+            _persistedStores = chosen;
             _scopeUnknown = false;
-            bool all = chosen.Count == 0;
-            foreach (var row in _rows) { row.Value.ThreeState = false; row.Value.Checked = row.Key == AllRowId ? all : all || chosen.Contains(row.Key, StringComparer.Ordinal); }
+            bool all = chosen.IsAll;
+            foreach (var row in _rows) { row.Value.ThreeState = false; row.Value.Checked = row.Key == AllRowId ? all : chosen.Allows(row.Key); }
             SyncAllRow();
         }
         finally { _building = false; }
@@ -328,7 +322,7 @@ internal sealed class MailboxAuthorizationPanel : TableLayoutPanel
     }
 
     /// <param name="removable">Closed mailboxes with emails in the archive: each gets «Togli dall'archivio».</param>
-    private void BuildGrid(IReadOnlyList<ArchiveOpenStore> stores, IReadOnlyList<string> chosen, Dictionary<string, StoreOwnEntry> own, IReadOnlyCollection<string> removable)
+    private void BuildGrid(IReadOnlyList<ArchiveOpenStore> stores, StoreScope chosen, Dictionary<string, StoreOwnEntry> own, IReadOnlyCollection<string> removable)
     {
         _building = true;
         try
@@ -339,12 +333,12 @@ internal sealed class MailboxAuthorizationPanel : TableLayoutPanel
                 Header("Archivio", "Le email della cassetta entrano nell'archivio locale cifrato di questo PC."));
 
             _scopeUnknown = false;
-            _persistedStores = chosen.ToArray();
-            bool allArchive = chosen.Count == 0;
+            _persistedStores = chosen;
+            bool allArchive = chosen.IsAll;
             AddStore(AllRowId, "Tutte le cassette, anche future", true, allArchive, null);
             foreach (var store in stores)
             {
-                bool archived = allArchive || chosen.Contains(store.Id, StringComparer.Ordinal);
+                bool archived = chosen.Allows(store.Id);
                 AddStore(store.Id, store.Name + (store.Open ? string.Empty : " (chiusa)"), store.Open, archived,
                     !store.Open && removable.Contains(store.Id, StringComparer.OrdinalIgnoreCase) ? store.Name : null);
                 if (store.IsDataFileStore && !store.HasAccount) AddOwnAddresses(store, own.TryGetValue(store.Id, out var entry) ? entry : null);
@@ -555,7 +549,7 @@ internal sealed class MailboxAuthorizationPanel : TableLayoutPanel
         _grid.Enabled = _profiles.Enabled = _refresh.Enabled = false;
         try
         {
-            string json = JsonSerializer.Serialize(all.Checked ? new List<string>() : archived);
+            string json = (all.Checked ? StoreScope.All() : StoreScope.Only(archived)).ToJson();
             if (WriteStores != null) await WriteStores(client, json, _lifetime);
             else await client.SetMetaAsync(ArchiveScope.StoresKey, json, _lifetime);
             if (Closing) return;

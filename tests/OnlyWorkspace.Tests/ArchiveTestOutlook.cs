@@ -122,10 +122,10 @@ internal sealed class FakeOutlook : IArchiveMailSource
     public string GetProfileName() { Call(nameof(GetProfileName)); return Profile; }
     public IReadOnlyCollection<string> GetOwnAddressList() { Call(nameof(GetOwnAddressList)); return new[] { "me@example.test" }.Concat(OwnFromStores).ToList(); }
 
-    public IArchiveFolderWalk WalkArchiveFolders(ICollection<string>? storeIds)
+    public IArchiveFolderWalk WalkArchiveFolders(StoreScope scope)
     {
         Call(nameof(WalkArchiveFolders));
-        var stores = _rows.Keys.Where(s => !ClosedStores.Contains(s) && (storeIds == null || storeIds.Count == 0 || storeIds.Contains(s))).ToArray();
+        var stores = _rows.Keys.Where(s => !ClosedStores.Contains(s) && scope.Allows(s)).ToArray();
         var folders = stores.SelectMany(s => new[] { new MailFolderRef { StoreId = s, EntryId = "inbox-" + s, Path = "Inbox" } }
             .Concat(Enumerable.Range(1, ExtraFoldersPerStore).Select(i => new MailFolderRef { StoreId = s, EntryId = $"extra-{s}-{i}", Path = "Inbox/Extra " + i })))
             .Where(f => !DeletedFolders.Contains(f.EntryId));

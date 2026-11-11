@@ -19,7 +19,7 @@ public sealed partial class ArchiveDb
             foreach (long id in seeds)
             {
                 if (physical.ContainsKey(id)) continue;
-                var flow = GetFlow(new ArchiveFlowSeed { Id = id, AllowedStoreIds = policy.AllowedStoreIds, IncludeAttachmentText = policy.IncludeAttachmentText }, int.MaxValue - 1);
+                var flow = GetFlow(new ArchiveFlowSeed { Id = id, Stores = policy.Stores, IncludeAttachmentText = policy.IncludeAttachmentText }, int.MaxValue - 1);
                 result.MetadataIncomplete |= flow.MetadataIncomplete; result.FactsIncomplete |= flow.FactsIncomplete;
                 foreach (var mail in flow.Timeline)
                     foreach (var copy in mail.Copies) { physical[copy.Id] = mail; }
@@ -30,7 +30,7 @@ public sealed partial class ArchiveDb
                 var query = new ArchiveQuery
                 {
                     EmailIds = ids.Skip(i).Take(500).ToList(),
-                    AllowedStoreIds = policy.AllowedStoreIds,
+                    Stores = policy.Stores,
                     IncludeAttachmentText = policy.IncludeAttachmentText,
                     IncludeFacts = true,
                     Max = 500

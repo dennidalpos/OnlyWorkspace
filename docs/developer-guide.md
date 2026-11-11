@@ -4,7 +4,7 @@
 
 Core contains models/privacy/facts; Infrastructure contains archive/config/security/transports; Outlook supplies COM/ribbon/WebView2 coordination; ConfigTool hosts configuration/tray/archive engine; AttachmentExtractor isolates document reading. Installed add-in targets net48; tests also target net10.0-windows. [Solution](../OnlyWorkspace.sln) and manifests define dependencies/versions.
 
-Outlook Object Model stays on Outlook UI STA. Tray owns the encrypted archive, exposing SID-restricted local pipe v15; add-in/tray update together. WebView messages and mail/attachments are untrusted input. No Graph/IMAP/OAuth mail connectors exist.
+Outlook Object Model stays on Outlook UI STA. Tray owns the encrypted archive, exposing SID-restricted local pipe v16; add-in/tray update together. WebView messages and mail/attachments are untrusted input. No Graph/IMAP/OAuth mail connectors exist.
 
 The dispatcher mechanically masks input, checks exposure and seals a nonserializable request proof. HTTP clients revalidate immediately before transport. Minimal accepts embedded typed facts/opaque references; Standard/Extended masked free text. Altered messages/schemas or unmasked text are refused. Unknown/duplicate/missing/truncated fact references refuse responses. Restore values locally; no automatic provider fallback.
 

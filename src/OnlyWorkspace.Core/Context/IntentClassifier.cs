@@ -14,7 +14,7 @@ public static class IntentClassifier
         {
             result.Keywords = filters.Keywords;
             result.Sender = filters.Sender;
-            if (filters.From != null) { result.StartDate = filters.From; result.EndDate = filters.To; }
+            if (filters.From != null) { result.StartDate = filters.From; result.EndDate = filters.To; result.PeriodStated = true; }
         }
         if (result.Target == "contacts")
         {
@@ -51,7 +51,7 @@ public static class IntentClassifier
     private static readonly System.Text.RegularExpressions.Regex ContactLookup = new(
         @"\b(contatt\w*|rubrica|telefon\w*|cellular\w*|phone|mobile|contact\s+(email|details)|address\s+book|indirizzo\s+(e-?mail|di)|e-?mail\s+(address|for)|chi\s+[èe]|who\s+is)\b" +
         @"|\b(azienda|company)\b.*\b(lavora|associated|work\w*)\b|\b(company)\b.*\bassociated\b" +
-        @"|\b(carica|ruolo)\s+(di|del|della)\b", RuleOptions);
+        @"|\b(carica|ruolo)\s+(di|del|della)\b|\b(che|quale)\s+(ruolo|carica|mansione)\b|\bjob\s+title\b", RuleOptions);
 
     private static readonly System.Text.RegularExpressions.Regex MailTerms = new(
         @"\b(e-?mails?|mail|posta|messaggi\w*|messages?|comunicazion\w*|discussioni|pec)\b", RuleOptions);

@@ -263,8 +263,8 @@ public sealed class ArchiveSearchEvolutionTests : IDisposable
         Add(db, "bridge", "Ordine REF-12345; ordine REF-98765", "<bridge@test>", store: "excluded");
         Add(db, "c", "Ordine REF-98765", "<c@test>"); Drain(db);
         Assert.Equal(3, db.GetFlow(new ArchiveFlowSeed { Id = a }).Timeline.Count);
-        Assert.Single(db.GetFlow(new ArchiveFlowSeed { Id = a, AllowedStoreIds = new List<string> { "s" } }).Timeline);
-        Assert.Empty(db.GetFlow(new ArchiveFlowSeed { Id = a, AllowedStoreIds = new List<string>() }).Timeline);
+        Assert.Single(db.GetFlow(new ArchiveFlowSeed { Id = a, Stores = StoreScope.Only(new[] { "s" }) }).Timeline);
+        Assert.Empty(db.GetFlow(new ArchiveFlowSeed { Id = a, Stores = StoreScope.None() }).Timeline);
     }
 
     [Fact]
@@ -274,7 +274,7 @@ public sealed class ArchiveSearchEvolutionTests : IDisposable
         Add(db, "older", "Ordine REF-12345", "<b@test>", sent: Day.AddDays(-2), received: Day.AddDays(1));
         Add(db, "forward", "Ordine REF-12345. Forwarded message dated 2001-01-01.", "<f@test>", sent: Day.AddDays(2), received: Day.AddDays(2));
         Add(db, "none1", "Ordine REF-12345"); Add(db, "none2", "Ordine REF-12345"); Drain(db);
-        var result = db.ExpandRelated(new[] { a }, new ArchiveFlowSeed { AllowedStoreIds = new List<string> { "s" } });
+        var result = db.ExpandRelated(new[] { a }, new ArchiveFlowSeed { Stores = StoreScope.Only(new[] { "s" }) });
         Assert.Equal(5, result.Hits.Count); Assert.Equal("older", result.Hits[0].EntryId); Assert.Equal("forward", result.Hits[^1].EntryId);
         Assert.Equal(4, result.Hits.Count(h => h.OutsideFilters)); Assert.False(result.Hits.Single(h => h.Id == a).OutsideFilters);
     }
@@ -325,7 +325,7 @@ public sealed class ArchiveSearchEvolutionTests : IDisposable
         {
             Text = words,
             FactFilters = filters,
-            AllowedStoreIds = new List<string> { "s" }
+            Stores = StoreScope.Only(new[] { "s" })
         })).Id);
         // The explicit search parser must not start interpreting natural-language instructions.
         Assert.NotEmpty(ArchiveSearchText.Parse(question, new List<ArchiveFactFilter>()));
@@ -367,10 +367,10 @@ public sealed class ArchiveSearchEvolutionTests : IDisposable
         using (var db = Open()) { a = Add(db, "a", "Ordine REF-12345. EUR 1000,01", "<a@test>"); Add(db, "other", "Ordine REF-12345", "<b@test>"); Add(db, "nonmatch", "Importo 20 EUR", "<c@test>"); Drain(db); }
         using var engine = new ArchiveEngine(_directory); await engine.Ready;
         var client = new ArchiveClient("p", _directory); await client.OpenAsync();
-        var query = new ArchiveQuery { IncludeFacts = true, AllowedStoreIds = new List<string> { "s" }, Max = 1 };
+        var query = new ArchiveQuery { IncludeFacts = true, Stores = StoreScope.Only(new[] { "s" }), Max = 1 };
         query.FactFilters.Add(new ArchiveFactFilter { Kind = ArchiveFactKind.Amount, AmountMin = 1000.01m, AmountMax = 1000.01m, Currency = "EUR" });
         Assert.Equal(a, Assert.Single(await client.SearchAsync(query)).Id);
-        var result = await client.ExpandRelatedAsync(new[] { a }, new ArchiveFlowSeed { AllowedStoreIds = new List<string> { "s" }, IncludeAttachmentText = false });
+        var result = await client.ExpandRelatedAsync(new[] { a }, new ArchiveFlowSeed { Stores = StoreScope.Only(new[] { "s" }), IncludeAttachmentText = false });
         Assert.Equal(2, result.Hits.Count); Assert.Contains(result.Hits, h => h.OutsideFilters && h.LinkFacts.Count > 0);
         var flow = await client.GetFlowAsync(new ArchiveFlowSeed { Id = a }); Assert.All(flow.Timeline, m => Assert.Single(m.Copies));
     }

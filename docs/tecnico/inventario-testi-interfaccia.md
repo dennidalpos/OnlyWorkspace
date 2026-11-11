@@ -21,7 +21,7 @@ Esito per schermata del passaggio di riduzione del 4 novembre 2026 (vedi [vocabo
 | Profilo IA | Accorciati Servizio IA e Budget token; livelli di esposizione, ricerca web e servizio esterno invariati; gli altri tooltip di campo restano come aiuto contestuale |
 | Capacità e verifiche | Accorciati introduzione e legenda; invariata l'avvertenza su dati inventati, token a pagamento e ricerca web |
 | Ricerca archivio, Cassette | Accorciati compattazione, Message-ID e scelta delle cassette |
-| `DataEgressNotice` | Versione 6 (4/11): testo, titolo e hash fanno parte delle autorizzazioni salvate; ogni modifica del testo richiede una nuova versione |
+| `DataEgressNotice` | Versione 6 al 4/11 (oggi 8, inventario storico): testo, titolo e hash fanno parte delle autorizzazioni salvate; ogni modifica del testo richiede una nuova versione |
 
 ## Non fatto
 
@@ -31,7 +31,7 @@ Esito per schermata del passaggio di riduzione del 4 novembre 2026 (vedi [vocabo
 
 ## Campi del profilo IA — 5 novembre 2026
 
-Inventario per campo del lotto #087/A202. «Accorciato» riguarda il tooltip, non le etichette o i comportamenti. Le descrizioni lunghe su uscita dati e costi restano nell’aiuto esistente; l’informativa versione 6 è invariata. La scheda dei dati si chiama «Autorizzazioni». Nessuna nuova prova a schermo sulla build installata.
+Inventario per campo del lotto #087/A202. «Accorciato» riguarda il tooltip, non le etichette o i comportamenti. Le descrizioni lunghe su uscita dati e costi restano nell’aiuto esistente; l’informativa versione 6 era invariata in quel lotto (oggi 8). La scheda dei dati si chiama «Autorizzazioni». Nessuna nuova prova a schermo sulla build installata.
 
 | Scheda | Campo o comando | Esito e contenuto conservato |
 |---|---|---|

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using OnlyWorkspace.Core.Archive;
 
 namespace OnlyWorkspace.ConfigTool.Forms;
 
@@ -11,12 +12,12 @@ namespace OnlyWorkspace.ConfigTool.Forms;
 /// </summary>
 internal static class MailboxExclusion
 {
-    /// <summary>Mailboxes archived before the change and not after it. An empty saved list means every mailbox.</summary>
-    public static IReadOnlyList<string> Excluded(IReadOnlyList<string> persisted, IReadOnlyCollection<string> storeIds,
+    /// <summary>Mailboxes archived before the change and not after it.</summary>
+    public static IReadOnlyList<string> Excluded(StoreScope persisted, IReadOnlyCollection<string> storeIds,
         bool allChecked, IReadOnlyCollection<string> archivedNow)
     {
         if (allChecked) return Array.Empty<string>();
-        var before = persisted.Count == 0 ? storeIds : storeIds.Where(id => persisted.Contains(id, StringComparer.Ordinal)).ToList();
+        var before = storeIds.Where(persisted.Allows).ToList();
         return before.Where(id => !archivedNow.Contains(id, StringComparer.Ordinal)).ToList();
     }
 

@@ -518,8 +518,9 @@ public class ArchiveDbTests : IDisposable
         }
         Assert.Equal(4, db.GetStats().Emails);
 
-        Assert.Equal(0, db.RemoveOtherStores(Array.Empty<string>(), 10)); // no choice = every mailbox
-        var keep = new[] { "gmail" };
+        Assert.Equal(0, db.RemoveOtherStores(StoreScope.All(), 10)); // all = every mailbox
+        Assert.Equal(0, db.RemoveOtherStores(StoreScope.None(), 10)); // none never empties the archive by itself
+        var keep = StoreScope.Only(new[] { "gmail" });
         Assert.Equal(1, db.RemoveOtherStores(keep, 1));
         Assert.Equal(1, db.RemoveOtherStores(keep, 10));
         Assert.Equal(1, db.RemoveOtherStores(keep, 10)); // the folder, once empty
@@ -552,7 +553,7 @@ public class ArchiveDbTests : IDisposable
             Header("p1", "Prova", "x@test.example", day, "<m2>"),
             Header("p2", "Altra prova", "y@test.example", day.AddDays(-1), "<m3>")
         }, folderDone: true);
-        db.SetMeta(ArchiveScope.StoresKey, "[]");
+        db.SetMeta(ArchiveScope.StoresKey, StoreScope.All().ToJson());
         db.SetMeta(StoreOwnAddresses.MetaKey, StoreOwnAddresses.WithGuess(StoreOwnAddresses.WithGuess(null, "pst", new StoreOwnEntry { Guessed = { "me@test.example" } }),
             "other", new StoreOwnEntry { Guessed = { "me@old.example" } }));
 
@@ -567,7 +568,7 @@ public class ArchiveDbTests : IDisposable
 
         Assert.Equal("g1", db.Search(new ArchiveQuery()).Single().EntryId);
         Assert.Equal("gmail", db.GetStoreCoverage().Single().StoreId);
-        Assert.Equal("[]", db.GetMeta(ArchiveScope.StoresKey));
+        Assert.Equal(StoreScope.All().ToJson(), db.GetMeta(ArchiveScope.StoresKey));
         Assert.Equal(new[] { "other" }, StoreOwnAddresses.Parse(db.GetMeta(StoreOwnAddresses.MetaKey)).Keys);
     }
 

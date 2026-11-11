@@ -28,11 +28,8 @@ public sealed partial class ArchiveDb
                     ("$e", seed.EntryId), ("$s", seed.StoreId)) ?? 0;
             var args = new List<(string, object?)> { ("$seed", id) };
             string scope = "";
-            if (seed.AllowedStoreIds != null)
-            {
-                var stores = seed.AllowedStoreIds.Select((store, i) => { args.Add(("$store" + i, store)); return "$store" + i; }).ToArray();
-                scope = " and f.store_id in (" + (stores.Length == 0 ? "null" : string.Join(",", stores)) + ")";
-            }
+            if (StoreScopeSql.Predicate(seed.Stores, "f.store_id", "$store", args) is { } storePredicate)
+                scope = " and " + storePredicate;
             string facts = "select x.email_id,x.kind+100 kind,x.value from archive_facts x join emails e on e.id=x.email_id join archive_fact_jobs j on j.email_id=e.id " +
                 "join eligible allowed on allowed.id=e.id where e.body_state=1 and e.present=1 and x.body_version=e.body_version and j.body_version=e.body_version and x.revision=" + ArchiveFactExtractor.Revision +
                 " and j.revision=x.revision and j.error is null and x.resolved=1 and x.kind in (3,4,5) and " + FlowFactSource +

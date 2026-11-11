@@ -29,7 +29,7 @@ Il registro DPAPI conserva identificativo casuale, data, esito, revisioni e cont
 
 ## Autorizzazione e limiti
 
-L'informativa 8 registra una conferma tecnica con utente Windows, postazione, data e testo accettato, distinta per profilo, destinazione, area del servizio, permessi e credenziali effettive. L'area (UE, non UE, non specificata) è dichiarata dall'amministratore per profilo; se non specificata serve una conferma separata. Non registra dichiarazioni aziendali o contrattuali. I record precedenti restano conservati e richiedono rinnovo. La policy conversazionale 8 separa i nuovi contesti dallo storico precedente.
+L'informativa 8 registra una conferma tecnica con utente Windows, postazione, data e testo accettato, distinta per servizio (copre ogni profilo e modello dello stesso servizio), destinazione, area, permessi e credenziali effettive. L'area (UE, non UE, non specificata) è dichiarata dall'amministratore per profilo; se non specificata serve una conferma separata. Non registra dichiarazioni aziendali o contrattuali. I record precedenti restano conservati e richiedono rinnovo. La policy conversazionale 8 separa i nuovi contesti dallo storico precedente.
 
 Il catalogo 3 riconosce anche il nome «euro» come parola intera, senza distinzione fra maiuscole e minuscole, prima o dopo un numero separato da spazio orizzontale. Sono coperte forme come `1234,56 euro` ed `EURO -1.234,56`, oltre a EUR, USD, GBP e ai simboli €, $, £. Il nome «euro» richiede cifre, con eventuali separatori interni virgola e punto. Parole come «eurozona» ed «euros», numeri raggruppati con spazi e altri nomi di valuta esulano da questa regola. La revisione 3 richiede di rinnovare le autorizzazioni dei profili interessati e apre un nuovo contesto conversazionale.
 

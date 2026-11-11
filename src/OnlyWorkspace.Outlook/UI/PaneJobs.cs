@@ -16,6 +16,7 @@ internal sealed class PaneJobReplay
     private object? _context;
     private object? _phase;
     private object? _security;
+    private object? _interpretation;
     private bool _cloud;
     private readonly StringBuilder _text = new();
 
@@ -31,13 +32,14 @@ internal sealed class PaneJobReplay
         {
             case "stream_start":
                 _start = message;
-                _context = _phase = _security = null;
+                _context = _phase = _security = _interpretation = null;
                 _cloud = false;
                 _text.Clear();
                 Action = Field(message, "action") as string is { Length: > 0 } action ? action : Field(message, "kind") as string == "chat" ? "Chat" : "Operazione";
                 Done = Total = 0;
                 break;
             case "stream_context" when _start != null: _context = message; break;
+            case "stream_interpretation" when _start != null: _interpretation = message; break;
             case "stream_phase" when _start != null:
                 _phase = message;
                 if (Field(message, "total") is int total) { Total = total; Done = Field(message, "done") as int? ?? 0; }
@@ -57,7 +59,7 @@ internal sealed class PaneJobReplay
     /// <summary>An operation that ended without a closing message (superseded, window closing) leaves nothing to replay.</summary>
     public void ClearTurn()
     {
-        _start = _context = _phase = _security = null;
+        _start = _context = _phase = _security = _interpretation = null;
         _cloud = false;
         _text.Clear();
         Action = string.Empty;
@@ -72,6 +74,7 @@ internal sealed class PaneJobReplay
         {
             messages.Add(_start);
             if (_context != null) messages.Add(_context);
+            if (_interpretation != null) messages.Add(_interpretation);
             if (_cloud) messages.Add(new { type = "cloud_used" });
             if (_phase != null) messages.Add(_phase);
             if (_security != null) messages.Add(_security);

@@ -323,14 +323,17 @@ public sealed partial class OutlookDataService : IArchiveMailSource, IOutlookDat
     }
 
     /// <summary>
-    /// Every mail folder of the chosen stores (all open stores when none is given), without trash, junk,
+    /// Every mail folder of the chosen stores (every open store for the scope «all», nothing for «none»), without trash, junk,
     /// drafts, outbox, sync issues and RSS feeds; at most MaxArchiveFolders per store. Listed a few folders per
     /// <see cref="IArchiveFolderWalk.Step"/>: a store with thousands of folders read in one call held Outlook's UI
     /// thread long enough for Outlook to disable the add-in.
     /// </summary>
-    public IArchiveFolderWalk WalkArchiveFolders(ICollection<string>? storeIds)
+    public IArchiveFolderWalk WalkArchiveFolders(StoreScope stores)
     {
         EnsureUiThread();
+        // None lists nothing: StoreFolders reads an empty list as every open store, so it is not asked.
+        if (stores.IsNone) return new ArchiveFolderWalk(this, new List<string>(), new List<MailFolderRef>());
+        var storeIds = stores.IsAll ? null : stores.StoreIds;
         return new ArchiveFolderWalk(this, storeIds, StoreFolders(storeIds, root: true));
     }
 

@@ -19,7 +19,7 @@ public sealed class WatchedArchiveMailSourceTests
         public string GetProfileName() => Note("profile");
         public IReadOnlyCollection<string> GetOwnAddressList() => Note<IReadOnlyCollection<string>>(new[] { "a@x.it" });
         public IReadOnlyList<OutlookStoreInfo> EnumerateStores() => Note<IReadOnlyList<OutlookStoreInfo>>(Array.Empty<OutlookStoreInfo>());
-        public IArchiveFolderWalk WalkArchiveFolders(ICollection<string>? storeIds) => Note<IArchiveFolderWalk>(new SpyWalk(this));
+        public IArchiveFolderWalk WalkArchiveFolders(StoreScope stores) => Note<IArchiveFolderWalk>(new SpyWalk(this));
         public IArchiveHeaderReader? OpenArchiveReader(string folderEntryId, string storeId, DateTime? newerThanUtc, DateTime? olderThanUtc, DateTime? modifiedSinceUtc = null, DateTime? modifiedUntilUtc = null) =>
             Note(Reader);
         public ArchiveBody? ReadForArchive(string entryId, string storeId) => Note<ArchiveBody?>(null);
@@ -81,7 +81,7 @@ public sealed class WatchedArchiveMailSourceTests
         spy.Reader = new SpyReader(spy);
         var source = new WatchedArchiveMailSource(spy);
 
-        using (var walk = source.WalkArchiveFolders(null))
+        using (var walk = source.WalkArchiveFolders(StoreScope.All()))
         {
             Assert.True(walk.Step(5));
             Assert.Empty(walk.Folders);

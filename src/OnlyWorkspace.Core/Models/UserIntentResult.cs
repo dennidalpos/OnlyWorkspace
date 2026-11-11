@@ -10,6 +10,8 @@ public sealed class UserIntentResult
     public string? PersonName { get; set; }
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
+    /// <summary>The question named the period (a day, a range, «domani mattina»); false when StartDate/EndDate are the default week.</summary>
+    public bool PeriodStated { get; set; }
 
     /// <summary>
     /// Mail search of a chat question. The model gives days (yyyy-MM-dd, midnight): the end day is included whole, or

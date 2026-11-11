@@ -20,7 +20,7 @@ After registering the new installation, setup checks that the old registry entry
 
 Uninstall removes the inventoried program files and the OnlyWorkspace Start menu shortcut. It preserves other files and refuses redirected program paths. Incomplete program or shortcut cleanup is reported with exit code 3 by the running uninstaller. The uninstall entry is kept if program file removal fails.
 
-Update tray/add-in together (pipe v15). New archives use format 13. Earlier formats, including 11 and 12, are refused with an explicit error and preserved for recovery. Use the matching build and a verified archive copy for recovery.
+Update tray/add-in together (pipe v16). New archives use format 13. Earlier formats, including 11 and 12, are refused with an explicit error and preserved for recovery. Use the matching build and a verified archive copy for recovery.
 
 Interactive uninstall defaults to keeping ProgramData config/secrets and the current user's archive. Silent `/S /PURGE` requests removal of those files, unreadable configuration copies and the invoking user's archive. `/PURGE=1` preserves those data. Back up first and verify the affected folders afterward. Purge uses extended Windows paths and removes directory junctions as links, preserving their targets. If removal is incomplete, the running uninstaller returns exit code 3. The standard NSIS launcher returns its own launch status. Other users' archives and Outlook mail are outside the purge scope. Uninstall removes only New Outlook policies created by setup and logs RegAsm/certificate removal failures. [Verification and limits](developer-guide.md#verification)
 
@@ -81,7 +81,7 @@ Clearing a key removes it on Save; profile ID rename moves references/default; c
 
 Level 0 sends no external data; Minimal permits typed protected facts/opaque references; Standard masked free text; Extended additionally masked attachment text with distinct permission. Original binary files, names, StoreId/EntryId are not sent. Local requests mask recognized identifiers; optional local amount/date settings differ from mandatory cloud masking.
 
-Notice 6, authorization key 3 and conversation policy 8 bind grants to profile, destination, declared EU/non-EU/unspecified region, permissions and credentials. When issuing a new grant, the authorization engine requires explicit confirmation for each cloud profile whose service region is unspecified. The acceptance history and its report list the confirmed profile IDs. Changed policy or credentials interrupt old work and start a fresh conversation. Old history stays readable.
+Notice 8, authorization key 3 and conversation policy 8 bind grants per service: a grant covers every profile and model of the same service with the same destination, declared EU/non-EU/unspecified region, permissions and credentials, until revoked or a new notice version. When issuing a new grant, the authorization engine requires explicit confirmation for each cloud profile whose service region is unspecified. The acceptance history and its report list the confirmed profile IDs. Changed policy or credentials interrupt old work and start a fresh conversation. Old history stays readable.
 
 Masking catalog revision 4 adds Italian postal addresses (`INDIRIZZO`); company names in free text are not masked. Revision 3 recognizes the whole word `euro` before or after an amount. Moving from revision 3 requires renewing the affected profile authorizations in **Privacy and data**. [Recognized forms and limits](tecnico/pseudonimizzazione.md)
 

@@ -12,7 +12,7 @@ public static class ChatWriting
     private const RegexOptions Options = RegexOptions.IgnoreCase | RegexOptions.CultureInvariant;
 
     private static readonly Regex WriteVerb = new(
-        @"\b(scriv\w*|prepar\w*|compon\w*|redig\w*|riscriv\w*|riformul\w*|miglior\w*|corregg\w*|correggi|tradu\w*|accorci\w*|allung\w*|abbozz\w*|bozza|testo\s+per|aiutami\s+a\s+scrivere|write|draft|rewrite|translate)\b", Options);
+        @"\b(scriv\w*|prepar\w*|compon\w*|redig\w*|riscriv\w*|riformul\w*|miglior\w*|corregg\w*|correggi|tradu\w*|accorci\w*|allung\w*|abbozz\w*|bozza|testo\s+per|aiutami\s+a\s+scrivere|write|compose|draft|rewrite|translate)\b", Options);
 
     // A writing verb about the mail itself («prepara un riepilogo delle email di ieri») is a mail question.
     private static readonly Regex MailDigest = new(
@@ -30,7 +30,7 @@ public static class ChatWriting
     public static bool AsksAboutAttachments(string? question) => AttachmentWord.IsMatch(question ?? string.Empty);
 
     private static readonly Regex AnalysisVerb = new(@"\b(analizz\w*|legg\w*|riassum\w*|sintetizz\w*|spieg\w*|descriv\w*|verific\w*|controll\w*|estra\w*|elenc\w*|vedi|vedere|visto|cosa\s+(c.è|dice|contiene)|che\s+cosa|quali|quanto|quando)\b", Options);
-    private static readonly Regex ComposeVerb = new(@"\b(scriv\w*|prepar\w*|compon\w*|redig\w*|riscriv\w*|riformul\w*|abbozz\w*|write|draft|rewrite)\b", Options);
+    private static readonly Regex ComposeVerb = new(@"\b(scriv\w*|prepar\w*|compon\w*|redig\w*|riscriv\w*|riformul\w*|abbozz\w*|write|compose|draft|rewrite)\b", Options);
 
     /// <summary>A question about the attached files («analizza gli allegati»), not a text to write with them.</summary>
     public static bool AsksAttachmentAnalysis(string? question)

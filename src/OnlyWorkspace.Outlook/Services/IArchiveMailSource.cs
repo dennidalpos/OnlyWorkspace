@@ -13,7 +13,7 @@ public interface IArchiveMailSource
 {
     string GetProfileName();
     IReadOnlyCollection<string> GetOwnAddressList();
-    IArchiveFolderWalk WalkArchiveFolders(ICollection<string>? storeIds);
+    IArchiveFolderWalk WalkArchiveFolders(StoreScope stores);
     IArchiveHeaderReader? OpenArchiveReader(string folderEntryId, string storeId, DateTime? newerThanUtc, DateTime? olderThanUtc, DateTime? modifiedSinceUtc = null, DateTime? modifiedUntilUtc = null);
     ArchiveBody? ReadForArchive(string entryId, string storeId);
     /// <summary>True when the item opens, false when Outlook reports it not found, null when it cannot tell.</summary>

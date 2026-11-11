@@ -39,4 +39,4 @@ Vale solo `/PURGE` senza valore. `/PURGE=1` e altre varianti conservano questi d
 
 ## Aggiornare
 
-Tray e add-in vanno aggiornati insieme (pipe v15). I nuovi archivi nascono in formato 13. I formati precedenti, inclusi 11 e 12, sono rifiutati con un errore esplicito e i dati restano disponibili per il recupero. Per recuperare un archivio precedente usare la build compatibile e una copia verificata. [Motore dell'archivio](../tecnico/archivio-motore.md#formato-conservazione-e-ricostruzione)
+Tray e add-in vanno aggiornati insieme (pipe v16). I nuovi archivi nascono in formato 13. I formati precedenti, inclusi 11 e 12, sono rifiutati con un errore esplicito e i dati restano disponibili per il recupero. Per recuperare un archivio precedente usare la build compatibile e una copia verificata. [Motore dell'archivio](../tecnico/archivio-motore.md#formato-conservazione-e-ricostruzione)

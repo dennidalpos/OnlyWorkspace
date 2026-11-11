@@ -14,7 +14,7 @@ public sealed class DocumentedVersionsTests
     // Current guides. verifica.md keeps commands and state, so its «Archivio» section is checked too; retired material is not.
     private static readonly string[] Guides =
     {
-        "README.md", "docs/OVERVIEW.it.md", "docs/admin-guide.md", "docs/developer-guide.md",
+        "README.md", "docs/OVERVIEW.it.md", "docs/user-guide.md", "docs/admin-guide.md", "docs/developer-guide.md",
         "docs/admin/configtool.md", "docs/admin/configurazione.md", "docs/admin/conformita-ue.md", "docs/admin/installazione.md",
         "docs/admin/sicurezza.md", "docs/tecnico/allegati.md", "docs/tecnico/architettura.md", "docs/tecnico/archivio-motore.md",
         "docs/tecnico/pseudonimizzazione.md", "docs/tecnico/verifica.md", "docs/utente/archivio.md", "docs/utente/modelli-web.md"
@@ -50,7 +50,19 @@ public sealed class DocumentedVersionsTests
     {
         // «informativa v2» (with v) names a signed historical text, never the current notice.
         Assert.Empty(Mismatches(@"informativa (\d+)\b", DataEgressNotice.Version));
+        Assert.Empty(Mismatches(@"\bnotice (\d+)\b", DataEgressNotice.Version));
         Assert.Contains(Lines(), l => l.Text.Contains("informativa " + DataEgressNotice.Version));
+    }
+
+    [Fact]
+    public void ConsentScope_InTheGuides_IsPerService_AsInTheNoticeText()
+    {
+        // #215: since notice 8 a grant covers every profile and model of the same service; a guide saying «per profilo» is stale.
+        Assert.Contains("L'autorizzazione vale per servizio", DataEgressNotice.Text);
+        var stale = Lines().Where(l => Regex.IsMatch(l.Text, @"(?:autorizzazion\w*|authorization|grants?)[^.|]{0,60}(?:per profilo|for profile\b|bind\w* grants to profile)", RegexOptions.IgnoreCase))
+            .Select(l => $"{l.File}:{l.Line}").ToList();
+        Assert.Empty(stale);
+        Assert.Contains(Lines(), l => l.Text.Contains("per servizio", StringComparison.OrdinalIgnoreCase) || l.Text.Contains("per service", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]

@@ -121,6 +121,13 @@ Le domande sulla posta per periodo («della mattina», «di ieri pomeriggio», �
 
 L’intento è classificato sul PC, senza inviare la domanda al modello: posta, agenda, contatti, scrittura e domande generali. Le regole conservano periodi, nomi, mittenti, codici e termini citati; le espressioni non riconosciute restano indizi di ricerca. Non rappresentano una comprensione completa dei filtri. Le domande che nominano la PEC passano all'interpretazione generale: quando il filtro di cassetta non è disponibile, la chat lo dichiara e rimanda a [Cerca e analizza](cerca-analizza.md), dove puoi selezionare la cassetta.
 
+### Come viene interpretata la domanda
+
+Sopra ogni risposta della chat una riga dice come è stata letta la domanda: «Interpretata come ricerca nella posta (da «Mario Rossi»; il 10/11/2026; parole: «contratto»)», «… domanda sul calendario, dal 15/11/2026 al 20/11/2026», «… ricerca nei contatti: «Mario Rossi»», «… richiesta di un testo da scrivere» o «… domanda generale: nessuna ricerca in posta, calendario o contatti». Per il calendario la riga dice anche se il periodo è quello scritto nella domanda oppure, se non è indicato, oggi e la settimana successiva. Se la lettura è sbagliata, riformula la domanda con il verbo e la fonte («cerca le email…», «che appuntamenti ho…»). La riga è mostrata nel turno corrente e non è salvata nello storico.
+
+Le regole leggono parole, non intenti, e usano una sola fonte per domanda (ordine: testo da scrivere, contatti, posta, calendario, generale). Limiti noti, verificati da un test: una domanda *sul* calendario o su una riunione come argomento («Come configuro il calendario in Outlook?», «Cosa significa la parola riunione?», «How do I schedule a meeting in Teams?») è letta come domanda sull'agenda; «Mail sulla riunione di domani» senza un verbo di ricerca è letta come agenda; «Who is the sender of the invoice mail?» è letta come ricerca di contatti; «Qual è la mail di Mario Rossi?» è letta come domanda generale. In questi casi aggiungi il verbo («cerca le email sulla riunione di domani») o usa [Cerca e analizza](cerca-analizza.md).
+
+
 ## Interrompi, Riprova, Rigenera
 
 - **Interrompi** (ribbon, barra di avanzamento, Esc o Invia) ferma l'operazione corrente. Cerca e analizza e Appuntamenti e scadenze, dopo almeno un'email letta, si chiudono con quanto letto salvato nello storico, senza inviare la richiesta al modello (o fermandola se è già partita); le altre azioni con «Operazione annullata.». Interrompi del ribbon ferma il lavoro della sua finestra o, se lì non c'è nulla in corso, quello delle altre finestre di Outlook.

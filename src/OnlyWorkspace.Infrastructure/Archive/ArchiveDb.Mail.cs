@@ -377,15 +377,16 @@ public sealed partial class ArchiveDb
     /// Removes what was indexed from the mailboxes no longer chosen, a slice at a time: up to
     /// <paramref name="maxEmails"/> emails, then their folders and the addresses left without emails.
     /// The folders that stay are read again from the top: an email also present there (same Message-ID)
-    /// was recorded once, possibly under a mailbox removed. An empty choice means every mailbox.
+    /// was recorded once, possibly under a mailbox removed. Only a selected scope removes anything: «all» keeps every
+    /// mailbox, and «none» (also what a damaged saved choice reads as) never empties the archive by itself.
     /// </summary>
     /// <returns>Emails and folders removed by this call; 0 when nothing is left to remove.</returns>
-    public int RemoveOtherStores(IReadOnlyCollection<string> keepStoreIds, int maxEmails)
+    public int RemoveOtherStores(StoreScope keep, int maxEmails)
     {
-        if (keepStoreIds.Count == 0) return 0;
+        if (keep == null || keep.Kind != StoreScopeKind.Selected || keep.IsNone) return 0;
         lock (_gate)
         {
-            var args = keepStoreIds.Select((s, i) => ("$s" + i, (object?)s)).ToArray();
+            var args = keep.StoreIds.Select((s, i) => ("$s" + i, (object?)s)).ToArray();
             string filter = "store_id collate nocase not in (" + string.Join(",", args.Select(a => a.Item1)) + ")";
             return RemoveStoresSlice(filter, args, maxEmails, tx => RemoveCheckedStoreSources(filter, args, tx));
         }
@@ -751,11 +752,8 @@ public sealed partial class ArchiveDb
             args.Add(("$code" + i, codes[i].ToUpperInvariant()));
             if (codes[i].Length >= 3) args.Add(("$code" + i + "fts", ArchiveSearchText.Literal(codes[i])));
         }
-        if (query.AllowedStoreIds != null)
-        {
-            var stores = query.AllowedStoreIds.Select((store, i) => { args.Add(("$store" + i, store)); return "$store" + i; }).ToArray();
-            sql.Append("and f.store_id in (").Append(stores.Length == 0 ? "null" : string.Join(",", stores)).Append(") ");
-        }
+        if (StoreScopeSql.Predicate(query.Stores, "f.store_id", "$store", args) is { } storePredicate)
+            sql.Append("and ").Append(storePredicate).Append(' ');
         if (query.EmailIds != null)
         {
             // Numeric row ids, never SQL text supplied by the caller.

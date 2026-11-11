@@ -286,11 +286,11 @@ public sealed class PseudonymizationPipelineTests
         long cursor = 0; var collected = new List<PrivacyEntity>();
         while (true)
         {
-            var page = db.GetPrivacyEntities(cursor, new() { "allowed" }, 43); if (page.Count == 0) break;
+            var page = db.GetPrivacyEntities(cursor, StoreScope.Only(new[] { "allowed" }), 43); if (page.Count == 0) break;
             Assert.All(page, p => Assert.True(p.Id > cursor)); collected.AddRange(page); cursor = page.Max(p => p.Id);
         }
         Assert.Equal(251, collected.Count); Assert.DoesNotContain(collected, e => e.Value == "Excluded Person");
-        Assert.Empty(db.GetPrivacyEntities(0, new(), 500)); Assert.Equal(252, db.GetPrivacyEntities(0, null, 500).Count);
+        Assert.Empty(db.GetPrivacyEntities(0, StoreScope.None(), 500)); Assert.Equal(252, db.GetPrivacyEntities(0, StoreScope.All(), 500).Count);
     }
 
     [Fact]
@@ -318,7 +318,7 @@ public sealed class PseudonymizationPipelineTests
     }
 
     [Fact]
-    public async Task VersionFifteenTransportsIdentityPagesThroughTheRealLocalEngine()
+    public async Task VersionSixteenTransportsIdentityPagesThroughTheRealLocalEngine()
     {
         string directory = Scratch();
         using (var seed = ArchiveDb.Open(directory, "p"))
@@ -328,9 +328,9 @@ public sealed class PseudonymizationPipelineTests
         }
         using var engine = new ArchiveEngine(directory); await engine.Ready;
         var client = new ArchiveClient("p", directory); await client.OpenAsync();
-        Assert.Equal(15, ArchivePipe.Version);
-        Assert.Equal("Persona Sintetica", Assert.Single(await client.GetPrivacyEntitiesAsync(0, new() { "allowed" })).Value);
-        Assert.Empty(await client.GetPrivacyEntitiesAsync(0, new()));
+        Assert.Equal(16, ArchivePipe.Version);
+        Assert.Equal("Persona Sintetica", Assert.Single(await client.GetPrivacyEntitiesAsync(0, StoreScope.Only(new[] { "allowed" }))).Value);
+        Assert.Empty(await client.GetPrivacyEntitiesAsync(0, StoreScope.None()));
     }
 
     [Theory]

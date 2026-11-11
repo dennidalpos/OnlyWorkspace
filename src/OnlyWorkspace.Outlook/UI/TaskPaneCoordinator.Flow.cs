@@ -95,21 +95,20 @@ public partial class TaskPaneCoordinator
     {
         var indexer = CurrentArchive;
         var db = indexer == null ? null : await indexer.OpenForSearchAsync();
-        var allowed = indexer == null ? new List<string>() : await indexer.GetAllowedSearchStoresAsync();
-        var chosen = allowed == null ? null : new HashSet<string>(allowed, StringComparer.OrdinalIgnoreCase);
-        if (db == null || chosen?.Count == 0) throw new FlowRefusedException(true);
-        if (seed.StoreId.Length > 0 && chosen != null && !chosen.Contains(seed.StoreId))
-            throw new FlowRefusedException(chosen.Count == 0);
-        seed.AllowedStoreIds = allowed;
+        var allowed = indexer == null ? StoreScope.None() : await indexer.GetAllowedSearchStoresAsync();
+        if (db == null || allowed.IsNone) throw new FlowRefusedException(true);
+        if (seed.StoreId.Length > 0 && !allowed.Allows(seed.StoreId))
+            throw new FlowRefusedException(false);
+        seed.Stores = allowed;
         seed.IncludeAttachmentText = _config?.Archive?.IndexAttachmentText == true && (localReconstruction || GetActiveProfile() is { } flowProfile && AttachmentContentAllowed(flowProfile));
         var flow = await db.GetFlowAsync(seed, complete ? int.MaxValue - 1 : 20000, ct);
         ct.ThrowIfCancellationRequested();
-        if (chosen != null)
+        if (!allowed.IsAll)
         {
-            if (seed.Id > 0 && flow.Timeline.Any(e => e.Id == seed.Id && !chosen.Contains(e.StoreId)))
-                throw new FlowRefusedException(chosen.Count == 0);
-            flow.Timeline.RemoveAll(e => !chosen.Contains(e.StoreId));
-            flow.PossibleLinks.RemoveAll(e => !chosen.Contains(e.StoreId));
+            if (seed.Id > 0 && flow.Timeline.Any(e => e.Id == seed.Id && !allowed.Allows(e.StoreId)))
+                throw new FlowRefusedException(false);
+            flow.Timeline.RemoveAll(e => !allowed.Allows(e.StoreId));
+            flow.PossibleLinks.RemoveAll(e => !allowed.Allows(e.StoreId));
         }
         flow.ConversationLimited = visible?.ConversationLimited == true;
         if (visible != null)
@@ -118,7 +117,7 @@ public partial class TaskPaneCoordinator
             var known = new HashSet<string>(flow.Timeline.Select(e => e.StoreId + "\n" + e.EntryId), StringComparer.OrdinalIgnoreCase);
             foreach (var item in visibleItems)
             {
-                if (item.EntryId.Length == 0 || item.StoreId.Length == 0 || chosen != null && !chosen.Contains(item.StoreId)) continue;
+                if (item.EntryId.Length == 0 || item.StoreId.Length == 0 || !allowed.Allows(item.StoreId)) continue;
                 if (!known.Add(item.StoreId + "\n" + item.EntryId)) continue;
                 flow.Timeline.Add(new ArchiveFlowMail
                 {

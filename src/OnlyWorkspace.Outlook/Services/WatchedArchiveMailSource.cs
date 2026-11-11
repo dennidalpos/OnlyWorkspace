@@ -31,8 +31,8 @@ internal sealed class WatchedArchiveMailSource : IArchiveMailSource
     public IReadOnlyCollection<string> GetOwnAddressList() => Named(nameof(GetOwnAddressList), _inner.GetOwnAddressList);
     public IReadOnlyList<OutlookStoreInfo> EnumerateStores() => Named(nameof(EnumerateStores), _inner.EnumerateStores);
 
-    public IArchiveFolderWalk WalkArchiveFolders(ICollection<string>? storeIds) =>
-        new Walk(Named(nameof(WalkArchiveFolders), () => _inner.WalkArchiveFolders(storeIds)));
+    public IArchiveFolderWalk WalkArchiveFolders(StoreScope stores) =>
+        new Walk(Named(nameof(WalkArchiveFolders), () => _inner.WalkArchiveFolders(stores)));
 
     public IArchiveHeaderReader? OpenArchiveReader(string folderEntryId, string storeId, DateTime? newerThanUtc, DateTime? olderThanUtc, DateTime? modifiedSinceUtc = null, DateTime? modifiedUntilUtc = null) =>
         Named(nameof(OpenArchiveReader), () => _inner.OpenArchiveReader(folderEntryId, storeId, newerThanUtc, olderThanUtc, modifiedSinceUtc, modifiedUntilUtc)) is { } reader ? new Reader(reader) : null;

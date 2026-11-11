@@ -703,7 +703,7 @@ public sealed class MainConfigFormTests
                 new() { Id = "pst", Name = "OW test", Open = false },
                 new() { Id = "empty", Name = "Vuota", Open = false }
             };
-            type.GetMethod("BuildGrid", Flags)!.Invoke(panel, new object?[] { stores, new List<string>(), StoreOwnAddresses.Parse(null), new List<string> { "PST", "gmail" } });
+            type.GetMethod("BuildGrid", Flags)!.Invoke(panel, new object?[] { stores, StoreScope.All(), StoreOwnAddresses.Parse(null), new List<string> { "PST", "gmail" } });
 
             var remove = Assert.Single(Descendants(panel).OfType<Button>(), b => b.AccessibleName?.StartsWith("Togli dall'archivio: ") == true);
             Assert.Equal("Togli dall'archivio: OW test (chiusa)", remove.AccessibleName);
@@ -729,7 +729,7 @@ public sealed class MainConfigFormTests
                 new() { Id = "pst", Name = "Vecchia posta", Open = true, IsDataFileStore = true }
             };
             var json = StoreOwnAddresses.WithChoice(StoreOwnAddresses.WithGuess(null, "pst", new StoreOwnEntry { Guessed = { "a@vecchia.it", "b@vecchia.it" } }), "pst", new[] { "a@vecchia.it" });
-            type.GetMethod("BuildGrid", Flags)!.Invoke(panel, new object?[] { stores, new List<string>(), StoreOwnAddresses.Parse(json), new List<string>() });
+            type.GetMethod("BuildGrid", Flags)!.Invoke(panel, new object?[] { stores, StoreScope.All(), StoreOwnAddresses.Parse(json), new List<string>() });
 
             // The account's store has no line: one box, named after the PST.
             var box = Assert.Single(Descendants(panel).OfType<TextBox>(), b => b.AccessibleName?.StartsWith("Indirizzi miei: ") == true);

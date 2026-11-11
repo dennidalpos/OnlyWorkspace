@@ -255,7 +255,8 @@ public sealed class ArchiveFlow
 
 public sealed class ArchiveFlowSeed
 {
-    public List<string>? AllowedStoreIds { get; set; }
+    /// <summary>Mailboxes the flow may read; a missing value on the pipe reads as none.</summary>
+    public StoreScope Stores { get; set; } = StoreScope.All();
     public bool IncludeAttachmentText { get; set; } = true;
     public long Id { get; set; }
     public string EntryId { get; set; } = string.Empty;
@@ -310,7 +311,8 @@ public sealed class ArchiveQuery
     public List<ArchiveEmailRef>? EmailRefs { get; set; }
     public List<ArchiveFactFilter> FactFilters { get; set; } = new();
     public bool IncludeFacts { get; set; }
-    public List<string>? AllowedStoreIds { get; set; }
+    /// <summary>Mailboxes the query may read; a missing value on the pipe reads as none.</summary>
+    public StoreScope Stores { get; set; } = StoreScope.All();
     /// <summary>Free text: the emails whose subject or body match best come first.</summary>
     public string? Text { get; set; }
     public bool IncludeAttachmentText { get; set; } = true;

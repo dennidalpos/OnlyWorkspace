@@ -128,6 +128,16 @@ public partial class TaskPaneCoordinator
 
             ct.ThrowIfCancellationRequested();
             writing = intent.Target == "write";
+            // How the question was read, next to the answer: a wrong reading is told apart from a wrong answer (#201).
+            PostStream(turn, new
+            {
+                type = "stream_interpretation",
+                text = writing ? IntentInterpretation.Describe(intent, userInstruction)
+                    : requestsSelectedEmail ? IntentInterpretation.ForSelectedEmail()
+                    : answerOnDraft ? IntentInterpretation.ForDraft()
+                    : kept != null ? IntentInterpretation.ForRetry()
+                    : IntentInterpretation.Describe(intent, userInstruction)
+            });
             IEnumerable<ChatMessage>? messages = null;
             string? notice = null;
             string listing = string.Empty;

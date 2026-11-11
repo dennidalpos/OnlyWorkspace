@@ -37,7 +37,7 @@ internal sealed class ArchivePipeResponse
 
 internal static class ArchivePipe
 {
-    internal const int Version = 15;
+    internal const int Version = 16;
     private const int MaxFrameBytes = 64 * 1024 * 1024;
     private const int MaxMessageBytes = 256 * 1024 * 1024;
 

@@ -33,7 +33,8 @@ public sealed class ArchiveStatus
     public ArchiveStats Stats { get; set; } = new();
     public long MaxBytes { get; set; }
     public long DiskFreeBytes { get; set; }
-    public IReadOnlyList<string> StoreIds { get; set; } = Array.Empty<string>();
+    /// <summary>Mailboxes the user chose to archive.</summary>
+    public StoreScope Stores { get; set; } = StoreScope.All();
     /// <summary>Indicizza ora was asked: the indexer works without waiting for an idle PC until nothing is left.</summary>
     public bool IndexingNow { get; set; }
 }
@@ -178,13 +179,13 @@ public sealed class ArchiveIndexer : IArchiveIndexer, IDisposable
         }
     }
 
-    /// <summary>Explicit query scope; never confuse saved [] (all) with the DB's [] (none).</summary>
-    public async Task<List<string>?> GetAllowedSearchStoresAsync()
+    /// <summary>The mailboxes a query may read: the saved choice when the archive is authorized and open, otherwise none.</summary>
+    public async Task<StoreScope> GetAllowedSearchStoresAsync()
     {
         using (await PaneLockAsync())
         {
             bool authorized = !_stopping && ReadSettings(refresh: true).Enabled && await EnsureOpenAsync(refresh: true);
-            return ArchiveScope.ForQuery(authorized ? await StoreIdsAsync() : Array.Empty<string>(), authorized);
+            return ArchiveScope.ForQuery(authorized ? await StoreScopeAsync() : StoreScope.None(), authorized);
         }
     }
 
@@ -321,7 +322,7 @@ public sealed class ArchiveIndexer : IArchiveIndexer, IDisposable
         if (_cleanup && Volatile.Read(ref _interactive) == 0)
         {
             // Mailboxes taken out of the archive: database work only, no need to wait for an idle PC.
-            var keep = await StoreIdsAsync();
+            var keep = await StoreScopeAsync();
             var sw = Stopwatch.StartNew();
             int removed;
             do
@@ -499,9 +500,9 @@ public sealed class ArchiveIndexer : IArchiveIndexer, IDisposable
         _appliedScope = scope;
         _scopeKnown = true;
         if (first) return;
-        var storeIds = ArchiveScope.ParseStores(scope);
+        var chosen = StoreScope.Parse(scope);
         ResetScope();
-        OnlyWorkspaceLog.Logger.Information("Archive: mailbox choice changed, {Stores} mailboxes selected (0 = all)", storeIds.Count);
+        OnlyWorkspaceLog.Logger.Information("Archive: mailbox choice changed to {Kind}, {Stores} mailboxes listed", chosen.Kind, chosen.StoreIds.Count);
     }
 
     private void ResetScope()
@@ -578,8 +579,8 @@ public sealed class ArchiveIndexer : IArchiveIndexer, IDisposable
         _recentFolder = null;
     }
 
-    private async Task<IReadOnlyList<string>> StoreIdsAsync() =>
-        ArchiveScope.ParseStores(_db == null ? null : await _db.GetMetaAsync(MetaStores));
+    private async Task<StoreScope> StoreScopeAsync() =>
+        _db == null ? StoreScope.None() : StoreScope.Parse(await _db.GetMetaAsync(MetaStores));
 
     /// <summary>
     /// Refresh recent mail without discarding the historical table's current position. False while the folder list
@@ -592,9 +593,9 @@ public sealed class ArchiveIndexer : IArchiveIndexer, IDisposable
             if (_stopping) return false;
             if (_folderWalk == null)
             {
-                var stores = await StoreIdsAsync();
+                var stores = await StoreScopeAsync();
                 if (_stopping) return false;
-                _folderWalk = _data.WalkArchiveFolders(stores.ToList());
+                _folderWalk = _data.WalkArchiveFolders(stores);
             }
             var sw = Stopwatch.StartNew();
             bool listed;
@@ -945,15 +946,18 @@ public sealed class ArchiveIndexer : IArchiveIndexer, IDisposable
                     status.Error = "Elenco cartelle incompleto; alcune sorgenti non sono state verificate.";
                 status.Stats = await _db.GetStatsAsync();
                 status.Paused = await _db.GetMetaAsync(MetaPaused) == "1";
-                status.StoreIds = await StoreIdsAsync();
+                status.Stores = await StoreScopeAsync();
                 status.IndexingNow = _indexNow;
             }
             return status;
         }
     }
 
-    /// <summary>Test seam: creates the archive and sets the mailboxes to index; empty = every open store.</summary>
-    internal async Task ActivateAsync(IReadOnlyCollection<string> storeIds)
+    /// <summary>Test seam: creates the archive and sets the mailboxes to index; no StoreIDs = every open store.</summary>
+    internal Task ActivateAsync(IReadOnlyCollection<string> storeIds) =>
+        ActivateAsync(storeIds.Count == 0 ? StoreScope.All() : StoreScope.Only(storeIds));
+
+    internal async Task ActivateAsync(StoreScope stores)
     {
         await _operations.WaitAsync();
         try
@@ -963,7 +967,7 @@ public sealed class ArchiveIndexer : IArchiveIndexer, IDisposable
             if (_db == null) await OpenAsync(create: true);
             if (_db == null) return;
 
-            string scope = JsonSerializer.Serialize(storeIds);
+            string scope = stores.ToJson();
             await _db.SetMetaAsync(MetaStores, scope);
             await _db.SetMetaAsync(MetaPaused, null);
             // New scope: drop the mailboxes taken out, list the folders again and start a pass at the next tick.

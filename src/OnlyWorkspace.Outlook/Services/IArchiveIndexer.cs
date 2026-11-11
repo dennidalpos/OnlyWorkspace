@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using OnlyWorkspace.Core.Archive;
 using OnlyWorkspace.Infrastructure.Archive;
 
 namespace OnlyWorkspace.Outlook.Services;
@@ -9,7 +10,7 @@ public interface IArchiveIndexer
 {
     ArchiveClient? Db { get; }
     Task<ArchiveClient?> OpenForSearchAsync();
-    Task<List<string>?> GetAllowedSearchStoresAsync();
+    Task<StoreScope> GetAllowedSearchStoresAsync();
     Task<ArchiveStatus> GetStatusAsync();
     Task ReportMissingAsync();
     Task SetPausedAsync(bool paused);

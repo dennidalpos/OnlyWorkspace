@@ -10,7 +10,7 @@ namespace OnlyWorkspace.Core.Archive;
 /// </summary>
 public static class ArchiveScope
 {
-    /// <summary>JSON list of StoreIDs; empty = every open mailbox, including those opened later.</summary>
+    /// <summary>Saved <see cref="StoreScope"/> as JSON: all (also mailboxes opened later), selected StoreIDs or none.</summary>
     public const string StoresKey = "stores";
     public const string PausedKey = "paused";
     /// <summary>Mailboxes Outlook had open at the last pass (ArchiveOpenStore list), for the ConfigTool.</summary>
@@ -18,15 +18,11 @@ public static class ArchiveScope
     /// <summary>preferences.json flag: this Windows user does not want the archive.</summary>
     public const string UserOffFlag = "archiveOff";
 
-    /// <summary>Translate the user's saved choice to the DB contract: null=all, empty=deny-all.</summary>
-    public static List<string>? ForQuery(IReadOnlyList<string> selected, bool authorized) =>
-        !authorized ? new List<string>() : selected.Count == 0 ? null : new List<string>(selected);
+    /// <summary>The scope a query may use: the saved choice when the archive is authorized, otherwise none.</summary>
+    public static StoreScope ForQuery(StoreScope saved, bool authorized) =>
+        !authorized ? StoreScope.None() : new StoreScope { Kind = saved.Kind, StoreIds = new List<string>(saved.StoreIds ?? new List<string>()) };
 
-    public static IReadOnlyList<string> ParseStores(string? json)
-    {
-        try { return string.IsNullOrEmpty(json) ? Array.Empty<string>() : JsonSerializer.Deserialize<List<string>>(json!) ?? new List<string>(); }
-        catch (JsonException) { return Array.Empty<string>(); }
-    }
+    public static StoreScope ParseStores(string? json) => StoreScope.Parse(json);
 
     public static IReadOnlyList<ArchiveOpenStore> ParseOpenStores(string? json)
     {

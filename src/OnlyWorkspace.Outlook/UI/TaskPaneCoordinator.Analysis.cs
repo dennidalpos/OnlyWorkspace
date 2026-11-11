@@ -359,7 +359,7 @@ public partial class TaskPaneCoordinator
         var indexer = CurrentArchive;
         var db = indexer != null && emails.Any(e => e.ArchiveId > 0) ? await indexer.OpenForSearchAsync() : null;
         var archived = emails.Where(e => e.ArchiveId > 0).Select(e => e.ArchiveId).Distinct().ToList();
-        var facts = db != null && archived.Count > 0 ? await db.SearchAsync(new ArchiveQuery { EmailIds = archived, AllowedStoreIds = await indexer!.GetAllowedSearchStoresAsync(), IncludeFacts = true, IncludeAttachmentText = false, Max = 500 }, ct) : new List<ArchiveHit>();
+        var facts = db != null && archived.Count > 0 ? await db.SearchAsync(new ArchiveQuery { EmailIds = archived, Stores = await indexer!.GetAllowedSearchStoresAsync(), IncludeFacts = true, IncludeAttachmentText = false, Max = 500 }, ct) : new List<ArchiveHit>();
         var items = new List<ChatMailItem>(emails.Count);
         foreach (var e in emails)
         {
@@ -694,8 +694,8 @@ public partial class TaskPaneCoordinator
     private async Task<List<ArchiveHit>> SearchArchiveAsync(ArchiveClient db, ArchiveQuery query, bool attachments,
         MailSearchCoverage coverage, CancellationToken ct, int latest = 0)
     {
-        query.AllowedStoreIds = CurrentArchive is { } scopeIndexer
-            ? await scopeIndexer.GetAllowedSearchStoresAsync() : new List<string>();
+        query.Stores = CurrentArchive is { } scopeIndexer
+            ? await scopeIndexer.GetAllowedSearchStoresAsync() : StoreScope.None();
         if (query.FactFilters.Count == 0) query.Text = ArchiveSearchText.Parse(query.Text, query.FactFilters);
         string queryText = query.Text ?? string.Empty;
         async Task<List<ArchiveHit>> ReadPagesAsync()
@@ -751,7 +751,7 @@ public partial class TaskPaneCoordinator
         }
         else coverage.Scanned = hits.Count;
         if (latest > 0) hits = ArchiveHit.OnePerMessage(hits, out _).Take(latest).ToList();
-        var related = await db.ExpandRelatedAsync(hits.Select(h => h.Id).ToList(), new ArchiveFlowSeed { AllowedStoreIds = query.AllowedStoreIds, IncludeAttachmentText = query.IncludeAttachmentText }, ct);
+        var related = await db.ExpandRelatedAsync(hits.Select(h => h.Id).ToList(), new ArchiveFlowSeed { Stores = query.Stores, IncludeAttachmentText = query.IncludeAttachmentText }, ct);
         coverage.Copies = related.Copies; coverage.MetadataIncomplete |= related.MetadataIncomplete; coverage.FactsIncomplete |= related.FactsIncomplete;
         return related.Hits;
     }

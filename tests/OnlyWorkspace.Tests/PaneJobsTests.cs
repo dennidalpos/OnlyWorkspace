@@ -35,6 +35,20 @@ public sealed class PaneJobsTests
     }
 
     [Fact]
+    public void Replay_KeepsTheInterpretationOfTheTurn_AfterTheContext_AndForgetsItWithTheTurn()
+    {
+        var replay = new PaneJobReplay();
+        replay.Record(new { type = "stream_start", turnId = "1:9", kind = "chat" });
+        replay.Record(new { type = "stream_interpretation", text = "Interpretata come domanda generale." });
+        replay.Record(new { type = "stream_chunk", chunk = "Risposta" });
+        string restore = Json(replay.Restore());
+        Assert.True(restore.IndexOf("stream_start") < restore.IndexOf("stream_interpretation"));
+        Assert.True(restore.IndexOf("stream_interpretation") < restore.IndexOf("Risposta"));
+        replay.Record(new { type = "stream_start", turnId = "1:10", kind = "chat" });
+        Assert.DoesNotContain("stream_interpretation", Json(replay.Restore()));
+    }
+
+    [Fact]
     public void Replay_KeepsOnlyTheLatestSecurityReport_BeforeTheText()
     {
         var replay = new PaneJobReplay();

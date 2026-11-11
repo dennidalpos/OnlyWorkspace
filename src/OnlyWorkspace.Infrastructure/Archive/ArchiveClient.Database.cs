@@ -48,8 +48,8 @@ public sealed partial class ArchiveClient
     };
 
     public Task ConfirmInitialInventoryAsync(CancellationToken ct = default) => CallAsync<object?>(nameof(ArchiveDb.ConfirmInitialInventory), Array.Empty<object?>(), ct);
-    public Task<IReadOnlyList<OnlyWorkspace.Core.Privacy.PrivacyEntity>> GetPrivacyEntitiesAsync(long afterId, List<string>? storeIds, int take = 500, CancellationToken ct = default) =>
-        CallAsync<IReadOnlyList<OnlyWorkspace.Core.Privacy.PrivacyEntity>>(nameof(ArchiveDb.GetPrivacyEntities), new object?[] { afterId, storeIds, take }, ct);
+    public Task<IReadOnlyList<OnlyWorkspace.Core.Privacy.PrivacyEntity>> GetPrivacyEntitiesAsync(long afterId, StoreScope stores, int take = 500, CancellationToken ct = default) =>
+        CallAsync<IReadOnlyList<OnlyWorkspace.Core.Privacy.PrivacyEntity>>(nameof(ArchiveDb.GetPrivacyEntities), new object?[] { afterId, stores, take }, ct);
     public Task<ArchiveBody?> GetOriginalAsync(string entryId, string storeId, CancellationToken ct = default) =>
         CallAsync<ArchiveBody?>(nameof(ArchiveDb.GetOriginal), new object?[] { entryId, storeId }, ct);
 
@@ -116,8 +116,8 @@ public sealed partial class ArchiveClient
     public Task SetFolderErrorAsync(long folderId, string error, CancellationToken ct = default) =>
         CallAsync<object?>(nameof(ArchiveDb.SetFolderError), new object?[] { folderId, error }, ct);
 
-    public Task<int> RemoveOtherStoresAsync(IReadOnlyCollection<string> keepStoreIds, int maxEmails, CancellationToken ct = default) =>
-        CallAsync<int>(nameof(ArchiveDb.RemoveOtherStores), new object?[] { keepStoreIds, maxEmails }, ct);
+    public Task<int> RemoveOtherStoresAsync(StoreScope keep, int maxEmails, CancellationToken ct = default) =>
+        CallAsync<int>(nameof(ArchiveDb.RemoveOtherStores), new object?[] { keep, maxEmails }, ct);
 
     public Task<int> RemoveClosedStoreAsync(string storeId, int maxEmails, CancellationToken ct = default) =>
         CallAsync<int>(nameof(ArchiveDb.RemoveClosedStore), new object?[] { storeId, maxEmails }, ct);

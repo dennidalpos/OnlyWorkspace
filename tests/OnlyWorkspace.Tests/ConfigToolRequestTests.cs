@@ -233,13 +233,13 @@ public sealed class ConfigToolRequestTests
             Field<HashSet<string>>(panel, "_archived").Add("synthetic");
             Field<CheckBox>(panel, "_mine").Checked = true;
             Set(panel, "_building", false);
-            Call(panel, "BuildGrid", new List<ArchiveOpenStore> { new() { Id = "a", Name = "A", Open = true }, new() { Id = "b", Name = "B", Open = true }, new() { Id = "closed", Name = "Chiusa", Open = false } }, new List<string> { "a" }, StoreOwnAddresses.Parse(null), Array.Empty<string>());
+            Call(panel, "BuildGrid", new List<ArchiveOpenStore> { new() { Id = "a", Name = "A", Open = true }, new() { Id = "b", Name = "B", Open = true }, new() { Id = "closed", Name = "Chiusa", Open = false } }, StoreScope.Only(new[] { "a" }), StoreOwnAddresses.Parse(null), Array.Empty<string>());
             var rows = Field<Dictionary<string, CheckBox>>(panel, "_rows");
             var completion = new TaskCompletionSource<bool>();
             int writes = 0;
             panel.WriteStores = async (_, _, _) => { writes++; await completion.Task; throw new IOException("synthetic"); };
             panel.ReadStores = (_, _) => corrupt ? Task.FromResult<string?>("[42]")
-                : unreadable ? Task.FromException<string?>(new IOException("synthetic read")) : Task.FromResult<string?>("[\"a\"]");
+                : unreadable ? Task.FromException<string?>(new IOException("synthetic read")) : Task.FromResult<string?>(StoreScope.Only(new[] { "a" }).ToJson());
             Set(panel, "_building", true); rows["b"].Checked = true; Set(panel, "_building", false);
             var save = (Task)Call(panel, "ApplyAsync")!;
             Assert.False(Field<Control>(panel, "_grid").Enabled);
@@ -265,7 +265,7 @@ public sealed class ConfigToolRequestTests
             Field<HashSet<string>>(panel, "_archived").Add("synthetic");
             Field<CheckBox>(panel, "_mine").Checked = true;
             Set(panel, "_building", false);
-            Call(panel, "BuildGrid", new List<ArchiveOpenStore> { new() { Id = "a", Name = "Posta lavoro", Open = true }, new() { Id = "b", Name = "B", Open = true } }, new List<string> { "a", "b" }, StoreOwnAddresses.Parse(null), Array.Empty<string>());
+            Call(panel, "BuildGrid", new List<ArchiveOpenStore> { new() { Id = "a", Name = "Posta lavoro", Open = true }, new() { Id = "b", Name = "B", Open = true } }, StoreScope.Only(new[] { "a", "b" }), StoreOwnAddresses.Parse(null), Array.Empty<string>());
             var rows = Field<Dictionary<string, CheckBox>>(panel, "_rows");
             var writes = new List<string>(); string? asked = null;
             panel.WriteStores = (_, json, _) => { writes.Add(json); return Task.CompletedTask; };
@@ -278,7 +278,7 @@ public sealed class ConfigToolRequestTests
             Assert.Contains("Posta lavoro", asked);
             Assert.Contains("1.234 email", asked);
             Assert.Contains("eliminati", asked);
-            if (confirm) { Assert.Equal(new[] { "[\"b\"]" }, writes); Assert.False(rows["a"].Checked); }
+            if (confirm) { Assert.Equal(new[] { StoreScope.Only(new[] { "b" }).ToJson() }, writes); Assert.False(rows["a"].Checked); }
             else
             {
                 Assert.Empty(writes);
@@ -300,7 +300,7 @@ public sealed class ConfigToolRequestTests
             Field<HashSet<string>>(panel, "_archived").Add("synthetic");
             Field<CheckBox>(panel, "_mine").Checked = true;
             Set(panel, "_building", false);
-            Call(panel, "BuildGrid", new List<ArchiveOpenStore> { new() { Id = "a", Name = "A", Open = true }, new() { Id = "b", Name = "B", Open = true } }, new List<string> { "a" }, StoreOwnAddresses.Parse(null), Array.Empty<string>());
+            Call(panel, "BuildGrid", new List<ArchiveOpenStore> { new() { Id = "a", Name = "A", Open = true }, new() { Id = "b", Name = "B", Open = true } }, StoreScope.Only(new[] { "a" }), StoreOwnAddresses.Parse(null), Array.Empty<string>());
             var rows = Field<Dictionary<string, CheckBox>>(panel, "_rows");
             int writes = 0, questions = 0;
             panel.WriteStores = (_, _, _) => { writes++; return Task.CompletedTask; };
@@ -321,10 +321,10 @@ public sealed class ConfigToolRequestTests
     public void MailboxExclusion_FindsWhatAChangeTakesOut()
     {
         var ids = new[] { "a", "b", "c" };
-        Assert.Empty(MailboxExclusion.Excluded(Array.Empty<string>(), ids, true, ids));
-        Assert.Equal(new[] { "c" }, MailboxExclusion.Excluded(Array.Empty<string>(), ids, false, new[] { "a", "b" }));
-        Assert.Equal(new[] { "b" }, MailboxExclusion.Excluded(new[] { "a", "b" }, ids, false, new[] { "a" }));
-        Assert.Empty(MailboxExclusion.Excluded(new[] { "a" }, ids, false, new[] { "a", "b" }));
+        Assert.Empty(MailboxExclusion.Excluded(StoreScope.All(), ids, true, ids));
+        Assert.Equal(new[] { "c" }, MailboxExclusion.Excluded(StoreScope.All(), ids, false, new[] { "a", "b" }));
+        Assert.Equal(new[] { "b" }, MailboxExclusion.Excluded(StoreScope.Only(new[] { "a", "b" }), ids, false, new[] { "a" }));
+        Assert.Empty(MailboxExclusion.Excluded(StoreScope.Only(new[] { "a" }), ids, false, new[] { "a", "b" }));
         string unknown = MailboxExclusion.Question(new[] { ("A", (int?)null) });
         Assert.Contains("numero di email non leggibile", unknown);
     }

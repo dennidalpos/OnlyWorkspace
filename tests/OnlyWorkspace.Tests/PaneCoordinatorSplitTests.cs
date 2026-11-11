@@ -87,7 +87,7 @@ public sealed class PaneCoordinatorSplitTests
     [Fact]
     public void ArchiveStatus_ListsEveryStore_MarkingTheChosenOnes()
     {
-        var status = new ArchiveStatus { Available = true, Active = true, Phase = "idle", StoreIds = new[] { "a" } };
+        var status = new ArchiveStatus { Available = true, Active = true, Phase = "idle", Stores = StoreScope.Only(new[] { "a" }) };
         var stores = new[]
         {
             new OutlookStoreInfo { StoreId = "a", DisplayName = "Posta A", IsOpen = true },

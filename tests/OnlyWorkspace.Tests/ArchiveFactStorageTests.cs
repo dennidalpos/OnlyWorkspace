@@ -58,13 +58,13 @@ public sealed class ArchiveFactStorageTests : IDisposable
         var query = new ArchiveQuery
         {
             EmailRefs = new() { new() { EntryId = "one", StoreId = "store" } },
-            AllowedStoreIds = new() { "store" },
+            Stores = StoreScope.Only(new[] { "store" }),
             IncludeFacts = true
         };
         Assert.Equal(id, Assert.Single(db.Search(query)).Id);
-        query.AllowedStoreIds = new() { "another" }; Assert.Empty(db.Search(query));
-        query.AllowedStoreIds = new(); Assert.Empty(db.Search(query));
-        query.AllowedStoreIds = null;
+        query.Stores = StoreScope.Only(new[] { "another" }); Assert.Empty(db.Search(query));
+        query.Stores = StoreScope.None(); Assert.Empty(db.Search(query));
+        query.Stores = StoreScope.All();
         query.EmailRefs![0].StoreId = "another"; Assert.Empty(db.Search(query));
         query.EmailRefs.Clear(); Assert.Empty(db.Search(query));
         var folder = db.GetOrAddFolder("store", "folder", "Synthetic\\Inbox");
@@ -442,6 +442,6 @@ public sealed class ArchiveFactStorageTests : IDisposable
         Assert.Equal(1, (await client.GetFactProgressAsync()).Done);
         var q = Query(new ArchiveFactFilter { Kind = ArchiveFactKind.Amount, AmountMin = 1000, AmountMax = 1000 });
         var hit = Assert.Single(await client.SearchAsync(q)); Assert.Equal(id, hit.Id); Assert.NotEmpty(hit.Facts);
-        Assert.Equal(15, ArchivePipe.Version);
+        Assert.Equal(16, ArchivePipe.Version);
     }
 }

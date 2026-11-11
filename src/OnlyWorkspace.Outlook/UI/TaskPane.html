@@ -375,6 +375,7 @@
   }
   .msg-label .i { width: 13px; height: 13px; }
   .msg-body:empty { display: none; }
+  .msg-interpretation { color: var(--text-2); font-size: var(--text-size-12); margin-bottom: 6px; }
   .msg-phase { display: flex; align-items: center; gap: 8px; color: var(--text-2); font-size: var(--text-size-12); }
   .msg-body:not(:empty) + .msg-phase { margin-top: 8px; }
   .spinner {
@@ -3577,6 +3578,17 @@
         if (state.current) {
           state.current.cloud = true;
           scheduleCloudWait(state.current);
+        }
+        break;
+
+      case 'stream_interpretation':
+        // How the host read the question, above the answer (#201); a replayed page shows it once.
+        if (state.current && data.text) {
+          if (!state.current.interpretation) {
+            state.current.interpretation = el('div', 'msg-interpretation');
+            state.current.assistant.insertBefore(state.current.interpretation, state.current.body);
+          }
+          state.current.interpretation.textContent = data.text;
         }
         break;
 

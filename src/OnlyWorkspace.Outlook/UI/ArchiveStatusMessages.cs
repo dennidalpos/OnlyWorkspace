@@ -41,7 +41,7 @@ internal static class ArchiveStatusMessages
     public static object Status(ArchiveStatus status, IReadOnlyCollection<ArchiveStoreCoverage> coverage, IEnumerable<OutlookStoreInfo> stores)
     {
         var light = LightOf(status);
-        var chosen = new HashSet<string>(status.StoreIds, StringComparer.OrdinalIgnoreCase);
+        var chosen = status.Stores;
         var byStore = coverage.ToDictionary(s => s.StoreId, StringComparer.OrdinalIgnoreCase);
         return new
         {
@@ -61,7 +61,7 @@ internal static class ArchiveStatusMessages
                 ? stores.Where(s => s.StoreId.Length > 0)
                     .Select(s =>
                     {
-                        bool selected = chosen.Count == 0 || chosen.Contains(s.StoreId);
+                        bool selected = chosen.Allows(s.StoreId);
                         var c = byStore.TryGetValue(s.StoreId, out var found) ? found : null;
                         return ArchiveMetrics.Store(s.DisplayName, s.IsOpen, selected, c);
                     }).ToList()

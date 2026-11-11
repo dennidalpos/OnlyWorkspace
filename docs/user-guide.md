@@ -59,7 +59,7 @@ Limits: 3,000 folders/mailbox, depth 12, metadata for 50 recipients and 30 attac
 
 ## Data controls
 
-Local AI uses loopback. External endpoints require authorization for profile, destination, region, permissions and credentials. Level 0 sends nothing; Minimal sends protected structured facts; Standard permits mechanically masked free text; Extended adds masked attachment text only with separate permission. Original files/file names are not uploaded. Pseudonymization is reversible, can miss sensitive text and is not anonymity. The word form **1234,56 euro** remains unrecognized.
+Local AI uses loopback. External endpoints require authorization per service (it covers every profile and model of that service with the same destination, region, permissions and credentials). Level 0 sends nothing; Minimal sends protected structured facts; Standard permits mechanically masked free text; Extended adds masked attachment text only with separate permission. Original files/file names are not uploaded. Pseudonymization is reversible, can miss sensitive text and is not anonymity. The word form **1234,56 euro** remains unrecognized.
 
 Free-form web queries during actions, including mail-derived queries, are currently blocked. ConfigTool capability checks can send fixed synthetic external requests. A web setting/capability badge does not override this boundary. Changed credentials/policy interrupt prior work and start a fresh model conversation; old history stays readable.
 

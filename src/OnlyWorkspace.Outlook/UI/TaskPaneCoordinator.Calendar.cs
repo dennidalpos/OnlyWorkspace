@@ -340,7 +340,7 @@ public partial class TaskPaneCoordinator
             var hits = await db.SearchAsync(new ArchiveQuery
             {
                 EmailRefs = copies.Skip(start).Take(500).ToList(),
-                AllowedStoreIds = stores,
+                Stores = stores,
                 IncludeFacts = true,
                 IncludeAttachmentText = attachmentsAllowed,
                 Max = 500
