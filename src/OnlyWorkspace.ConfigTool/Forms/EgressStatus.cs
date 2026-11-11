@@ -13,7 +13,7 @@ internal sealed class EgressStatus
 {
     public string Text { get; set; } = string.Empty;
     public Tone Tone { get; set; }
-    /// <summary>There is at least one profile that sends data outside: «Accetta» makes sense.</summary>
+    /// <summary>There is at least one profile that sends data outside: «Leggi e autorizza» makes sense.</summary>
     public bool CanAccept { get; set; }
     /// <summary>A consent exists: «Revoca» makes sense.</summary>
     public bool CanRevoke { get; set; }
@@ -48,15 +48,21 @@ internal sealed class EgressStatus
             }
             else if (missing.Count > 0)
             {
-                lines.Add("Profili da autorizzare o rinnovare (destinazione, livello, permessi o chiavi cambiati): " + string.Join(", ", missing) + ".");
+                lines.Add("Server da autorizzare (servizio, livello, permessi o chiavi mai autorizzati): " + string.Join(", ", missing) + ".");
                 tone = Tone.Warning;
             }
             else tone = Tone.Success;
         }
         var history = config.DataEgress?.History ?? new List<DataEgressEvent>();
-        var egressProfiles = DataEgress.EgressProfiles(config);
-        foreach (var profile in egressProfiles)
-            lines.Add($"• {profile.DisplayName}: " + (DataEgress.HasProfileGrant(config, profile, resolveSecret) ? "autorizzato" : "invii bloccati, da autorizzare o rinnovare"));
+        var egressProfiles = DataEgress.EgressProfiles(config).ToList();
+        // One line per service: the authorization covers every profile and model of the service with the same permissions.
+        foreach (var service in DataEgress.ByService(egressProfiles))
+        {
+            var blocked = service.Where(p => !DataEgress.HasProfileGrant(config, p, resolveSecret)).Select(DataEgress.Name).ToList();
+            string names = string.Join(", ", service.Select(DataEgress.Name));
+            lines.Add($"• {DataEgress.Endpoint(service.First().BaseUrl)} ({names}): " + (blocked.Count == 0 ? "autorizzato"
+                : "invii bloccati per " + string.Join(", ", blocked) + ", permessi o chiavi mai autorizzati"));
+        }
         if (history.Count > 0)
         {
             lines.Add("Storico:");
@@ -70,31 +76,4 @@ internal sealed class EgressStatus
             CanRevoke = consent != null
         };
     }
-}
-
-/// <summary>Texts of the storage table of «Privacy e dati».</summary>
-internal static class StorageText
-{
-    private static readonly CultureInfo Italian = CultureInfo.GetCultureInfo("it-IT");
-
-    /// <summary>Key of the rows shown: the table is rebuilt only when it changes.</summary>
-    public static string Signature(StorageReport report) =>
-        string.Join("\n", report.Items.Select(i => i.Name + "|" + i.Bytes + "|" + i.Files + "|" + i.Unreadable + "|" + i.Detail + "|" + i.Path));
-
-    public static string Size(StorageItem item)
-    {
-        string size = AppStorageUsage.Text(item.Bytes) + (item.Files == 1 ? " · 1 file" : $" · {item.Files.ToString("N0", Italian)} file");
-        if (item.Unreadable > 0) size += $" · {item.Unreadable} non leggibili";
-        if (item.Detail.Length > 0) size += "\r\n" + item.Detail;
-        return size;
-    }
-
-    public static string SizeTip(StorageItem item) =>
-        "Dimensione dei file su disco" + (item.Detail.Length > 0 ? ", divisa per tipo." : ".") +
-        (item.Unreadable > 0 ? " Alcuni file non sono leggibili con i diritti del tuo utente e non sono contati." : string.Empty);
-
-    public static string Total(StorageReport report, DateTime now) =>
-        $"Totale {AppStorageUsage.Text(report.TotalBytes)} in {report.TotalFiles.ToString("N0", Italian)} file" +
-        (report.FreeBytes is { } free ? $"; liberi sul disco dell'archivio {AppStorageUsage.Text(free)}." : ".") +
-        $" Calcolato alle {now:HH:mm}.";
 }

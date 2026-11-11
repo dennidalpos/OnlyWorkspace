@@ -70,7 +70,8 @@ public sealed class DataEgressConsent : DataEgressSigner
     public List<string> Hosts { get; set; } = new();
     /// <summary>One entry per host: what the company declared and the highest level authorized.</summary>
     public List<DataEgressProvider> Providers { get; set; } = new();
-    public List<DataEgressProfileGrant> Profiles { get; set; } = new();
+    /// <summary>Authorized combinations per service; every profile and model with the same permissions and keys is covered.</summary>
+    public List<DataEgressServiceGrant> Grants { get; set; } = new();
 }
 
 /// <summary>One acceptance or revocation, kept in config.json so it travels with every backup.</summary>
@@ -106,7 +107,7 @@ public sealed class WorkspaceDataEgressConfig
 /// <summary>Text the responsible person accepts. A new version voids every earlier acceptance.</summary>
 public static class DataEgressNotice
 {
-    public const int Version = 7;
+    public const int Version = 8;
 
     public const string Title = "Informativa sull'uscita dei dati verso servizi di intelligenza artificiale esterni";
 
@@ -117,7 +118,7 @@ public static class DataEgressNotice
         "I valori originali vengono ripristinati solo sul PC. La pseudonimizzazione è reversibile, avviene sul PC con regole meccaniche e non rende anonimi i dati né promette una riservatezza assoluta (non è una protezione al 100%). Identificativi, importi e date sono sostituiti da riferimenti, ma ciò che la procedura non riconosce, comprese le categorie particolari di dati (art. 9 GDPR, per esempio la salute), resta nel testo e viene inviato al servizio. Nessun file binario viene caricato. La ricerca web con contenuti non verificabili è bloccata, anche quando la query nasce da un modello locale. Solo con il livello Esteso la ricerca web delle azioni abilitate invia al servizio l'intera richiesta, cioè il testo delle email e degli allegati che contiene, già pseudonimizzato come ogni altro invio e limitato agli ultimi 6000 caratteri; non vengono create query dai domini della posta; i risultati tornano sul PC e i valori originali vengono ripristinati solo lì.",
         "Per ogni profilo cloud l'amministratore dichiara dove il servizio elabora i dati (UE, non UE o non specificata); un'area non specificata richiede una conferma esplicita.",
         "Le prove di connessione e capacità usano richieste sintetiche fisse, senza contenuti di Outlook. Le credenziali necessarie all'autenticazione sono trasmesse al servizio configurato.",
-        "Autorizzi esclusivamente i profili e le destinazioni riepilogati, con i permessi e le chiavi attuali. L'autorizzazione si può revocare; le richieste già ricevute dal servizio non si possono ritirare.",
+        "Autorizzi esclusivamente i servizi e le destinazioni riepilogati, con i permessi e le chiavi attuali. L'autorizzazione vale per servizio: copre ogni profilo e modello dello stesso servizio con gli stessi permessi e le stesse chiavi, e le combinazioni già autorizzate restano valide fino alla revoca o a una nuova versione di questa informativa. L'autorizzazione si può revocare; le richieste già ricevute dal servizio non si possono ritirare.",
         "L'autorizzazione tecnica non certifica adempimenti, contratti o conformità normativa. L'organizzazione verifica le condizioni del fornitore e gli obblighi applicabili al proprio utilizzo. Rileggi sempre i risultati dell'IA."
     });
 
@@ -281,6 +282,14 @@ public static partial class DataEgress
         var confirmed = new HashSet<string>(confirmedUnspecifiedRegionProfiles ?? Array.Empty<string>(), StringComparer.OrdinalIgnoreCase);
         if (unspecified.Any(id => !confirmed.Contains(id)))
             throw new InvalidOperationException("Confermare esplicitamente tutti i profili con area del servizio non specificata.");
+        var previousConsent = config.DataEgress?.Consent;
+        bool keep = Current(previousConsent);
+        var hosts = Hosts(config).Concat(keep ? previousConsent!.Hosts ?? new List<string>() : new List<string>())
+            .Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(h => h, StringComparer.OrdinalIgnoreCase).ToList();
+        ExposureLevel Level(string host) => new[] { RequiredLevel(config, host) }
+            .Concat(keep ? (previousConsent!.Providers ?? new List<DataEgressProvider>()).Where(p => p != null && string.Equals(p.Host, host, StringComparison.OrdinalIgnoreCase)).Select(p => p.Level) : Enumerable.Empty<ExposureLevel>())
+            .Max();
+        var grants = MergeGrants(config, profiles, resolveSecret);
         var consent = new DataEgressConsent
         {
             AcceptedUtc = nowUtc,
@@ -290,17 +299,17 @@ public static partial class DataEgress
             NoticeHash = DataEgressNotice.Hash,
             NoticeText = DataEgressNotice.Text,
             Date = nowUtc.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
-            Hosts = Hosts(config).ToList(),
-            Providers = Hosts(config).Select(h => new DataEgressProvider { Host = h, Level = RequiredLevel(config, h) }).ToList(),
-            Profiles = profiles.Select(p => CreateGrant(p, resolveSecret)).ToList()
+            Hosts = hosts,
+            Providers = hosts.Select(h => new DataEgressProvider { Host = h, Level = Level(h) }).ToList(),
+            Grants = grants
         };
         config.DataEgress ??= new WorkspaceDataEgressConfig();
         ScrubHistory(config.DataEgress);
         var previous = config.DataEgress.Consent;
         if (previous != null && !config.DataEgress.History.Any(e => e.Authorization?.AcceptedUtc == previous.AcceptedUtc && e.Authorization.NoticeVersion == previous.NoticeVersion && e.Authorization.NoticeHash == previous.NoticeHash && e.Authorization.NoticeText == previous.NoticeText))
-            config.DataEgress.History.Add(Event(DataEgressEvent.Accepted, previous, previous.WindowsUser, previous.Machine, previous.AcceptedUtc));
+            config.DataEgress.History.Add(Event(DataEgressEvent.Accepted, previous, previous.WindowsUser, previous.Machine, previous.AcceptedUtc, new List<string>()));
         config.DataEgress.Consent = consent;
-        var accepted = Event(DataEgressEvent.Accepted, consent, windowsUser, machine, nowUtc);
+        var accepted = Event(DataEgressEvent.Accepted, consent, windowsUser, machine, nowUtc, profiles.Select(p => p.Id).ToList());
         if (unspecified.Count > 0) accepted.ConfirmedUnspecifiedRegionProfiles = unspecified;
         config.DataEgress.History.Add(accepted);
         ScrubHistory(config.DataEgress);
@@ -314,12 +323,13 @@ public static partial class DataEgress
         if (consent == null) return;
         ScrubHistory(config.DataEgress!);
         config.DataEgress!.Consent = null;
-        config.DataEgress.History.Add(Event(DataEgressEvent.Revoked, consent, windowsUser, machine, nowUtc));
+        config.DataEgress.History.Add(Event(DataEgressEvent.Revoked, consent, windowsUser, machine, nowUtc,
+            EgressProfiles(config).Select(p => p.Id).ToList()));
         ScrubHistory(config.DataEgress);
         BindProfiles(config, null);
     }
 
-    private static DataEgressEvent Event(string action, DataEgressConsent consent, string windowsUser, string machine, DateTime nowUtc) => new()
+    private static DataEgressEvent Event(string action, DataEgressConsent consent, string windowsUser, string machine, DateTime nowUtc, List<string> profiles) => new()
     {
         Action = action,
         AtUtc = nowUtc,
@@ -331,16 +341,16 @@ public static partial class DataEgress
         NoticeHash = consent.NoticeHash,
         Hosts = consent.Hosts.ToList(),
         Levels = consent.Providers.Select(p => $"{p.Host}: {ExposurePolicy.Label(p.Level)}").ToList(),
-        Profiles = consent.Profiles.Select(p => p.ProfileId).ToList(),
+        Profiles = profiles,
         Authorization = WithoutCredentialProofs(JsonSerializer.Deserialize<DataEgressConsent>(JsonSerializer.Serialize(consent))!)
     };
 
     /// <summary>A past authorization is never verified again, so its history copy keeps what was accepted (text, declarations,
-    /// profile and policy key) but not the salts and fingerprints that tie a grant to the credentials: they would sit in
+    /// service and policy key) but not the salts and fingerprints that tie a grant to the credentials: they would sit in
     /// config.json for good and help a guess at a weak key.</summary>
     internal static DataEgressConsent WithoutCredentialProofs(DataEgressConsent consent)
     {
-        foreach (var grant in consent.Profiles ?? new List<DataEgressProfileGrant>())
+        foreach (var grant in (consent.Grants ?? new List<DataEgressServiceGrant>()).Where(g => g != null))
         {
             grant.CredentialSalt = string.Empty;
             grant.CredentialFingerprint = string.Empty;

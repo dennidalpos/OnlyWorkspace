@@ -15,6 +15,45 @@ internal interface IThemed
     void ApplyTheme();
 }
 
+/// <summary>
+/// The one set of sizes and spaces of the ConfigTool, at 96 DPI (forms scale them with <see cref="Ui.ScaleFromDesignDpi"/>).
+/// Commands are 32 px high; a compact button sits beside a field and matches its height.
+/// </summary>
+internal static class Metrics
+{
+    public const int Gap = 8;
+    public const int ButtonHeight = 32;
+    public const int CompactButtonHeight = 26;
+    public const int ButtonMinWidth = 96;
+    public const int ButtonPadding = 12;
+    /// <summary>Inside a dialog and around its button bar.</summary>
+    public const int DialogPadding = 16;
+    /// <summary>A checkbox that depends on the one above it.</summary>
+    public const int Indent = 24;
+    /// <summary>Space above a group heading inside a card.</summary>
+    public const int GroupSpacing = 14;
+
+    private static T Sized<T>(T button, int minWidth, int height, int padding, Padding margin) where T : Button
+    {
+        button.AutoSize = true;
+        // GrowAndShrink: a GrowOnly button keeps the size DPI scaling gave it on top of its own.
+        button.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+        button.MinimumSize = new Size(minWidth, height);
+        button.Padding = new Padding(padding, 0, padding, 0);
+        button.Margin = margin;
+        return button;
+    }
+
+    /// <summary>A button of a dialog bar or of the window footer; bars flow right to left, so the gap sits on the left.</summary>
+    public static T DialogButton<T>(T button) where T : Button => Sized(button, ButtonMinWidth, ButtonHeight, ButtonPadding, new Padding(Gap, 0, 0, 0));
+
+    /// <summary>A command inside a page, in a row read left to right.</summary>
+    public static T CommandButton<T>(T button) where T : Button => Sized(button, 0, ButtonHeight, ButtonPadding, new Padding(0, 0, Gap, Gap));
+
+    /// <summary>A button beside a field (choose, show, browse).</summary>
+    public static T CompactButton<T>(T button) where T : Button => Sized(button, 0, CompactButtonHeight, Gap, new Padding(Gap / 2, 0, 0, 0));
+}
+
 internal sealed class Palette
 {
     public Color Window, Sidebar, Card, Border;

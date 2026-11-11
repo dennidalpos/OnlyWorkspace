@@ -76,7 +76,7 @@ public sealed class ArchiveSearchForm : Form
         _cancel.Enabled = false;
         var search = Command("Cerca");
         search.Kind = ButtonKind.Primary;
-        search.MinimumSize = new Size(96, 28);
+        search.MinimumSize = new Size(Metrics.ButtonMinWidth, Metrics.ButtonHeight);
         var refresh = Command("Aggiorna stato");
         var optimize = Command("Ottimizza indice");
         // Not destructive (nothing is deleted, the archive only pauses): red is kept for actions that lose data.
@@ -116,7 +116,7 @@ public sealed class ArchiveSearchForm : Form
         layout.Controls.Add(profileBar, 0, 0);
         layout.Controls.Add(_sections, 0, 1);
         _sections.SelectedIndexChanged += (_, _) => _tabs.SelectedIndex = _sections.SelectedIndex;
-        _tabs.SelectedIndexChanged += (_, _) => _sections.Select(_tabs.SelectedIndex);
+        _tabs.SelectedIndexChanged += (_, _) => { _sections.Select(_tabs.SelectedIndex); Ui.ScrollToTop(_tabs.SelectedTab); };
 
         var searchPage = new TabPage("Ricerca") { Name = "ArchiveSearchTab", Padding = new Padding(0, 6, 0, 0), AutoScroll = true };
         var searchLayout = Rows(SizeType.AutoSize, SizeType.AutoSize, SizeType.AutoSize, SizeType.Percent);
@@ -661,15 +661,7 @@ public sealed class ArchiveSearchForm : Form
         Theme.ApplyWindowChrome(this);
     }
 
-    private static FlatButton Command(string text) => new()
-    {
-        Text = text,
-        AutoSize = true,
-        AutoSizeMode = AutoSizeMode.GrowAndShrink,
-        MinimumSize = new Size(0, 28),
-        Padding = new Padding(8, 0, 8, 0),
-        Margin = new Padding(0, 0, 6, 6)
-    };
+    private static FlatButton Command(string text) => Metrics.CommandButton(new FlatButton { Text = text });
 
     private static DataGridView Grid() => new()
     {

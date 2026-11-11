@@ -137,7 +137,7 @@ public sealed partial class MainConfigForm
     /// Reads limits and capabilities from the provider's model endpoint: no text generation and no cost.
     /// No-op without a model or for connectors that publish nothing.
     /// </summary>
-    /// <returns>Why nothing was read, for «Aggiorna capacità»; null when read (or nothing to read).</returns>
+    /// <returns>Why nothing was read, for «Diagnosi»; null when read (or nothing to read).</returns>
     private Task<string?> LoadModelLimitsAsync(LlmProfileConfig p) => LoadModelLimitsCoreAsync(p, default);
 
     private async Task<string?> LoadModelLimitsCoreAsync(LlmProfileConfig p, System.Threading.CancellationToken cancellationToken)
@@ -188,15 +188,15 @@ public sealed partial class MainConfigForm
         RefillPresets();
         ShowModelLimits();
         ResetWebSupport();
-        return info == null ? "Il servizio non pubblica le capacità di questo modello: usa «Prova funzioni»." : null;
+        return info == null ? "Il servizio non pubblica le capacità di questo modello: le prove di «Diagnosi» le verificano." : null;
     }
 
     private void LstProfiles_SelectedIndexChanged(object? sender, EventArgs e)
     {
         if (_refreshingList || _lstProfiles.SelectedItem is not ProfileItem item) return;
+        Ui.ScrollToTop(_profileHost);
         _probeRun?.Cancel();
         _connectionCheck?.Cancel();
-        _capabilityRefresh?.Cancel();
         SetProbeStatus(ProbeIdle, Tone.Muted);
 
         bool wasLoading = _isLoading;
@@ -261,7 +261,6 @@ public sealed partial class MainConfigForm
     {
         if (_isLoading) return;
         _connectionCheck?.Cancel();
-        _capabilityRefresh?.Cancel();
         UpdateSelectedProfileFromUi();
         MarkDirty();
     }
@@ -518,7 +517,7 @@ public sealed partial class MainConfigForm
         {
             var caps = CurrentCaps();
             var p = item.Profile;
-            string? previousPolicy = _connectionCheck != null || _capabilityRefresh != null ? ConversationPolicy.Key(p) : null;
+            string? previousPolicy = _connectionCheck != null || _probeRun != null ? ConversationPolicy.Key(p) : null;
             p.DisplayName = _txtDisplayName.Text.Trim();
             p.Type = caps.Type;
             p.BaseUrl = _txtEndpoint.Text.Trim();
@@ -543,7 +542,6 @@ public sealed partial class MainConfigForm
             if (previousPolicy != null && previousPolicy != ConversationPolicy.Key(p))
             {
                 _connectionCheck?.Cancel();
-                _capabilityRefresh?.Cancel();
             }
         }
     }
@@ -630,7 +628,6 @@ public sealed partial class MainConfigForm
     /// </summary>
     private void ResetWebSupport()
     {
-        _webSupportCheck?.Cancel();
         if (_lstProfiles.SelectedItem is not ProfileItem item) return;
         var caps = CurrentCaps();
         bool saved = item.Profile.WebSearchEnabled;
@@ -642,15 +639,15 @@ public sealed partial class MainConfigForm
         var declared = CurrentCapabilities()?.WebSearch ?? CapabilityState.Unknown;
         if (caps.WebSearch == WebSearchMode.OllamaCom && CurrentCapabilities()?.Tools == CapabilityState.Supported)
             declared = _inMemoryWebSecrets.TryGetValue(item.Profile.Id, out var key) && !string.IsNullOrWhiteSpace(key) ? CapabilityState.Supported : CapabilityState.Unknown;
-        // A real check of this model, endpoint and key (Verifica Ricerca web or Prova funzioni) wins over the declaration.
+        // A real check of this model, endpoint and key (Diagnosi) wins over the declaration.
         var verified = item.Profile.ModelCapabilities is { } cache && cache.Matches(item.Profile) ? cache.Probe(ProbeKind.Web) : null;
         if (verified?.Outcome == ProbeOutcome.Supported) declared = CapabilityState.Supported;
         else if (verified?.Outcome == ProbeOutcome.Unsupported) declared = CapabilityState.Unsupported;
         bool available = caps.WebSearch != WebSearchMode.None;
         bool usable = available && (saved || declared == CapabilityState.Supported);
 
-        if (_isLocked) { _lockedControls[_chkWebSearch] = usable; _lockedControls[_btnWebRetry] = available; }
-        else { _chkWebSearch.Enabled = usable; _btnWebRetry.Enabled = available; }
+        if (_isLocked) _lockedControls[_chkWebSearch] = usable;
+        else _chkWebSearch.Enabled = usable;
         _lblWebSupport.Text = !available ? "Non disponibile con questo connettore"
             : declared == CapabilityState.Unsupported ? "Non supportato dal modello"
             : saved ? "Supportato"
@@ -689,57 +686,6 @@ public sealed partial class MainConfigForm
         ResetWebSupport();
     }
 
-    private async System.Threading.Tasks.Task CheckWebSupportAsync()
-    {
-        if (_lstProfiles.SelectedItem is not ProfileItem item || _isLoading) return;
-        UpdateSelectedProfileFromUi();
-        var profile = item.Profile;
-        var model = profile.Model;
-        if (string.IsNullOrWhiteSpace(model) || string.IsNullOrWhiteSpace(profile.BaseUrl))
-        {
-            CopyableMessageBox.Show(this, "Inserisci endpoint e modello prima della verifica.", "Verifica Ricerca web", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            return;
-        }
-        var modelSecret = Profiles.SecretFor(profile.Id);
-        var webSecret = Profiles.WebSecretFor(profile.Id);
-        string identity = CapabilityKey(profile);
-        _webSupportCheck?.Cancel();
-        var cts = new System.Threading.CancellationTokenSource(WebSearchService.CheckTimeout + TimeSpan.FromSeconds(5));
-        _webSupportCheck = cts;
-        _btnWebRetry.Enabled = false;
-        _lblWebSupport.Text = "Verifica in corso…";
-        Theme.SetTone(_lblWebSupport, Tone.Warning);
-        try
-        {
-            var (supported, detail) = await WebProbeAsync(profile, modelSecret, webSecret, cts.Token);
-            if (cts.IsCancellationRequested || IsDisposed || Disposing || _webSupportCheck != cts || _lstProfiles.SelectedItem != item || CapabilityKey(profile) != identity) return;
-            var outcome = supported switch { true => ProbeOutcome.Supported, false => ProbeOutcome.Unsupported, _ => ProbeOutcome.Inconclusive };
-            // The same check as «Prova funzioni»: its outcome is shown in Avanzate too.
-            CacheFor(profile).Record(new CapabilityProbeResult { Kind = ProbeKind.Web, Outcome = outcome, Detail = detail, CheckedUtc = DateTime.UtcNow });
-            MarkDirty();
-            RefreshCapabilityRows();
-            ShowWebSupport(profile, outcome, detail);
-        }
-        catch (OperationCanceledException)
-        {
-            if (!IsDisposed && !Disposing && _webSupportCheck == cts)
-            {
-                _lblWebSupport.Text = "Errore di verifica: tempo di attesa scaduto";
-                LogActivity($"[WEB SEARCH] Profilo '{profile.Id}', modello '{model}': {_lblWebSupport.Text}");
-            }
-        }
-        finally
-        {
-            if (_webSupportCheck == cts) _webSupportCheck = null;
-            cts.Dispose();
-            if (!IsDisposed)
-            {
-                if (_isLocked) _lockedControls[_btnWebRetry] = true;
-                else _btnWebRetry.Enabled = true;
-            }
-        }
-    }
-
     /// <summary>Outcome of a real web check in Autorizzazioni: only a verified search allows ticking Ricerca web.</summary>
     private void ShowWebSupport(LlmProfileConfig profile, ProbeOutcome outcome, string detail)
     {
@@ -767,6 +713,7 @@ public sealed partial class MainConfigForm
     private async void BtnTestProfile_Click(object? sender, EventArgs e)
     {
         if (_connectionCheck != null) { _connectionCheck.Cancel(); return; }
+        if (_probeRun != null) { _probeRun.Cancel(); return; }
         if (_lstProfiles.SelectedItem is not ProfileItem item) return;
         UpdateSelectedProfileFromUi();
         var p = item.Profile;
@@ -775,8 +722,9 @@ public sealed partial class MainConfigForm
         using var run = new InteractiveRequest();
         _connectionCheck = run;
         string label = _btnTestProfile.Text;
-        _btnTestProfile.Text = "Annulla verifica";
-        SetTestResult("Verifica in corso (massimo 10 secondi)…", Tone.Warning, StatusLight.Working);
+        _btnTestProfile.Text = "Annulla diagnosi";
+        SetTestResult("Verifica della connessione in corso (massimo 10 secondi)…", Tone.Warning, StatusLight.Working);
+        bool healthy = false;
         bool Current() => !IsDisposed && ReferenceEquals(_lstProfiles.SelectedItem, item) && identity == ConversationPolicy.Key(p);
         try
         {
@@ -792,6 +740,7 @@ public sealed partial class MainConfigForm
                     SetTestResult($"OK ({sw.ElapsedMilliseconds} ms, {health.AvailableModels.Count} modelli)", Tone.Success);
                     await LoadModelLimitsCoreAsync(p, run.Token);
                     run.Token.ThrowIfCancellationRequested();
+                    healthy = Current();
                 }
                 else SetTestResult("Fallito: " + health.ErrorMessage, Tone.Danger);
             }
@@ -799,16 +748,21 @@ public sealed partial class MainConfigForm
         }
         catch (OperationCanceledException)
         {
-            if (Current()) SetTestResult(run.TimedOut ? "Tempo massimo di 10 secondi superato." : "Verifica annullata.", Tone.Warning);
+            if (Current()) SetTestResult(run.TimedOut ? "Tempo massimo di 10 secondi superato." : "Diagnosi annullata.", Tone.Warning);
         }
         catch (Exception ex)
         {
             if (Current()) SetTestResult("Errore: " + ErrorText.For(ex), Tone.Danger);
             if (!IsDisposed) LogActivity("[TEST ERROR] " + ex.Message);
         }
+        finally { _connectionCheck = null; }
+        try
+        {
+            // The connection answered: the same button goes on with the capability probes (no second command, no extra tick).
+            if (healthy && !IsDisposed) await RunProbesAsync(item);
+        }
         finally
         {
-            _connectionCheck = null;
             if (!IsDisposed) { _btnTestProfile.Text = label; _btnTestProfile.Enabled = !_isLocked; }
         }
     }

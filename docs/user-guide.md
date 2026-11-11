@@ -4,7 +4,7 @@ OnlyWorkspace is a COM add-in for classic Outlook on Windows. The interface is I
 
 ## First use and navigation
 
-Open **OnlyWorkspace → Configurazione** and complete the first-run wizard. Configure **Servizio → Indirizzo → Chiave → Modello** in order. Model listing is not a connection test. **Verifica connessione** uses synthetic input and may incur provider charges. Save the default profile; authorizing external data transfer is a separate action. Open an email and choose **Sintesi**.
+Open **OnlyWorkspace → Configurazione** and complete the first-run wizard. Configure **Servizio → Indirizzo → Chiave → Modello** in order. Model listing is not a connection test. In the profile, **Diagnosi** checks the connection and the model's functions with synthetic input and may incur provider charges. Save the default profile; authorizing external data transfer is a separate action. Open an email and choose **Sintesi**.
 
 The pane belongs to its Outlook window. **Chat**, **Posta** and **Storico** preserve their own filters/results. Posta contains search/analysis and briefing. The status dot opens **Stato**; endpoint, versions, measurements and **Diagnostica** are under **Avanzate**. Green requires a verified state, yellow actual work, red an error, grey off/paused/waiting/unverified. Selecting a model does not verify it. The cloud symbol means an external dispatch attempt, not a server receipt.
 

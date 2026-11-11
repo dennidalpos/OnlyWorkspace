@@ -58,22 +58,19 @@ internal static class CopyableMessageBox
         for (int i = results.Length - 1; i >= 0; i--)
         {
             var result = results[i];
-            var button = new FlatButton
+            var button = Metrics.DialogButton(new FlatButton
             {
                 Text = i < labels.Length ? labels[i] : result == DialogResult.Yes ? "Sì" : result == DialogResult.No ? "No" : result == DialogResult.Cancel ? "Annulla" : "OK",
                 DialogResult = result,
-                AutoSize = true,
-                AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                MinimumSize = new Size(80, 30),
                 // Laid out right to left: Tab still goes left to right, as the buttons read.
                 TabIndex = i + 1
-            };
+            });
             actions.Controls.Add(button);
             if (safeDefault ? result == DialogResult.No : i == 0) dialog.AcceptButton = button;
             if (result == DialogResult.Cancel || result == DialogResult.OK || (buttons == MessageBoxButtons.YesNo && result == DialogResult.No))
                 dialog.CancelButton = button;
         }
-        var copy = new FlatButton { Text = "Copia messaggio", AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, MinimumSize = new Size(130, 30), TabIndex = 0 };
+        var copy = Metrics.DialogButton(new FlatButton { Text = "Copia messaggio", TabIndex = 0 });
         copy.Click += (_, _) => { content.SelectAll(); content.Copy(); };
         actions.Controls.Add(copy);
         dialog.Controls.Add(body);

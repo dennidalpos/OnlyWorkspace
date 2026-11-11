@@ -20,6 +20,15 @@ internal static class Ui
 
     public static int Px(Control control, float value) => (int)Math.Round(value * Scale(control));
 
+    /// <summary>Every page, section, step and dialog opens at its top: scrolling containers of the subtree go back to 0.</summary>
+    public static void ScrollToTop(Control? root)
+    {
+        if (root == null) return;
+        if (root is ScrollableControl { AutoScroll: true } scrolling && scrolling.AutoScrollPosition != Point.Empty)
+            scrolling.AutoScrollPosition = Point.Empty;
+        foreach (Control child in root.Controls) ScrollToTop(child);
+    }
+
     /// <summary>A detached subtree created after the initial scaling; later DPI changes belong to WinForms.</summary>
     public static void ScaleDynamic(Control subtree, Control parent)
     {
@@ -783,6 +792,17 @@ internal sealed class ThemedNumeric : NumericUpDown, IThemed
 internal sealed class ScrollPanel : Panel, IThemed
 {
     public ScrollPanel() => AutoScroll = true;
+
+    /// <summary>The panel takes the keyboard focus itself, so reading keys scroll it (a Panel is not selectable by default).</summary>
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public bool Focusable
+    {
+        get => GetStyle(ControlStyles.Selectable);
+        set { SetStyle(ControlStyles.Selectable, value); TabStop = value; }
+    }
+
+    /// <summary>The end of the content is in view (also when nothing scrolls).</summary>
+    public bool AtEnd => !VerticalScroll.Visible || -AutoScrollPosition.Y + ClientSize.Height >= DisplayRectangle.Height - Ui.Px(this, 4);
 
     public void ApplyTheme() => Theme.ApplyScrollBars(this);
 

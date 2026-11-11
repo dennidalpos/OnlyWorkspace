@@ -11,7 +11,7 @@ using OnlyWorkspace.Core.Models;
 namespace OnlyWorkspace.Infrastructure.Llm;
 
 /// <summary>
-/// «Prova funzioni» of the ConfigTool: one short request per function with synthetic data only, one after the
+/// «Diagnosi» of the ConfigTool: one short request per function with synthetic data only, one after the
 /// other, no retry, at most <see cref="Timeout"/> each and <see cref="MaxOutputChars"/> of answer read. A timeout,
 /// a refused key or a network error is Inconclusive: it says nothing about the model. Nothing of Outlook is sent.
 /// </summary>

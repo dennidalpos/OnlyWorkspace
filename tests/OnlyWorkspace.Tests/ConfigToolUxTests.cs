@@ -139,6 +139,30 @@ public sealed class ConfigToolUxTests
     }
 
     [Fact]
+    public void Notice_OpensAtTheTop_AndUnlocksTheConfirmationsOnlyAtTheEndOfTheText()
+    {
+        OnSta(_ =>
+        {
+            using var notice = new DataEgressConsentForm { StartPosition = FormStartPosition.Manual, Location = new System.Drawing.Point(-4000, -4000) };
+            notice.Show();
+            Application.DoEvents();
+            var scroll = (ScrollPanel)typeof(DataEgressConsentForm).GetField("_scroll", Flags)!.GetValue(notice)!;
+            var read = (CheckBox)typeof(DataEgressConsentForm).GetField("_read", Flags)!.GetValue(notice)!;
+            Assert.Equal(System.Drawing.Point.Empty, scroll.AutoScrollPosition);
+            // The confirmations are outside the scrolling text.
+            Assert.False(scroll.Contains(read));
+            Assert.True(scroll.VerticalScroll.Visible, "the notice text is longer than the window at 650×560");
+            notice.CheckRead();
+            Assert.False(read.Enabled);
+            scroll.AutoScrollPosition = new System.Drawing.Point(0, 100000);
+            notice.CheckRead();
+            Assert.True(notice.ReadToEnd);
+            Assert.True(read.Enabled);
+            notice.Close();
+        });
+    }
+
+    [Fact]
     public void Notice_EscAndCloseAskOnlyAfterTheBoxIsTicked_AndShowTheReasonBesideTheButton()
     {
         OnSta(_ =>
@@ -147,6 +171,10 @@ public sealed class ConfigToolUxTests
             var hint = (Label)typeof(DataEgressConsentForm).GetField("_hint", Flags)!.GetValue(notice)!;
             var read = (CheckBox)typeof(DataEgressConsentForm).GetField("_read", Flags)!.GetValue(notice)!;
             Assert.True(OwnVisible(hint));
+            Assert.Contains("Scorri il testo fino in fondo", hint.Text);
+            Assert.False(read.Enabled);
+            ((Action)typeof(DataEgressConsentForm).GetField("_unlock", Flags)!.GetValue(notice)!)();
+            Assert.True(read.Enabled);
             Assert.Contains("Ho letto", hint.Text);
             // The owner-drawn checkbox paints its text with the palette: the window background must come from it too.
             Assert.Equal(Theme.Colors.Window, notice.BackColor);

@@ -28,7 +28,7 @@ internal sealed class MailboxAuthorizationPanel : TableLayoutPanel
     private readonly CancellationToken _lifetime;
     private readonly ThemedComboBox _profiles = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 240, Anchor = AnchorStyles.Left };
     // GrowAndShrink like the other buttons: GrowOnly keeps the size of an intermediate DPI layout (twice as tall at 150%).
-    private readonly FlatButton _refresh = new() { Text = "Aggiorna", AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, MinimumSize = new Size(0, 28), Padding = new Padding(8, 0, 8, 0) };
+    private readonly FlatButton _refresh = Metrics.CommandButton(new FlatButton { Text = "Aggiorna" });
     private readonly ThemedCheckBox _mine = new() { Text = "Archivio attivo per me", AutoSize = true, Margin = new Padding(3, 6, 3, 6) };
     private readonly TableLayoutPanel _grid = new() { AutoSize = true, ColumnCount = 2, Margin = new Padding(0, 4, 0, 4) };
     private readonly SelectableLabel _status = new() { AutoSize = true, MaximumSize = new Size(600, 0), Margin = new Padding(3, 4, 3, 0) };
@@ -378,7 +378,7 @@ internal sealed class MailboxAuthorizationPanel : TableLayoutPanel
         Control label = new SelectableLabel { Text = name, AutoSize = true, Margin = new Padding(3, 6, 3, 3) };
         if (removableName != null)
         {
-            var remove = new FlatButton { Text = "Togli dall'archivio", AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, MinimumSize = new Size(0, 26), Padding = new Padding(8, 0, 8, 0), AccessibleName = "Togli dall'archivio: " + name };
+            var remove = Metrics.CompactButton(new FlatButton { Text = "Togli dall'archivio", AccessibleName = "Togli dall'archivio: " + name });
             _tips.SetToolTip(remove, "Elimina dall'archivio di questo PC le email della cassetta chiusa, con dati e scelte. Non si possono recuperare.");
             remove.Click += async (_, _) => await RemoveClosedAsync(id, removableName);
             var line = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = Padding.Empty };
@@ -400,7 +400,7 @@ internal sealed class MailboxAuthorizationPanel : TableLayoutPanel
     private void AddOwnAddresses(ArchiveOpenStore store, StoreOwnEntry? entry)
     {
         var box = new ThemedTextBox { Width = 360, Text = string.Join("; ", entry?.Effective ?? Array.Empty<string>()), AccessibleName = "Indirizzi miei: " + store.Name };
-        var save = new FlatButton { Text = "Salva", AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, MinimumSize = new Size(0, 26), Padding = new Padding(8, 0, 8, 0), AccessibleName = "Salva gli indirizzi miei: " + store.Name };
+        var save = Metrics.CompactButton(new FlatButton { Text = "Salva", AccessibleName = "Salva gli indirizzi miei: " + store.Name });
         // Its own Save, unlike the ticks that apply at once: said where the user looks.
         _tips.SetToolTip(save, "Salva subito questi indirizzi per il tuo archivio (non serve il Salva della finestra).");
         var line = new FlowLayoutPanel { AutoSize = true, WrapContents = true, Margin = new Padding(18, 0, 0, 6) };

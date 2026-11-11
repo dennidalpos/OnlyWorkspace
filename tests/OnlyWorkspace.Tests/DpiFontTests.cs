@@ -20,25 +20,18 @@ public sealed class DpiFontTests
         OnSta(() => WithConfigurator(form =>
         {
             // The diagnostics are the last section and stay closed until asked for.
-            Assert.DoesNotContain(Descendants(form).OfType<Button>(), b => b.Visible && b.Text is "Aggiorna capacità" or "Prova funzioni");
             foreach (float scale in new[] { 1f, 1.25f, 1.5f })
             {
                 form.Font = new Font("Segoe UI", 9f * scale);
                 form.ClientSize = new Size((int)(820 * scale), (int)(600 * scale));
                 Descendants(form).OfType<NavButton>().Single(b => b.Text == "Avanzate").PerformClick();
                 Application.DoEvents();
-                var buttons = Descendants(form).OfType<Button>().Where(b => b.Text is "Aggiorna capacità" or "Prova funzioni" or "Annulla").ToList();
-                Assert.Equal(3, buttons.Count);
-                foreach (var button in buttons)
-                {
-                    Assert.True(button.Left >= 0 && button.Right <= button.Parent!.ClientSize.Width,
-                        $"{button.Text} extends outside its row at font scale {scale}");
-                    Assert.True(button.Parent!.Right <= button.Parent.Parent!.ClientSize.Width,
-                        $"Command row extends outside the capability viewport at font scale {scale}");
-                }
-                var web = Descendants(form).OfType<CheckBox>().Single(c => c.Text == "Prova anche la Ricerca web");
-                Assert.True(web.Right <= web.Parent!.ClientSize.Width);
-                Assert.True(web.Width >= web.GetPreferredSize(Size.Empty).Width);
+                var button = Descendants(form).OfType<Button>().Single(b => b.Text == "Diagnosi");
+                Assert.True(button.Left >= 0 && button.Right <= button.Parent!.ClientSize.Width,
+                    $"{button.Text} extends outside its row at font scale {scale}");
+                Assert.True(button.Parent!.Right <= button.Parent.Parent!.ClientSize.Width,
+                    $"Command row extends outside the viewport at font scale {scale}");
+                Assert.DoesNotContain(Descendants(form).OfType<CheckBox>(), c => c.Text.StartsWith("Prova anche"));
             }
         }));
     }

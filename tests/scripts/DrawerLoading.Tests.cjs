@@ -39,3 +39,24 @@ context.finishDrawerLoad('flow');
 assert.equal(context.drawerLoads.flow, undefined);
 assert.match(html, /id="jobProgress"[^>]*role="progressbar"[^>]*aria-label=/);
 console.log('PASS drawer loading: response, timeout, retry and no backend cancellation');
+// Every panel opens at its top, and focusing its first field or title does not scroll it.
+{
+  const start = html.indexOf('  function focusDrawer(id) {');
+  const end = html.indexOf('  function openDrawer(id) {', start);
+  assert.ok(start > 0 && end > start, 'focusDrawer and drawerToTop are next to openDrawer');
+  const focusOptions = [];
+  const body = { scrollTop: 480 };
+  const title = { focus: o => focusOptions.push(o) };
+  const drawer = { querySelector: s => s === '.drawer-body' ? body : s === '.drawer-header h2' ? title : null };
+  const pane = vm.createContext({ $: () => drawer });
+  new vm.Script(html.slice(start, end)).runInContext(pane);
+  pane.drawerToTop('infoDrawer');
+  assert.equal(body.scrollTop, 0);
+  pane.focusDrawer('infoDrawer');
+  assert.equal(JSON.stringify(focusOptions), JSON.stringify([{ preventScroll: true }]));
+  const open = html.slice(html.indexOf('  function openDrawer(id) {'), html.indexOf('  // ---------- Structured cards ----------'));
+  assert.ok(open.indexOf('drawerToTop(id);') > 0 && open.indexOf('drawerToTop(id);') < open.indexOf('focusDrawer(id);'));
+  assert.doesNotMatch(html, /\$\('infoTitle'\)\.scrollIntoView/);
+  assert.match(html, /close\.focus\(\{ preventScroll: true \}\);\s*modal\.scrollTop = 0;/);
+}
+console.log('PASS drawers and help open at their top');

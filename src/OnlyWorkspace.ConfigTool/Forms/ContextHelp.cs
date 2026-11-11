@@ -50,7 +50,7 @@ internal static class ContextHelp
         dialog.Controls.Add(content); dialog.Controls.Add(close);
         dialog.CancelButton = close;
         Ui.ScaleFromDesignDpi(dialog);
-        dialog.Shown += (_, _) => { Theme.Apply(dialog); Theme.ApplyWindowChrome(dialog); content.Focus(); };
+        dialog.Shown += (_, _) => { Theme.Apply(dialog); Theme.ApplyWindowChrome(dialog); content.Focus(); content.Select(0, 0); content.ScrollToCaret(); };
         dialog.ShowDialog(owner.FindForm());
     }
 }

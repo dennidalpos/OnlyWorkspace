@@ -281,9 +281,13 @@ public sealed class TrayApplicationContext : ApplicationContext
             _mainForm.WindowState = FormWindowState.Normal;
         }
 
+        bool reopened = !_mainForm.Visible;
+        if (reopened) _mainForm.ResetViewForReopen();
         _mainForm.Show();
         _mainForm.Activate();
         _mainForm.BringToFront();
+        // Activation gives the focus back and may scroll to it: the reopened page starts at its top anyway.
+        if (reopened) _mainForm.ResetViewForReopen();
         if (page == SingleInstanceManager.MailboxesPage) _mainForm.ShowMailboxes();
     }
 

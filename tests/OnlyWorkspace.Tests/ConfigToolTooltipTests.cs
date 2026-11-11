@@ -197,11 +197,11 @@ public sealed class ConfigToolTooltipTests
             Assert.Contains("0", TipOf("_numIdleTimeout"));
             Assert.Contains("si ferma", TipOf("_numBudget"));
             Assert.Contains("senza dati di Outlook", TipOf("_btnDetectModels"));
-            Assert.Contains("senza dati di Outlook", TipOf("_btnTestProfile"));
+            Assert.Contains("nessun dato di Outlook", TipOf("_btnTestProfile"));
             Assert.Contains("chiave", TipOf("_btnDetectModels"));
             Assert.Contains("chiave", TipOf("_btnTestProfile"));
-            Assert.Contains("addebiti", TipOf("_chkProbeWeb"));
-            Assert.Contains("pagamento", TipOf("_btnProbe"));
+            Assert.Contains("addebitare", TipOf("_btnTestProfile"));
+            Assert.Contains("pagamento", TipOf("_btnTestProfile"));
             Assert.Contains("permesso", TipOf("_cmbExposure"));
             Assert.Contains("bloccate", TipOf("_chkWebSearch"));
         });
@@ -256,6 +256,8 @@ public sealed class ConfigToolTooltipTests
             Assert.False(accept.Enabled);
             Assert.DoesNotContain(controls.OfType<TextBox>(), t => !t.ReadOnly);
             var read = Assert.Single(controls.OfType<CheckBox>());
+            Assert.False(read.Enabled);
+            ((Action)typeof(DataEgressConsentForm).GetField("_unlock", Flags)!.GetValue(notice)!)();
             read.Checked = true; Assert.True(accept.Enabled);
             read.Checked = false; Assert.False(accept.Enabled);
         });

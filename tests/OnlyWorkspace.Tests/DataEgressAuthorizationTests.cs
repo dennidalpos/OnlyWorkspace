@@ -33,7 +33,7 @@ public sealed class DataEgressAuthorizationTests
         var config = Config(profile);
         var consent = Accept(config);
         // Recorded from the same synthetic profile with the embedded catalog at revision 2.
-        consent.Profiles[0].PolicyKey = "TGZ9hboZlWRCv2uQrGTmfVoZu1E1MEkPtx8X+F89Xic=";
+        consent.Grants[0].PolicyKey = "TGZ9hboZlWRCv2uQrGTmfVoZu1E1MEkPtx8X+F89Xic=";
         var oldConversation = new ConversationHistory
         {
             ProfileId = profile.Id,
@@ -47,19 +47,64 @@ public sealed class DataEgressAuthorizationTests
     }
 
     [Fact]
-    public void ASecondProfileOnTheSameHostCannotInheritAuthorization()
+    public void AProfileOfTheSameServiceWithTheSamePermissionsIsCovered_ADifferentLevelOrKeyIsNot()
     {
         var profile = Profile();
         var config = Config(profile);
         Accept(config);
-        var second = Profile("second");
-        config.Profiles.Add(second);
-        Assert.True(DataEgress.AllowsModel(config, profile, Secret));
-        Assert.False(DataEgress.AllowsModel(config, second, Secret));
-        Assert.Single(DataEgress.Missing(config, Secret));
+        var same = Profile("same"); same.Model = "another-model";
+        var lower = Profile("lower"); lower.Exposure = ExposureLevel.Standard;
+        var otherKey = Profile("other-key"); otherKey.SecretRef = "other-model-key";
+        config.Profiles.AddRange(new[] { same, lower, otherKey });
+        Assert.True(DataEgress.AllowsModel(config, same, Secret));
+        Assert.False(DataEgress.AllowsModel(config, lower, Secret));
+        Assert.False(DataEgress.AllowsModel(config, otherKey, Secret));
         Accept(config);
-        Assert.Equal(2, config.DataEgress.Consent!.Profiles.Count);
-        Assert.True(DataEgress.AllowsModel(config, second, Secret));
+        Assert.Equal(3, config.DataEgress.Consent!.Grants.Count);
+        Assert.All(config.Profiles, p => Assert.True(DataEgress.AllowsModel(config, p, Secret)));
+    }
+
+    [Fact]
+    public void ReturningToAnAuthorizedCombinationOrChangingModelNeverAsksAgain()
+    {
+        var profile = Profile();
+        profile.Exposure = ExposureLevel.Standard;
+        var config = Config(profile);
+        Accept(config);
+        string standardBinding = profile.EgressAuthorizationKey;
+        profile.Exposure = ExposureLevel.Extended;
+        Assert.False(DataEgress.AllowsModel(config, profile, Secret));
+        Accept(config);
+        profile.Exposure = ExposureLevel.Standard;
+        profile.Model = "a-model-never-seen";
+        Assert.True(DataEgress.AllowsModel(config, profile, Secret));
+        DataEgress.BindProfiles(config, Secret);
+        // The combination keeps its grant, so the binding of its conversations is the same as before.
+        Assert.Equal(standardBinding, profile.EgressAuthorizationKey);
+        profile.Exposure = ExposureLevel.Extended;
+        Assert.True(DataEgress.AllowsModel(config, profile, Secret));
+    }
+
+    [Fact]
+    public void RememberedCombinationsAreLimitedPerServiceAndRevokeForgetsThemAll()
+    {
+        var profile = Profile();
+        var config = Config(profile);
+        for (int i = 0; i < DataEgress.GrantsPerService + 4; i++)
+        {
+            profile.SecretRef = "model-key-" + i;
+            Accept(config, r => "synthetic-" + r);
+        }
+        Assert.Equal(DataEgress.GrantsPerService, config.DataEgress.Consent!.Grants.Count);
+        Assert.True(DataEgress.AllowsModel(config, profile, r => "synthetic-" + r));
+        profile.SecretRef = "model-key-0";
+        Assert.False(DataEgress.AllowsModel(config, profile, r => "synthetic-" + r));
+        profile.SecretRef = "model-key-5";
+        Assert.True(DataEgress.AllowsModel(config, profile, r => "synthetic-" + r));
+        DataEgress.Revoke(config, "u", "pc", DateTime.UtcNow);
+        Assert.False(DataEgress.AllowsModel(config, profile, r => "synthetic-" + r));
+        Accept(config, r => "synthetic-" + r);
+        Assert.Single(config.DataEgress.Consent!.Grants);
     }
 
     [Theory]
@@ -119,13 +164,19 @@ public sealed class DataEgressAuthorizationTests
         var config = Config(profile);
         var first = Accept(config);
         var second = Accept(config);
-        Assert.NotEqual(first.Profiles[0].CredentialSalt, second.Profiles[0].CredentialSalt);
-        Assert.NotEqual(first.Profiles[0].CredentialFingerprint, second.Profiles[0].CredentialFingerprint);
+        // A renewed acceptance keeps the grant of an unchanged combination; a new one after Revoke gets a new salt.
+        Assert.Equal(first.Grants[0].CredentialSalt, second.Grants[0].CredentialSalt);
+        Assert.Equal(44, second.Grants[0].CredentialSalt.Length);
+        DataEgress.Revoke(config, "u", "pc", DateTime.UtcNow);
+        var third = Accept(config);
+        Assert.NotEqual(first.Grants[0].CredentialSalt, third.Grants[0].CredentialSalt);
+        Assert.NotEqual(first.Grants[0].CredentialFingerprint, third.Grants[0].CredentialFingerprint);
+        second = third;
         string json = JsonSerializer.Serialize(config, ConfigJson.Write);
         string report = DataEgressReport.RenderHtml(config, new DataEgressWorkstation(), resolveSecret: Secret);
         Assert.DoesNotContain(Secret("model-key")!, json + report);
         Assert.DoesNotContain(Secret("web-key")!, json + report);
-        Assert.DoesNotContain(second.Profiles[0].CredentialFingerprint, report);
+        Assert.DoesNotContain(second.Grants[0].CredentialFingerprint, report);
         var restored = JsonSerializer.Deserialize<WorkspaceConfig>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
         Assert.True(DataEgress.AllowsModel(restored, restored.Profiles[0], Secret));
         Assert.False(DataEgress.AllowsModel(restored, restored.Profiles[0]));
@@ -139,31 +190,31 @@ public sealed class DataEgressAuthorizationTests
         var config = Config(Profile());
         var first = Accept(config);
         // An entry written before the rule carries the proofs of its grant.
-        config.DataEgress.History[0].Authorization!.Profiles[0].CredentialSalt = first.Profiles[0].CredentialSalt;
-        config.DataEgress.History[0].Authorization!.Profiles[0].CredentialFingerprint = first.Profiles[0].CredentialFingerprint;
+        config.DataEgress.History[0].Authorization!.Grants[0].CredentialSalt = first.Grants[0].CredentialSalt;
+        config.DataEgress.History[0].Authorization!.Grants[0].CredentialFingerprint = first.Grants[0].CredentialFingerprint;
         var second = Accept(config);
         DataEgress.Revoke(config, "u", "pc", DateTime.UtcNow);
 
         Assert.True(config.DataEgress.History.Count >= 3);
         foreach (var entry in config.DataEgress.History)
         {
-            var grants = entry.Authorization!.Profiles;
+            var grants = entry.Authorization!.Grants;
             Assert.NotEmpty(grants);
-            Assert.All(grants, g => { Assert.Equal(string.Empty, g.CredentialSalt); Assert.Equal(string.Empty, g.CredentialFingerprint); Assert.NotEmpty(g.PolicyKey); Assert.NotEmpty(g.ProfileId); });
+            Assert.All(grants, g => { Assert.Equal(string.Empty, g.CredentialSalt); Assert.Equal(string.Empty, g.CredentialFingerprint); Assert.NotEmpty(g.PolicyKey); Assert.NotEmpty(g.Service); });
             Assert.Equal(DataEgressNotice.Text, entry.Authorization.NoticeText);
         }
         string json = JsonSerializer.Serialize(config, ConfigJson.Write);
         // Base64 holds + and /, which the serializer may escape: look for the escaped form too.
-        foreach (var proof in new[] { first.Profiles[0].CredentialSalt, first.Profiles[0].CredentialFingerprint })
+        foreach (var proof in new[] { first.Grants[0].CredentialSalt, first.Grants[0].CredentialFingerprint })
         {
             Assert.DoesNotContain(proof, json);
             Assert.DoesNotContain(JsonSerializer.Serialize(proof).Trim('"'), json);
         }
-        Assert.NotEmpty(second.Profiles[0].CredentialFingerprint);
+        Assert.NotEmpty(second.Grants[0].CredentialFingerprint);
 
         Assert.Null(config.DataEgress.Consent);
         var third = Accept(config);
-        Assert.NotEmpty(third.Profiles[0].CredentialFingerprint);
+        Assert.NotEmpty(third.Grants[0].CredentialFingerprint);
         Assert.True(DataEgress.AllowsModel(config, config.Profiles[0], Secret));
     }
 
@@ -206,7 +257,7 @@ public sealed class DataEgressAuthorizationTests
         var config = Config(Profile());
         Accept(config);
         // Distinct from the current consent's proofs, which legitimately stay in config.json.
-        var grant = config.DataEgress.History[0].Authorization!.Profiles[0];
+        var grant = config.DataEgress.History[0].Authorization!.Grants[0];
         grant.CredentialSalt = "OLDSALTMARKER";
         grant.CredentialFingerprint = "OLDFINGERPRINTMARKER";
 
@@ -215,7 +266,7 @@ public sealed class DataEgressAuthorizationTests
         string written = File.ReadAllText(Path.Combine(directory, "config.json"));
         Assert.DoesNotContain("OLDSALTMARKER", written);
         Assert.DoesNotContain("OLDFINGERPRINTMARKER", written);
-        Assert.Equal(string.Empty, config.DataEgress.History[0].Authorization!.Profiles[0].CredentialSalt);
+        Assert.Equal(string.Empty, config.DataEgress.History[0].Authorization!.Grants[0].CredentialSalt);
     }
 
     [Fact]
@@ -223,20 +274,20 @@ public sealed class DataEgressAuthorizationTests
     {
         var config = Config(Profile());
         var previous = Accept(config);
-        previous.Profiles.Clear();
+        previous.Grants.Clear();
         config.DataEgress.History.Clear(); // a real legacy entry has no authorization snapshot
         Assert.True(DataEgress.Current(previous));
         Assert.False(DataEgress.AllowsModel(config, config.Profiles[0], Secret));
         Accept(config);
         var snapshot = config.DataEgress.History[0].Authorization!;
-        Assert.Empty(snapshot.Profiles);
+        Assert.Empty(snapshot.Grants);
         Assert.Equal(DataEgressNotice.Text, snapshot.NoticeText);
         Assert.Equal(previous.Company, snapshot.Company);
         Assert.True(DataEgress.AllowsModel(config, config.Profiles[0], Secret));
     }
 
     [Fact]
-    public void MissingCredentialsAndDuplicateGrantsFailClosedWithoutPartialAcceptance()
+    public void MissingCredentialsFailClosedWithoutPartialAcceptance_ADuplicatedGrantStillMatches()
     {
         var config = Config(Profile());
         Assert.Throws<InvalidOperationException>(() => Accept(config, _ => null));
@@ -244,8 +295,8 @@ public sealed class DataEgressAuthorizationTests
         Assert.Empty(config.DataEgress.History);
         var consent = Accept(config);
         Assert.False(DataEgress.AllowsModel(config, config.Profiles[0], _ => null));
-        consent.Profiles.Add(consent.Profiles[0]);
-        Assert.False(DataEgress.AllowsModel(config, config.Profiles[0], Secret));
+        consent.Grants.Add(consent.Grants[0]);
+        Assert.True(DataEgress.AllowsModel(config, config.Profiles[0], Secret));
     }
 
     [Fact]

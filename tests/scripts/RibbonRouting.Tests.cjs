@@ -24,6 +24,7 @@ const context = vm.createContext({
   // Drawer doubles: one screen open at a time, as in the pane.
   openDrawer: id => { for (const n of ['historyDrawer', 'infoDrawer', 'analysisDrawer']) context.$(n).hidden = n !== id; calls.push('open:' + id); },
   closeDrawers: () => { for (const n of ['historyDrawer', 'infoDrawer', 'analysisDrawer']) context.$(n).hidden = true; calls.push('close'); },
+  drawerToTop: id => calls.push('top:' + id),
   focusComposer: (mode, prompt) => calls.push('composer:' + mode + ':' + (prompt || '')),
   clearConversation: () => calls.push('clear'),
   finishTurn: () => {},

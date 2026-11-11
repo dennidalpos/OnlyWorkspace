@@ -171,14 +171,14 @@ public static class CapabilityReport
                 ? new CapabilityRow(name, state, CapabilityOrigin.Declared, source, declaredUtc)
                 : new CapabilityRow(name, CapabilityState.Unknown, CapabilityOrigin.NotDeclared, "Il servizio non la dichiara e l'app non la prova.", null);
 
-        const string Untested = "Da provare con «Prova funzioni».";
+        const string Untested = "Da provare con «Diagnosi».";
         var rows = new List<CapabilityRow>
         {
             Probed("Risposta testuale", ProbeKind.Text, CapabilityState.Unknown, Untested),
             Probed("JSON strutturato", ProbeKind.Json, declared?.StructuredOutput ?? CapabilityState.Unknown, Untested),
             Probed("Ragionamento", ProbeKind.Reasoning, declared?.Reasoning ?? CapabilityState.Unknown, Untested),
             webAvailable
-                ? Probed("Ricerca web", ProbeKind.Web, declared?.WebSearch ?? CapabilityState.Unknown, "Da provare con «Prova funzioni» e Ricerca web selezionata.")
+                ? Probed("Ricerca web", ProbeKind.Web, declared?.WebSearch ?? CapabilityState.Unknown, "Da provare con «Diagnosi».")
                 : new CapabilityRow("Ricerca web", CapabilityState.Unsupported, CapabilityOrigin.NotAvailable, "Il connettore non offre Ricerca web.", null),
             Declared("Strumenti", declared?.Tools ?? CapabilityState.Unknown),
             Declared("Visione", declared?.Vision ?? CapabilityState.Unknown)

@@ -15,17 +15,13 @@ using OnlyWorkspace.Infrastructure.Llm;
 namespace OnlyWorkspace.ConfigTool.Forms;
 
 /// <summary>
-/// «Avanzate» of a profile: each capability with outcome, provenance and date, «Aggiorna capacità»
-/// (what the service declares, no generation) and «Prova funzioni» (short requests with synthetic data, may cost
-/// tokens). Results are saved with the normal Salva and dropped when service, model, endpoint or key change.
+/// «Avanzate» of a profile: each capability with outcome, provenance and date. The single «Diagnosi» button (under the
+/// sections) checks the connection, reads what the service declares and runs short requests with synthetic data (may
+/// cost tokens). Results are saved with the normal Salva and dropped when service, model, endpoint or key change.
 /// </summary>
 public sealed partial class MainConfigForm
 {
     private TableLayoutPanel _capabilityTable = null!;
-    private FlatButton _btnRefreshCapabilities = null!;
-    private FlatButton _btnProbe = null!;
-    private FlatButton _btnProbeCancel = null!;
-    private ThemedCheckBox _chkProbeWeb = null!;
     private OperationalStatusLabel _lblProbeStatus = null!;
     private CancellationTokenSource? _probeRun;
     private int _capabilityOriginWidth;
@@ -33,12 +29,13 @@ public sealed partial class MainConfigForm
     private IEnumerable<Control> CapabilityOriginCells() =>
         _capabilityTable.Controls.Cast<Control>().Where(c => _capabilityTable.GetColumn(c) == 2);
 
-    private const string ProbeCost =
-        "«Prova funzioni» invia al servizio brevi richieste con dati inventati (nessun dato di Outlook): risposta testuale, JSON strutturato " +
-        "e ragionamento, una alla volta, al massimo 60 secondi ciascuna e senza ripetizioni. Con un servizio a pagamento consuma pochi token; " +
-        "la Ricerca web, se selezionata, esegue una vera ricerca che il fornitore può addebitare.";
+    internal const string ProbeCost =
+        "«Diagnosi» controlla indirizzo, chiave e modello, rilegge le capacità dichiarate dal servizio e invia brevi richieste con dati inventati " +
+        "(nessun dato di Outlook): risposta testuale, JSON strutturato, ragionamento e, se il servizio la offre, Ricerca web. Una alla volta, " +
+        "al massimo 60 secondi ciascuna e senza ripetizioni. Con un servizio a pagamento consuma pochi token; la ricerca web è una vera ricerca " +
+        "che il fornitore può addebitare.";
 
-    private const string ProbeIdle = "Prove non ancora eseguite per questo profilo.";
+    private const string ProbeIdle = "Diagnosi non ancora eseguita per questo profilo.";
 
     private void BuildCapabilityRows(TableLayoutPanel grid)
     {
@@ -47,12 +44,12 @@ public sealed partial class MainConfigForm
             AutoSize = true,
             MaximumSize = new Size(440, 0),
             Margin = new Padding(3, 6, 3, 8),
-            Text = "«Scegli modello…» elenca i modelli senza provare nulla. «Verifica connessione» controlla indirizzo, chiave e modello. " +
-                   "«Aggiorna capacità» rilegge ciò che il servizio dichiara, senza costi. «Prova funzioni» verifica davvero le funzioni usate dall'app."
+            Text = "«Scegli modello…» elenca i modelli senza provare nulla. «Diagnosi» controlla la connessione, rilegge ciò che il servizio dichiara " +
+                   "e verifica davvero le funzioni usate dall'app."
         };
         Theme.SetTone(intro, Tone.Muted);
         AddWide(grid, intro, "Differenza fra i comandi del profilo.",
-            lead: "Cosa fanno Scegli modello, Verifica connessione, Aggiorna capacità e Prova funzioni.");
+            lead: "Cosa fanno Scegli modello e Diagnosi.");
 
         _capabilityTable = new TableLayoutPanel { AutoSize = true, ColumnCount = 3, Margin = new Padding(3, 0, 3, 6) };
         for (int i = 0; i < 3; i++) _capabilityTable.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
@@ -60,38 +57,19 @@ public sealed partial class MainConfigForm
             "Per ogni funzione: esito (sì, no, non dichiarata, non verificabile) e origine (dichiarata dal servizio, verificata con una prova o prova inconcludente). " +
             "Visione e Strumenti sono solo dichiarati: l'app non li usa né li prova.");
 
-        _btnRefreshCapabilities = SecondaryButton("Aggiorna capacità");
-        _btnRefreshCapabilities.Click += async (s, e) => await RefreshDeclaredCapabilitiesAsync();
-        Tip(_btnRefreshCapabilities, "Rilegge limiti e capacità dichiarati, senza generazione né costi. Alcuni servizi non li pubblicano. Salva conserva gli esiti.");
-        _btnProbe = SecondaryButton("Prova funzioni");
-        _btnProbe.Click += async (s, e) => await RunProbesAsync();
-        Tip(_btnProbe, ProbeCost);
-        _btnProbeCancel = SecondaryButton("Annulla");
-        _btnProbeCancel.Enabled = false;
-        _btnProbeCancel.Click += (s, e) => { _probeRun?.Cancel(); _capabilityRefresh?.Cancel(); };
-        Tip(_btnProbeCancel, "Ferma le prove: gli esiti già ottenuti restano.");
-        foreach (var b in new[] { _btnRefreshCapabilities, _btnProbe, _btnProbeCancel }) b.Margin = new Padding(0, 0, 6, 6);
-        var commands = Inline(_btnRefreshCapabilities, _btnProbe, _btnProbeCancel);
-        commands.WrapContents = true;
-        commands.Anchor = AnchorStyles.Left | AnchorStyles.Right;
-        AddWide(grid, commands, "Aggiorna capacità, Prova funzioni e Annulla.");
-
-        // The cost note sits behind a «?» beside the checkbox; the status label below stays visible, short, and shows progress.
-        _chkProbeWeb = new ThemedCheckBox { Text = "Prova anche la Ricerca web", AutoSize = true };
-        Tip(_chkProbeWeb, "Aggiunge una ricerca sintetica, senza dati di Outlook, con possibili addebiti. Spento per impostazione predefinita.");
-        var probeWebRow = Inline(_chkProbeWeb, ContextHelp.Button(this, "Costo delle prove", () => ProbeCost, _tips));
-        int probeWebIndex = grid.RowCount++;
+        // One test command: «Diagnosi» sits under the sections; its progress shows here, short, with the cost note behind a «?».
+        int statusIndex = grid.RowCount++;
         grid.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        grid.Controls.Add(probeWebRow, 0, probeWebIndex);
-        grid.SetColumnSpan(probeWebRow, grid.ColumnCount);
-        _lblProbeStatus = AddWide(grid, new OperationalStatusLabel { AutoSize = true, MaximumSize = new Size(440, 0), Margin = new Padding(3, 4, 3, 6), Text = ProbeIdle },
-            "Avanzamento ed esito delle prove; i risultati si salvano con Salva.");
+        _lblProbeStatus = new OperationalStatusLabel { AutoSize = true, MaximumSize = new Size(440, 0), Margin = new Padding(3, 4, 3, 6), Text = ProbeIdle };
+        Tip(_lblProbeStatus, "Avanzamento ed esito della diagnosi; i risultati si salvano con Salva.");
+        var statusRow = Inline(_lblProbeStatus, ContextHelp.Button(this, "Costo della diagnosi", () => ProbeCost, _tips));
+        grid.Controls.Add(statusRow, 0, statusIndex);
+        grid.SetColumnSpan(statusRow, grid.ColumnCount);
         Theme.SetTone(_lblProbeStatus, Tone.Muted);
         // Wrapped at the visible width of the section, like the exposure note: a fixed width was cut off at 100%.
         grid.Layout += (_, _) =>
         {
             int width = Math.Max(Ui.Px(this, 160), grid.ClientSize.Width - Ui.Px(this, 32));
-            if (commands.MaximumSize.Width != width) commands.MaximumSize = new Size(width, 0);
             foreach (var label in new[] { intro, _lblProbeStatus })
                 if (label.MaximumSize.Width != width) label.MaximumSize = new Size(width, 0);
             // Provenance and date wrap in what the first two columns leave: at 150% the date was cut off.
@@ -163,72 +141,27 @@ public sealed partial class MainConfigForm
         }
     }
 
-    /// <summary>«Aggiorna capacità»: the service's declaration, read again and reported in words.</summary>
-    private InteractiveRequest? _capabilityRefresh;
-
-    private async Task RefreshDeclaredCapabilitiesAsync()
-    {
-        if (_lstProfiles.SelectedItem is not ProfileItem item || _isLoading || _probeRun != null || _capabilityRefresh != null) return;
-        UpdateSelectedProfileFromUi();
-        var p = item.Profile;
-        if (ProviderCatalog.Get(p.Type).Capabilities == CapabilitySource.None)
-        {
-            SetProbeStatus("Questo servizio non pubblica le capacità dei modelli: usa «Prova funzioni» per verificarle.", Tone.Warning);
-            return;
-        }
-        using var run = new InteractiveRequest();
-        _capabilityRefresh = run;
-        string identity = CapabilityKey(p);
-        SetProbeRunning(true);
-        SetProbeStatus("Lettura delle capacità dichiarate (massimo 10 secondi)…", Tone.Warning, StatusLight.Working);
-        try
-        {
-            string? problem = await LoadModelLimitsCoreAsync(p, run.Token);
-            run.Token.ThrowIfCancellationRequested();
-            if (!IsDisposed && ReferenceEquals(_lstProfiles.SelectedItem, item) && CapabilityKey(p) == identity)
-                SetProbeStatus(problem ?? "Capacità dichiarate rilette; si salvano con Salva.", problem == null ? Tone.Success : Tone.Danger);
-        }
-        catch (OperationCanceledException)
-        {
-            if (!IsDisposed && ReferenceEquals(_lstProfiles.SelectedItem, item) && CapabilityKey(p) == identity)
-                SetProbeStatus(run.TimedOut ? "Tempo massimo di 10 secondi superato." : "Aggiornamento annullato.", Tone.Warning);
-        }
-        finally { _capabilityRefresh = null; if (!IsDisposed) SetProbeRunning(false); }
-    }
-
     private void SetProbeStatus(string text, Tone tone, StatusLight? light = null)
     {
         _lblProbeStatus.SetState(light ?? StateForTone(tone));
         _lblProbeStatus.Text = text;
         Theme.SetTone(_lblProbeStatus, tone);
         Tip(_lblProbeStatus, text);
-    }
-
-    private void SetProbeRunning(bool running)
-    {
-        void Set(Control c, bool enabled)
-        {
-            if (_isLocked) _lockedControls[c] = enabled;
-            else c.Enabled = enabled;
-        }
-        Set(_btnProbe, !running);
-        Set(_btnRefreshCapabilities, !running);
-        Set(_chkProbeWeb, !running);
-        _btnProbeCancel.Enabled = running;
+        // The status sits in Avanzate, which may be out of view: while «Diagnosi» runs the line beside it carries the same words.
+        if (_probeRun != null) SetTestResult(text, tone, light ?? StateForTone(tone));
     }
 
     /// <summary>
-    /// «Prova funzioni». The results of a run whose profile changed meanwhile (selection, model, endpoint, key)
-    /// are dropped: a late answer never paints another configuration.
+    /// The probing stage of «Diagnosi», after the connection answered. The results of a run whose profile changed meanwhile
+    /// (selection, model, endpoint, key) are dropped: a late answer never paints another configuration.
     /// </summary>
-    private async Task RunProbesAsync()
+    private async Task RunProbesAsync(ProfileItem item)
     {
-        if (_lstProfiles.SelectedItem is not ProfileItem item || _isLoading || _probeRun != null || _capabilityRefresh != null) return;
-        UpdateSelectedProfileFromUi();
+        if (_isLoading || _probeRun != null) return;
         var p = item.Profile;
         if (string.IsNullOrWhiteSpace(p.Model) || string.IsNullOrWhiteSpace(p.BaseUrl))
         {
-            SetProbeStatus("Inserisci indirizzo e modello prima delle prove.", Tone.Warning);
+            SetProbeStatus("Inserisci indirizzo e modello prima della diagnosi.", Tone.Warning);
             return;
         }
 
@@ -237,14 +170,13 @@ public sealed partial class MainConfigForm
         string? webSecret = Profiles.WebSecretFor(p.Id);
         bool webAvailable = ProviderCatalog.Get(p.Type).WebSearch != WebSearchMode.None;
         var kinds = new List<ProbeKind> { ProbeKind.Text, ProbeKind.Json, ProbeKind.Reasoning };
-        if (webAvailable && _chkProbeWeb.Checked) kinds.Add(ProbeKind.Web);
+        if (webAvailable) kinds.Add(ProbeKind.Web);
 
         bool Current() => !IsDisposed && ReferenceEquals(_lstProfiles.SelectedItem, item) && CapabilityKey(p) == key &&
                           secret == Profiles.SecretFor(p.Id);
 
         var run = new CancellationTokenSource();
         _probeRun = run;
-        SetProbeRunning(true);
         int done = 0;
         var progress = new Progress<CapabilityProbeResult>(result =>
         {
@@ -255,7 +187,7 @@ public sealed partial class MainConfigForm
             RefreshCapabilityRows();
             if (result.Kind == ProbeKind.Web) ShowWebSupport(p, result.Outcome, result.Detail);
             // Posted: a callback may land after the run ended, and must not overwrite its final status.
-            if (_probeRun == run) SetProbeStatus($"Prova {done} di {kinds.Count} completata: {ProbeName(result.Kind)} {OutcomeWord(result.Outcome)}.", Tone.Warning, StatusLight.Working);
+            if (_probeRun == run) SetProbeStatus($"Prova {done} di {kinds.Count}: {ProbeName(result.Kind)} {OutcomeWord(result.Outcome)}.", Tone.Warning, StatusLight.Working);
         });
 
         var plain = Probing(p, reasoning: false);
@@ -270,17 +202,17 @@ public sealed partial class MainConfigForm
             await ModelCapabilityProbe.RunAsync(client, reasoningClient, kinds, web, progress, run.Token);
             if (Current())
             {
-                SetProbeStatus("Prove completate. Gli esiti si salvano con Salva.", Tone.Success);
-                LogActivity($"[CAPACITÀ] Profilo '{p.Id}', modello '{p.Model}': prove completate.");
+                SetProbeStatus("Diagnosi completata. Gli esiti si salvano con Salva.", Tone.Success);
+                LogActivity($"[CAPACITÀ] Profilo '{p.Id}', modello '{p.Model}': diagnosi completata.");
             }
         }
         catch (OperationCanceledException)
         {
-            if (Current()) SetProbeStatus($"Prove interrotte: {done} di {kinds.Count} esiti conservati.", Tone.Warning);
+            if (Current()) SetProbeStatus($"Diagnosi interrotta: {done} di {kinds.Count} esiti conservati.", Tone.Warning);
         }
         catch (Exception ex)
         {
-            if (Current()) SetProbeStatus("Prove non avviate: " + ErrorText.For(ex), Tone.Danger);
+            if (Current()) SetProbeStatus("Diagnosi non avviata: " + ErrorText.For(ex), Tone.Danger);
         }
         finally
         {
@@ -288,7 +220,6 @@ public sealed partial class MainConfigForm
             (reasoningClient as IDisposable)?.Dispose();
             if (_probeRun == run) _probeRun = null;
             run.Dispose();
-            if (!IsDisposed) SetProbeRunning(false);
         }
     }
 
@@ -342,7 +273,7 @@ public sealed partial class MainConfigForm
         };
     }
 
-    /// <summary>A probe of the profile in Avanzate, a manual change in Connessione: the earlier outcomes no longer apply.</summary>
+    /// <summary>A diagnosis of the profile, a manual change in Connessione: the earlier outcomes no longer apply.</summary>
     private void InvalidateProbes(LlmProfileConfig p, bool webOnly = false)
     {
         _probeRun?.Cancel();

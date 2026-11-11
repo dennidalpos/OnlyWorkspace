@@ -51,7 +51,7 @@ public sealed class ConfigToolRequestTests
             using var client = new SlowClient(); form.ConnectionClientFactory = (_, _) => client;
             Call(form, "BtnTestProfile_Click", null, EventArgs.Empty);
             Assert.True(client.Token.CanBeCanceled);
-            Assert.Equal("Annulla verifica", Field<Button>(form, "_btnTestProfile").Text);
+            Assert.Equal("Annulla diagnosi", Field<Button>(form, "_btnTestProfile").Text);
             Call(form, "BtnTestProfile_Click", null, EventArgs.Empty);
             Pump(() => client.Disposed && Field<InteractiveRequest?>(form, "_connectionCheck") == null);
             Assert.True(client.Token.IsCancellationRequested);
@@ -83,26 +83,24 @@ public sealed class ConfigToolRequestTests
     }
 
     [Fact]
-    public void CapabilitiesCannotReenterAndUseTheCancelButton()
+    public void DiagnosisCannotReenterAndTheSameButtonCancelsIt()
     {
         Sta(dir =>
         {
             new FileConfigurationService(dir, dir).SaveConfiguration(new WorkspaceConfig { DefaultProfile = "fixture", Profiles = new() { Profile() } });
             using var form = new MainConfigForm(dir, null, dir); form.CreateControl(); _ = form.Handle;
             using var client = new SlowClient(); form.ConnectionClientFactory = (_, _) => client;
-            var task = (Task)Call(form, "RefreshDeclaredCapabilitiesAsync")!;
-            Assert.False(task.IsCompleted);
-            var again = (Task)Call(form, "RefreshDeclaredCapabilitiesAsync")!; Assert.True(again.IsCompleted);
+            Call(form, "BtnTestProfile_Click", null, EventArgs.Empty);
+            var button = Field<Button>(form, "_btnTestProfile");
+            Assert.Equal("Annulla diagnosi", button.Text);
             Assert.Equal(1, client.Calls);
-            // PerformClick does nothing on a button of a tab that was never shown: raise the Click handlers directly,
-            // otherwise only the 10 second deadline ends the run and the test measures that instead of the button.
-            var cancel = Field<Button>(form, "_btnProbeCancel");
-            Assert.True(cancel.Enabled);
-            typeof(Button).GetMethod("OnClick", Flags)!.Invoke(cancel, new object[] { EventArgs.Empty });
-            Pump(() => task.IsCompleted); task.GetAwaiter().GetResult();
-            Assert.Contains("annullato", Field<Label>(form, "_lblProbeStatus").Text);
-            Assert.True(client.Disposed); Assert.True(client.Token.IsCancellationRequested);
-            Assert.False(Field<Button>(form, "_btnProbeCancel").Enabled);
+            // The second click is the cancel: it never starts another request.
+            Call(form, "BtnTestProfile_Click", null, EventArgs.Empty);
+            Pump(() => client.Disposed && Field<InteractiveRequest?>(form, "_connectionCheck") == null);
+            Assert.Equal(1, client.Calls);
+            Assert.True(client.Token.IsCancellationRequested);
+            Assert.Contains("annullata", Field<Label>(form, "_lblTestResult").Text);
+            Assert.Equal("Diagnosi", button.Text);
         });
     }
 

@@ -6,7 +6,7 @@ using OnlyWorkspace.Infrastructure.Storage;
 namespace OnlyWorkspace.Tests;
 
 /// <summary>#177: the texts of «Privacy e dati» live outside MainConfigForm and are checked without a window.</summary>
-public sealed class PrivacyPageTextTests
+public sealed class EgressStatusTests
 {
     private static LlmProfileConfig Cloud() => new()
     {
@@ -40,7 +40,7 @@ public sealed class PrivacyPageTextTests
 
         Assert.Equal(Tone.Warning, status.Tone);
         Assert.Contains("dashscope-intl.aliyuncs.com", status.Text);
-        Assert.Contains("• Qwen: invii bloccati", status.Text);
+        Assert.Contains("(Qwen): invii bloccati per Qwen", status.Text);
         Assert.True(status.CanAccept);
         Assert.False(status.CanRevoke);
     }
@@ -53,7 +53,7 @@ public sealed class PrivacyPageTextTests
 
         var current = EgressStatus.Build(config, TestEgress.ResolveSecret);
         Assert.Equal(Tone.Success, current.Tone);
-        Assert.Contains("• Qwen: autorizzato", current.Text);
+        Assert.Contains("(Qwen): autorizzato", current.Text);
         Assert.True(current.CanRevoke);
 
         config.DataEgress.Consent!.NoticeVersion = 1;

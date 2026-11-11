@@ -368,7 +368,7 @@ public sealed class MainConfigFormTests
             Write(directory, new WorkspaceConfig { DefaultProfile = "a", Profiles = new() { Local("a", web: true) } },
                 new() { ["profile_a_token"] = "secret" });
             using var form = new MainConfigForm(directory, null, directory);
-            var check = typeof(MainConfigForm).GetField("_webSupportCheck", Flags)!;
+            var check = typeof(MainConfigForm).GetField("_probeRun", Flags)!;
             var web = Field<CheckBox>(form, "_chkWebSearch");
             Assert.Null(check.GetValue(form));
             Assert.True(web.Checked);
@@ -892,8 +892,9 @@ public sealed class MainConfigFormTests
             var status = Field<OperationalStatusLabel>(form, "_lblProbeStatus");
             Assert.True(status.Visible || !status.Parent!.Visible, "The probe status is a label of the section, not hidden behind a «?».");
             Assert.NotEqual(OnlyWorkspace.Core.Archive.StatusLight.Working, status.State);
-            var probeWeb = Field<CheckBox>(form, "_chkProbeWeb");
-            Assert.Contains(probeWeb.Parent!.Controls.OfType<Button>(), b => b.AccessibleName == "Informazioni: Costo delle prove");
+            Assert.Contains(status.Parent!.Controls.OfType<Button>(), b => b.AccessibleName == "Informazioni: Costo della diagnosi");
+            Assert.DoesNotContain(Descendants(form).OfType<CheckBox>(), c => c.Text.StartsWith("Prova anche"));
+            Assert.Single(Descendants(form).OfType<Button>(), b => b.Text is "Diagnosi" or "Annulla diagnosi");
             Assert.True(status.Text.Length <= 100, "A short status: the cost note lives behind the «?».");
         });
     }

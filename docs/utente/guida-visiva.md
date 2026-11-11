@@ -314,9 +314,8 @@ flowchart TD
 
     CHECK_STATO -->|"Profili IA e Modelli"| PROFILI["Pannello Profili IA:<br/>• Aggiunta/modifica provider (Ollama, OpenAI, Anthropic, Gemini, Qwen...)<br/>• Inserimento credenziali nel vault cifrato DPAPI<br/>• Contesto Ollama e autorizzazioni sui dati"]
     PROFILI --> TEST_CONN{"Verifiche del profilo:"}
-    TEST_CONN -->|"Verifica connessione"| RUN_TEST["Verifica raggiungibilità dell'endpoint"]
+    TEST_CONN -->|"Diagnosi"| RUN_TEST["Connessione, capacità dichiarate e prove brevi<br/>(testo, JSON, ragionamento, ricerca web se offerta)"]
     TEST_CONN -->|"Scegli modello…"| RUN_MODELS["Elenco modelli disponibili direttamente dal servizio"]
-    TEST_CONN -->|"Verifica Ricerca web"| RUN_WEB_CHECK["Prova reale di ricerca web (singola, entro 60s)<br/>per abilitare la casella di ricerca web"]
 
     CHECK_STATO -->|"Governance Privacy e Uscita Dati"| PRIVACY["Pannello Privacy e dati:<br/>Mostra server destinatari calcolati e spazio occupato"]
     PRIVACY --> CHECK_EGRESS{"L'uscita dati verso i server è approvata?"}

@@ -40,7 +40,6 @@ public sealed partial class MainConfigForm : Form
     private readonly Dictionary<string, string> _inMemoryWebSecrets = new();
     private ProfileEditor? _profileEditor;
     private ProfileEditor Profiles => _profileEditor ??= new ProfileEditor(() => _config, _inMemorySecrets, _inMemoryWebSecrets);
-    private System.Threading.CancellationTokenSource? _webSupportCheck;
     private bool _isDirty;
     private bool _isLocked;
     private readonly Dictionary<Control, bool> _lockedControls = new();
@@ -118,8 +117,8 @@ public sealed partial class MainConfigForm : Form
     private CheckBox _chkWebSearch = null!;
     private TextBox _txtWebSearchKey = null!;
     private Label _lblWebSupport = null!;
-    private Button _btnWebRetry = null!;
     private Label _lblModelLimits = null!;
+    private ScrollPanel _profileHost = null!;
     private OperationalStatusLabel _lblTestResult = null!;
     private Button _btnTestProfile = null!;
 
@@ -215,17 +214,16 @@ public sealed partial class MainConfigForm : Form
         Tip(_btnSave, "Controlla e salva le impostazioni per tutti gli utenti di questo PC (config.json e chiavi cifrate in %ProgramData%\\OnlyWorkspace). " +
             "Serve un amministratore (richiesta UAC). Il riquadro di Outlook applica le modifiche entro pochi secondi.");
 
-        _btnUnlock = SecondaryButton("Sblocca");
+        _btnUnlock = Metrics.DialogButton(new FlatButton { Text = "Sblocca" });
         _btnUnlock.Click += (s, e) => UnlockConfiguration();
         Tip(_btnUnlock, "La configurazione è protetta da password: inseriscila per modificare i campi in questa finestra. Le scelte personali (Le mie cassette) restano sempre modificabili.");
-        _btnResetPassword = SecondaryButton("Reimposta password (UAC)");
+        _btnResetPassword = Metrics.DialogButton(new FlatButton { Text = "Reimposta password (UAC)" });
         _btnResetPassword.Click += async (s, e) => await ResetAdminPassword();
         Tip(_btnResetPassword, "Password dimenticata: un amministratore di Windows (richiesta UAC) ne imposta una nuova o la toglie.");
 
         var btnClose = SecondaryButton("Chiudi");
         Tip(btnClose, "Chiude la finestra; OnlyWorkspace resta attivo nell'area di notifica. Le modifiche non salvate vengono chieste prima di chiudere.");
-        btnClose.MinimumSize = new Size(90, 32);
-        btnClose.Margin = new Padding(8, 0, 0, 0);
+        Metrics.DialogButton(btnClose);
         btnClose.Click += (s, e) => Close();
 
         _footer.Controls.Add(_lblStatus, 0, 0);
@@ -283,7 +281,7 @@ public sealed partial class MainConfigForm : Form
                 "Archivio locale cifrato della posta e, per il tuo utente, quali cassette archiviare.");
             AddPage(nav, "Manutenzione e backup", "\uE74E", BuildBackupPage(),
                 "Copia e ripristino di configurazione e chiavi, cartella dei dati e registro delle operazioni di questa sessione.");
-            AddPage(nav, "Privacy e dati", "\uE72E", BuildPrivacyPage(),
+            AddPage(nav, "Privacy e dati", "\uE72E", _privacyPage = BuildPrivacyPage(),
                 "Informativa sull'uscita dei dati, spazio occupato dai file dell'app, chiavi di registro e server che ricevono dati.");
             AddPage(nav, "Informazioni", "\uE897", BuildAboutPage(),
                 "Versione, autore, licenza e componenti di terze parti con le loro licenze.");
@@ -295,6 +293,16 @@ public sealed partial class MainConfigForm : Form
     }
 
     private readonly List<string> _pageDescriptions = new();
+    private Control _privacyPage = null!;
+    private int _shownPage;
+
+    /// <summary>A window shown again from the tray opens like a new one: page at its top, keyboard on the navigation.</summary>
+    internal void ResetViewForReopen()
+    {
+        if (_pages.Count == 0) return;
+        ActiveControl = _navButtons[_shownPage];
+        Ui.ScrollToTop(_pages[_shownPage]);
+    }
 
     private void AddPage(TableLayoutPanel nav, string title, string glyph, Control page, string description)
     {
@@ -358,6 +366,9 @@ public sealed partial class MainConfigForm : Form
         }
         afterLayout?.Invoke();
         _laidOutFor[page] = _pageHost.ClientSize;
+        // Every visit starts at the top, also after a deep link scrolled the page (ShowMailboxes) or a visit left it lower.
+        Ui.ScrollToTop(page);
+        _shownPage = index;
 
         static IEnumerable<Control> Containers(Control root)
         {
@@ -367,7 +378,7 @@ public sealed partial class MainConfigForm : Form
                     foreach (var nested in Containers(child)) yield return nested;
         }
         _lblPageTitle.Text = _navButtons[index].Text;
-        if (_navButtons[index].Text == "Privacy e dati")
+        if (page == _privacyPage)
         {
             RefreshDestinations();
             RefreshEgress();
@@ -441,10 +452,8 @@ public sealed partial class MainConfigForm : Form
     {
         if (disposing)
         {
-            _webSupportCheck?.Cancel();
             _probeRun?.Cancel();
             _connectionCheck?.Cancel();
-            _capabilityRefresh?.Cancel();
             // Dispose can run twice (tray exit, then the form's own close): cancel only once.
             if (!_archiveLifetime.IsCancellationRequested) _archiveLifetime.Cancel();
             Theme.Changed -= OnThemeChanged;
@@ -502,6 +511,7 @@ public sealed partial class MainConfigForm : Form
             }
         };
 
+        AddSubheading(behavior, "Allegati nell'archivio");
         _chkIndexAttachments = AddWide(behavior, new ThemedCheckBox { Text = "Testo degli allegati nell'indice dell'archivio", AutoSize = true },
             "Rende cercabile anche il testo degli allegati (PDF, Office, testo); i file non vengono copiati. Spegnendola si cancellano quelle parole e i fatti derivati (i nomi dei file restano); riaccendendola Outlook le rilegge.");
         _chkIndexAttachments.CheckedChanged += (s, e) =>
@@ -514,10 +524,12 @@ public sealed partial class MainConfigForm : Form
             "Legge sul PC, con l'OCR di Windows, PDF scansionati e immagini allegate. Spenta: restano non letti e i testi già riconosciuti restano; riaccendendola vengono riletti.");
         _chkAttachmentOcr.CheckedChanged += (s, e) => { _config.AttachmentOcr = _chkAttachmentOcr.Checked; MarkDirty(); };
 
+        AddSubheading(behavior, "Protezione della configurazione");
         _btnManagePassword = AddRow(behavior, "Password amministrativa:", SecondaryButton("Imposta / cambia / disattiva…"),
             "Facoltativa: chi apre questa finestra vede le impostazioni ma può cambiarle solo con la password. Se la dimentichi, «Reimposta password» la reimposta con i diritti di amministratore.");
         _btnManagePassword.Click += async (s, e) => await ManageAdminPassword();
 
+        AddSubheading(behavior, "Limiti e registro");
         _numMaxSearch = Numeric(10, 200, 50, 10);
         _numMaxSearch.ValueChanged += (s, e) => { _config.Limits.MaxSearchItems = (int)_numMaxSearch.Value; MarkDirty(); };
         _numFollowUpDays = Numeric(1, 30, 5, 1);
@@ -635,14 +647,13 @@ public sealed partial class MainConfigForm : Form
         Tip(btnExportBackup, "Salva in un file la configurazione e le chiavi API. Le chiavi sono cifrate per questo PC: il file si ripristina solo qui. Non contiene archivio né storico.");
         layout.Controls.Add(ActionCard("Backup di configurazione e credenziali", "Configurazione e credenziali in un unico archivio, valido solo su questo PC.", btnExportBackup), 0, 0);
 
-        var btnImportRestore = PrimaryButton("Ripristina backup...");
+        var btnImportRestore = PrimaryButton("Ripristina backup…");
         btnImportRestore.Kind = ButtonKind.Danger;
         btnImportRestore.Click += BtnImportRestore_Click;
         Tip(btnImportRestore, "Sostituisce configurazione e chiavi attuali con quelle di un backup fatto su questo PC. Serve un amministratore di Windows (richiesta UAC).");
         layout.Controls.Add(ActionCard("Ripristino da backup", "Sostituisce configurazione e credenziali attuali con quelle di un backup.", btnImportRestore), 0, 1);
 
         var btnOpenFolder = _btnOpenDataFolder = SecondaryButton("Apri cartella dati");
-        btnOpenFolder.MinimumSize = new Size(0, 30);
         btnOpenFolder.Click += (s, e) =>
         {
             // Never a click that does nothing: a missing folder or a failed start is said in the status bar.
@@ -915,10 +926,8 @@ public sealed partial class MainConfigForm : Form
         _btnEgressAccept = SecondaryButton("Leggi e autorizza…");
         _btnEgressAccept.Click += async (s, e) => await AcceptAndSaveDataEgressAsync();
         _btnEgressRevoke = SecondaryButton("Revoca");
-        _btnEgressRevoke.Margin = new Padding(8, 3, 3, 3);
         _btnEgressRevoke.Click += (s, e) => RevokeDataEgress();
         _btnEgressExport = SecondaryButton("Esporta PDF…");
-        _btnEgressExport.Margin = new Padding(8, 3, 3, 3);
         _btnEgressExport.Click += async (s, e) => await ExportDataEgressAsync();
         AddRow(egress, "", Inline(_btnEgressAccept, _btnEgressRevoke, _btnEgressExport), "Accettazione, revoca ed esportazione dell'informativa sull'uscita dei dati.");
         Tip(_btnEgressExport, "Salva un PDF A4 con postazione, profili IA, livelli e server autorizzati, dichiarazioni, responsabile che ha abilitato l'uscita dei dati, storico e testo accettato. Funziona anche in sola lettura.");
@@ -1528,8 +1537,9 @@ public sealed partial class MainConfigForm : Form
         var layout = new TableLayoutPanel { AutoSize = true, ColumnCount = 1, Padding = new Padding(16, 14, 16, 12) };
         var caption = new SelectableLabel { Text = label, AutoSize = true, MaximumSize = new Size(360, 0), Margin = new Padding(0, 0, 0, 6) };
         var input = new ThemedTextBox { Width = 360, UseSystemPasswordChar = true };
-        var ok = new FlatButton { Text = "OK", Kind = ButtonKind.Primary, DialogResult = DialogResult.OK, MinimumSize = new Size(88, 30), Margin = new Padding(8, 0, 0, 0) };
-        var cancel = new FlatButton { Text = "Annulla", DialogResult = DialogResult.Cancel, MinimumSize = new Size(88, 30), Margin = Padding.Empty };
+        var ok = Metrics.DialogButton(new FlatButton { Text = "OK", Kind = ButtonKind.Primary, DialogResult = DialogResult.OK });
+        var cancel = Metrics.DialogButton(new FlatButton { Text = "Annulla", DialogResult = DialogResult.Cancel });
+        cancel.Margin = Padding.Empty;
         var actions = new FlowLayoutPanel { AutoSize = true, FlowDirection = FlowDirection.RightToLeft, WrapContents = false, Anchor = AnchorStyles.Right, Margin = new Padding(0, 12, 0, 0) };
         actions.Controls.AddRange(new Control[] { ok, cancel });
         // Laid out right to left: Tab follows the reading order instead.
@@ -2038,6 +2048,18 @@ public sealed partial class MainConfigForm : Form
         if (span > 1) grid.SetColumnSpan(cell, span);
     }
 
+    /// <summary>A heading inside a card, so each set of tick boxes reads as its own group.</summary>
+    private static void AddSubheading(TableLayoutPanel grid, string text)
+    {
+        var label = new SelectableLabel { Text = text, AutoSize = true, Margin = new Padding(0, Metrics.GroupSpacing, 3, 4), AccessibleRole = AccessibleRole.StaticText };
+        Ui.SetFont(label, 9F, family: "Segoe UI Semibold");
+        Theme.SetTone(label, Tone.Muted);
+        int row = grid.RowCount++;
+        grid.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        grid.Controls.Add(label, 0, row);
+        grid.SetColumnSpan(label, grid.ColumnCount);
+    }
+
     private T AddWide<T>(TableLayoutPanel grid, T field, string tip, string? lead = null) where T : Control
     {
         int row = grid.RowCount++;
@@ -2087,27 +2109,11 @@ public sealed partial class MainConfigForm : Form
     private static void SetNumeric(NumericUpDown numeric, decimal value) =>
         numeric.Value = Math.Max(numeric.Minimum, Math.Min(numeric.Maximum, value));
 
-    private static FlatButton PrimaryButton(string text) => new()
-    {
-        Text = text,
-        Kind = ButtonKind.Primary,
-        // GrowAndShrink: a GrowOnly button keeps the size DPI scaling gave it on top of its own.
-        AutoSize = true,
-        AutoSizeMode = AutoSizeMode.GrowAndShrink,
-        MinimumSize = new Size(120, 32),
-        Padding = new Padding(12, 0, 12, 0),
-        Margin = new Padding(8, 0, 0, 0)
-    };
+    /// <summary>The main command of a card or of the footer: the common size, a gap on its left.</summary>
+    private static FlatButton PrimaryButton(string text) => Metrics.DialogButton(new FlatButton { Text = text, Kind = ButtonKind.Primary });
 
-    private static FlatButton SecondaryButton(string text) => new()
-    {
-        Text = text,
-        AutoSize = true,
-        AutoSizeMode = AutoSizeMode.GrowAndShrink,
-        MinimumSize = new Size(0, 28),
-        Padding = new Padding(8, 0, 8, 0),
-        Margin = Padding.Empty
-    };
+    /// <summary>A command in a page, in a row read left to right: the common size, gaps on its right and below.</summary>
+    private static FlatButton SecondaryButton(string text) => Metrics.CommandButton(new FlatButton { Text = text });
 
     private sealed class ProfileItem
     {

@@ -58,16 +58,17 @@ public sealed partial class MainConfigForm
             "Servizio, indirizzo, modello, chiave e tempi di attesa del profilo selezionato.",
             "Quanto testo il modello legge e scrive (solo per i modelli locali) e quanto è creativo nelle risposte.",
             "Cosa può uscire dal PC: con Minimo solo fatti protetti; con Standard ed Esteso anche testo mascherato. Query web non verificabili bloccate.",
-            "Diagnostica del modello: capacità con esito, provenienza e data; Aggiorna capacità e Prova funzioni."
+            "Diagnostica del modello: capacità con esito, provenienza e data; si aggiornano con il pulsante Diagnosi."
         };
         for (int i = 0; i < sections.Controls.Count && i < sectionTips.Length; i++) Tip(sections.Controls[i], sectionTips[i]);
+        var host = _profileHost = new ScrollPanel { Dock = DockStyle.Fill, Margin = Padding.Empty };
         sections.SelectedIndexChanged += (s, e) =>
         {
             for (int i = 0; i < grids.Length; i++) grids[i].Visible = i == sections.SelectedIndex;
             // The scrolling host otherwise keeps the extent of a taller section shown before (empty scroll bar).
-            grids[0].Parent?.PerformLayout();
+            host.PerformLayout();
+            Ui.ScrollToTop(host);
         };
-        var host = new ScrollPanel { Dock = DockStyle.Fill, Margin = Padding.Empty };
         host.Controls.AddRange(grids);
         editLayout.Controls.Add(sections, 0, 0);
         editLayout.Controls.Add(host, 0, 1);
@@ -189,8 +190,7 @@ public sealed partial class MainConfigForm
         _txtModel.HandleCreated += (s, e) => ApplyModelHint();
         Tip(_txtModel, "Nome esatto del modello. Per il cloud inserisci prima la chiave, poi usa «Scegli modello…». Si applica con Salva.");
         _btnDetectModels = SecondaryButton(DetectModelsText);
-        _btnDetectModels.MinimumSize = new Size(0, 23);
-        _btnDetectModels.Margin = new Padding(3);
+        Metrics.CompactButton(_btnDetectModels);
         _btnDetectModels.Click += BtnDetectModels_Click;
         Tip(_btnDetectModels, "Elenca i modelli inviando la chiave inserita al servizio, senza dati di Outlook. Per le capacità usa Avanzate; Salva applica la scelta.");
         AddRow(conn, "Modello:", FillRow(new InputFrame(_txtModel), _btnDetectModels), "Nome del modello invocato.");
@@ -209,7 +209,6 @@ public sealed partial class MainConfigForm
             if (!_isLoading && _lstProfiles.SelectedItem is ProfileItem item)
             {
                 _connectionCheck?.Cancel();
-                _capabilityRefresh?.Cancel();
                 _inMemorySecrets[item.Profile.Id] = _txtToken.Text;
                 MarkDirty();
                 InvalidateWebSupport();
@@ -277,6 +276,7 @@ public sealed partial class MainConfigForm
     /// <summary>Autorizzazioni: cloud service, attachment text and Ricerca web.</summary>
     private void BuildPermissionRows(TableLayoutPanel net)
     {
+        AddSubheading(net, "Servizio e livello di esposizione");
         _chkExternal = AddWide(net, new ThemedCheckBox { Text = "Servizio esterno: invii soggetti alla protezione dei dati", AutoSize = true },
             "Il servizio è fuori da questo PC. Gli invii, già mascherati, richiedono l'autorizzazione in Privacy e dati. Sempre attivo per servizi cloud e indirizzi esterni.");
         _chkExternal.CheckedChanged += (s, e) =>
@@ -307,6 +307,7 @@ public sealed partial class MainConfigForm
         foreach (var region in new[] { ServiceRegion.Unspecified, ServiceRegion.Eu, ServiceRegion.NonEu }) _cmbRegion.Items.Add(new RegionItem(region));
         _cmbRegion.SelectedIndexChanged += (s, e) => OnProfileFieldChanged();
 
+        AddSubheading(net, "Cosa può partire verso il servizio");
         _chkAllowAttachments = AddWide(net, new ThemedCheckBox { Text = "Includi allegati verso il cloud", AutoSize = true },
             "Disponibile con Esteso: include nelle richieste al servizio il testo estratto in locale dagli allegati, pseudonimizzato sul PC. I nomi dei file e i file restano sul PC. Si applica con Salva.");
         _chkAllowAttachments.CheckedChanged += (s, e) => OnProfileFieldChanged();
@@ -320,11 +321,9 @@ public sealed partial class MainConfigForm
         _chkPseudonymizeAmounts.CheckedChanged += (s, e) => OnProfileFieldChanged();
         _chkPseudonymizeDates.CheckedChanged += (s, e) => OnProfileFieldChanged();
 
+        AddSubheading(net, "Ricerca web");
         _lblWebSupport = AddRow(net, "Ricerca web:", new SelectableLabel { AutoSize = true, Text = WebNotChecked, Margin = new Padding(3, 5, 3, 6) },
             "Se il modello scelto sa cercare sul web, secondo il servizio o secondo la prova fatta con il pulsante.");
-        _btnWebRetry = AddRow(net, "", SecondaryButton("Verifica Ricerca web (può costare)"),
-            "Verifica il supporto con una ricerca sintetica, senza dati di Outlook. Il servizio può addebitarla.");
-        _btnWebRetry.Click += async (s, e) => await CheckWebSupportAsync();
         _chkWebSearch = AddRow(net, "Abilitazione:", new ThemedCheckBox { Text = "Ricerca web attiva", AutoSize = true },
             "Abilita la ricerca web per le azioni spuntate sotto. Con Esteso la ricerca invia l'intera richiesta (testo di email e allegati compreso) pseudonimizzata sul PC; a Minimo e Standard nessuna ricerca; le query generate dal modello restano bloccate. Richiede l'informativa accettata.");
         _chkWebSearch.CheckedChanged += (s, e) => { OnProfileFieldChanged(); UpdateWebActionsEnabled(); };
@@ -358,13 +357,12 @@ public sealed partial class MainConfigForm
     private void ShowExposure() =>
         _lblExposure.Text = _chkExternal.Checked ? ExposurePolicy.Describe(SelectedExposure) : "Profilo locale: nessun dato lascia il PC; importi e date si sostituiscono se lo scegli.";
 
-    /// <summary>Verifica connessione with its result, always visible under the sections.</summary>
+    /// <summary>Diagnosi with its result, always visible under the sections.</summary>
     private TableLayoutPanel BuildProfileTestRow()
     {
-        _btnTestProfile = SecondaryButton("Verifica connessione");
-        _btnTestProfile.MinimumSize = new Size(0, 30);
+        _btnTestProfile = SecondaryButton("Diagnosi");
         _btnTestProfile.Click += BtnTestProfile_Click;
-        Tip(_btnTestProfile, "Controlla servizio, chiave e modello con una richiesta sintetica, inviando la chiave al servizio ma senza dati di Outlook. Non salva le modifiche.");
+        Tip(_btnTestProfile, ProbeCost + " Invia la chiave al servizio. Non salva le modifiche.");
         // AutoSize with side anchors wraps to the column: a long error grows the row instead of being clipped.
         _lblTestResult = Ui.SetFont(new OperationalStatusLabel
         {

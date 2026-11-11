@@ -98,7 +98,7 @@ public sealed class NavigationAccessibilityTests
                 if (archiveWindow)
                     Assert.Equal(2, Assert.Single(Descendants(form).OfType<TabControl>()).SelectedIndex);
                 else
-                    Assert.Contains(Descendants(form).OfType<Button>(), button => button.Visible && button.Text == "Prova funzioni");
+                    Assert.Contains(Descendants(form).OfType<Button>(), button => button.Visible && button.Text == "Diagnosi");
 
                 PressArrow(tabs[last], Keys.Right);
                 Assert.True(tabs[0].Focused);

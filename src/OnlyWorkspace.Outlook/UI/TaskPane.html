@@ -1717,7 +1717,9 @@
     modal.addEventListener('close', function () { modal.remove(); if (trigger && trigger.isConnected) trigger.focus(); });
     document.body.appendChild(modal);
     modal.showModal();
-    close.focus();
+    // The button follows the text: focusing it must not open a long description at its end.
+    close.focus({ preventScroll: true });
+    modal.scrollTop = 0;
   }
 
   function setupContextHelp() {
@@ -2736,8 +2738,13 @@
   // Keyboard and screen-reader users land inside the panel they opened: its first field, else its title.
   function focusDrawer(id) {
     var field = $(id).querySelector('[data-autofocus]');
-    if (field && !field.disabled && field.offsetParent !== null) field.focus();
-    else $(id).querySelector('.drawer-header h2').focus();
+    if (field && !field.disabled && field.offsetParent !== null) field.focus({ preventScroll: true });
+    else $(id).querySelector('.drawer-header h2').focus({ preventScroll: true });
+  }
+  // Every panel opens at its top: Chromium keeps the offset of a hidden element, so a panel reopened mid-page otherwise.
+  function drawerToTop(id) {
+    var body = $(id).querySelector('.drawer-body');
+    if (body) body.scrollTop = 0;
   }
   function openDrawer(id) {
     if (id !== 'historyDrawer') finishDrawerLoad('history');
@@ -2749,6 +2756,7 @@
     $('contextCard').hidden = true;
     $(id).hidden = false;
     showPage(id);
+    drawerToTop(id);
     focusDrawer(id);
     if (id === 'historyDrawer') {
       requestHistory();
@@ -3125,7 +3133,7 @@
   // The status dot opens Stato, which details Archivio and IA.
   $('btnState').addEventListener('click', function () {
     if ($('infoDrawer').hidden) openDrawer('infoDrawer');
-    $('infoTitle').scrollIntoView({ block: 'start' });
+    drawerToTop('infoDrawer');
   });
   $('btnChatPage').addEventListener('click', closeDrawers);
   $('btnSearchPage').addEventListener('click', function () { if ($('analysisDrawer').hidden) openDrawer('analysisDrawer'); });
@@ -3672,7 +3680,7 @@
         if (data.toggle) toggleDrawer('infoDrawer'); else openDrawer('infoDrawer');
         if (!$('infoDrawer').hidden) {
           if (data.section === 'archive') { if (!$('archiveSection').hidden) $('archiveSection').scrollIntoView({ block: 'start' }); }
-          else $('infoTitle').scrollIntoView({ block: 'start' });
+          else drawerToTop('infoDrawer');
         }
         break;
 

@@ -6,7 +6,7 @@ using OnlyWorkspace.Infrastructure.Llm;
 
 namespace OnlyWorkspace.Tests;
 
-/// <summary>«Prova funzioni» and «Capacità e verifiche»: outcomes with provenance, never a guess from a failure.</summary>
+/// <summary>«Diagnosi» and «Capacità e verifiche»: outcomes with provenance, never a guess from a failure.</summary>
 public sealed class ModelCapabilityProbeTests
 {
     private static readonly ProbeKind[] Model = { ProbeKind.Text, ProbeKind.Json, ProbeKind.Reasoning };

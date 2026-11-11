@@ -63,16 +63,14 @@ Inventario per campo del lotto #087/A202. «Accorciato» riguarda il tooltip, no
 | Autorizzazioni | Includi allegati verso il cloud (già «Testo degli allegati») | Rinominato; invariato: Esteso, permesso, testo estratto mascherato; nomi e file locali, Salva |
 | Autorizzazioni | Sostituzione importi/date | Mantenuti e nascosti come prima; la futura UI locale resta nel task #084 |
 | Autorizzazioni | Supporto Ricerca web | Mantenuto: supporto dichiarato o provato |
-| Autorizzazioni | Verifica Ricerca web | Accorciato: richiesta sintetica, nessun dato Outlook, possibile addebito |
 | Autorizzazioni | Ricerca web attiva | Mantenuto: ricerche delle azioni bloccate, nessun testo/query inviato, informativa necessaria |
 | Autorizzazioni | Azioni con ricerca | Mantenuti aiuti delle singole azioni e riepilogo |
 | Autorizzazioni | Chiave Ollama Web | Accorciato: distinta dalla chiave modello, cifratura locale con Salva |
 | Avanzate | Introduzione e tabella capacità | Mantenute: differenza tra comandi, esito/provenienza e limiti delle funzioni non usate |
-| Avanzate | Aggiorna capacità | Accorciato: sole dichiarazioni, nessuna generazione/costo, disponibilità non garantita, Salva conserva gli esiti |
-| Avanzate | Prova funzioni | Mantenuto: richieste sintetiche, durata, nessun dato Outlook, token e possibile costo web |
+| Profilo | Diagnosi | Unico pulsante di prova: connessione, capacità dichiarate, richieste sintetiche, durata, nessun dato Outlook, token e possibile costo web; annulla con lo stesso pulsante |
 | Avanzate | Annulla | Mantenuto: arresto, esiti già ottenuti conservati |
 | Avanzate | Prova anche Ricerca web | Accorciato: richiesta sintetica senza dati Outlook, possibili addebiti, inizialmente spento; aiuto costi mantenuto |
 | Avanzate | Esito delle prove | Mantenuto: avanzamento, esito e Salva |
-| Comune | Verifica connessione | Accorciato: servizio/chiave/modello, richiesta sintetica senza dati Outlook, nessun salvataggio |
+| Procedura guidata | Verifica connessione | Accorciato: servizio/chiave/modello, richiesta sintetica senza dati Outlook, nessun salvataggio (le prove di capacità sono solo nel profilo) |
 
 `ConfigToolTooltipTests` controlla presenza degli aiuti e significati essenziali (Salva, rimozione della chiave, HTTPS, arresto per budget, dati Outlook, costi e blocchi), senza fissare intere frasi. Il passaggio non qualifica layout, zoom o lettore schermo.

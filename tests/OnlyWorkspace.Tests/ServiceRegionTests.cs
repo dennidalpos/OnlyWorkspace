@@ -38,8 +38,8 @@ public sealed class ServiceRegionTests
     [Fact]
     public void Region_AppearsInTheProfileSummaryAndTheReport()
     {
-        Assert.Contains("Area del servizio: UE", DataEgress.ProfileSummary(Cloud(ServiceRegion.Eu)));
-        Assert.Contains("Area del servizio: Non specificata", DataEgress.ProfileSummary(Cloud(ServiceRegion.Unspecified)));
+        Assert.Contains("area del servizio: UE", DataEgress.ServiceSummary(new[] { Cloud(ServiceRegion.Eu) }));
+        Assert.Contains("area del servizio: Non specificata", DataEgress.ServiceSummary(new[] { Cloud(ServiceRegion.Unspecified) }));
         var config = TestEgress.Accepted(new WorkspaceConfig { DefaultProfile = "cloud", Profiles = new() { Cloud(ServiceRegion.NonEu) } });
         string html = DataEgressReport.RenderHtml(config, new DataEgressWorkstation());
         Assert.Contains("<th>Area</th>", html);
@@ -108,9 +108,10 @@ public sealed class ServiceRegionTests
     }
 
     [Fact]
-    public void Notice_IsVersionSevenAndSaysSensitiveDataAreNotAnonymized()
+    public void Notice_IsVersionEightAndSaysSensitiveDataAreNotAnonymized()
     {
-        Assert.Equal(7, DataEgressNotice.Version);
+        Assert.Equal(8, DataEgressNotice.Version);
+        Assert.Contains("L'autorizzazione vale per servizio", DataEgressNotice.Text);
         Assert.Contains("livello Esteso la ricerca web", DataEgressNotice.Text);
         Assert.Contains("viene inviato al servizio", DataEgressNotice.Text);
         Assert.Contains("non è una protezione al 100%", DataEgressNotice.Text);
