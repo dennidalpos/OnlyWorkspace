@@ -186,7 +186,7 @@ function Call-Static([string]$name, [object[]]$arguments) {
 function Wait-PaneTask($task) {
     $until = [DateTime]::UtcNow.AddSeconds(30)
     while (!$task.IsCompleted) {
-        if ([DateTime]::UtcNow -gt $until) { throw 'Pane task timeout' }
+        if ([DateTime]::UtcNow -gt $until) { throw "Pane task timeout (waiting at line $((Get-PSCallStack)[1].ScriptLineNumber))" }
         [Windows.Forms.Application]::DoEvents()
         Start-Sleep -Milliseconds 10
     }
@@ -377,7 +377,7 @@ try {
         Assert-Pass $overflow 'The real pane dispatch did not reject full-request overflow'
         Assert-Pass (!$listener.Pending()) 'HTTP was reached for an oversized request'
         $beforeWeb = $false
-        try { $task = Call 'AddWebEvidenceAsync' @($llmProfile.PSObject.BaseObject, $bounded, [int]0, [Threading.CancellationToken]::None, '{"type":"object"}'); [void]$task.GetAwaiter().GetResult() }
+        try { $task = Call 'AddWebEvidenceAsync' @($llmProfile.PSObject.BaseObject, $bounded, [int]0, [Threading.CancellationToken]::None, '{"type":"object"}', $null); [void]$task.GetAwaiter().GetResult() }
         catch { $beforeWeb = $_.Exception.ToString().Contains('ContextTooLongException') }
         Assert-Pass $beforeWeb 'Pre-web check did not include the structured schema'
     }
@@ -386,8 +386,8 @@ try {
         $listener.Stop(); $llmProfile.BaseUrl = $oldUrl; $llmProfile.ContextBudgetTokens = $oldBudget
     }
 
-    # Parallel web search (A150): started only for an action the profile searches the web for, and the data-egress
-    # notice still stops it when it does not cover the web host (ollama.com for a local Ollama model).
+    # Parallel web search (A150): started only for an action the profile searches the web for; a profile without
+    # masked search (local Ollama) skips it. The egress block of an Esteso profile is covered further down.
     $type.GetField('_turn', $flags).SetValue($script:coordinator, [int]7)
     $llmProfile.WebSearchEnabled = $true
     try {
@@ -397,12 +397,13 @@ try {
         Set-Field '_webActionForTurn' 'chat'
         $started = Call 'StartWebSearch' @($llmProfile.PSObject.BaseObject, 'Novita normative', [int]7, [Threading.CancellationToken]::None)
         Assert-Pass ($null -ne $started) 'Web search not started for a chat action'
-        $refused = $false
+        # A profile without masked search (local Ollama) skips the search and goes on from Outlook data: no block, no sources.
+        $failure = $null
         try { $task = Call 'AddWebEvidenceAsync' @($llmProfile.PSObject.BaseObject, $messages, $started, [Threading.CancellationToken]::None, $null); [void](Wait-PaneTask $task) }
-        catch { $refused = $_.Exception.ToString().Contains('DataEgressBlockedException') }
-        Assert-Pass $refused 'The parallel web search joined the request without the data-egress notice'
+        catch { $failure = $_.Exception.ToString() }
+        Assert-Pass ($null -eq $failure) "The parallel web search of a profile without masked search aborted the action: $failure"
         $sources = $type.GetField('_webForTurn', $flags).GetValue($script:coordinator)
-        Assert-Pass ($sources.Sources.Count -eq 0) 'A refused web search left sources in the turn'
+        Assert-Pass ($sources.Sources.Count -eq 0) 'A skipped web search left sources in the turn'
     }
     finally { $llmProfile.WebSearchEnabled = $false; Set-Field '_webActionForTurn' $null }
 
@@ -851,11 +852,11 @@ try {
         catch { $refused = $_.Exception.ToString().Contains('DataEgressBlockedException') }
         Assert-Pass ($refused -and !$attachmentCapture.Pending) 'A224 revoked consent reached HTTP through a captured client'
         Approve-FixtureEgress $attachmentConfig
-        $attachmentConfig.DataEgress.Consent.Profiles.Clear()
+        $attachmentConfig.DataEgress.Consent.Grants.Clear()
         $refused = $false
         try { $null = Call 'CreateLlmClient' @($attachmentProfile, $false) }
         catch { $refused = $_.Exception.ToString().Contains('DataEgressBlockedException') }
-        Assert-Pass ($refused -and !$attachmentCapture.Pending) 'A224 legacy host-only v4 consent inherited a profile grant'
+        Assert-Pass ($refused -and !$attachmentCapture.Pending) 'A224 host-only consent without a service grant allowed dispatch'
 
         # Both actual keys change under the same reference, through the real isolated DPAPI vault.
         $egressServiceBefore = $service
@@ -951,7 +952,7 @@ try {
             $seed = New-Object OnlyWorkspace.Core.Archive.ArchiveFlowSeed -Property @{StoreId='a';EntryId='a'}
             $task = Call 'ReadFlowAsync' @($seed, $null, $false, [Threading.CancellationToken]::None, $false)
             [void](Wait-PaneTask $task)
-            Assert-Pass (($selection -eq '[]' -and $null -eq $seed.AllowedStoreIds) -or ($selection -ne '[]' -and $seed.AllowedStoreIds.Count -eq 1)) 'Actual pane flow projected a different scope'
+            Assert-Pass (($selection -eq '[]' -and $seed.Stores.IsAll) -or ($selection -ne '[]' -and !$seed.Stores.IsAll -and $seed.Stores.StoreIds.Count -eq 1)) 'Actual pane flow projected a different scope'
         }
         # A208: actual dispatcher + encrypted archive/pipe, no configured AI profile or Outlook application.
         $profiles = @($scopeConfig.Profiles)
@@ -1042,7 +1043,8 @@ try {
         [void]$scopeDb.SetMetaAsync('stores', '["a"]', [Threading.CancellationToken]::None).GetAwaiter().GetResult()
         # The fixed calendar prompt quotes an example date; a fixture date equal to it would look like a leak (#163).
         $promptExampleDate = '30/11/2026'
-        $fixtureDays = @(20..40 | Where-Object { [DateTime]::Today.AddDays($_).ToString('dd/MM/yyyy') -ne $promptExampleDate })
+        # Day of month above 12: dd/MM and MM/dd readings of an earlier date would be ambiguous and the fact stays unresolved.
+        $fixtureDays = @(20..60 | Where-Object { $day = [DateTime]::Today.AddDays($_); $day.ToString('dd/MM/yyyy') -ne $promptExampleDate -and $day.Day -gt 12 })
         $calendarDay = [DateTime]::Today.AddDays($fixtureDays[0])
         $calendarDate = $calendarDay.ToString('dd/MM/yyyy')
         $calendarIso = $calendarDay.ToString('yyyy-MM-dd')

@@ -6,8 +6,8 @@ namespace OnlyWorkspace.Tests;
 /// <summary>
 /// #201: phrases that satisfy more than one rule of <see cref="IntentClassifier"/>, or none clearly. The rules run in a fixed
 /// order (write, contacts, mail, calendar, general); each row states the intent a person means. The few rows the rules get
-/// wrong are not hidden in the first theory: they sit in <see cref="KnownLimits"/> with the outcome the rules give, and the
-/// guides name that limit.
+/// wrong (#201, fixed by #222) are listed with the intent a person means; a limit found later goes in a separate theory with
+/// the outcome the rules give, and the guides name it.
 /// </summary>
 public sealed class IntentCorpusTests
 {
@@ -45,6 +45,9 @@ public sealed class IntentCorpusTests
     [InlineData("Any new emails about the quarterly review?", "email")]
     [InlineData("Riepilogo delle mail arrivate stamattina", "email")]
     [InlineData("Elenca gli eventi e le mail di oggi", "email")]
+    [InlineData("Mail sulla riunione di domani", "email")]
+    [InlineData("Who is the sender of the invoice mail?", "email")]
+    [InlineData("Chi ha scritto la mail sul preventivo?", "email")]
     // Contacts: who, number, role, company.
     [InlineData("Chi è Mario Rossi?", "contacts")]
     [InlineData("Who is Elena Conti?", "contacts")]
@@ -58,6 +61,8 @@ public sealed class IntentCorpusTests
     [InlineData("Trova nella rubrica Elena Conti", "contacts")]
     [InlineData("Find the address book entry for John Doe", "contacts")]
     [InlineData("Cerca il contatto di Mario Rossi e le sue ultime mail", "contacts")]
+    [InlineData("Qual è la mail di Mario Rossi?", "contacts")]
+    [InlineData("What is the email of John Doe?", "contacts")]
     // Calendar: the agenda, a meeting, a period.
     [InlineData("Ho una riunione domani?", "calendar")]
     [InlineData("Cosa ho in agenda oggi?", "calendar")]
@@ -69,6 +74,7 @@ public sealed class IntentCorpusTests
     [InlineData("Quando è il prossimo appuntamento con il dentista?", "calendar")]
     [InlineData("Che impegni ho domani? Controlla anche la posta", "calendar")]
     [InlineData("Riassumi la riunione di ieri", "calendar")]
+    [InlineData("Come è andata la riunione di ieri?", "calendar")]
     // General: how-to, concepts, texts the user pastes, nothing in Outlook to read.
     [InlineData("Come si cifra una mail con S/MIME?", "general")]
     [InlineData("Qual è la differenza tra PEC e posta elettronica ordinaria?", "general")]
@@ -81,43 +87,18 @@ public sealed class IntentCorpusTests
     [InlineData("Calcola il 22% di 1.250 euro", "general")]
     [InlineData("Suggerisci un nome per il progetto", "general")]
     [InlineData("Is it better to send the report by mail or in a shared folder?", "general")]
+    [InlineData("Come configuro il calendario in Outlook?", "general")]
+    [InlineData("Cosa significa la parola riunione?", "general")]
+    [InlineData("How do I schedule a meeting in Teams?", "general")]
     public void Phrase_IsRoutedToTheDataThePersonMeans(string question, string expected) =>
         Assert.Equal(expected, IntentClassifier.ClassifyLocal(question, Today).Target);
-
-    /// <summary>
-    /// The rules read words, not intent: a sentence about the calendar or a meeting as a topic reads as the agenda, and the
-    /// mail of a person asked without a verb of search is read as a contact. The guides say so (riquadro.md, «Come viene
-    /// interpretata la domanda»); a rule that fixes one of these must move its row to the first theory.
-    /// </summary>
-    public static readonly (string Question, string Meant, string Gives)[] KnownLimits =
-    {
-        ("Come configuro il calendario in Outlook?", "general", "calendar"),
-        ("Cosa significa la parola riunione?", "general", "calendar"),
-        ("How do I schedule a meeting in Teams?", "general", "calendar"),
-        ("Mail sulla riunione di domani", "email", "calendar"),
-        ("Who is the sender of the invoice mail?", "email", "contacts"),
-        ("Qual è la mail di Mario Rossi?", "contacts", "general"),
-    };
-
-    public static IEnumerable<object[]> LimitRows() => KnownLimits.Select(l => new object[] { l.Question, l.Meant, l.Gives });
-
-    [Theory]
-    [MemberData(nameof(LimitRows))]
-    public void KnownLimit_GivesTheRecordedOutcome_NotTheOneMeant(string question, string meant, string gives)
-    {
-        string actual = IntentClassifier.ClassifyLocal(question, Today).Target;
-        Assert.NotEqual(meant, actual);
-        Assert.Equal(gives, actual);
-        string guide = File.ReadAllText(Path.Combine(TestBuildPaths.RepositoryRoot, "docs", "utente", "riquadro.md"));
-        Assert.Contains(question, guide);
-    }
 
     [Fact]
     public void TheCorpus_HoldsAtLeastSixtyPhrases_InBothLanguages()
     {
         string source = File.ReadAllText(Path.Combine(TestBuildPaths.RepositoryRoot, "tests", "OnlyWorkspace.Tests", "IntentCorpusTests.cs"));
         var rows = System.Text.RegularExpressions.Regex.Matches(source, @"\[InlineData\(""[^""]+"", ""(?:write|email|contacts|calendar|general)""\)\]").Count;
-        Assert.True(rows + KnownLimits.Length >= 60, $"{rows} + {KnownLimits.Length} phrases");
+        Assert.True(rows >= 60, $"{rows} phrases");
         Assert.Contains("What is on my calendar tomorrow?", source);
         Assert.Contains("Ho una riunione domani?", source);
     }

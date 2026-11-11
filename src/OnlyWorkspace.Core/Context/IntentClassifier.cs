@@ -66,6 +66,22 @@ public static class IntentClassifier
     private static readonly System.Text.RegularExpressions.Regex ExplicitMailboxRequest = new(
         @"\b(cerc\w*|trov\w*|elenc\w*|mostr\w*|riassum\w*|search|find|show|list|summari[sz]e)\s+((for|all|the|tutte|tutti|le|i|mie|miei)\s+)*(e-?mails?|mail|posta|messaggi\w*|messages?|pec)\b", RuleOptions);
 
+    // «Come configuro il calendario…», «Cosa significa la parola riunione?»: how-to or definition, nothing in Outlook to read.
+    private static readonly System.Text.RegularExpressions.Regex HowTo = new(
+        @"^\s*(come\s+(si\s+)?(configur\w*|impost\w*|cre\w*|usar\w*|aggiung\w*|condivid\w*|sincroniz\w*|pianific\w*|organizz\w*|fiss\w*)|(che\s+)?cosa\s+significa|how\s+(do|can|should|to)\b|what\s+does\b.*\bmean)", RuleOptions);
+
+    // A mail noun that opens the sentence and is followed by a preposition: «Mail sulla riunione di domani».
+    private static readonly System.Text.RegularExpressions.Regex LeadingMailNoun = new(
+        @"^\s*(e-?mails?|mail|messaggi|messages?|pec)\s+(sul|sulla|sull['’]|sui|sugli|sulle|su|da|dal|dalla|dai|con|about|from|regarding)\b", RuleOptions);
+
+    // «Who is the sender of the invoice mail?»: the sender of a message, not a lookup of a person.
+    private static readonly System.Text.RegularExpressions.Regex AsksSender = new(
+        @"\b(who\s+is\s+the\s+sender|who\s+sent|chi\s+[èe]\s+il\s+mittente|chi\s+(ha\s+)?(scritto|inviato|mandato))\b", RuleOptions);
+
+    // «Qual è la mail di Mario Rossi?»: the address of a person is a contact lookup.
+    private static readonly System.Text.RegularExpressions.Regex AddressOfPerson = new(
+        @"\b(qual\s+[èe]|what\s+is|what's|dammi|dimmi)\s+(la\s+|the\s+|l['’]\s*)?(e-?mail|mail)\s+(di|del|della|of|for)\b", RuleOptions);
+
     public static UserIntentResult FallbackClassify(string query, DateTime referenceDate)
     {
         var text = query ?? string.Empty;
@@ -78,7 +94,14 @@ public static class IntentClassifier
             return result;
         }
 
-        if (ContactLookup.IsMatch(text) && !ExplicitMailboxRequest.IsMatch(text))
+        if (AsksSender.IsMatch(text) && MailTerms.IsMatch(text))
+        {
+            result.Target = "email";
+            result.Keywords = query;
+            return result;
+        }
+
+        if ((ContactLookup.IsMatch(text) || AddressOfPerson.IsMatch(text)) && !ExplicitMailboxRequest.IsMatch(text))
         {
             result.Target = "contacts";
             result.PersonName = query;
@@ -86,14 +109,14 @@ public static class IntentClassifier
         }
 
         // Time words qualify a request; they never decide which Outlook data to read.
-        if (ChatWriting.AsksMailSearch(text) || (MailTerms.IsMatch(text) && MailRequest.IsMatch(text)))
+        if (ChatWriting.AsksMailSearch(text) || (MailTerms.IsMatch(text) && (MailRequest.IsMatch(text) || LeadingMailNoun.IsMatch(text))))
         {
             result.Target = "email";
             result.Keywords = query;
             return result;
         }
 
-        if (CalendarLookup.IsMatch(text))
+        if (CalendarLookup.IsMatch(text) && !HowTo.IsMatch(text))
         {
             result.Target = "calendar";
             result.StartDate = referenceDate.Date;
