@@ -810,52 +810,13 @@ public sealed partial class MainConfigForm : Form
 
     private void RefreshEgress()
     {
-        string When(DateTime utc) => utc.ToLocalTime().ToString("dd/MM/yyyy HH:mm", Italian);
-
-        var consent = _config.DataEgress?.Consent;
-        var hosts = DataEgress.Hosts(_config);
-        var missing = DataEgress.Missing(_config, _vault.GetSecret);
-        var lines = new List<string>();
-        Tone tone;
-        if (consent == null)
-        {
-            lines.Add("Non accettata: profili cloud e ricerca web esterna sono bloccati.");
-            lines.Add(hosts.Count == 0 ? "La configurazione attuale non invia dati a server esterni." : "Server configurati: " + string.Join(", ", hosts) + ".");
-            tone = hosts.Count == 0 ? Tone.Muted : Tone.Warning;
-        }
-        else
-        {
-            lines.Add($"Autorizzazione tecnica; " +
-                $"registrata il {When(consent.AcceptedUtc)} dall'utente {consent.WindowsUser} su {consent.Machine}.");
-            lines.Add("Destinazioni autorizzate: " + (consent.Providers.Count == 0 ? "nessuno"
-                : string.Join(", ", consent.Providers.Select(p => $"{p.Host} fino a «{ExposurePolicy.Label(p.Level)}»"))) + ".");
-            if (!DataEgress.Current(consent))
-            {
-                lines.Add($"Da rinnovare: il testo dell'informativa è cambiato (versione {DataEgressNotice.Version}). Fino ad allora l'uscita dei dati è bloccata.");
-                tone = Tone.Warning;
-            }
-            else if (missing.Count > 0)
-            {
-                lines.Add("Profili da autorizzare o rinnovare (destinazione, livello, permessi o chiavi cambiati): " + string.Join(", ", missing) + ".");
-                tone = Tone.Warning;
-            }
-            else tone = Tone.Success;
-        }
-        var history = _config.DataEgress?.History ?? new List<DataEgressEvent>();
-        foreach (var profile in DataEgress.EgressProfiles(_config))
-            lines.Add($"• {profile.DisplayName}: " + (DataEgress.HasProfileGrant(_config, profile, _vault.GetSecret) ? "autorizzato" : "invii bloccati, da autorizzare o rinnovare"));
-        if (history.Count > 0)
-        {
-            lines.Add("Storico:");
-            lines.AddRange(history.AsEnumerable().Reverse().Take(5).Select(e => $"• {When(e.AtUtc)} {e.Action}: {e.Responsible} (utente {e.WindowsUser})"));
-        }
-        _lblEgress.Text = string.Join("\r\n", lines);
-        Theme.SetTone(_lblEgress, tone);
-        bool canAccept = DataEgress.EgressProfiles(_config).Any();
-        if (_isLocked) _lockedControls[_btnEgressAccept] = canAccept;
-        else _btnEgressAccept.Enabled = canAccept;
-        if (_isLocked) _lockedControls[_btnEgressRevoke] = consent != null;
-        else _btnEgressRevoke.Enabled = consent != null;
+        var status = EgressStatus.Build(_config, _vault.GetSecret);
+        _lblEgress.Text = status.Text;
+        Theme.SetTone(_lblEgress, status.Tone);
+        if (_isLocked) _lockedControls[_btnEgressAccept] = status.CanAccept;
+        else _btnEgressAccept.Enabled = status.CanAccept;
+        if (_isLocked) _lockedControls[_btnEgressRevoke] = status.CanRevoke;
+        else _btnEgressRevoke.Enabled = status.CanRevoke;
     }
     private TableLayoutPanel _storageGrid = null!;
     private SelectableLabel _lblStorageTotal = null!;
@@ -893,7 +854,7 @@ public sealed partial class MainConfigForm : Form
 
     private void FillStorage(StorageReport report)
     {
-        string shown = string.Join("\n", report.Items.Select(i => i.Name + "|" + i.Bytes + "|" + i.Files + "|" + i.Unreadable + "|" + i.Detail + "|" + i.Path));
+        string shown = StorageText.Signature(report);
         if (shown == _storageShown && _storageGrid.Controls.Count > 0)
         {
             SetStorageTotal(report);
@@ -923,15 +884,12 @@ public sealed partial class MainConfigForm : Form
             Row(Cell("Voce", 0, bold: true), Cell("Spazio", bold: true), Cell("Percorso", bold: true));
             foreach (var item in report.Items)
             {
-                string size = AppStorageUsage.Text(item.Bytes) + (item.Files == 1 ? " · 1 file" : $" · {item.Files.ToString("N0", Italian)} file");
-                if (item.Unreadable > 0) size += $" · {item.Unreadable} non leggibili";
-                if (item.Detail.Length > 0) size += "\r\n" + item.Detail;
+                string size = StorageText.Size(item);
                 var name = Cell(item.Name, 0);
                 var sizeCell = Cell(size);
                 var path = Cell(item.Path);
                 Tip(name, item.Note);
-                Tip(sizeCell, "Dimensione dei file su disco" + (item.Detail.Length > 0 ? ", divisa per tipo." : ".") +
-                    (item.Unreadable > 0 ? " Alcuni file non sono leggibili con i diritti del tuo utente e non sono contati." : string.Empty));
+                Tip(sizeCell, StorageText.SizeTip(item));
                 Tip(path, "Cartella o file su questo PC. Si può selezionare e copiare.");
                 Row(name, sizeCell, path);
             }
@@ -944,12 +902,8 @@ public sealed partial class MainConfigForm : Form
         SetStorageTotal(report);
     }
 
-    private void SetStorageTotal(StorageReport report) =>
-        _lblStorageTotal.Text = $"Totale {AppStorageUsage.Text(report.TotalBytes)} in {report.TotalFiles.ToString("N0", Italian)} file" +
-            (report.FreeBytes is { } free ? $"; liberi sul disco dell'archivio {AppStorageUsage.Text(free)}." : ".") +
-            $" Calcolato alle {DateTime.Now:HH:mm}.";
+    private void SetStorageTotal(StorageReport report) => _lblStorageTotal.Text = StorageText.Total(report, DateTime.Now);
 
-    private static readonly System.Globalization.CultureInfo Italian = System.Globalization.CultureInfo.GetCultureInfo("it-IT");
 
     /// <summary>One place that says what the app writes on the PC and which servers receive data.</summary>
     private Control BuildPrivacyPage()
@@ -1373,42 +1327,8 @@ public sealed partial class MainConfigForm : Form
     }
 
 
-    private void PrepareProfileSecrets()
-    {
-        // Before validation: it warns on cloud profiles without a SecretRef. An emptied field removes the key.
-        foreach (var profile in _config.Profiles)
-        {
-            if (_inMemorySecrets.TryGetValue(profile.Id, out var secret) && !string.IsNullOrWhiteSpace(secret))
-            {
-                profile.SecretRef = $"profile_{profile.Id}_token";
-                _vault.SetSecret(profile.SecretRef, secret);
-            }
-            else
-            {
-                profile.SecretRef = string.Empty;
-            }
-        }
-        foreach (var kvp in _inMemoryWebSecrets)
-        {
-            var profile = _config.Profiles.FirstOrDefault(p => p.Id == kvp.Key);
-            if (profile == null) continue;
-            if (string.IsNullOrWhiteSpace(kvp.Value))
-            {
-                if (!string.IsNullOrEmpty(profile.WebSearchSecretRef)) _vault.RemoveSecret(profile.WebSearchSecretRef);
-                profile.WebSearchSecretRef = string.Empty;
-                profile.WebSearchEnabled = false;
-                continue;
-            }
-            var key = $"profile_{profile.Id}_web_search";
-            _vault.SetSecret(key, kvp.Value);
-            profile.WebSearchSecretRef = key;
-        }
-        // Keys of removed or renamed profiles would otherwise stay in secrets.bin and in every backup.
-        var referenced = new HashSet<string>(_config.Profiles.SelectMany(p => new[] { p.SecretRef, p.WebSearchSecretRef }), StringComparer.OrdinalIgnoreCase);
-        foreach (var key in _vault.Keys)
-            if (key.StartsWith("profile_", StringComparison.OrdinalIgnoreCase) && !referenced.Contains(key)) _vault.RemoveSecret(key);
-
-    }
+    private void PrepareProfileSecrets() =>
+        ProfileSecretSync.Apply(_config, _inMemorySecrets, _inMemoryWebSecrets, _vault, () => _vault.Keys);
 
     private async Task<bool> SaveValidated()
     {

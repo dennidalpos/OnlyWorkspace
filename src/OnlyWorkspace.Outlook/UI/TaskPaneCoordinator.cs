@@ -381,13 +381,13 @@ public partial class TaskPaneCoordinator : IDisposable
         ReloadIfConfigChanged();
 
         var type = GetString(message, "type");
-        if (type is "summary" or "email_followup" or "reply" or "security" or "action_items" or "extract_data" or "custom_reply")
+        if (PaneMessageRules.NeedsEmail(type))
         {
             // Explicit history/retry targets keep their original source, independently of the current selection.
             if (EmailRefOf(message) == null && _dataService?.CanActOnSelectedEmail(_contextWindow) != true)
             {
                 UpdateContext();
-                Toast("Seleziona o apri un'email per questa azione.", "info");
+                Toast(PaneMessageRules.NoEmailToast, "info");
                 return;
             }
         }
@@ -2219,12 +2219,7 @@ public partial class TaskPaneCoordinator : IDisposable
         var activeProfile = GetActiveProfile();
         if (activeProfile == null)
         {
-            _control.PostMessage(new
-            {
-                type = "connection_health_result",
-                isHealthy = false,
-                errorMessage = "Nessun profilo IA configurato o configurazione non valida."
-            });
+            _control.PostMessage(PaneMessageRules.ConnectionFailed(PaneMessageRules.NoProfileMessage));
             return;
         }
 
@@ -2238,26 +2233,13 @@ public partial class TaskPaneCoordinator : IDisposable
             sw.Stop();
             if (!connectionCheck.Report(result.IsHealthy, result.ErrorMessage)) return;
 
-            _control.PostMessage(new
-            {
-                type = "connection_health_result",
-                isHealthy = result.IsHealthy,
-                version = result.Version,
-                modelsCount = result.AvailableModels.Count,
-                latencyMs = sw.ElapsedMilliseconds,
-                errorMessage = result.ErrorMessage
-            });
+            _control.PostMessage(PaneMessageRules.ConnectionHealth(result.IsHealthy, result.Version, result.AvailableModels.Count, sw.ElapsedMilliseconds, result.ErrorMessage));
         }
         catch (Exception ex)
         {
             if (!connectionCheck.IsCurrent) return;
             if (ModelServiceStatus.IsServiceFailure(ex)) connectionCheck.Report(false, LlmErrorText.Describe(ex, activeProfile));
-            _control.PostMessage(new
-            {
-                type = "connection_health_result",
-                isHealthy = false,
-                errorMessage = LlmErrorText.Describe(ex, activeProfile)
-            });
+            _control.PostMessage(PaneMessageRules.ConnectionFailed(LlmErrorText.Describe(ex, activeProfile)));
         }
         finally
         {
