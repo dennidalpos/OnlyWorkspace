@@ -71,7 +71,7 @@ public sealed class ArchiveSearchForm : Form
         Icon = Services.AppIconHelper.GetAppIcon();
         Font = new Font("Segoe UI", 9F);
         Size = new Size(1000, 720);
-        MinimumSize = new Size(680, 480);
+        MinimumSize = Metrics.SearchWindowMin;
         _sync.AccessibleDescription = "Avvia un nuovo controllo delle cassette quando Outlook è aperto";
         _cancel.Enabled = false;
         var search = Command("Cerca");
@@ -116,12 +116,12 @@ public sealed class ArchiveSearchForm : Form
         layout.Controls.Add(profileBar, 0, 0);
         layout.Controls.Add(_sections, 0, 1);
         _sections.SelectedIndexChanged += (_, _) => _tabs.SelectedIndex = _sections.SelectedIndex;
-        _tabs.SelectedIndexChanged += (_, _) => { _sections.Select(_tabs.SelectedIndex); Ui.ScrollToTop(_tabs.SelectedTab); };
+        _tabs.SelectedIndexChanged += (_, _) => { _sections.Select(_tabs.SelectedIndex); Ui.ShowView(_tabs.SelectedTab); };
 
         var searchPage = new TabPage("Ricerca") { Name = "ArchiveSearchTab", Padding = new Padding(0, 6, 0, 0), AutoScroll = true };
         var searchLayout = Rows(SizeType.AutoSize, SizeType.AutoSize, SizeType.AutoSize, SizeType.Percent);
         searchLayout.Dock = DockStyle.Top;
-        searchLayout.MinimumSize = new Size(0, 480);
+        searchLayout.MinimumSize = new Size(0, Metrics.SearchLayoutMinHeight);
         searchPage.Layout += (_, _) =>
         {
             int height = Math.Max(searchPage.ClientSize.Height - searchPage.Padding.Vertical, searchLayout.MinimumSize.Height);
@@ -245,7 +245,7 @@ public sealed class ArchiveSearchForm : Form
         // The reason of a failed mailbox is the point of the column: it wraps (rows grow) and the full text is in the tooltip.
         _stores.Columns[8].DefaultCellStyle.WrapMode = DataGridViewTriState.True;
         Ui.ScaleFromDesignDpi(this);
-        void MatchMinimumSize() => MinimumSize = new Size(Ui.Px(this, 680), Ui.Px(this, 480));
+        void MatchMinimumSize() => MinimumSize = new Size(Ui.Px(this, Metrics.SearchWindowMin.Width), Ui.Px(this, Metrics.SearchWindowMin.Height));
         Load += (_, _) => MatchMinimumSize();
         DpiChanged += (_, _) => MatchMinimumSize();
         FontChanged += (_, _) => MatchMinimumSize();

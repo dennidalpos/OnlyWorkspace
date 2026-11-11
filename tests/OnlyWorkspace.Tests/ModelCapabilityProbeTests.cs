@@ -125,6 +125,28 @@ public sealed class ModelCapabilityProbeTests
         Assert.Equal((CapabilityOrigin.Declared, "no"), (rows[5].Origin, rows[5].OutcomeText));
     }
 
+    [Theory]
+    [InlineData(ProbeOutcome.Supported)]
+    [InlineData(ProbeOutcome.Unsupported)]
+    public void Record_InconclusiveProbeKeepsTheVerifiedOutcome(ProbeOutcome verified)
+    {
+        var cache = ModelCapabilitiesCache.For(new LlmProfileConfig { Type = "ollama", AuthType = "none", Model = "m1", BaseUrl = "http://lan.example.test" });
+        var when = new DateTime(2026, 11, 5, 8, 0, 0, DateTimeKind.Utc);
+        cache.Record(new CapabilityProbeResult { Kind = ProbeKind.Text, Outcome = verified, Detail = "ok", CheckedUtc = when });
+        cache.Record(new CapabilityProbeResult { Kind = ProbeKind.Text, Outcome = ProbeOutcome.Inconclusive, Detail = "timeout 60 s", CheckedUtc = when.AddDays(6) });
+        cache.Record(new CapabilityProbeResult { Kind = ProbeKind.Text, Outcome = ProbeOutcome.Inconclusive, Detail = "timeout 90 s", CheckedUtc = when.AddDays(7) });
+
+        var probe = Assert.Single(cache.Probes);
+        Assert.Equal((verified, when), (probe.Outcome, probe.CheckedUtc));
+        Assert.Contains("ok", probe.Detail);
+        Assert.Contains("timeout 90 s", probe.Detail);
+        Assert.DoesNotContain("timeout 60 s", probe.Detail);
+
+        // A later conclusive probe still replaces it.
+        cache.Record(new CapabilityProbeResult { Kind = ProbeKind.Text, Outcome = ProbeOutcome.Inconclusive == verified ? ProbeOutcome.Supported : (verified == ProbeOutcome.Supported ? ProbeOutcome.Unsupported : ProbeOutcome.Supported), Detail = "nuova", CheckedUtc = when.AddDays(8) });
+        Assert.Equal("nuova", Assert.Single(cache.Probes).Detail);
+    }
+
     [Fact]
     public void Cache_AppliesOnlyToTheSameServiceAuthenticationModelAndEndpoint()
     {

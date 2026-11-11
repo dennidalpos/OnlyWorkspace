@@ -53,7 +53,7 @@ public sealed class ConfigToolRequestTests
             Assert.True(client.Token.CanBeCanceled);
             Assert.Equal("Annulla diagnosi", Field<Button>(form, "_btnTestProfile").Text);
             Call(form, "BtnTestProfile_Click", null, EventArgs.Empty);
-            Pump(() => client.Disposed && Field<InteractiveRequest?>(form, "_connectionCheck") == null);
+            Pump(() => client.Disposed && !Field<OnlyWorkspace.ConfigTool.Services.DiagnosisRun>(form, "_diagnosis").ConnectionRunning);
             Assert.True(client.Token.IsCancellationRequested);
             Assert.Contains("annullata", Field<Label>(form, "_lblTestResult").Text);
         });
@@ -77,7 +77,7 @@ public sealed class ConfigToolRequestTests
             else { var providers = Field<ComboBox>(form, "_cmbProvider"); providers.SelectedIndex = (providers.SelectedIndex + 1) % providers.Items.Count; }
             Assert.True(client.Token.IsCancellationRequested);
             client.Late.SetResult(LlmHealthResult.Success("late", Array.Empty<string>()));
-            Pump(() => client.Disposed && Field<InteractiveRequest?>(form, "_connectionCheck") == null);
+            Pump(() => client.Disposed && !Field<OnlyWorkspace.ConfigTool.Services.DiagnosisRun>(form, "_diagnosis").ConnectionRunning);
             if (action != "close") Assert.DoesNotContain("OK", label.Text);
         });
     }
@@ -96,7 +96,7 @@ public sealed class ConfigToolRequestTests
             Assert.Equal(1, client.Calls);
             // The second click is the cancel: it never starts another request.
             Call(form, "BtnTestProfile_Click", null, EventArgs.Empty);
-            Pump(() => client.Disposed && Field<InteractiveRequest?>(form, "_connectionCheck") == null);
+            Pump(() => client.Disposed && !Field<OnlyWorkspace.ConfigTool.Services.DiagnosisRun>(form, "_diagnosis").ConnectionRunning);
             Assert.Equal(1, client.Calls);
             Assert.True(client.Token.IsCancellationRequested);
             Assert.Contains("annullata", Field<Label>(form, "_lblTestResult").Text);

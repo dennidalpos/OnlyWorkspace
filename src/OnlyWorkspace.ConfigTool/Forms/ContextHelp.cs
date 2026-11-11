@@ -13,7 +13,7 @@ internal static class ContextHelp
             AccessibleName = "Informazioni: " + title,
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            MinimumSize = new Size(28, 28),
+            MinimumSize = Metrics.HelpButtonMin,
             Margin = new Padding(4, 2, 4, 2)
         };
         tips.SetToolTip(button, "Apre la descrizione di «" + title + "».");
@@ -34,7 +34,7 @@ internal static class ContextHelp
             MinimizeBox = false,
             MaximizeBox = false,
             Size = new Size(560, 350),
-            MinimumSize = new Size(320, 240),
+            MinimumSize = Metrics.HelpPopupMin,
             Font = owner.Font
         };
         var content = new ThemedTextBox

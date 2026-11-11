@@ -23,7 +23,6 @@ public sealed partial class MainConfigForm
 {
     private TableLayoutPanel _capabilityTable = null!;
     private OperationalStatusLabel _lblProbeStatus = null!;
-    private CancellationTokenSource? _probeRun;
     private int _capabilityOriginWidth;
 
     private IEnumerable<Control> CapabilityOriginCells() =>
@@ -42,7 +41,7 @@ public sealed partial class MainConfigForm
         var intro = new SelectableLabel
         {
             AutoSize = true,
-            MaximumSize = new Size(440, 0),
+            MaximumSize = new Size(Metrics.TextWidthNarrow, 0),
             Margin = new Padding(3, 6, 3, 8),
             Text = "«Scegli modello…» elenca i modelli senza provare nulla. «Diagnosi» controlla la connessione, rilegge ciò che il servizio dichiara " +
                    "e verifica davvero le funzioni usate dall'app."
@@ -60,7 +59,7 @@ public sealed partial class MainConfigForm
         // One test command: «Diagnosi» sits under the sections; its progress shows here, short, with the cost note behind a «?».
         int statusIndex = grid.RowCount++;
         grid.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        _lblProbeStatus = new OperationalStatusLabel { AutoSize = true, MaximumSize = new Size(440, 0), Margin = new Padding(3, 4, 3, 6), Text = ProbeIdle };
+        _lblProbeStatus = new OperationalStatusLabel { AutoSize = true, MaximumSize = new Size(Metrics.TextWidthNarrow, 0), Margin = new Padding(3, 4, 3, 6), Text = ProbeIdle };
         Tip(_lblProbeStatus, "Avanzamento ed esito della diagnosi; i risultati si salvano con Salva.");
         var statusRow = Inline(_lblProbeStatus, ContextHelp.Button(this, "Costo della diagnosi", () => ProbeCost, _tips));
         grid.Controls.Add(statusRow, 0, statusIndex);
@@ -148,7 +147,7 @@ public sealed partial class MainConfigForm
         Theme.SetTone(_lblProbeStatus, tone);
         Tip(_lblProbeStatus, text);
         // The status sits in Avanzate, which may be out of view: while «Diagnosi» runs the line beside it carries the same words.
-        if (_probeRun != null) SetTestResult(text, tone, light ?? StateForTone(tone));
+        if (_diagnosis.ProbeRunning) SetTestResult(text, tone, light ?? StateForTone(tone));
     }
 
     /// <summary>
@@ -157,7 +156,7 @@ public sealed partial class MainConfigForm
     /// </summary>
     private async Task RunProbesAsync(ProfileItem item)
     {
-        if (_isLoading || _probeRun != null) return;
+        if (_isLoading || _diagnosis.ProbeRunning) return;
         var p = item.Profile;
         if (string.IsNullOrWhiteSpace(p.Model) || string.IsNullOrWhiteSpace(p.BaseUrl))
         {
@@ -176,7 +175,7 @@ public sealed partial class MainConfigForm
                           secret == Profiles.SecretFor(p.Id);
 
         var run = new CancellationTokenSource();
-        _probeRun = run;
+        _diagnosis.BeginProbe(run);
         int done = 0;
         var progress = new Progress<CapabilityProbeResult>(result =>
         {
@@ -187,7 +186,7 @@ public sealed partial class MainConfigForm
             RefreshCapabilityRows();
             if (result.Kind == ProbeKind.Web) ShowWebSupport(p, result.Outcome, result.Detail);
             // Posted: a callback may land after the run ended, and must not overwrite its final status.
-            if (_probeRun == run) SetProbeStatus($"Prova {done} di {kinds.Count}: {ProbeName(result.Kind)} {OutcomeWord(result.Outcome)}.", Tone.Warning, StatusLight.Working);
+            if (_diagnosis.IsProbe(run)) SetProbeStatus($"Prova {done} di {kinds.Count}: {ProbeName(result.Kind)} {OutcomeWord(result.Outcome)}.", Tone.Warning, StatusLight.Working);
         });
 
         var plain = Probing(p, reasoning: false);
@@ -218,7 +217,7 @@ public sealed partial class MainConfigForm
         {
             (client as IDisposable)?.Dispose();
             (reasoningClient as IDisposable)?.Dispose();
-            if (_probeRun == run) _probeRun = null;
+            _diagnosis.EndProbe(run);
             run.Dispose();
         }
     }
@@ -276,7 +275,7 @@ public sealed partial class MainConfigForm
     /// <summary>A diagnosis of the profile, a manual change in Connessione: the earlier outcomes no longer apply.</summary>
     private void InvalidateProbes(LlmProfileConfig p, bool webOnly = false)
     {
-        _probeRun?.Cancel();
+        _diagnosis.CancelProbe();
         if (p.ModelCapabilities is { } cache)
         {
             if (webOnly) cache.Probes.RemoveAll(r => r.Kind == ProbeKind.Web);

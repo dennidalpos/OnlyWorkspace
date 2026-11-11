@@ -31,21 +31,21 @@ public sealed class SetupWizardForm : Form
     private readonly ThemedComboBox _cmbProvider = new() { Width = 420 };
     private readonly ThemedComboBox _cmbPreset = new() { Width = 420, DropDownStyle = ComboBoxStyle.DropDownList };
     private Control _presetRow = null!;
-    private readonly SelectableLabel _lblLocalAi = new() { AutoSize = true, MaximumSize = new Size(560, 0), Visible = false, Margin = new Padding(0, 0, 0, 8) };
+    private readonly SelectableLabel _lblLocalAi = new() { AutoSize = true, MaximumSize = new Size(Metrics.TextWidthDialog, 0), Visible = false, Margin = new Padding(0, 0, 0, 8) };
     private readonly ThemedTextBox _txtEndpoint = new() { Width = 420 };
     private readonly ThemedTextBox _txtModel = new() { Width = 260 };
     private readonly FlatButton _btnDetect = Metrics.CompactButton(new FlatButton { Text = DetectText });
     private readonly ThemedTextBox _txtKey = new() { Width = 420, UseSystemPasswordChar = true };
     private readonly SelectableLabel _lblKey = new() { Text = "Chiave API:", AutoSize = true };
-    private readonly SelectableLabel _lblTest = new() { AutoSize = true, MaximumSize = new Size(560, 0) };
-    private readonly SelectableLabel _lblModelNote = new() { AutoSize = true, MaximumSize = new Size(560, 0) };
+    private readonly SelectableLabel _lblTest = new() { AutoSize = true, MaximumSize = new Size(Metrics.TextWidthDialog, 0) };
+    private readonly SelectableLabel _lblModelNote = new() { AutoSize = true, MaximumSize = new Size(Metrics.TextWidthDialog, 0) };
     private readonly ThemedCheckBox _chkArchive = new() { Text = "Consenti l'archivio locale delle email su questo PC", AutoSize = true, Checked = true };
     private readonly ThemedCheckBox _chkAttachments = new() { Text = "Conserva e rendi cercabile il testo degli allegati leggibili", AutoSize = true, Checked = true };
     private readonly ThemedCheckBox _chkAutostart = new() { Text = "Avvia OnlyWorkspace all'accesso a Windows (consigliato)", AutoSize = true, Checked = true };
-    private readonly SelectableLabel _lblAddin = new() { AutoSize = true, MaximumSize = new Size(560, 0) };
-    private readonly SelectableLabel _lblOutlook = new() { AutoSize = true, MaximumSize = new Size(560, 0), Margin = new Padding(0, 12, 0, 0) };
+    private readonly SelectableLabel _lblAddin = new() { AutoSize = true, MaximumSize = new Size(Metrics.TextWidthDialog, 0) };
+    private readonly SelectableLabel _lblOutlook = new() { AutoSize = true, MaximumSize = new Size(Metrics.TextWidthDialog, 0), Margin = new Padding(0, 12, 0, 0) };
     private readonly FlatButton _btnRepair = Metrics.CommandButton(new FlatButton { Text = "Ripara add-in" });
-    private readonly SelectableLabel _lblSummary = new() { AutoSize = true, MaximumSize = new Size(560, 0) };
+    private readonly SelectableLabel _lblSummary = new() { AutoSize = true, MaximumSize = new Size(Metrics.TextWidthDialog, 0) };
     private readonly ToolTip _tips = new() { AutoPopDelay = 20000, InitialDelay = 400, ReshowDelay = 100 };
 
     private InteractiveRequest? _connectionCheck;
@@ -74,7 +74,7 @@ public sealed class SetupWizardForm : Form
         Text = "Configurazione guidata di OnlyWorkspace";
         Font = new Font("Segoe UI", 9F);
         ClientSize = new Size(640, 470);
-        MinimumSize = new Size(560, 420);
+        MinimumSize = Metrics.WizardWindowMin;
         StartPosition = FormStartPosition.CenterParent;
         MinimizeBox = MaximizeBox = false;
         ShowInTaskbar = false;
@@ -484,8 +484,7 @@ public sealed class SetupWizardForm : Form
     private void ShowStep(int index)
     {
         _step = Math.Max(0, Math.Min(_steps.Count - 1, index));
-        for (int i = 0; i < _steps.Count; i++) _steps[i].Visible = i == _step;
-        Ui.ScrollToTop(_steps[_step]);
+        Ui.ShowView(_steps[_step], _steps, _step);
         _lblHeader.Text = $"Passo {_step + 1} di {_steps.Count} · {_titles[_step]}";
         _btnBack.Enabled = _step > 0;
         _btnNext.Text = _step == _steps.Count - 1 ? "Applica e salva" : "Avanti";

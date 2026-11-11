@@ -67,7 +67,7 @@ public sealed partial class MainConfigForm
             for (int i = 0; i < grids.Length; i++) grids[i].Visible = i == sections.SelectedIndex;
             // The scrolling host otherwise keeps the extent of a taller section shown before (empty scroll bar).
             host.PerformLayout();
-            Ui.ScrollToTop(host);
+            Ui.ShowView(host, grids, sections.SelectedIndex);
         };
         host.Controls.AddRange(grids);
         editLayout.Controls.Add(sections, 0, 0);
@@ -208,7 +208,7 @@ public sealed partial class MainConfigForm
         {
             if (!_isLoading && _lstProfiles.SelectedItem is ProfileItem item)
             {
-                _connectionCheck?.Cancel();
+                _diagnosis.CancelConnection();
                 _inMemorySecrets[item.Profile.Id] = _txtToken.Text;
                 MarkDirty();
                 InvalidateWebSupport();
@@ -290,7 +290,7 @@ public sealed partial class MainConfigForm
             "0 blocca ogni invio. Minimo invia solo fatti estratti in locale; Standard anche email e testo libero mascherati; Esteso aggiunge gli allegati con permesso distinto e la ricerca web con il testo pseudonimizzato. Si applica con Salva.");
         foreach (var level in ExposurePolicy.All) _cmbExposure.Items.Add(new ExposureItem(level));
         _cmbExposure.SelectedIndexChanged += (s, e) => { ShowExposure(); OnProfileFieldChanged(); ApplyCapabilities(); UpdateWebActionsEnabled(); };
-        _lblExposure = AddRow(net, "", new SelectableLabel { AutoSize = true, MaximumSize = new Size(440, 0), Margin = new Padding(3, 0, 3, 6) },
+        _lblExposure = AddRow(net, "", new SelectableLabel { AutoSize = true, MaximumSize = new Size(Metrics.TextWidthNarrow, 0), Margin = new Padding(3, 0, 3, 6) },
             "Cosa esce dal PC al livello scelto.");
         Theme.SetTone(_lblExposure, Tone.Muted);
         DescriptionHelp(_lblExposure, "Protezione dei dati");

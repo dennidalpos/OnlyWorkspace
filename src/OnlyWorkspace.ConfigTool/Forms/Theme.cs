@@ -33,6 +33,30 @@ internal static class Metrics
     /// <summary>Space above a group heading inside a card.</summary>
     public const int GroupSpacing = 14;
 
+    // Widths where a long label wraps (MaximumSize), at 96 DPI. Forms must not repeat these numbers.
+    public const int TextWidthSide = 300;
+    public const int TextWidthCaption = 360;
+    public const int TextWidthNarrow = 440;
+    public const int TextWidthMedium = 520;
+    public const int TextWidthDialog = 560;
+    public const int TextWidthPage = 600;
+    public const int StorageLabelNarrow = 190;
+    public const int StorageLabelWide = 330;
+    public const int WebSupportMinWidth = 160;
+    public const int ColumnLabelWide = 160;
+    public const int ColumnLabelNarrow = 140;
+    public const int RowMinHeight = 30;
+    public const int SearchLayoutMinHeight = 480;
+
+    // Smallest sizes of each window or popup, at 96 DPI.
+    public static readonly Size MainWindowMin = new(820, 500);
+    public static readonly Size WizardWindowMin = new(560, 420);
+    public static readonly Size ConsentWindowMin = new(380, 360);
+    public static readonly Size SearchWindowMin = new(680, 480);
+    public static readonly Size MessageBoxMin = new(420, 200);
+    public static readonly Size HelpPopupMin = new(320, 240);
+    public static readonly Size HelpButtonMin = new(28, 28);
+
     private static T Sized<T>(T button, int minWidth, int height, int padding, Padding margin) where T : Button
     {
         button.AutoSize = true;

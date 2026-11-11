@@ -177,7 +177,7 @@ public sealed partial class MainConfigForm : Form
         Icon = AppIconHelper.GetAppIcon();
         // Fits 1366x768 at 100% and 1920x1080 at 150%; FitToScreen handles anything smaller.
         ClientSize = new Size(900, 600);
-        MinimumSize = new Size(820, 500);
+        MinimumSize = Metrics.MainWindowMin;
         StartPosition = FormStartPosition.CenterScreen;
         Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
 
@@ -301,7 +301,7 @@ public sealed partial class MainConfigForm : Form
     {
         if (_pages.Count == 0) return;
         ActiveControl = _navButtons[_shownPage];
-        Ui.ScrollToTop(_pages[_shownPage]);
+        Ui.ShowView(_pages[_shownPage]);
     }
 
     private void AddPage(TableLayoutPanel nav, string title, string glyph, Control page, string description)
@@ -367,7 +367,7 @@ public sealed partial class MainConfigForm : Form
         afterLayout?.Invoke();
         _laidOutFor[page] = _pageHost.ClientSize;
         // Every visit starts at the top, also after a deep link scrolled the page (ShowMailboxes) or a visit left it lower.
-        Ui.ScrollToTop(page);
+        Ui.ShowView(page);
         _shownPage = index;
 
         static IEnumerable<Control> Containers(Control root)
@@ -452,8 +452,7 @@ public sealed partial class MainConfigForm : Form
     {
         if (disposing)
         {
-            _probeRun?.Cancel();
-            _connectionCheck?.Cancel();
+            _diagnosis.CancelAll();
             // Dispose can run twice (tray exit, then the form's own close): cancel only once.
             if (!_archiveLifetime.IsCancellationRequested) _archiveLifetime.Cancel();
             Theme.Changed -= OnThemeChanged;
@@ -577,7 +576,7 @@ public sealed partial class MainConfigForm : Form
         var btnWizard = AddRow(setup, "Procedura guidata:", SecondaryButton("Configurazione guidata…"),
             "Riapre la procedura guidata del primo avvio, in cinque passi: modello IA, archivio, avvio con Windows e controllo dell'add-in in Outlook.");
         btnWizard.Click += (s, e) => RunSetupWizard();
-        _lblAddinState = AddRow(setup, "Add-in Outlook:", new SelectableLabel { AutoSize = true, MaximumSize = new Size(520, 0), Margin = new Padding(3, 6, 3, 6) },
+        _lblAddinState = AddRow(setup, "Add-in Outlook:", new SelectableLabel { AutoSize = true, MaximumSize = new Size(Metrics.TextWidthMedium, 0), Margin = new Padding(3, 6, 3, 6) },
             "Se Outlook carica OnlyWorkspace per il tuo utente, letto dalle impostazioni di Windows.");
         _btnRepairAddin = AddRow(setup, "", SecondaryButton("Ripara add-in"),
             "Se la scheda OnlyWorkspace non compare in Outlook: la riattiva per il tuo utente e chiede a Outlook di non disattivarla più. Poi chiudi e riapri Outlook.");
@@ -889,7 +888,7 @@ public sealed partial class MainConfigForm : Form
             }
             SelectableLabel Cell(string text, int left = 12, bool bold = false)
             {
-                var label = new SelectableLabel { Text = text, AutoSize = true, MaximumSize = new Size(Ui.Px(_storageGrid, left == 0 ? 190 : 330), 0), Margin = new Padding(Ui.Px(_storageGrid, left), Ui.Px(_storageGrid, 4), Ui.Px(_storageGrid, 3), Ui.Px(_storageGrid, 4)) };
+                var label = new SelectableLabel { Text = text, AutoSize = true, MaximumSize = new Size(Ui.Px(_storageGrid, left == 0 ? Metrics.StorageLabelNarrow : Metrics.StorageLabelWide), 0), Margin = new Padding(Ui.Px(_storageGrid, left), Ui.Px(_storageGrid, 4), Ui.Px(_storageGrid, 3), Ui.Px(_storageGrid, 4)) };
                 return bold ? Ui.SetFont(label, 9F, FontStyle.Bold) : label;
             }
             Row(Cell("Voce", 0, bold: true), Cell("Spazio", bold: true), Cell("Percorso", bold: true));
@@ -921,7 +920,7 @@ public sealed partial class MainConfigForm : Form
     {
         var page = ScrollPage(out var stack);
         var egress = AddGroup(stack, "Uscita dei dati da Outlook");
-        _lblEgress = AddWide(egress, new SelectableLabel { AutoSize = true, MaximumSize = new Size(600, 0), Margin = new Padding(3, 3, 3, 6) },
+        _lblEgress = AddWide(egress, new SelectableLabel { AutoSize = true, MaximumSize = new Size(Metrics.TextWidthPage, 0), Margin = new Padding(3, 3, 3, 6) },
             "Se e da chi è stata accettata l'informativa che autorizza l'invio di dati di Outlook a servizi esterni. Senza, i profili cloud e la ricerca web esterna sono bloccati per tutti gli utenti di questo PC.");
         _btnEgressAccept = SecondaryButton("Leggi e autorizza…");
         _btnEgressAccept.Click += async (s, e) => await AcceptAndSaveDataEgressAsync();
@@ -938,7 +937,7 @@ public sealed partial class MainConfigForm : Form
         _storageGrid = AddWide(files, new TableLayoutPanel { AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, ColumnCount = 3, Margin = Padding.Empty },
             "File creati da OnlyWorkspace per il tuo utente Windows e, in fondo, quelli comuni a tutti gli utenti. Passa sul nome di una voce per sapere cosa contiene.");
         foreach (var width in new[] { SizeType.AutoSize, SizeType.AutoSize, SizeType.Percent }) _storageGrid.ColumnStyles.Add(new ColumnStyle(width, 100F));
-        _lblStorageTotal = AddWide(files, new SelectableLabel { AutoSize = true, MaximumSize = new Size(600, 0), Margin = new Padding(3, 8, 3, 3) },
+        _lblStorageTotal = AddWide(files, new SelectableLabel { AutoSize = true, MaximumSize = new Size(Metrics.TextWidthPage, 0), Margin = new Padding(3, 8, 3, 3) },
             "Somma delle voci sopra e spazio ancora libero sul disco dell'archivio. Sotto 5 GB liberi l'archivio avvisa, sotto 1 GB smette di acquisire email.");
         _btnRefreshStorage = AddRow(files, "", SecondaryButton("Aggiorna"),
             "Ricalcola lo spazio occupato. Legge solo le dimensioni dei file: non apre l'archivio e non cancella nulla.");
@@ -947,7 +946,7 @@ public sealed partial class MainConfigForm : Form
         {
             Text = "File su richiesta, non contati: CSV estratti (Download), ZIP di diagnostica o di backup (Desktop o cartella scelta).",
             AutoSize = true,
-            MaximumSize = new Size(600, 0),
+            MaximumSize = new Size(Metrics.TextWidthPage, 0),
             Margin = new Padding(3, 6, 3, 3)
         }, "File che crei tu con un comando: restano dove li hai salvati finché non li elimini.");
 
@@ -959,11 +958,11 @@ public sealed partial class MainConfigForm : Form
                    "• Ripara add-in: HKCU Software\\Microsoft\\Office\\16.0\\Outlook\\Resiliency.\r\n" +
                    "• Setup: certificato OnlyApps negli archivi Root e TrustedPublisher del computer; facoltativamente le policy che nascondono «Prova il nuovo Outlook».",
             AutoSize = true,
-            MaximumSize = new Size(600, 0)
+            MaximumSize = new Size(Metrics.TextWidthPage, 0)
         }, "Impostazioni di Windows scritte da installazione, procedura guidata e «Ripara add-in».");
 
         var network = AddGroup(stack, "Server che ricevono dati");
-        _lblDestinations = AddWide(network, new SelectableLabel { AutoSize = true, MaximumSize = new Size(600, 0) },
+        _lblDestinations = AddWide(network, new SelectableLabel { AutoSize = true, MaximumSize = new Size(Metrics.TextWidthPage, 0) },
             "A chi arrivano i dati con la configurazione attuale, ricavato dai profili; si aggiorna aprendo questa pagina.");
         return page;
     }
@@ -1000,7 +999,7 @@ public sealed partial class MainConfigForm : Form
         {
             string meta = (component.Version != "-" ? component.Version + " · " : string.Empty) + component.License +
                           (component.Note.Length > 0 ? " · " + component.Note : string.Empty) + (component.Distributed ? string.Empty : " · solo sviluppo");
-            AddRow(credits, component.Name, new SelectableLabel { Text = meta, AutoSize = true, MaximumSize = new Size(520, 0), Margin = new Padding(3, 6, 3, 6) }, component.Url);
+            AddRow(credits, component.Name, new SelectableLabel { Text = meta, AutoSize = true, MaximumSize = new Size(Metrics.TextWidthMedium, 0), Margin = new Padding(3, 6, 3, 6) }, component.Url);
         }
     }
 
@@ -1317,7 +1316,7 @@ public sealed partial class MainConfigForm : Form
 
     private const string WebNotChecked = "Da verificare";
 
-    private InteractiveRequest? _connectionCheck;
+    private readonly DiagnosisRun _diagnosis = new();
     internal Func<LlmProfileConfig, string?, ILlmClient>? ConnectionClientFactory;
 
     private async Task<bool> SaveActiveConfiguration()
@@ -1535,7 +1534,7 @@ public sealed partial class MainConfigForm : Form
             ForeColor = Theme.Colors.Text
         };
         var layout = new TableLayoutPanel { AutoSize = true, ColumnCount = 1, Padding = new Padding(16, 14, 16, 12) };
-        var caption = new SelectableLabel { Text = label, AutoSize = true, MaximumSize = new Size(360, 0), Margin = new Padding(0, 0, 0, 6) };
+        var caption = new SelectableLabel { Text = label, AutoSize = true, MaximumSize = new Size(Metrics.TextWidthCaption, 0), Margin = new Padding(0, 0, 0, 6) };
         var input = new ThemedTextBox { Width = 360, UseSystemPasswordChar = true };
         var ok = Metrics.DialogButton(new FlatButton { Text = "OK", Kind = ButtonKind.Primary, DialogResult = DialogResult.OK });
         var cancel = Metrics.DialogButton(new FlatButton { Text = "Annulla", DialogResult = DialogResult.Cancel });
@@ -2031,7 +2030,7 @@ public sealed partial class MainConfigForm : Form
             var lbl = new SelectableLabel { Text = label, AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(column == 0 ? 0 : 24, 6, 10, 3) };
             // Same minimum label width in every group keeps the field column aligned across groups.
             // The second label of a pair gets one too: its field then lines up across groups as well.
-            lbl.MinimumSize = new Size(column == 0 ? 160 : 140, 0);
+            lbl.MinimumSize = new Size(column == 0 ? Metrics.ColumnLabelWide : Metrics.ColumnLabelNarrow, 0);
             grid.Controls.Add(lbl, column, row);
             Tip(lbl, tip);
         }

@@ -17,7 +17,7 @@ internal static class CopyableMessageBox
             Text = caption,
             Font = new Font("Segoe UI", 9F),
             ClientSize = new Size(580, 260),
-            MinimumSize = new Size(420, 200),
+            MinimumSize = Metrics.MessageBoxMin,
             StartPosition = owner == null ? FormStartPosition.CenterScreen : FormStartPosition.CenterParent,
             MinimizeBox = false,
             MaximizeBox = false,

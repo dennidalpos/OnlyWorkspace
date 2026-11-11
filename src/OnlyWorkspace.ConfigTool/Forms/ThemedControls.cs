@@ -20,8 +20,20 @@ internal static class Ui
 
     public static int Px(Control control, float value) => (int)Math.Round(value * Scale(control));
 
-    /// <summary>Every page, section, step and dialog opens at its top: scrolling containers of the subtree go back to 0.</summary>
-    public static void ScrollToTop(Control? root)
+    /// <summary>
+    /// The one place where a page, section, step or tab opens: when <paramref name="views"/> is given, only
+    /// <paramref name="views"/>[<paramref name="index"/>] stays visible; then every scrolling container under
+    /// <paramref name="scrollRoot"/> goes back to its top. A view change that does not come here is a defect
+    /// (ConfigToolViewChangeTests).
+    /// </summary>
+    public static void ShowView(Control? scrollRoot, IReadOnlyList<Control>? views = null, int index = 0)
+    {
+        if (views != null)
+            for (int i = 0; i < views.Count; i++) views[i].Visible = i == index;
+        ScrollToTop(scrollRoot);
+    }
+
+    private static void ScrollToTop(Control? root)
     {
         if (root == null) return;
         if (root is ScrollableControl { AutoScroll: true } scrolling && scrolling.AutoScrollPosition != Point.Empty)
@@ -474,7 +486,7 @@ internal sealed class SegmentedBar : FlowLayoutPanel
                 TabStyle = true,
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                MinimumSize = new Size(0, 30),
+                MinimumSize = new Size(0, Metrics.RowMinHeight),
                 Padding = new Padding(8, 0, 8, 0),
                 Margin = new Padding(0, 0, 4, 0)
             };

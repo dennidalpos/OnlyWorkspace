@@ -43,14 +43,14 @@ internal sealed class DataEgressConsentForm : Form
         BackColor = Theme.Colors.Window;
         ForeColor = Theme.Colors.Text;
         Size = new Size(650, 560);
-        MinimumSize = new Size(380, 360);
+        MinimumSize = Metrics.ConsentWindowMin;
         var list = profiles ?? Array.Empty<LlmProfileConfig>();
         var layout = _text = new TableLayoutPanel { Dock = DockStyle.Top, AutoSize = true, ColumnCount = 1, Padding = new Padding(Metrics.DialogPadding) };
         var scroll = _scroll = new ScrollPanel { Dock = DockStyle.Fill, Focusable = true, AccessibleName = DataEgressNotice.Title };
         scroll.Controls.Add(layout);
         void TextRow(string text, bool heading = false)
         {
-            var row = new SelectableLabel { Text = text, AutoSize = true, MaximumSize = new Size(560, 0), Margin = new Padding(0, 0, 0, Metrics.Gap + 4) };
+            var row = new SelectableLabel { Text = text, AutoSize = true, MaximumSize = new Size(Metrics.TextWidthDialog, 0), Margin = new Padding(0, 0, 0, Metrics.Gap + 4) };
             if (heading) Ui.SetFont(row, 10.5F, FontStyle.Bold);
             layout.Controls.Add(row);
         }
@@ -71,7 +71,7 @@ internal sealed class DataEgressConsentForm : Form
             Text = "Ho letto e autorizzo gli invii protetti per i servizi indicati",
             AutoSize = true,
             Enabled = false,
-            MaximumSize = new Size(560, 0),
+            MaximumSize = new Size(Metrics.TextWidthDialog, 0),
             AccessibleDescription = ScrollHint
         };
         confirmations.Controls.Add(read);
@@ -85,7 +85,7 @@ internal sealed class DataEgressConsentForm : Form
                 Text = "Confermo di autorizzare anche l'area non specificata: " + string.Join(", ", unspecified.Select(DataEgress.Name)),
                 AutoSize = true,
                 Enabled = false,
-                MaximumSize = new Size(560, 0),
+                MaximumSize = new Size(Metrics.TextWidthDialog, 0),
                 AccessibleDescription = ScrollHint
             };
             confirmations.Controls.Add(_region);
@@ -102,7 +102,7 @@ internal sealed class DataEgressConsentForm : Form
         {
             Text = ScrollHint,
             AutoSize = true,
-            MaximumSize = new Size(300, 0),
+            MaximumSize = new Size(Metrics.TextWidthSide, 0),
             Margin = new Padding(0, Metrics.Gap, Metrics.Gap + 4, 0)
         };
         bool Ready() => read.Checked && (region == null || region.Checked);

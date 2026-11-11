@@ -194,9 +194,8 @@ public sealed partial class MainConfigForm
     private void LstProfiles_SelectedIndexChanged(object? sender, EventArgs e)
     {
         if (_refreshingList || _lstProfiles.SelectedItem is not ProfileItem item) return;
-        Ui.ScrollToTop(_profileHost);
-        _probeRun?.Cancel();
-        _connectionCheck?.Cancel();
+        Ui.ShowView(_profileHost);
+        _diagnosis.CancelAll();
         SetProbeStatus(ProbeIdle, Tone.Muted);
 
         bool wasLoading = _isLoading;
@@ -260,7 +259,7 @@ public sealed partial class MainConfigForm
     private void OnProfileFieldChanged()
     {
         if (_isLoading) return;
-        _connectionCheck?.Cancel();
+        _diagnosis.CancelConnection();
         UpdateSelectedProfileFromUi();
         MarkDirty();
     }
@@ -517,7 +516,7 @@ public sealed partial class MainConfigForm
         {
             var caps = CurrentCaps();
             var p = item.Profile;
-            string? previousPolicy = _connectionCheck != null || _probeRun != null ? ConversationPolicy.Key(p) : null;
+            string? previousPolicy = _diagnosis.Busy ? ConversationPolicy.Key(p) : null;
             p.DisplayName = _txtDisplayName.Text.Trim();
             p.Type = caps.Type;
             p.BaseUrl = _txtEndpoint.Text.Trim();
@@ -541,7 +540,7 @@ public sealed partial class MainConfigForm
             p.WebSearchActions = _webActions.Controls.Cast<CheckBox>().Where(b => b.Checked).Select(b => (string)b.Tag!).ToList();
             if (previousPolicy != null && previousPolicy != ConversationPolicy.Key(p))
             {
-                _connectionCheck?.Cancel();
+                _diagnosis.CancelConnection();
             }
         }
     }
@@ -694,7 +693,7 @@ public sealed partial class MainConfigForm
         LogActivity($"[WEB SEARCH] Profilo '{profile.Id}', modello '{profile.Model}': {_lblWebSupport.Text}");
         // The width of the panel the label sits in, not a fixed 480 px: a long error wraps inside the card.
         int room = (_lblWebSupport.Parent?.ClientSize.Width ?? 0) - _lblWebSupport.Left - _lblWebSupport.Margin.Horizontal;
-        _lblWebSupport.MaximumSize = new Size(Math.Max(Ui.Px(_lblWebSupport, 160), room), 0);
+        _lblWebSupport.MaximumSize = new Size(Math.Max(Ui.Px(_lblWebSupport, Metrics.WebSupportMinWidth), room), 0);
         bool supported = outcome == ProbeOutcome.Supported;
         if (_isLocked) _lockedControls[_chkWebSearch] = supported;
         else _chkWebSearch.Enabled = supported;
@@ -712,15 +711,14 @@ public sealed partial class MainConfigForm
 
     private async void BtnTestProfile_Click(object? sender, EventArgs e)
     {
-        if (_connectionCheck != null) { _connectionCheck.Cancel(); return; }
-        if (_probeRun != null) { _probeRun.Cancel(); return; }
+        if (_diagnosis.CancelRunning()) return;
         if (_lstProfiles.SelectedItem is not ProfileItem item) return;
         UpdateSelectedProfileFromUi();
         var p = item.Profile;
         string identity = ConversationPolicy.Key(p);
         string? secret = _inMemorySecrets.TryGetValue(p.Id, out var s) ? s : null;
         using var run = new InteractiveRequest();
-        _connectionCheck = run;
+        _diagnosis.BeginConnection(run);
         string label = _btnTestProfile.Text;
         _btnTestProfile.Text = "Annulla diagnosi";
         SetTestResult("Verifica della connessione in corso (massimo 10 secondi)…", Tone.Warning, StatusLight.Working);
@@ -755,7 +753,7 @@ public sealed partial class MainConfigForm
             if (Current()) SetTestResult("Errore: " + ErrorText.For(ex), Tone.Danger);
             if (!IsDisposed) LogActivity("[TEST ERROR] " + ex.Message);
         }
-        finally { _connectionCheck = null; }
+        finally { _diagnosis.EndConnection(run); }
         try
         {
             // The connection answered: the same button goes on with the capability probes (no second command, no extra tick).

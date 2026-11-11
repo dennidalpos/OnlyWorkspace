@@ -88,9 +88,21 @@ public sealed class ModelCapabilitiesCache
 
     public CapabilityProbeResult? Probe(ProbeKind kind) => Probes.LastOrDefault(p => p.Kind == kind);
 
-    /// <summary>A newer probe of the same kind replaces the older one.</summary>
+    /// <summary>
+    /// A newer probe of the same kind replaces the older one, except an inconclusive one over a verified outcome:
+    /// that keeps the verified outcome and date and only notes the later attempt.
+    /// </summary>
     public void Record(CapabilityProbeResult result)
     {
+        var previous = Probe(result.Kind);
+        if (result.Outcome == ProbeOutcome.Inconclusive && previous is { Outcome: not ProbeOutcome.Inconclusive })
+        {
+            const string Marker = " | Ultima prova inconcludente: ";
+            int cut = previous.Detail.IndexOf(Marker, StringComparison.Ordinal);
+            string baseDetail = cut >= 0 ? previous.Detail.Substring(0, cut) : previous.Detail;
+            previous.Detail = baseDetail + Marker + result.Detail + " (" + result.CheckedUtc.ToString("yyyy-MM-dd") + ")";
+            return;
+        }
         Probes.RemoveAll(p => p.Kind == result.Kind);
         Probes.Add(result);
     }

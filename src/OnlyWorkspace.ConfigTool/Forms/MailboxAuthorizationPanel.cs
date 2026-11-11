@@ -31,7 +31,7 @@ internal sealed class MailboxAuthorizationPanel : TableLayoutPanel
     private readonly FlatButton _refresh = Metrics.CommandButton(new FlatButton { Text = "Aggiorna" });
     private readonly ThemedCheckBox _mine = new() { Text = "Archivio attivo per me", AutoSize = true, Margin = new Padding(3, 6, 3, 6) };
     private readonly TableLayoutPanel _grid = new() { AutoSize = true, ColumnCount = 2, Margin = new Padding(0, 4, 0, 4) };
-    private readonly SelectableLabel _status = new() { AutoSize = true, MaximumSize = new Size(600, 0), Margin = new Padding(3, 4, 3, 0) };
+    private readonly SelectableLabel _status = new() { AutoSize = true, MaximumSize = new Size(Metrics.TextWidthPage, 0), Margin = new Padding(3, 4, 3, 0) };
     private readonly Dictionary<string, CheckBox> _rows = new(StringComparer.Ordinal);
     private readonly HashSet<string> _open = new(StringComparer.Ordinal);
     // Profiles with an archive; the combo may instead show the Outlook profile whose archive does not exist yet.

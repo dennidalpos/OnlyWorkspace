@@ -368,16 +368,16 @@ public sealed class MainConfigFormTests
             Write(directory, new WorkspaceConfig { DefaultProfile = "a", Profiles = new() { Local("a", web: true) } },
                 new() { ["profile_a_token"] = "secret" });
             using var form = new MainConfigForm(directory, null, directory);
-            var check = typeof(MainConfigForm).GetField("_probeRun", Flags)!;
+            var diagnosis = Field<OnlyWorkspace.ConfigTool.Services.DiagnosisRun>(form, "_diagnosis");
             var web = Field<CheckBox>(form, "_chkWebSearch");
-            Assert.Null(check.GetValue(form));
+            Assert.False(diagnosis.Busy);
             Assert.True(web.Checked);
             Assert.True(web.Enabled); // a saved activation can be switched off
 
             Field<TextBox>(form, "_txtEndpoint").Text = "http://127.0.0.1:11435";
             Field<TextBox>(form, "_txtToken").Text = "other";
 
-            Assert.Null(check.GetValue(form));
+            Assert.False(diagnosis.Busy);
             Assert.False(web.Checked);
             Assert.False(web.Enabled);
             Assert.Equal("Da verificare", Field<Label>(form, "_lblWebSupport").Text);
