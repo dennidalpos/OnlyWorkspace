@@ -1283,15 +1283,15 @@ public sealed partial class MainConfigForm : Form
             }
 
             RefreshProfileNames();
-            _numMaxSearch.Value = Math.Max(10, Math.Min(200, _config.Limits.MaxSearchItems));
+            _numMaxSearch.Value = SaveMessages.MaxSearchItems(_config.Limits.MaxSearchItems);
             SetNumeric(_numFollowUpDays, _config.Limits.FollowUpDays);
             SetNumeric(_numMaxAnalysis, _config.Limits.MaxAnalysisEmails);
             _cmbLogLevel.SelectedItem = _cmbLogLevel.Items.Cast<LogLevelItem>().FirstOrDefault(i => i.Value == _config.Logging.Level)
                 ?? _cmbLogLevel.Items.Cast<LogLevelItem>().First(i => i.Value == "Information");
 
             _chkHistoryEnabled.Checked = _config.History.Enabled;
-            _numRetentionDays.Value = Math.Max(1, Math.Min(365, _config.History.RetentionDays));
-            _numMaxConversations.Value = Math.Max(10, Math.Min(1000, _config.History.MaxConversations));
+            _numRetentionDays.Value = SaveMessages.RetentionDays(_config.History.RetentionDays);
+            _numMaxConversations.Value = SaveMessages.MaxConversations(_config.History.MaxConversations);
 
             _config.Archive ??= new WorkspaceArchiveConfig();
             _chkArchiveEnabled.Checked = _config.Archive.Enabled;
@@ -1322,7 +1322,7 @@ public sealed partial class MainConfigForm : Form
         RefreshEgress();
         var blocked = DataEgress.Missing(_config, _vault.GetSecret);
         if (blocked.Count > 0)
-            SetStatus("Salvato. Bloccati finché non si accetta l'informativa sull'uscita dei dati (Privacy e dati): " + string.Join(", ", blocked) + ".", Tone.Warning);
+            SetStatus(SaveMessages.BlockedUntilNotice(blocked), Tone.Warning);
         return true;
     }
 
@@ -1335,7 +1335,7 @@ public sealed partial class MainConfigForm : Form
         var validation = ConfigurationValidator.Validate(_config, _vault.GetSecret);
         if (!validation.IsValid)
         {
-            CopyableMessageBox.Show(this, "Validazione fallita:\n\n- " + string.Join("\n- ", validation.Errors), "Validazione non riuscita", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            CopyableMessageBox.Show(this, SaveMessages.ValidationFailed(validation.Errors), "Validazione non riuscita", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return false;
         }
 
@@ -1366,11 +1366,8 @@ public sealed partial class MainConfigForm : Form
             UpdateTitle();
             _trayContext?.UpdateProfileStatus();
 
-            // Warnings (missing key or model, cards profile gone) belong in the status, not only in the log of another page.
-            var warnings = validation.Warnings;
-            SetStatus(warnings.Count == 0 ? $"Salvato alle {DateTime.Now:HH:mm}. Le modifiche sono attive per l'Add-in Outlook."
-                : $"Salvato alle {DateTime.Now:HH:mm}, " + (warnings.Count == 1 ? "con un avviso: " : $"con {warnings.Count} avvisi (tutti nel log di Manutenzione e backup): ") + warnings[0],
-                warnings.Count == 0 ? Tone.Success : Tone.Warning);
+            var saved = SaveMessages.Saved(validation.Warnings, DateTime.Now);
+            SetStatus(saved.Text, saved.Tone);
             LogActivity("Configurazione salvata con successo in: " + configPath);
             return true;
         }
