@@ -33,7 +33,7 @@ I messaggi d'errore mostrano istruzioni in italiano; il dettaglio tecnico resta 
 
 ## Uscita dei dati
 
-**Privacy e dati → Leggi e autorizza…** mostra l'informativa 7 e i profili/destinatari ricavati dalla configurazione, con l'area del servizio di ciascuno. Non richiede anagrafica o dichiarazioni da compilare: seleziona la conferma (e, per i profili con area non specificata, la conferma dedicata) e premi **Autorizza e salva** (UAC se necessario). Utente Windows, postazione, data e testo accettato sono registrati automaticamente. Le autorizzazioni restano distinte per profilo e legate a destinazione, livello, permessi e chiavi effettive. I record precedenti sono conservati e richiedono rinnovo.
+**Privacy e dati → Leggi e autorizza…** mostra l'informativa 8 e i profili/destinatari ricavati dalla configurazione, con l'area del servizio di ciascuno. Non richiede anagrafica o dichiarazioni da compilare: seleziona la conferma (e, per i profili con area non specificata, la conferma dedicata) e premi **Autorizza e salva** (UAC se necessario). Utente Windows, postazione, data e testo accettato sono registrati automaticamente. Le autorizzazioni restano distinte per profilo e legate a destinazione, livello, permessi e chiavi effettive. I record precedenti sono conservati e richiedono rinnovo.
 
 Il motore richiede la conferma dedicata per tutti i profili cloud con area non specificata prima di registrare una nuova accettazione. Lo storico delle autorizzazioni e il rapporto esportabile riportano gli identificativi dei profili confermati.
 

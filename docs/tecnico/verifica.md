@@ -4,194 +4,15 @@ Per la configurazione degli output centrali, delle cache e delle fixture conserv
 
 Test di codice, prova sulla build installata e qualifica su cassette e provider reali sono evidenze diverse. Le prove si fanno solo su WS-DP01, con copie isolate per quelle distruttive e Ollama solo su loopback. I resoconti completi delle prove fino al 19/10/2026 sono nella storia git (file `collaudo-qualita.md`, rimosso il 19/10/2026).
 
-Contenuto datato trasferito nel dossier SecondBrain: `02-areas/products/OnlyWorkspace/history/imported/docs/tecnico/verifica.md`. Originale e SHA-256 nel rapporto di migrazione; questa voce conserva i riferimenti esistenti e non autorizza nuovi interventi.
+Le cronache dei lotti (24/10-8/11/2026: prove, gate, installazioni, schermate) non vivono più in questo file: sono nel dossier SecondBrain, `01-projects/OnlyWorkspace/history/2026-11-11-verifica-cronaca/report.md` (SHA-256 `98F83920CCD9A1E8C6663728B2B866E68056ED748E351BF6FA0572B3F664EBA8`), con il testo integrale delle sezioni datate. Le ricevute precedenti sono nelle cartelle `history/` dello stesso dossier. Qui restano comandi, stato corrente, discrepanze e ciò che non è qualificato.
 
-## Build installata con il catalogo di mascheramento 4 — 8 novembre 2026
+## Stato corrente
 
-Installata in place la build 7513878 (setup `/S`, uscita 0; binari OnlyWorkspace e DLL Microsoft con firma Valid, nessun certificato in Root). Prima del rinnovo, «Privacy e dati» mostrava qwencloud con invii bloccati «da autorizzare o rinnovare»: l'autorizzazione del 7 novembre non valeva più con la rev. 4. Rinnovata dall'utente nel ConfigTool (informativa 6, conferma dell'area non specificata). Chat dal riquadro di Outlook con testo sintetico contenente nome, indirizzo postale e telefono, profilo qwencloud a «3 - Esteso»: risposta ripristinata in 3,6 s. Il registro di audit, letto con `PseudonymizationAuditStore` dalle DLL installate, riporta `completed`, `catalog=4`, `postal-address=4` e i conteggi PERSONA=1, INDIRIZZO=1, TEL=1. Non provato: il livello Standard sulla build installata (il profilo era a Esteso, che maschera allo stesso modo) e il corpo HTTP inviato (visibile solo con le catture del #027).
+Il lavoro aperto e gli esiti di ogni lotto sono nel tracker del dossier (`01-projects/OnlyWorkspace/tracker.json`), non qui. Questo file non conta i lotti chiusi e non riapre task.
 
-## Esecutore del tracker `run-tracker.ps1` — 8 novembre 2026
+Versioni che le guide citano e che un test confronta con il codice (`DocumentedVersionsTests`): informativa sull'uscita dei dati, policy della conversazione, pipe locale dell'archivio, formato dell'archivio, numero enum di Esteso. Chi le cambia aggiorna le guide nello stesso lotto.
 
-Il valore `0x80000003` passato a `SetThreadExecutionState` è un Int32 negativo in PowerShell, quindi la conversione a `uint` falliva e lo script si fermava prima di avviare qualunque sessione. Ora usa costanti `[uint32]`. Le esclusioni per numero sono parametri (`-Skip`, `-NoQualification`, anche separati da virgole). `-DryRun` mostra la selezione senza avviare sessioni. L'uscita della sessione è in JSON: il giro si ferma su codice di uscita, `is_error`, `subtype` o `api_error_status`. La parola «quota» nel testo di una risposta riuscita non lo ferma più.
-
-Prove con Claude Code 2.1.319:
-- Due sessioni fresche di sonda con `-p`, `--settings run-tracker.settings.json`, `--permission-mode acceptEdits` e `--output-format json` hanno accettato i flag.
-- Sono stati eseguiti `pwsh -File` con `knowledge.ps1`, `dotnet build`, `git status/log` e `cd … &&`.
-- Sono stati negati `git commit` (regola deny), `dotnet --list-sdks` (fuori allowlist) e un `pwsh -Command` con variabili `$`, che Bash rifiuta prima dell'esecuzione.
-- Il `-DryRun` sul tracker reale ha selezionato #021, #027, #056, #063, #073, #121 e #139 e ha escluso i default.
-- `tests/scripts/RunTracker.Tests.ps1` ha superato 10 casi su 10 con un tracker sintetico e una CLI finta.
-- Analisi PSScriptAnalyzer con le regole del gate: 0 rilievi.
-
-Primo giro reale, lanciato dal manutentore senza `-OnlyId` (log `run-20261108-154109.log`):
-- Sette sessioni fresche, nell'ordine #021, #027, #056, #063, #073, #121 e #139. Le prime sei sono terminate con exit 0 e `subtype` `success`, da 23 a 144 turni. Ognuna ha aggiornato il tracker e scritto il proprio report in `history/`. HEAD è rimasto `17a9b12`, quindi nessun commit.
-- Ogni sessione ha avuto da 5 a 15 permessi negati. I dinieghi riguardavano Read/Grep/Glob nel dossier SecondBrain e `Skill(playwright-cli)`. Riguardavano anche i comandi con variabili di shell, cicli, `cd` in catena o `git -C`: tra questi, build e test lanciati in forma composta.
-- Correzioni: `--add-dir` per `SECONDBRAIN_HOME` e per `ms-playwright`; la guida ai comandi semplici nel prompt; il log dei dinieghi con conteggio, percorso o skill.
-- Sonde fresche: senza `--add-dir` sono stati negati Read, Grep, Glob e Skill; con `--add-dir` sono passati Grep e Glob. Con una copia del settings che aggiunge `Skill(playwright-cli)`, `git ls-files`, `git check-ignore`, `head`, `tail`, `wc` e `which`, sono passate tutte e quattro le chiamate di prova.
-- Il file `run-tracker.settings.json` non si può modificare dall'interno di una sessione, quindi le regole aggiuntive vanno applicate a mano.
-
-Giro reale con `-OnlyId '#139'` (8 novembre 2026, sera, log `run-20261108-224517.log`), dopo che il manutentore ha aggiunto a mano le regole a `run-tracker.settings.json`:
-- Una sessione fresca, avviata dal processo `pwsh -NoProfile -File scripts/automation/run-tracker.ps1 -OnlyId #139`, con il prompt normale (qualifica: False). Il `-DryRun` precedente (`run-20261108-224511.log`) aveva selezionato gli stessi sette task del primo giro.
-- Dall'interno della sessione sono passati Read e Grep nel dossier, `git ls-files`, `git check-ignore`, `wc`, `which`, `Skill(playwright-cli)` e `pwsh -NoProfile -File` con uno script della scratchpad. Sono stati negati solo un comando Bash con `$TEMP`, vietato anche dal prompt, e un Glob su `%TEMP%`, fuori dalle cartelle `--add-dir`. Nessuno dei due ha bloccato il lavoro: lo script `.ps1` legge i log. Il conteggio finale dei dinieghi compare nel log solo dopo la fine della sessione.
-- Tracker e report `history/` aggiornati dalla sessione, HEAD `7513878` invariato.
-
-**Non provato:** il testo reale dell'errore di quota. La classificazione lo riconosce solo per schema (`usage limit`, `rate limit`, `quota`, `429` e simili). In ogni caso qualunque errore ferma il giro, quindi un testo diverso cambia solo l'etichetta del log.
-
-## MAX_PATH della cartella di configurazione su net48 — 8 novembre 2026
-
-Misura di `ConfigurationBackupService.ReplacePair` (task #119, residuo di #117). Una sonda console net48 senza `longPathAware` nel manifest carica l'`OnlyWorkspace.Infrastructure.dll` Release net48. Chiama `ReplacePair` due volte per ogni cartella da 140 a 240 caratteri: la seconda chiamata trova i file e passa da `File.Replace` con la copia `.bak`. La cartella è valida se `config.json` e `secrets.bin` contengono i byte della seconda scrittura.
-
-| Codice | Nome temporaneo più lungo | Cartella massima accettata | Primo fallimento |
-| --- | --- | --- | --- |
-| `2bc1941`, prima di #117 (due GUID interi) | 90 caratteri | 169 | 170, `DirectoryNotFoundException` |
-| `f2aae46`, dopo #117 (id da 12 esadecimali) | 49 caratteri | 209 | 210, `DirectoryNotFoundException` |
-
-Il processo della sonda riporta `RtlAreLongPathsEnabled` = 0 e un file a 300 caratteri fallisce. Windows abilita i percorsi lunghi solo con il criterio di sistema e il manifest dell'applicazione insieme, quindi il processo applica MAX_PATH anche se la postazione ha `LongPathsEnabled` = 1. [Limite di lunghezza dei percorsi](https://learn.microsoft.com/windows/win32/fileio/maximum-file-path-limitation) **Non qualificato:** la stessa misura su una macchina o VM isolata con `LongPathsEnabled` = 0 e nei processi reali (Outlook, ConfigTool).
-
-## Indirizzi postali, schede tagliate e pratica — 7 novembre 2026
-
-Il catalogo 4 maschera gli indirizzi postali italiani (`INDIRIZZO`); `PseudonymizationPipelineTests` verifica cinque forme con ripristino esatto, audit senza originale e quattro frasi comuni («via mail», «corso di italiano») lasciate intatte. Le ragioni sociali nel testo libero restano non mascherate e il limite è dichiarato in [Pseudonimizzazione](pseudonimizzazione.md). La revisione 4 rinnova le autorizzazioni dei profili cloud. Schede del ConfigTool: `DpiFontTests` misura le quattro etichette a scala 100–200% con client 820 e 900 px, nessun taglio; la scheda Storico a 200% è tagliata solo sotto il minimo di 340 px CSS del riquadro (scorrimento voluto, nessuna correzione). Pratica: il messaggio per email di partenza non più disponibile e l’avviso di risultato superato sono coperti da `FlowPane.Tests.cjs`; il ramo del coordinatore non ha un test isolato (richiede il riquadro). **Non qualificato:** prove a schermo (task #021), cattura HTTP reale degli indirizzi (task #027).
-
-## Importi scritti con «euro» — 6 novembre 2026
-
-Con il catalogo 3, `PseudonymizationPipelineTests` verifica parola intera, ripristino esatto e casi esclusi. `MaskedFreeTextTransportTests` verifica su HTTP loopback che due importi con «euro» vengano sostituiti e ripristinati nei percorsi strutturati e in streaming di OpenAI, Anthropic, Gemini e Ollama, a Standard ed Esteso. `DataEgressAuthorizationTests` usa chiavi ricavate dal catalogo 2 per verificare il rinnovo dell'autorizzazione e la separazione della conversazione. I test mirati passano su net48 e net10 con dati sintetici. [Forme riconosciute e limiti](pseudonimizzazione.md#autorizzazione-e-limiti)
-
-## Conferma dell'area del servizio — 6 novembre 2026
-
-`ServiceRegionTests` esercita il dialogo e il motore di autorizzazione su net48 e net10. Il motore rifiuta conferme mancanti o parziali prima di registrare il consenso. Il salvataggio e la rilettura conservano gli identificativi dei profili con area non specificata confermati nell'evento. Il rapporto HTML li rende con escape. Le prove usano configurazioni sintetiche.
-
-## Ritiro del vecchio disinstallatore — 6 novembre 2026
-
-`Packaging.Tests.ps1` verifica che il ritiro attenda la registrazione della nuova installazione, rifiuti un file senza firma, segnali un file bloccato e preservi un file estraneo già presente con estensione `.disabled`. Il test di successo usa una firma simulata e una rinomina Win32 reale. Una prova separata con una copia del disinstallatore firmato verifica Authenticode reale e SHA-256 identico dopo la rinomina. La fixture NSIS restituisce 3 in caso di collisione e 0 al nuovo tentativo, con voce di disinstallazione sintetica, file estranei e certificato del firmatario negli store invariati. La prova del passaggio completo su un pacchetto firmato resta da eseguire. [Rinomina per handle su Windows](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-setfileinformationbyhandle)
-
-## Inventario dei file programma — 6 novembre 2026
-
-`Packaging.Tests.ps1` esercita il codice di installazione in Windows PowerShell 5.1 con una chiave di registro isolata. La matrice copre il rifiuto della cartella precedente senza inventario, la prima installazione in una nuova cartella, il rollback dopo un errore di copia, gli aggiornamenti con file ritirati, il rifiuto delle collisioni con file estranei, le junction, i percorsi oltre 260 caratteri e la ripresa della disinstallazione dopo un file bloccato. Una fixture NSIS 3.13 separata verifica `/D` con spazi, aggiornamento sul posto e uscita del disinstallatore avviato direttamente. La compilazione del setup usa un payload sintetico e la qualifica su un pacchetto firmato resta da eseguire.
-
-## Pulizia dei file programma — 6 novembre 2026
-
-Con NSIS 3.13, `Packaging.Tests.ps1` esercita il rollback dopo un errore di setup e il processo del disinstallatore con file e collegamenti sintetici. La directory programma e le due cartelle del menu Start vengono svuotate dei file rimovibili e delle junction, mentre le sentinelle esterne restano intatte. Un file bloccato produce il codice 3. Dopo lo sblocco, il rollback completa la pulizia e restituisce il codice 2 dell'errore iniziale, mentre la disinstallazione restituisce 0. Una junction al posto della directory programma è rifiutata. Il setup con payload sintetico è stato compilato senza firma. Installazione, aggiornamento e disinstallazione di un pacchetto firmato restano prove separate. [RemoveDirectoryW](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-removedirectoryw)
-
-## Percorsi estesi per `/PURGE` e formato corrente dell'archivio — 6 novembre 2026
-
-Working tree sopra `dedad06`. Con NSIS 3.13 la fixture rimuove archivio e copia del vault su percorsi oltre 260 caratteri, preserva i file delle destinazioni delle junction e rifiuta un contenitore locale reindirizzato. Il disinstallatore sintetico avviato direttamente restituisce 3 su un file bloccato. Il nuovo tentativo, dopo lo sblocco, riesce. Il setup con payload sintetico è stato compilato senza firma. La pulizia della directory programma e la disinstallazione su una build reale restano qualifiche separate. [Codici del disinstallatore NSIS](https://nsis.sourceforge.io/Docs/AppendixD.html#D.1)
-
-Il motore inizializza e riapre il formato 13. Le prove di rifiuto confrontano i byte di database e chiave prima e dopo l'apertura dei formati precedenti. L'import CLI rifiuta `Full` e conserva configurazione e vault. Il gate locale registra 1.792 test per runtime, 24 script, build e analisi statica senza avvisi o errori, smoke net48 x64/x86 e zero vulnerabilità NuGet segnalate. La nuova installazione Windows rimane da verificare. Ricevuta nel dossier `history/2026-11-06-purge-greenfield/report.md`.
-
-## Regressione `/PURGE` e gate dopo il ritiro delle skill — 5 novembre 2026
-
-Working tree sopra `0646fa0`. Lo stesso eseguibile sintetico NSIS 3.13, con gli stessi dati e argomenti, rimuove archivio e copia illeggibile del vault a 192 e 199 caratteri. A 270 e 277 caratteri i due file restano anche con codice di uscita 0. I file ProgramData sono rimossi in entrambi i casi. La fixture corretta supera i sei casi, inclusi i due ordini di `/PURGE`, un percorso con spazi, le opzioni che devono conservare i dati e il controllo dei contenuti delle sentinelle. La prova riguarda le macro su dati sintetici. La disinstallazione reale e i percorsi lunghi restano da qualificare separatamente.
-
-`check-code.ps1` è passato senza le skill ritirate. I riferimenti di `egress-reviewer` alle sorgenti e alla documentazione sono stati verificati. Un primo tentativo con il percorso fisico annidato ha incontrato errori net48 sui file temporanei dell'importazione. L'alias temporaneo ha mantenuto output e fixture nella stessa area gestita. [Configurazione degli output](output-locali.md)
-
-Il gate con l'alias ha completato la build senza avvisi o errori, 1.802 test su ciascun runtime (net48 e net10.0-windows, zero ignorati), 24 script, smoke net48 x64/x86 e il controllo NuGet senza vulnerabilità segnalate. Ricevuta nel dossier `history/2026-11-05-purge-gate/report.md`.
-
-## Trasporto mascherato e tooltip dei profili — 5 novembre 2026
-
-Working tree sopra `271af3c`. `MaskedFreeTextTransportTests` esercita factory, dispatcher e HTTP su loopback: OpenAI, Anthropic, Gemini e Ollama, Standard/Esteso, risposte strutturate e streaming (16 casi), compresi segnaposto divisi fra eventi e ripristino esatto. Un caso per famiglia verifica entrambi i percorsi senza connessione a Minimo, con testo non sigillato a Standard/Esteso e con rifiuto del masker. Il Follow-up cloud Standard usa coordinatore, autorizzazione di fixture e trasporto reali, una email sintetica e un precedente: una richiesta, fonti, risposta ripristinata e salvataggio dell'esito. Catture e registri DPAPI sono conservati nelle fixture centrali. Il catalogo 2 non riconosce `1234,56 euro`: limite osservato via HTTP, documentato in [Pseudonimizzazione](pseudonimizzazione.md), distinto dagli importi riconosciuti come `1234,56 EUR`.
-
-Tooltip dei campi del profilo accorciati e inventariati in [Inventario testi](inventario-testi-interfaccia.md#campi-del-profilo-ia--5-novembre-2026); `ConfigToolTooltipTests` controlla effetti, salvataggio, protezione e costi senza vincolare frasi intere. Informativa, configurazione e protocolli invariati. **Non qualificato:** provider esterni, Outlook installato, prove a schermo a 100/200%, tastiera e lettore schermo; nessuna installazione eseguita.
-
-Gate: analisi statica/build senza avvisi o errori, 1.802 test per runtime net48/net10 (zero ignorati), 24 script, smoke net48 x64/x86 e NuGet senza vulnerabilità segnalate. Nessun fallimento né ripetizione nel gate finale. Nella preparazione, il campione con «euro» ha prodotto 17 fallimenti e 4 passaggi; conservate le catture, la matrice usa EUR per verificare il trasporto dei formati riconosciuti. Ricevuta e limite tracciato nel dossier: `history/2026-11-05-masked-transport-tooltips/report.md`.
-
-## Lotto tracker (pratica, schede, stati, termini, provider) — 4 novembre 2026
-
-Modifiche non ancora pubblicate sopra `50e5b0f`. Pratica: il risultato ricostruito è segnalato come superato quando si seleziona un'altra email e il rifiuto non è annunciato come «completata» (`FlowPane.Tests.cjs`). Schede: nuovo test `ProfileTabs_ShowTheirWholeLabelAcrossFontScalesAndWindowWidths` (4 schede del profilo, scala 1–2, client 820/900): nessun taglio riprodotto nel test; «Storico» a 190 CSS px resta oltre la vista ma raggiungibile con lo scorrimento orizzontale (pagina minima 340 px, tre pulsanti entro 336 px). Stati e termini: colori «in corso» in due variabili, «Operazione interrotta.» per Interrompi, [vocabolario](interfaccia-vocabolario.md) e `UiVocabulary.Tests.cjs`. Censimento [provider europei](provider-ia-ue.md): solo fonti, nessuna chiamata. `csharp-ls` 0.28.0: diagnostica CS0029/CS0103 identica a `dotnet build` su un errore introdotto e ripristinato, definizione tra progetti riuscita, ma analizza il solo `net48`.
-
-Gate: `check-code.ps1` (0 avvisi, 0 errori, 8 ponti skill), 1.801 test per runtime, 24 script, smoke net48 x64/x86, NuGet senza vulnerabilità. Installata su WS-DP01 la build firmata del working tree (file identici alla cartella publish; backup con hash in `SecondBrain/.runtime/backup-20261104-install-lotto-tracker`). **Non qualificato:** nessuna prova a schermo (computer-use negato per Outlook e ConfigTool), quindi restano aperti Avanzate a schermo, email di partenza eliminata, finestra di scrittura/risposta inline/nuovo messaggio, Interrompi e 200% del ConfigTool.
-
-## Gate a riposo e prova a schermo di `a877abd` — 4 novembre 2026
-
-Gate in una sola passata dopo `dotnet build-server shutdown` e 15 s, a riposo (nessun processo dotnet residuo né Outlook): 1.800 test per runtime net48/net10, 23 script, `check-code.ps1` (0 avvisi, 0 errori, 8 ponti skill), smoke net48 x64/x86, NuGet senza vulnerabilità; nessun fallimento né ripetizione. Installata su WS-DP01 la build firmata di `a877abd` (92 file identici alla cartella publish, `config.json` invariato). Sullo schermo principale (4K, 150%) con tema scuro: la lista profili del ConfigTool mostra il contorno di focus con le frecce; i passi 1–4 della procedura guidata hanno il testo accanto a ogni «?» e le caselle senza tagli. Non provati: 200% di scala, cambio tema con le icone della tray, nomi accessibili con l'Assistente vocale, caselle con etichetta lunga (a larghezza predefinita non vanno a capo).
-
-## Qualifica a schermo in Outlook di `a877abd` — 4 novembre 2026
-
-Con un PST sintetico (4 email `.example`, catena di 3 messaggi più una estranea) sullo schermo secondario al 100%: il preset «Ricostruisci la pratica» di Cerca e analizza indica l'email di partenza, ricostruisce in locale «3 email nella pratica» (nessun client IA, nessun invio), segue il cambio di email e resta disattivato senza selezione; il riquadro non ha più il pannello Flusso. Le azioni sulla singola email compaiono solo con un'email selezionata o aperta (Explorer e finestra di lettura: ribbon, Posta, Chat). Lo zoom del riquadro a 150% e 200% (Ctrl+rotella) non taglia lo Stato; a 200% compare lo scorrimento orizzontale. Non provati: trascinamento del bordo per restringere il riquadro, finestra di scrittura e risposta inline, barra lavori con «Interrompi», email di partenza non più disponibile, prove con cloud e consensi. Il PST è stato staccato dal profilo e `config.json` è invariato.
-
-## Automazione Claude Code e script di firma — 3 novembre 2026
-
-`sign-binaries.ps1` e `create-code-signing-cert.ps1` leggono la password del PFX solo da `ONLYAPPS_PFX_PASSWORD` (parametro `-PasswordPlain` rimosso); `Packaging.Tests.ps1` verifica l'assenza del parametro e l'errore con variabile mancante. Senza BOM, Windows PowerShell 5.1 legge male gli accenti: provato con `Parser.ParseFile` su `smoke-net48.ps1`, `WebViewBoundary.Smoke.ps1` e `PanePolicy.Tests.ps1`, che ora hanno il BOM UTF-8 (`WebViewFocus.Smoke.ps1` lo aveva già).
-
-Per Claude Code: l'hook `.claude/hooks/protect-paths.cjs` rifiuta le scritture su `.local-secrets/`, `dist/`, `publish/`, `*.pfx` e `*.owbak` (14 casi via pipe, rifiuto confermato dal vivo su `dist/`); la skill `gate` (solo invocazione esplicita) elenca i comandi del gate in sequenza; il subagente `egress-reviewer` (Read/Grep/Glob) controlla il confine dei dati verso il cloud. Provato su due diff noti: ha rilevato il testo di `WebSearchService.Disclosure`, che descrive un invio che `SearchAsync` blocca (residuo tracciato). Dall'11 novembre 2026 `.claude/` (hook, subagente e impostazioni) non è più nel repository: questa descrizione resta come cronaca di quella verifica.
-
-Gate: 1.794 test per runtime net48/net10, 23 script, analisi statica/build Release, smoke net48 x64/x86, NuGet senza vulnerabilità. Nelle esecuzioni con la macchina carica sono comparsi `ConcurrentProcesses_PreserveEveryFlag` (A234, net48 e net10), `CancellationAfterParentExited_KillsTheIdentifiedDescendant` e `HttpErrorCancellationTests` (net10), più un errore CS8602 transitorio di `check-code.ps1` su codice invariato; tutti verdi alla ripetizione, nessuna causa dimostrata. Non eseguiti: smoke WebView manuali, build installata, Outlook, cloud reale.
-
-## Informativa della ricerca web — 3 novembre 2026
-
-Il suggerimento «Ricerca web» del ConfigTool (`WebSearchService.Disclosure`), il tooltip della spunta e le guide [Ricerca web](../utente/modelli-web.md) e [Dipendenze](dipendenze.md) dicono ora che durante le azioni nessuna ricerca invia dati (`SearchAsync` blocca ogni query) e che esce solo la richiesta sintetica fissa della verifica di capacità. `DataEgressNotice` resta alla versione 5, senza modifica del testo accettato. `WebSearchServiceTests` copre testo e blocco; corretto anche il CS8602 di `ConfigToolUxTests` (`AccessibleDescription` è `string?`), che faceva fallire `check-code.ps1` al primo build a freddo. Gate: 1.797 test per runtime net48/net10, 23 script, `check-code.ps1`. `ConcurrentProcesses_PreserveEveryFlag` (A234) è fallito su entrambi i runtime nel primo passaggio, subito dopo la build, ed è passato dopo `dotnet build-server shutdown`. Non eseguiti: smoke e prove a schermo del tooltip.
-
-## Stato del candidato — 3 novembre 2026
-
-Il candidato del lotto preferenze/provider deriva da `80572a2` e comprende la semplificazione del catalogo IA e la diagnostica delle preferenze concorrenti. Dal 3 novembre 2026 l'installato su WS-DP01 è la build firmata del commit che chiude le prove dal vivo descritte sotto. Nel candidato il prodotto è 1.0.0, l'archivio è in formato 13, la pipe è v15, l'informativa è v5, la policy conversazione è revisione 7 e il catalogo di pseudonimizzazione è revisione 2. Il contratto cloud corrente usa concessioni per profilo e fatti tipizzati; vedere [Pseudonimizzazione](pseudonimizzazione.md). Le prove datate sotto qualificano soltanto i rispettivi candidati.
-
-Il lotto runtime/Storico supera 1.790 test per ciascun runtime net48/net10, 22 script, analisi statica/build Release, smoke net48 e WebViewFocus x64/x86; NuGet non segnala vulnerabilità. La regressione storage è verificata anche con writer in processi indipendenti x64/x86. Nel primo gate è ricomparso il timeout delle preferenze concorrenti su net48: A234 resta aperta e la ripetizione verde non ne dimostra la causa. Ricevuta nel dossier: `history/2026-11-03-runtime-history/report.md`.
-
-## Prove dal vivo in Outlook — 3 novembre 2026
-
-Build firmata installata su WS-DP01 (92/92 file identici al publish, backup verificato per hash di archivio, Storico, `config.json` e `secrets.bin`), Outlook classico non elevato sul monitor secondario al 100%, zoom del riquadro con Ctrl+rotella. Osservati a schermo e con UI Automation: filtri di Posta impilati e valori delle tendine leggibili a 100% e 200%, intestazione entro un terzo dell'altezza, toast d'errore con motivo che non copre il cassetto, Copia che segnala l'esito senza togliere l'errore, tabelle di Stato senza scorrimento orizzontale a 100%, suggerimenti completi dei titoli dello Storico, landmark di navigazione con nome, conferma in due clic armata oltre 6 s e annullata da Esc, eliminazione da tastiera (anche della conversazione aperta e di «Elimina tutto») che resta nello Storico con focus vicino o sul titolo e annuncio dell'esito. Nel ConfigTool installato: conferme prima di «Leggi e autorizza» e «Esporta PDF» con modifiche pendenti, Esc sull'informativa con casella spuntata che chiede conferma, Annulla che chiude senza domande, motivo del pulsante disabilitato accanto ai pulsanti, riga «Chiave di accesso» nascosta con autenticazione «none»; nessun salvataggio, hash della configurazione invariati.
-
-Difetti trovati e corretti nello stesso lotto, poi riverificati sulla build reinstallata: il pulsante «?» della guida contestuale si allargava a tutta la riga; la tendina «Solo Posta in arrivo» era troncata a 200%; dopo una conferma l'annuncio «Conversazione eliminata.» veniva sostituito da «Conferma annullata.»; la casella dell'informativa era senza testo visibile perché la finestra non usava i colori del tema. Gate: 1.790 test per runtime net48/net10, `test-scripts.ps1`, analisi statica/build Release e `WebViewFocus.Smoke.ps1` superati.
-
-Non verificati dal vivo: «Interruzione in corso…» (la ricerca locale termina in 0,2 s e il profilo cloud predefinito è bloccato dall'informativa), le scelte dei turni precedenti in Chat, l'annullo UAC e la lunghezza della password amministrativa (nessun valore inserito nei campi password), l'indicatore d'avviso e l'avvio automatico dopo la procedura guidata (richiedono un salvataggio). Restano coperti dai test isolati.
-
-## Preferenze concorrenti e catalogo IA — 3 novembre 2026
-
-Il test delle preferenze attende che entrambi i writer indipendenti siano pronti prima di liberarli e conserva tempi di avvio e delle singole operazioni. Le prove net48/net10 a riposo, con carico CPU e con I/O controllato preservano tutte le flag. Un titolare indipendente del mutex verifica il timeout senza sostituire il file e il successivo recupero; l'abbandono del mutex conserva le flag. Il writer produttivo mantiene mutex, attesa di due secondi e flush atomico. Nel gate completo il timeout è ricomparso su net10: un writer fallisce la prima operazione mentre l’altro prosegue. La fixture ora attende entrambi prima di riportare un errore, per conservarne le tracce. La causa resta indimostrata: A234 rimane parziale, senza attribuzioni a starvation, scheduling o corruzione.
-
-Il candidato propone sei preset IA e converte in memoria dodici tipi ritirati al generico `openai-compatible`, senza scrivere durante il caricamento. Salvataggio, importazione offline e ripristino conservano endpoint, modello e riferimenti alle chiavi; le capacità specifiche vengono invalidate e il cambio di tipo invalida autorizzazione e riuso della conversazione. Il generico usa chat completions, autenticazione none/bearer e nessuna ricerca web specifica. Azure, Perplexity e Ollama Cloud conservano i rispettivi protocolli soltanto per profili esistenti. Dettagli e limiti in [Provider IA](../admin/provider-ia.md#preset-disponibili).
-
-Il gate finale supera 1.817 test per ciascun runtime net48/net10, 22 script, analisi statica/build Release e smoke net48 x64/x86; NuGet non segnala vulnerabilità. Il timeout A234 del gate precedente resta una prova distinta e non è risolto dal verde successivo. Entrambi i template distribuiti superano `validate` offline.
-
-## Marcatore rimosso e feedback del riquadro — 3 novembre 2026
-
-Il candidato `3f375c1` toglie il marcatore dei testi generati e il comando `inspect-ai-html`, e migliora feedback del riquadro (A199) e del ConfigTool (A200). Il gate supera 1.790 test misurati per ciascun runtime net48/net10, tutti gli script di `test-scripts.ps1`, analisi statica/build Release senza avvisi e smoke net48 x64/x86; il conteggio è riconciliato con il 1.817 del gate precedente (`1e1fe75`) confrontando i nomi di `dotnet test --list-tests`: −34 casi di `GeneratedTextMarkupTests` (7 test e 8 teorie espanse in 27 casi, tutti legati al marcatore rimosso) e +7 casi di ConfigToolUxTests/MainConfigFormTests danno 1.790, senza esclusioni; a `86ba0b2` l'elenco è 1.792 (+2 test di A200 per «?» e note della procedura guidata), misurato il 3 novembre 2026. Le tabelle di Stato sono state misurate su una pagina statica (nessuno scorrimento a 400 px, 4 px a 340 px). Nessuna prova dal vivo in Outlook né sul ConfigTool installato: l'installato noto resta `18647c6`.
-
-Le regressioni usano configurazioni/vault sintetici, UI WinForms isolata e HTTP simulato. Non qualificano una nuova installazione, Outlook o servizi cloud reali. Ricevuta nel dossier: `history/2026-11-03-A234-A211/report.md`.
-
-## Layout e Storico del riquadro — 3 novembre 2026
-
-Il candidato locale impila i filtri di Posta nelle viste strette, compatta l'intestazione nelle finestre basse e riserva spazio al toast anche con la barra lavori. Il minimo della pagina resta 340 CSS px; i pannelli si adattano alla viewport, distinta dalla larghezza del documento. Eliminare una conversazione, anche quella corrente, o tutto lo Storico mantiene la pagina aperta. Il focus segue la voce successiva, poi precedente, oppure il titolo della lista vuota; i ridisegni conservano l'identità del controllo attivo. Una risposta tardiva non riapre lo Storico e non impone il focus precedente.
-
-Gli esiti di eliminazione sono correlati alla richiesta e annunciati dopo la persistenza. File mancanti o bloccati producono un errore; un'eliminazione parziale non annuncia successo e può essere riprovata. Se fallisce soltanto la lettura successiva, l'esito dell'eliminazione resta distinto e la lista offre Riprova.
-
-Le cancellazioni registrano prima una revoca cifrata persistente dell'ID, verificata da ogni writer sotto il mutex dello storico: una scrittura tardiva non ricrea la conversazione. Un file superstite dopo un errore resta leggibile e l'eliminazione può essere riprovata; le sue scritture restano revocate. «Elimina tutto» include gli ID già persistiti al momento dell'operazione, lasciando salvabili quelli nuovi non ancora presenti su disco. Il registro assente è ammesso per gli storici precedenti; se è illeggibile, salvataggi e cancellazioni falliscono senza scartarlo. Il registro non viene compattato automaticamente. Anche le letture della lista sono correlate: risposte precedenti alla cancellazione, duplicate o superate da una nuova lettura sono scartate. Le invalidazioni avviano un nuovo refresh, differito durante una cancellazione, senza spostare il focus.
-
-La navigazione Posta espone un landmark con nome; chip e sezione corrente hanno indicatori anche in `forced-colors`.
-
-`DpapiHistoryStorageServiceTests` verifica revoche, riapertura ed errori; `HistoryDeletion.Tests.ps1` controlla writer in processi indipendenti. `HistoryPane.Tests.cjs` esercita focus, errori e risposte obsolete; `PanePolicy.Tests.ps1` usa lo storage cifrato reale con dati sintetici e un file bloccato. `WebViewFocus.Smoke.ps1` misura 380×800 e 190×400, anche con zoom WebView2 al 200%, verifica i valori delle tendine, toast e barra lavori, navigazione da tastiera e contrasto emulato. Il parametro facoltativo `-EvidenceDirectory` conserva misure e catture sintetiche. Queste prove isolate non qualificano Outlook installato, tecnologie assistive, DPI dei monitor o il Contrasto elevato di Windows. A191/A194 conservano i criteri dal vivo aperti.
-
-La ripetizione finale del precedente lotto A191/A194 del 3 novembre 2026 superò **1.784 test per ciascun runtime net48/net10**, zero esclusi; Release e analisi statica senza avvisi/errori, 21 script, smoke net48 e WebViewFocus x64/x86 superati, NuGet senza vulnerabilità segnalate. Un gate intermedio ha riprodotto il timeout net10 di `ConcurrentProcesses_PreserveEveryFlag` già tracciato in A234; writer e test sono invariati e il successivo esito verde non ne dimostra la causa né risolve l'instabilità. Esiti e limiti conservati nel dossier, `history/2026-11-03-A233-A191-A194/report.md`.
-
-## Agenda e confine cloud rigoroso — 2 novembre 2026
-
-Ricevuta storica trasferita nel dossier SecondBrain: `02-areas/products/OnlyWorkspace/history/2026-11-03-MEM02/ricevute.md#agenda-e-confine-cloud-rigoroso--2-novembre-2026`.
-
-## Ripresa assistita della qualifica Outlook — 2 novembre 2026
-
-Ricevuta storica trasferita nel dossier SecondBrain: `02-areas/products/OnlyWorkspace/history/2026-11-03-MEM02/ricevute.md#ripresa-assistita-della-qualifica-outlook--2-novembre-2026`.
-
-## Installazione e ridimensionamento del riquadro — 2 novembre 2026
-
-Ricevuta storica trasferita nel dossier SecondBrain: `02-areas/products/OnlyWorkspace/history/2026-11-03-MEM02/ricevute.md#installazione-e-ridimensionamento-del-riquadro--2-novembre-2026`.
-
-## Errori del ConfigTool — 2 novembre 2026
-
-Ricevuta storica trasferita nel dossier SecondBrain: `02-areas/products/OnlyWorkspace/history/2026-11-03-MEM02/ricevute.md#errori-del-configtool--2-novembre-2026`.
-
-## Errori del riquadro — 2 novembre 2026
-
-Ricevuta storica trasferita nel dossier SecondBrain: `02-areas/products/OnlyWorkspace/history/2026-11-03-MEM02/ricevute.md#errori-del-riquadro--2-novembre-2026`.
-
-## Consensi per profilo e istruzioni tecniche — 1 novembre 2026
-
-Ricevuta storica trasferita nel dossier SecondBrain: `02-areas/products/OnlyWorkspace/history/2026-11-03-MEM02/ricevute.md#consensi-per-profilo-e-istruzioni-tecniche--1-novembre-2026`.
-
-## Esteso e riscontri del ConfigTool — 1 novembre 2026
-
-Ricevuta storica trasferita nel dossier SecondBrain: `02-areas/products/OnlyWorkspace/history/2026-11-03-MEM02/ricevute.md#esteso-e-riscontri-del-configtool--1-novembre-2026`.
-
-## Pseudonimizzazione e ridimensionamento — 1 novembre 2026
-
-Ricevuta storica trasferita nel dossier SecondBrain: `02-areas/products/OnlyWorkspace/history/2026-11-03-MEM02/ricevute.md#pseudonimizzazione-e-ridimensionamento--1-novembre-2026`.
+Evidenza corrente sul working tree dell'11/11/2026: `check-code.ps1` con 0 avvisi, suite xUnit net10 e net48 verdi. Non è una prova sulla build installata: la build installata può essere precedente ai lotti recenti e le prove a schermo sono elencate in «Non qualificato» e nel tracker.
 
 ## Comandi
 
@@ -216,14 +37,6 @@ Formato **13**, pipe **v15**. Le migrazioni dai formati 11/12 sono coperte da fi
 
 Nel lotto A205 del 29 ottobre 2026 la build allora candidata era installata su WS-DP01: firma verificata e file corrispondenti al publish. Migrazione e ricerca sono provate anche su copie sintetiche create dai precedenti binari installati, con il nuovo runtime net48 x64 e x86. Il vecchio lettore 1 richiede la rilettura degli allegati: il corpo resta disponibile e i testi superati non vengono serviti. Dentro Outlook sono osservati il riquadro, lo Stato senza contatori delle schede e il blocco cloud fino al rinnovo dell'informativa v3; ConfigTool espone soltanto le scelte dell'archivio. Configurazione e vault sono preservati. Queste prove non qualificano provider reali, Office x86, grandi cassette o guasti fisici; la cartella già non leggibile resta un limite dichiarato. Evidenze nel dossier, `history/2026-10-29-A205-completamento/report.md`.
 
-## Lotto residui di verifica — 3 novembre 2026
-
-Su `86ba0b2`: il conteggio dei test è riconciliato (sezione precedente); il testo della presentazione PDF non cita il marcatore rimosso (le slide sono immagini, verificate alla fonte `DECK` in `generate-assets.py`); `check-code.ps1` controlla l'allineamento dei ponti skill ed è stato provato su copie; il suo fallimento transitorio è riprodotto solo eseguendolo mentre `dotnet test` usa lo stesso albero (MSB3026), vedi [Analisi statica](analisi-statica.md). Il «?» di «Servizio IA» resta dentro la griglia a 100%, 150% e 200% di scala simulata (test), e a schermo sulla build installata `86ba0b2` a 100% le note dei passi 1, 3 e 4 della procedura guidata mostrano un testo accanto al «?»; il 200% a schermo non è stato misurato.
-
-Gate sul working tree del lotto (non ancora in commit): 1.794 test per ciascun runtime net48/net10 (1.792 a `86ba0b2` più 2 casi di scala), `test-scripts.ps1`, `check-code.ps1` e smoke net48 x64/x86 superati. Il primo gate ha trovato 8 casi di `SetupWizard_ExplainsLocalIndexingAndNoticeForInteractiveCloudActions` falliti da `86ba0b2`: il test non scendeva nelle righe delle note, ora corretto.
-
-A234: 160 esecuzioni isolate di `ConcurrentProcesses_PreserveEveryFlag` (40 per runtime, a riposo e con 24 cicli CPU su 16 thread) sono passate tutte; il timeout del mutex non è riprodotto e la causa resta non dimostrata. Writer e attesa di 2 s invariati.
-
 ## Discrepanze aperte
 
 Il Briefing Minimo esclude l'agenda dal prompt e riusa solo il risultato validato del modello tramite `HistoryChatMessage.ModelContent`; `Content` conserva l'agenda e le altre informazioni locali per la visualizzazione. `PanePolicy.Tests.ps1` esercita `CompleteBriefingAsync`, factory reale, HTTP su loopback, salvataggio DPAPI, riapertura e richiesta successiva con appuntamenti ed email sentinella sintetici. A Minimo non escono soggetto, luogo e metadati mostrati soltanto localmente; Standard e profilo locale conservano il contesto dell'agenda. Il livello 0 e l'informativa restano vincoli di dispatch. Nelle prove di quel lotto la policy conversazione era revisione 4; nel candidato attuale è revisione 8 e vincola il riuso alla policy del profilo. La fixture sostituisce la raccolta Outlook con dati semplici: non qualifica una nuova installazione o un servizio cloud reale. Il vecchio percorso costruiva il prompt con l'agenda, ma la factory rifiutava il Briefing a Minimo; nessun invio reale pregresso è dimostrato.
@@ -234,7 +47,7 @@ A205 è completata sul candidato pubblicato `db1a459`: archivio formato 12, pipe
 
 Il preset **Ricostruisci la pratica** è locale, precede la factory IA e resta disponibile senza un profilo IA. Il dispatcher net48 con archivio e pipe isolati verifica identità della fonte, fonte assente e cassetta esclusa; il riquadro scarta le risposte tardive. La sintesi è un comando esplicito separato. La nuova migrazione supporta 11/12→13, verifica il backup completo e conserva i dati rimossi soltanto nelle copie di recupero. Prove isolate e funzionamento installato restano distinti.
 
-Il tracker (SecondBrain: `02-areas/products/OnlyWorkspace/tracker.json`) è l’unica fonte del lavoro aperto, con evidenze, priorità, dipendenze e criteri di completamento. I conteggi e gli ordini di ripresa nei lotti precedenti sono storici e non riaprono attività concluse. I residui già bloccati restano soggetti ai vincoli delle rispettive voci. Il limite di 6.000 caratteri dell’input web resta (A44: oltre il limite il riquadro lo dichiara sotto la risposta); ampliarlo richiede nuova informativa e accettazione.
+Il tracker (SecondBrain: `01-projects/OnlyWorkspace/tracker.json`) è l’unica fonte del lavoro aperto, con evidenze, priorità, dipendenze e criteri di completamento. I conteggi e gli ordini di ripresa nei lotti precedenti sono storici e non riaprono attività concluse. I residui già bloccati restano soggetti ai vincoli delle rispettive voci. Il limite di 6.000 caratteri dell’input web resta (A44: oltre il limite il riquadro lo dichiara sotto la risposta); ampliarlo richiede nuova informativa e accettazione.
 
 Ricerca per riferimenti in chat qualificata sulla build installata con PST sintetico: entrambe le domande di A162 trovano l'ordine richiesto ed escludono quello diverso. Parser, termini di contenuto, confini delle cassette e allegati sono coperti dai test automatici; il parser della ricerca esplicita conserva il proprio comportamento. Il confronto delle fonti in [Conformità UE](../admin/conformita-ue.md) usa originali italiani di AI Act, modifica 2026/1744, consolidato AI Act al 27/07/2026 e consolidato GDPR acquisiti il 28/10/2026 dalla API Cellar dell'Ufficio delle pubblicazioni (EUR-Lex rifiuta lo scaricamento automatico); verificati gli articoli citati, non l'intero testo né l'applicazione al caso concreto. Art. 11 della L.132/2025 confrontato con Normattiva vigente al 27/10/2026; questo riscontro non qualifica l'intera legge né le norme richiamate. I test tecnici non sostituiscono queste verifiche. A175: ruoli e applicabilità valutati sul perimetro dichiarato dal manutentore (uso interno lavorativo dal 2 agosto 2026 in poi), con fonti AI Act nelle versioni accettate dal registro e linee guida finali del 20/07/2026. Sei fixture sul sorgente reale DraftFormatter, tre prove della copia con appunti simulati e dieci dimostrazioni su metadati/impronte documentano la fattibilità iniziale, senza qualifica Outlook; il successivo incremento HTML è descritto sotto. Task aperto e parziale; ricevuta history/2026-10-28-a175-valutazione-fattibilita/report.md nel dossier. La sola valutazione iniziale non richiedeva build o suite completa; i controlli mirati del successivo incremento HTML sono distinti.
 
@@ -289,11 +102,7 @@ Le azioni contestuali sono coperte da `SelectionActions.Tests.cjs`, `PanePolicy.
 
 Exchange, OST e cassette condivise; cassette oltre 80 GB; Office MSI a 32 bit; installazione senza WebView2; ConfigTool con scala di sistema al 125%; reset password da utente standard con UAC; disco pieno e perdita di alimentazione; connettori senza account (Azure OpenAI, Anthropic, Mistral, xAI, DeepSeek, OpenRouter, Groq, Together, Fireworks, Perplexity, Ollama Cloud, LM Studio, llama.cpp, vLLM, LocalAI, Jan). Gli smoke x86 non qualificano Outlook x86. Pratiche (E9) e OCR (E8) osservati sulla build installata solo su dati sintetici; OCR provato solo con il riconoscitore `it-IT` e su scansioni sintetiche, non su PC senza lingue OCR né su scansioni reali di qualità bassa. Riprova sulle email e sui risultati web già letti verificata solo dai test: sulla build installata il pulsante compare solo dopo un errore reale del modello. Livelli di esposizione, informativa v2 e segnaposto collaudati sulla build installata il 27/10/2026: salvataggio bloccato senza informativa v2, compilazione, export PDF dal ConfigTool, richieste del riquadro registrate da un endpoint compatibile OpenAI su loopback ai livelli 1, 2 e 3 (PST sintetico; al livello 1 schede di sintesi solo su posta reale, perché quel giorno le schede cloud erano sospese) e risposta dai fatti locali senza richiesta. Non provati nel riquadro con un provider cloud reale; i segnaposto riconoscono i nomi solo accanto a un indirizzo email; le etichette «Scadenza pagamento», «Scadenza fattura» e «Data di scadenza» sono coperte dall’estrattore revisione 3 e dal recupero dei derivati 2→3, senza rigenerare schede o modificare originali, consensi e consumi. Briefing e Appuntamenti e scadenze usano fatti locali a Minimo e originali ripuliti a Standard o con profili locali; il Briefing Minimo conserva l’agenda solo nella visualizzazione locale e nello Storico. Pacchetti, copie fisiche, filtri di cassetta e risposta locale senza trasporto sono verificati anche dal test del coordinatore net48 isolato; l’intento è classificato da regole locali, senza richiesta al modello.
 
-Lo stato aperto e i criteri di chiusura sono nel tracker (SecondBrain: `02-areas/products/OnlyWorkspace/tracker.json`); le prove precedenti e le revisioni documentali/skill restano nella storia Git. I conteggi e gli esiti dei lotti precedenti qualificano solo quei checkout; i criteri attuali sono nel tracker e le prove di ogni attività chiusa nelle ricevute `history/` del dossier SecondBrain. Sync e Check SecondBrain accompagnano l'aggiornamento del dossier. I comandi riproducibili sono nella sezione Comandi di questa guida e in Output locali; AGENTS.md contiene le direttive comuni, mentre le skill mantengono le istruzioni specifiche dei flussi.
-
-## Accettazione E6 — 24/10/2026 notte
-
-Ricevuta storica trasferita nel dossier SecondBrain: `02-areas/products/OnlyWorkspace/history/imported/docs/tecnico/verifica.md#accettazione-e6--24102026-notte`. Questo riferimento conserva i collegamenti delle guide e delle fixture; non ripete la qualifica sul codice corrente.
+Lo stato aperto e i criteri di chiusura sono nel tracker (SecondBrain: `01-projects/OnlyWorkspace/tracker.json`); le prove precedenti e le revisioni documentali/skill restano nella storia Git. I conteggi e gli esiti dei lotti precedenti qualificano solo quei checkout; i criteri attuali sono nel tracker e le prove di ogni attività chiusa nelle ricevute `history/` del dossier SecondBrain. Sync e Check SecondBrain accompagnano l'aggiornamento del dossier. I comandi riproducibili sono nella sezione Comandi di questa guida e in Output locali; AGENTS.md contiene le direttive comuni, mentre le skill mantengono le istruzioni specifiche dei flussi.
 
 ## Preferenze concorrenti: limite misurato
 

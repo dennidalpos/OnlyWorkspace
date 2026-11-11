@@ -29,11 +29,46 @@ Il registro DPAPI conserva identificativo casuale, data, esito, revisioni e cont
 
 ## Autorizzazione e limiti
 
-L'informativa 7 registra una conferma tecnica con utente Windows, postazione, data e testo accettato, distinta per profilo, destinazione, area del servizio, permessi e credenziali effettive. L'area (UE, non UE, non specificata) è dichiarata dall'amministratore per profilo; se non specificata serve una conferma separata. Non registra dichiarazioni aziendali o contrattuali. I record precedenti restano conservati e richiedono rinnovo. La policy conversazionale 8 separa i nuovi contesti dallo storico precedente.
+L'informativa 8 registra una conferma tecnica con utente Windows, postazione, data e testo accettato, distinta per profilo, destinazione, area del servizio, permessi e credenziali effettive. L'area (UE, non UE, non specificata) è dichiarata dall'amministratore per profilo; se non specificata serve una conferma separata. Non registra dichiarazioni aziendali o contrattuali. I record precedenti restano conservati e richiedono rinnovo. La policy conversazionale 8 separa i nuovi contesti dallo storico precedente.
 
 Il catalogo 3 riconosce anche il nome «euro» come parola intera, senza distinzione fra maiuscole e minuscole, prima o dopo un numero separato da spazio orizzontale. Sono coperte forme come `1234,56 euro` ed `EURO -1.234,56`, oltre a EUR, USD, GBP e ai simboli €, $, £. Il nome «euro» richiede cifre, con eventuali separatori interni virgola e punto. Parole come «eurozona» ed «euros», numeri raggruppati con spazi e altri nomi di valuta esulano da questa regola. La revisione 3 richiede di rinnovare le autorizzazioni dei profili interessati e apre un nuovo contesto conversazionale.
 
 Il catalogo 4 maschera gli indirizzi postali italiani (categoria `INDIRIZZO`): via, viale, piazza, piazzale, corso, largo, vicolo, strada, lungotevere, contrada o località seguiti da un nome con iniziale maiuscola e da un numero civico, con CAP, una parola di città e sigla di provincia se presenti. Una parola comune come «via» o «corso» senza nome proprio e civico resta com’è; una città di più parole può restare in parte visibile. Indirizzi esteri e scritti in altro modo, e **le ragioni sociali nel testo libero**, non sono mascherati: escono come scritti, salvo le aziende note agli store autorizzati. La revisione 4 richiede di rinnovare le autorizzazioni dei profili interessati (stessa regola della 3).
+
+## Misura del riconoscimento
+
+Misura dell'11 novembre 2026 sul catalogo incorporato (revisione 4), senza entità locali né elenchi del cliente: è il riconoscimento dei soli modelli del catalogo. Il corpus è sintetico e deterministico, generato da `PseudonymizationBench` in `tests/OnlyWorkspace.Tests`: nomi comuni combinati a caso, indirizzi e-mail `.test`, numeri di telefono in blocchi non assegnati, IBAN, codici fiscali e partite IVA costruiti per regola da parti inventate. Nessun dato reale. Ogni testo è etichettato con i valori che dovrebbero uscire mascherati; le esche sono testi senza dati che somigliano a dati (numeri d'ordine di 11 cifre, versioni con tre numeri, nomi di prodotto).
+
+**Mascherati**: il valore non compare più nel testo inviato. **Categoria giusta**: il segnaposto che lo copre è della categoria attesa. **Mancati**: valori rimasti in chiaro. **Falsi positivi**: segnaposto su testo che non era un dato.
+
+<!-- bench:start -->
+Catalogo revisione 4: corpus sintetico di 280 testi, 248 valori etichettati e 40 testi senza dati personali (esche).
+
+| Categoria | Valori | Mascherati | Categoria giusta | Mancati | Falsi positivi |
+| --- | --- | --- | --- | --- | --- |
+| PERSONA | 40 | 20 % | 20 % | 32 | 0 |
+| AZIENDA | 20 | 0 % | 0 % | 20 | 0 |
+| INDIRIZZO | 30 | 67 % | 67 % | 10 | 0 |
+| EMAIL | 28 | 100 % | 100 % | 0 | 0 |
+| TEL | 24 | 100 % | 100 % | 0 | 0 |
+| IBAN | 16 | 100 % | 100 % | 0 | 0 |
+| CF | 16 | 100 % | 100 % | 0 | 0 |
+| PIVA | 16 | 100 % | 100 % | 0 | 2 |
+| IMPORTO | 24 | 100 % | 100 % | 0 | 0 |
+| DATA | 24 | 67 % | 67 % | 8 | 1 |
+| PRATICA | 10 | 100 % | 100 % | 0 | 0 |
+| **Totale** | 248 | 72 % | 72 % | 70 | 3 |
+<!-- bench:end -->
+
+Come leggerla:
+
+- **Identificatori con forma fissa** (e-mail, telefoni, IBAN, codici fiscali, partite IVA, importi, riferimenti di pratica): tutti mascherati nel corpus. I falsi positivi sono numeri di 11 cifre che non sono partite IVA (2) e una versione software scritta come data (1).
+- **Persone**: si riconoscono solo quando il nome è scritto accanto al suo indirizzo e-mail, come nell'intestazione «Da: Nome Cognome <indirizzo>». Un nome dopo un saluto («Gentile Nome Cognome»), in mezzo a una frase, a inizio frase o in una firma passa in chiaro; solo il 20 % dei valori del corpus è coperto, cioè le sole intestazioni con indirizzo. Un nome è comunque mascherato in tutto il testo quando compare anche in un'intestazione con indirizzo.
+- **Ragioni sociali**: 0 %. Il catalogo non ha un modello per le aziende; escono in chiaro, salvo quelle presenti tra le entità locali.
+- **Indirizzi**: gli indirizzi italiani con «via», «piazza», «corso» e simili sono coperti; quelli esteri (formato inglese o tedesco) e la forma con numero prima della via no. Il numero civico con barra è coperto.
+- **Date**: i formati numerici con barra, trattino o punto sono coperti; mancano la data scritta con il mese in lettere e quella con anno a due cifre.
+
+Il numero non dice nulla sulle categorie particolari dei dati (salute, opinioni, appartenenze), che il catalogo non cerca. Serve a decidere, con un dato, se vale la pena aggiungere un secondo strato (per esempio un riconoscitore di entità locale) per persone e aziende: questa misura non lo introduce né lo propone. Ripetere con `dotnet test tests\OnlyWorkspace.Tests --filter PseudonymizationBench`; il test `PublishedTable_EqualsTheMeasureOfTheCurrentCatalog` fallisce se il catalogo cambia e la tabella no.
 
 ## Catture reali (7 novembre 2026, QwenCloud)
 

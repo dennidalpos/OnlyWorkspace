@@ -51,14 +51,14 @@ La [guida del riquadro](utente/riquadro.md) spiega azioni, scorciatoie e interru
 
 - **Archivio**: database cifrato sul PC, gestito dalla tray, con chiave protetta da DPAPI Windows. Conserva i testi acquisiti degli allegati, non i file allegati originali.
 - **IA locale**: Ollama su loopback elabora sul PC. Per lavorare offline occorre anche disattivare la ricerca web.
-- **Servizi esterni**: il livello 0 blocca gli invii. Minimo ammette solo fatti strutturati protetti; Standard anche email e testo libero, già mascherati (identificativi, importi e date sostituiti da segnaposto, ripristinati sul PC); Esteso aggiunge il testo degli allegati con permesso distinto. Nomi dei file, file binari e query web non verificabili restano sul PC; i dati sensibili non riconosciuti dalla maschera non sono anonimizzati. Anche i modelli locali ricevono il testo con gli identificativi mascherati. Gli invii richiedono autorizzazione tecnica per profilo con informativa 7 e l'area del servizio (UE, non UE, non specificata), senza campi manuali.
+- **Servizi esterni**: il livello 0 blocca gli invii. Minimo ammette solo fatti strutturati protetti; Standard anche email e testo libero, già mascherati (identificativi, importi e date sostituiti da segnaposto, ripristinati sul PC); Esteso aggiunge il testo degli allegati con permesso distinto. Nomi dei file, file binari e query web non verificabili restano sul PC; i dati sensibili non riconosciuti dalla maschera non sono anonimizzati. Anche i modelli locali ricevono il testo con gli identificativi mascherati. Gli invii richiedono autorizzazione tecnica per profilo con informativa 8 e l'area del servizio (UE, non UE, non specificata), senza campi manuali.
 - **Pseudonimizzazione**: sostituisce i valori riconosciuti e li ripristina nella risposta sul PC. Può lasciare dati non riconosciuti; non garantisce anonimato. Importi e date hanno opzioni separate, inizialmente disattivate.
 
 Dettagli e limiti: [Modelli IA e Web Search](utente/modelli-web.md), [Sicurezza e privacy](admin/sicurezza.md), [Pseudonimizzazione](tecnico/pseudonimizzazione.md).
 
 ## Documentazione
 
-[Indice delle guide](README.md): [utente](README.md#utente), [amministratore](README.md#amministratore), [tecnico](README.md#tecnico). Per iniziare: [Riquadro](utente/riquadro.md) e [Installazione](admin/installazione.md).
+[Indice delle guide](README.md#italian-reference-map). Per iniziare: [Riquadro](utente/riquadro.md) e [Installazione](admin/installazione.md).
 
 Le guide descrivono il codice disponibile; le prove sulla build installata hanno una copertura distinta. Diagrammi di dettaglio: [percorsi utente](utente/guida-visiva.md) e [architettura](tecnico/architettura.md).
 
