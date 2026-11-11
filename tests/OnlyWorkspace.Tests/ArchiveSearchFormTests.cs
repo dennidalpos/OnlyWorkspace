@@ -3,6 +3,8 @@ using System.Runtime.ExceptionServices;
 using System.Windows.Forms;
 using OnlyWorkspace.ConfigTool.Forms;
 
+using static OnlyWorkspace.Tests.FormFields;
+
 namespace OnlyWorkspace.Tests;
 
 [Collection(WinFormsCollection.Name)]
@@ -61,7 +63,7 @@ public sealed class ArchiveSearchFormTests
                 Assert.Equal(1000m, query.FactFilters[0].AmountMin); Assert.Equal(1000.01m, query.FactFilters[0].AmountMax); Assert.Equal("EUR", query.FactFilters[0].Currency);
                 Assert.Equal(OnlyWorkspace.Core.Archive.ArchiveFactKind.Deadline, query.FactFilters[1].Kind);
                 Assert.Equal("2026-11-01", query.FactFilters[1].DateFrom); Assert.Equal("2026-11-30", query.FactFilters[1].DateTo);
-                var text = (Control)typeof(ArchiveSearchForm).GetField("_query", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(form)!;
+                var text = Field<Control>(form, "_query");
                 text.Text = "ordine ORD-2026/118";
                 Assert.Equal(3, form.CreateQuery().FactFilters.Count);
                 Assert.Equal("ORD-2026/118", form.CreateQuery().FactFilters[2].Value);

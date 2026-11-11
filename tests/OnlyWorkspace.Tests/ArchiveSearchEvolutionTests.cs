@@ -9,6 +9,8 @@ using OnlyWorkspace.Core.Agents;
 using OnlyWorkspace.Core.Archive;
 using OnlyWorkspace.Infrastructure.Archive;
 
+using static OnlyWorkspace.Tests.FormFields;
+
 namespace OnlyWorkspace.Tests;
 
 public sealed class ArchiveSearchEvolutionTests : IDisposable
@@ -60,7 +62,7 @@ public sealed class ArchiveSearchEvolutionTests : IDisposable
     public void CompleteCodeIndexDoesNotReinspectEveryOriginal()
     {
         using var db = Open(); Add(db, "one", "Ordine ORD-2026/118"); Drain(db);
-        var connection = (Microsoft.Data.Sqlite.SqliteConnection)typeof(ArchiveDb).GetField("_db", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(db)!;
+        var connection = Field<Microsoft.Data.Sqlite.SqliteConnection>(db, "_db");
         int inspections = 0;
         connection.CreateFunction<string?, string?, long>("ow_code_contains", (text, fragment) => { inspections++; return 0; });
         Assert.Single(db.Search(new ArchiveQuery { Text = "2026/118" }));
@@ -147,7 +149,7 @@ public sealed class ArchiveSearchEvolutionTests : IDisposable
             db.SaveBody(id, body);
         }
         Drain(db); Assert.Equal(2, db.Search(new ArchiveQuery { Text = "12345" }).Count);
-        var connection = (Microsoft.Data.Sqlite.SqliteConnection)typeof(ArchiveDb).GetField("_db", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(db)!;
+        var connection = Field<Microsoft.Data.Sqlite.SqliteConnection>(db, "_db");
         using (var command = connection.CreateCommand()) { command.CommandText = "update attachment_contents set text='ORDER-98765'"; command.ExecuteNonQuery(); }
         Assert.Empty(db.Search(new ArchiveQuery { Text = "12345" })); Assert.Equal(2, db.Search(new ArchiveQuery { Text = "98765" }).Count);
         Drain(db); Assert.Empty(db.Search(new ArchiveQuery { Text = "12345" })); Assert.Equal(2, db.Search(new ArchiveQuery { Text = "98765" }).Count);
@@ -183,7 +185,7 @@ public sealed class ArchiveSearchEvolutionTests : IDisposable
         if (upgrade)
         {
             // Emulate an existing archive with the previously persisted content trigger and no revision.
-            var connection = (Microsoft.Data.Sqlite.SqliteConnection)typeof(ArchiveDb).GetField("_db", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(db)!;
+            var connection = Field<Microsoft.Data.Sqlite.SqliteConnection>(db, "_db");
             using var command = connection.CreateCommand();
             command.CommandText = "drop trigger search_content_update; create trigger search_content_update after update on attachment_contents begin " +
                 "delete from code_attachment_fts where rowid in(select email_id from attachments where content_hash=old.hash); " +

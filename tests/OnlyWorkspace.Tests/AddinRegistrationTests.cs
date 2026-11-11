@@ -6,6 +6,8 @@ using OnlyWorkspace.ConfigTool.Forms;
 using OnlyWorkspace.ConfigTool.Services;
 using OnlyWorkspace.Core.Models;
 
+using static OnlyWorkspace.Tests.FormFields;
+
 namespace OnlyWorkspace.Tests;
 
 [Collection(WinFormsCollection.Name)]
@@ -44,7 +46,7 @@ public sealed class AddinRegistrationTests
                 using var wizard = new SetupWizardForm(profile, null, archiveEnabled: true, indexAttachments: false);
                 var next = typeof(SetupWizardForm).GetMethod("Next", BindingFlags.NonPublic | BindingFlags.Instance)!;
                 for (int i = 0; i < 4; i++) next.Invoke(wizard, null);
-                var summary = (Label)typeof(SetupWizardForm).GetField("_lblSummary", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(wizard)!;
+                var summary = Field<Label>(wizard, "_lblSummary");
                 Assert.Contains("synthetic", summary.Text);
                 Assert.Contains("locale", summary.Text);
                 Assert.Contains("senza il testo degli allegati", summary.Text);
@@ -85,7 +87,7 @@ public sealed class AddinRegistrationTests
                 };
                 var original = System.Text.Json.JsonSerializer.Serialize(profile);
                 using var wizard = new SetupWizardForm(profile, cloud ? "synthetic-key" : null, archive, attachments);
-                var pages = (List<Control>)typeof(SetupWizardForm).GetField("_steps", flags)!.GetValue(wizard)!;
+                var pages = Field<List<Control>>(wizard, "_steps");
                 var next = typeof(SetupWizardForm).GetMethod("Next", flags)!;
                 // Notes are a visible summary plus a «?» whose AccessibleDescription holds the full text, one level down.
                 static IEnumerable<Control> All(Control parent) => parent.Controls.Cast<Control>().SelectMany(c => new[] { c }.Concat(All(c)));
@@ -101,16 +103,16 @@ public sealed class AddinRegistrationTests
                 Assert.DoesNotContain("non invia nulla a servizi IA", text);
                 Assert.DoesNotContain("una volta, per ogni profilo", text);
 
-                var note = ((Label)typeof(SetupWizardForm).GetField("_lblModelNote", flags)!.GetValue(wizard)!).Text;
+                var note = Field<Label>(wizard, "_lblModelNote").Text;
                 Assert.Contains("Privacy e dati", note);
                 Assert.Contains(cloud ? "fatti locali con segnaposto" : "senza Web Search", note);
-                var tips = (ToolTip)typeof(SetupWizardForm).GetField("_tips", flags)!.GetValue(wizard)!;
-                var attachmentChoice = (Control)typeof(SetupWizardForm).GetField("_chkAttachments", flags)!.GetValue(wizard)!;
+                var tips = Field<ToolTip>(wizard, "_tips");
+                var attachmentChoice = Field<Control>(wizard, "_chkAttachments");
                 Assert.Contains("Conserva nell'archivio cifrato il testo", tips.GetToolTip(attachmentChoice));
                 Assert.Contains("Non autorizza da solo invii cloud", tips.GetToolTip(attachmentChoice));
 
                 for (int i = 0; i < 4; i++) next.Invoke(wizard, null);
-                var summary = ((Label)typeof(SetupWizardForm).GetField("_lblSummary", flags)!.GetValue(wizard)!).Text;
+                var summary = Field<Label>(wizard, "_lblSummary").Text;
                 Assert.Contains(archive ? "corpo integrale acquisito" : "Archivio: non consentito", summary);
                 if (archive) Assert.Contains(attachments ? ", con il testo degli allegati." : ", senza il testo degli allegati.", summary);
                 Assert.Contains("Gli invii esterni delle azioni IA e di Web Search richiedono l'informativa accettata", summary);
@@ -142,7 +144,7 @@ public sealed class AddinRegistrationTests
                 using var wizard = new SetupWizardForm(new LlmProfileConfig { Id = "synthetic", Model = "synthetic" }, null, true, true);
                 wizard.Show();
                 wizard.Size = wizard.MinimumSize;
-                var pages = (List<Control>)typeof(SetupWizardForm).GetField("_steps", flags)!.GetValue(wizard)!;
+                var pages = Field<List<Control>>(wizard, "_steps");
                 foreach (int step in new[] { 0, 2, 3, 4 })
                 {
                     typeof(SetupWizardForm).GetMethod("ShowStep", flags)!.Invoke(wizard, new object[] { step });

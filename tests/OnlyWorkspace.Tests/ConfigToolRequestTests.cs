@@ -8,14 +8,14 @@ using OnlyWorkspace.Core.Interfaces;
 using OnlyWorkspace.Core.Models;
 using OnlyWorkspace.Infrastructure.Configuration;
 
+using static OnlyWorkspace.Tests.FormFields;
+
 namespace OnlyWorkspace.Tests;
 
 [Collection(WinFormsCollection.Name)]
 public sealed class ConfigToolRequestTests
 {
     private const BindingFlags Flags = BindingFlags.Instance | BindingFlags.NonPublic;
-    private static T Field<T>(object owner, string name) => (T)owner.GetType().GetField(name, Flags)!.GetValue(owner)!;
-    private static void Set(object owner, string name, object value) => owner.GetType().GetField(name, Flags)!.SetValue(owner, value);
     /// <summary>The control's own Visible flag; the property also needs every parent shown, which a form never shown is not.</summary>
     private static bool SelfVisible(Control control)
     {

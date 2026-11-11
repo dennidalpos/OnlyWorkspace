@@ -2,6 +2,8 @@ using System.Text.Json;
 using OnlyWorkspace.Core.Models;
 using OnlyWorkspace.Core.Privacy;
 
+using static OnlyWorkspace.Tests.FormFields;
+
 namespace OnlyWorkspace.Tests;
 
 public sealed class ServiceRegionTests
@@ -81,9 +83,8 @@ public sealed class ServiceRegionTests
             try
             {
                 using var form = new OnlyWorkspace.ConfigTool.Forms.DataEgressConsentForm(new[] { Cloud(region) });
-                var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
-                var read = (System.Windows.Forms.CheckBox)typeof(OnlyWorkspace.ConfigTool.Forms.DataEgressConsentForm).GetField("_read", flags)!.GetValue(form)!;
-                var accept = (System.Windows.Forms.Button)typeof(OnlyWorkspace.ConfigTool.Forms.DataEgressConsentForm).GetField("_accept", flags)!.GetValue(form)!;
+                var read = Field<System.Windows.Forms.CheckBox>(form, "_read");
+                var accept = Field<System.Windows.Forms.Button>(form, "_accept");
                 var confirm = Descendants(form).OfType<System.Windows.Forms.CheckBox>().FirstOrDefault(c => c.Text.StartsWith("Confermo", StringComparison.Ordinal));
                 Assert.Equal(needsConfirmation, confirm != null);
                 read.Checked = true;

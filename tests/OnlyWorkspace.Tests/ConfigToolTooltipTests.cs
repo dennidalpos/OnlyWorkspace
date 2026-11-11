@@ -5,6 +5,8 @@ using OnlyWorkspace.ConfigTool.Forms;
 using OnlyWorkspace.Core.Models;
 using OnlyWorkspace.Infrastructure.Configuration;
 
+using static OnlyWorkspace.Tests.FormFields;
+
 namespace OnlyWorkspace.Tests;
 
 /// <summary>Every command and setting of the ConfigTool says what it is for, also on the tray's archive window and the wizard.</summary>
@@ -54,7 +56,7 @@ public sealed class ConfigToolTooltipTests
         Assert.True(missing.Count == 0, "Senza tooltip: " + string.Join("; ", missing));
     }
 
-    private static ToolTip Tips(object form) => (ToolTip)form.GetType().GetField("_tips", Flags)!.GetValue(form)!;
+    private static ToolTip Tips(object form) => Field<ToolTip>(form, "_tips");
 
     [Fact]
     public void ContrastTheme_UsesSystemColours_AndAnOpenWindowFollowsTheSwitch()
@@ -107,8 +109,8 @@ public sealed class ConfigToolTooltipTests
             using var form = new MainConfigForm(directory, null, directory);
             typeof(MainConfigForm).GetMethod("SetProbeStatus", Flags)!.Invoke(form,
                 new object?[] { "Prova precedente completata", Tone.Success, null });
-            ((ListBox)typeof(MainConfigForm).GetField("_lstProfiles", Flags)!.GetValue(form)!).SelectedIndex = 1;
-            var badge = (OperationalStatusLabel)typeof(MainConfigForm).GetField("_lblProbeStatus", Flags)!.GetValue(form)!;
+            Field<ListBox>(form, "_lstProfiles").SelectedIndex = 1;
+            var badge = Field<OperationalStatusLabel>(form, "_lblProbeStatus");
             Assert.Equal(OnlyWorkspace.Core.Archive.StatusLight.Off, badge.State);
             Assert.DoesNotContain("precedente", badge.Text);
         });
@@ -124,7 +126,7 @@ public sealed class ConfigToolTooltipTests
             badge.SetState(OnlyWorkspace.Core.Archive.StatusLight.Working);
             Assert.Contains("in corso", badge.AccessibleDescription);
             badge.SetState(OnlyWorkspace.Core.Archive.StatusLight.Waiting);
-            var animation = (System.Windows.Forms.Timer)typeof(OperationalStatusLabel).GetField("_animation", Flags)!.GetValue(badge)!;
+            var animation = Field<System.Windows.Forms.Timer>(badge, "_animation");
             Assert.False(animation.Enabled);
             Assert.Equal("Esito completo con motivo", badge.Controls.OfType<TextBox>().Single().Text);
             Assert.True(badge.Controls.OfType<TextBox>().Single().ReadOnly);
@@ -150,17 +152,17 @@ public sealed class ConfigToolTooltipTests
             using var tray = new OnlyWorkspace.ConfigTool.Tray.TrayApplicationContext(directory, true,
                 preferencesDir: directory, archiveDir: Path.Combine(directory, "archive"));
             var type = tray.GetType();
-            var menu = (ContextMenuStrip)type.GetField("_contextMenu", Flags)!.GetValue(tray)!;
+            var menu = Field<ContextMenuStrip>(tray, "_contextMenu");
             Assert.Equal(new[] { "Archivio", "IA", "Configurazione", "Esci da OnlyWorkspace" }, menu.Items.OfType<ToolStripMenuItem>().Select(i => i.Text));
             var set = type.GetMethod("SetArchiveStatus", Flags)!;
-            var archive = (ToolStripMenuItem)type.GetField("_itemArchiveStatus", Flags)!.GetValue(tray)!;
+            var archive = Field<ToolStripMenuItem>(tray, "_itemArchiveStatus");
             set.Invoke(tray, new object[] { OnlyWorkspace.Core.Archive.StatusLight.Error, "Errore sintetico" });
             var image = archive.Image;
             set.Invoke(tray, new object[] { OnlyWorkspace.Core.Archive.StatusLight.Error, "Errore ancora presente" });
             Assert.Same(image, archive.Image);
             Assert.Equal("Errore ancora presente", archive.Text);
             tray.UpdateProfileStatus();
-            var ia = (ToolStripMenuItem)type.GetField("_itemStatus", Flags)!.GetValue(tray)!;
+            var ia = Field<ToolStripMenuItem>(tray, "_itemStatus");
             Assert.Contains("non verificata", ia.Text);
             Assert.Contains("Profilo sintetico", ia.Text);
         });
@@ -180,7 +182,7 @@ public sealed class ConfigToolTooltipTests
             new FileConfigurationService(directory, directory).SetUserFlag("guidedSetupDone", true);
             using var form = new MainConfigForm(directory, null, directory);
             // Pages filled on first display (Informazioni) are built here too.
-            var pages = (List<Control>)typeof(MainConfigForm).GetField("_pages", Flags)!.GetValue(form)!;
+            var pages = Field<List<Control>>(form, "_pages");
             for (int i = 0; i < pages.Count; i++) typeof(MainConfigForm).GetMethod("ShowPage", Flags)!.Invoke(form, new object[] { i });
             AssertEveryControlHasATip(form, Tips(form));
             string TipOf(string field) => Tips(form).GetToolTip((Control)typeof(MainConfigForm).GetField(field, Flags)!.GetValue(form)!) ?? string.Empty;
@@ -257,7 +259,7 @@ public sealed class ConfigToolTooltipTests
             Assert.DoesNotContain(controls.OfType<TextBox>(), t => !t.ReadOnly);
             var read = Assert.Single(controls.OfType<CheckBox>());
             Assert.False(read.Enabled);
-            ((Action)typeof(DataEgressConsentForm).GetField("_unlock", Flags)!.GetValue(notice)!)();
+            Field<Action>(notice, "_unlock")();
             read.Checked = true; Assert.True(accept.Enabled);
             read.Checked = false; Assert.False(accept.Enabled);
         });

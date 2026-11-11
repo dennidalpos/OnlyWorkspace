@@ -6,6 +6,8 @@ using OnlyWorkspace.ConfigTool.Forms;
 using OnlyWorkspace.Core.Models;
 using OnlyWorkspace.Infrastructure.Configuration;
 
+using static OnlyWorkspace.Tests.FormFields;
+
 namespace OnlyWorkspace.Tests;
 
 [Collection(WinFormsCollection.Name)]
@@ -37,13 +39,13 @@ public sealed class SelectableUiTests
                 using var form = new MainConfigForm(directory, null, directory);
                 var flags = BindingFlags.NonPublic | BindingFlags.Instance;
                 var type = typeof(MainConfigForm);
-                var status = (Label)type.GetField("_lblWebSupport", flags)!.GetValue(form)!;
+                var status = Field<Label>(form, "_lblWebSupport");
                 string error = "Errore di verifica: " + new string('x', 500);
                 status.Text = error;
                 type.GetMethod("SetLocked", flags)!.Invoke(form, new object[] { true });
-                var log = (TextBox)type.GetField("_txtLog", flags)!.GetValue(form)!;
-                var endpoint = (TextBox)type.GetField("_txtEndpoint", flags)!.GetValue(form)!;
-                var token = (TextBox)type.GetField("_txtToken", flags)!.GetValue(form)!;
+                var log = Field<TextBox>(form, "_txtLog");
+                var endpoint = Field<TextBox>(form, "_txtEndpoint");
+                var token = Field<TextBox>(form, "_txtToken");
                 Assert.True(log.Enabled);
                 Assert.True(log.ReadOnly);
                 Assert.False(endpoint.Enabled);

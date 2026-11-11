@@ -52,4 +52,21 @@ Le ricerche web con dati non verificabili sono bloccate, inclusi domini ricavati
 - In **Chat** la ricerca parte solo per le domande generali o quando la domanda chiede il web («sul web», «online», «in rete», «notizie»); le domande su posta, agenda e contatti rispondono dai dati Outlook.
 - La raccolta dell’archivio e la ricostruzione locale del flusso non usano Ricerca web. La ricerca può essere addebitata dal provider.
 
+### QwenCloud
+
+Prova reale dell'11/11/2026 sull'endpoint del profilo, `https://token-plan.maas.qwencloudapi.com/compatible-mode/v1`. La documentazione del provider è stata usata solo come riferimento: le pagine non concordano sui modelli supportati.
+
+- **Endpoint**: `POST {BaseUrl}/responses` (Responses API compatibile OpenAI). `GET {BaseUrl}/models` elenca i modelli della chiave.
+- **Richiesta inviata da OnlyWorkspace**: `model`, `input`, `tools: [{"type":"web_search"}]`, `store: false`, senza `tool_choice`, `max_tool_calls` e `include`. Il provider la accetta, e con un modello che cerca risponde con elementi `web_search_call` (stato `completed`, `action.query`, `action.sources[].url`) seguiti dal `message` finale. Gli URL sono in `action.sources` anche senza `include`. `annotations` era vuoto in tutte le prove: le fonti citate compaiono nel testo.
+- **Parametri facoltativi**: `tool_choice` accetta `"auto"` (valore predefinito restituito), `"required"` e `{"type":"web_search"}`. Con `qwen3.7-plus` la ricerca parte solo con `"required"` o con l'oggetto. `search_context_size` è accettato, ma il suo effetto non è stato misurato. `max_tool_calls: 1` è accettato, ma con `qwen3.8-flash` non è partita nessuna ricerca: non va usato.
+- **Modelli provati** (testo, stessa domanda sintetica):
+
+| Modello | Ricerca con la richiesta dell'app | Con `tool_choice` forzato |
+|---|---|---|
+| qwen3.8-flash, qwen3.8-max, qwen3.7-max, qwen4-max-preview, glm-5.3, glm-5.2, deepseek-v4-pro, deepseek-v4.1-flash, auto | sì | sì (provato su qwen3.8-flash) |
+| qwen3.7-plus | no | sì |
+| qwen3.6-flash | no | no: risponde senza cercare e può indicare una fonte non consultata |
+
+L'elenco dipende dalla chiave e dal piano. Per il profilo configurato vale la verifica del ConfigTool. Senza `web_search_call` l'app considera la ricerca non eseguita: l'azione usa i soli dati Outlook, anche se il testo del modello nomina una fonte.
+
 Abilitazione e verifica: [ConfigTool](../admin/configtool.md#profili-ia-e-ricerca-web). Codice: [WebSearchService](../../src/OnlyWorkspace.Infrastructure/Llm/WebSearchService.cs), [WebSearchAction](../../src/OnlyWorkspace.Core/Models/WebSearchAction.cs).

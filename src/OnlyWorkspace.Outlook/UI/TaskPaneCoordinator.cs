@@ -736,13 +736,16 @@ public partial class TaskPaneCoordinator : IDisposable
             PostPhase(turn, "Generazione in corso…");
 
             var response = new StringBuilder();
-            var answerMessages = (await AddWebEvidenceAsync(activeProfile, messages, turn, ct)).ToList();
+            var timings = new PhaseTimings();
+            var answerMessages = (await AddWebEvidenceAsync(activeProfile, messages, turn, ct, timings: timings)).ToList();
             EnsurePromptFits(answerMessages, activeProfile);
+            var generation = Stopwatch.StartNew();
             await foreach (var chunk in client.StreamChatAsync(answerMessages, ct))
             {
                 response.Append(chunk);
                 PostStream(turn, new { type = "stream_chunk", chunk });
             }
+            timings.AddGeneration(generation.ElapsedMilliseconds);
             // A reply is a draft to insert: the note goes beside it, never into its text.
             if (conversationNotice.Length > 0 && op["type"] == "summary")
             {
@@ -764,7 +767,7 @@ public partial class TaskPaneCoordinator : IDisposable
             }
 
             PostStream(turn, new { type = "stream_end", latencyMs = sw.ElapsedMilliseconds, truncated = client.LastCompletion?.IsTruncated == true, op });
-            OnlyWorkspaceLog.Logger.Information("Completed {Op} in {LatencyMs} ms", logOp, sw.ElapsedMilliseconds);
+            timings.LogCompleted(OnlyWorkspaceLog.Logger, logOp, sw.ElapsedMilliseconds);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
@@ -1010,6 +1013,7 @@ public partial class TaskPaneCoordinator : IDisposable
             }
             string json;
             string attachmentNotice = string.Empty;
+            var timings = new PhaseTimings();
             if (ExposurePolicy.SendsFactsOnly(activeProfile))
             {
                 if (opType != "action_items") throw new DataEgressBlockedException(FactsOnlyMessage);
@@ -1024,7 +1028,9 @@ public partial class TaskPaneCoordinator : IDisposable
                 var pack = MailEvidencePack.Chronological(new[] { new MailEvidence { Mail = mail } });
                 var safe = new CloudFactsRequest(pack);
                 client = CreateLlmClient(activeProfile, wholeEmails: false);
+                var factsGeneration = Stopwatch.StartNew();
                 var protectedJson = await client.CompleteStructuredAsync(safe.Messages, CloudFactsRequest.Schema, ct);
+                timings.AddGeneration(factsGeneration.ElapsedMilliseconds);
                 ModelOutput.EnsureComplete(client.LastCompletion);
                 var localItems = safe.ReadActionItems(protectedJson);
                 json = JsonSerializer.Serialize(new
@@ -1066,8 +1072,10 @@ public partial class TaskPaneCoordinator : IDisposable
 
                 client = CreateLlmClient(activeProfile);
                 PostPhase(turn, phase);
-                var groundedPrompt = await AddWebEvidenceAsync(activeProfile, promptFactory(body, email), turn, ct, jsonSchema);
+                var groundedPrompt = await AddWebEvidenceAsync(activeProfile, promptFactory(body, email), turn, ct, jsonSchema, timings);
+                var generation = Stopwatch.StartNew();
                 json = await client.CompleteStructuredAsync(groundedPrompt, jsonSchema, ct);
+                timings.AddGeneration(generation.ElapsedMilliseconds);
                 ModelOutput.EnsureComplete(client.LastCompletion);
             }
             var (text, extra) = render(json, email);
@@ -1088,6 +1096,7 @@ public partial class TaskPaneCoordinator : IDisposable
                 foreach (var p in extra.GetType().GetProperties()) end[p.Name] = p.GetValue(extra);
             }
             PostStream(turn, end);
+            timings.LogCompleted(OnlyWorkspaceLog.Logger, opType, sw.ElapsedMilliseconds);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
@@ -1316,9 +1325,12 @@ public partial class TaskPaneCoordinator : IDisposable
             // Collection already chose originals or local facts; the agenda above follows the same permission.
             client = CreateLlmClient(activeProfile, wholeEmails: false);
             PostPhase(turn, $"Analisi di {unread.Count} email non lette…");
-            var groundedPrompt = (await AddWebEvidenceAsync(activeProfile, messages, turn, ct, PromptCatalog.BriefingJsonSchema)).ToList();
+            var timings = new PhaseTimings();
+            var groundedPrompt = (await AddWebEvidenceAsync(activeProfile, messages, turn, ct, PromptCatalog.BriefingJsonSchema, timings)).ToList();
             EnsurePromptFits(groundedPrompt, activeProfile);
+            var generation = Stopwatch.StartNew();
             var json = await client.CompleteStructuredAsync(groundedPrompt, PromptCatalog.BriefingJsonSchema, ct);
+            timings.AddGeneration(generation.ElapsedMilliseconds);
             BriefingResult briefing;
             string? triageFailure = null;
             try
@@ -1373,6 +1385,7 @@ public partial class TaskPaneCoordinator : IDisposable
             });
             await RecordActionInHistoryAsync(activeProfile, "Briefing di oggi", md.ToString(), ct, modelContent: modelContent);
             PostStream(turn, new { type = "stream_end", latencyMs = sw.ElapsedMilliseconds, truncated = client.LastCompletion?.IsTruncated == true, op, items });
+            timings.LogCompleted(OnlyWorkspaceLog.Logger, "briefing", sw.ElapsedMilliseconds);
         }
         finally
         {
@@ -1885,24 +1898,27 @@ public partial class TaskPaneCoordinator : IDisposable
         return search;
     }
 
-    private Task<IEnumerable<ChatMessage>> AddWebEvidenceAsync(LlmProfileConfig profile, IEnumerable<ChatMessage> messages, int turn, CancellationToken ct, string? jsonSchema = null) =>
-        MergeWebAsync(profile, messages, list => SearchForActionAsync(profile, list, turn, ct), ct, jsonSchema);
+    private Task<IEnumerable<ChatMessage>> AddWebEvidenceAsync(LlmProfileConfig profile, IEnumerable<ChatMessage> messages, int turn, CancellationToken ct, string? jsonSchema = null, PhaseTimings? timings = null) =>
+        MergeWebAsync(profile, messages, list => SearchForActionAsync(profile, list, turn, ct), ct, jsonSchema, timings);
 
     /// <summary>The result of <see cref="StartWebSearch"/> joins the request, with the same checks as a search made now.</summary>
     private Task<IEnumerable<ChatMessage>> AddWebEvidenceAsync(LlmProfileConfig profile, IEnumerable<ChatMessage> messages, Task<WebSearchResult?> started, CancellationToken ct, string? jsonSchema = null) =>
         MergeWebAsync(profile, messages, _ => started, ct, jsonSchema);
 
     private async Task<IEnumerable<ChatMessage>> MergeWebAsync(LlmProfileConfig profile, IEnumerable<ChatMessage> messages,
-        Func<List<ChatMessage>, Task<WebSearchResult?>> search, CancellationToken ct, string? jsonSchema)
+        Func<List<ChatMessage>, Task<WebSearchResult?>> search, CancellationToken ct, string? jsonSchema, PhaseTimings? timings = null)
     {
         var list = ModelRequestContext.Prepare(profile, messages, jsonSchema);
         WebSearchResult? web;
+        var searchWatch = Stopwatch.StartNew();
         try
         {
             web = await search(list);
+            if (web != null) timings?.AddWeb(searchWatch.ElapsedMilliseconds);
         }
         catch (WebSearchSkippedException)
         {
+            timings?.AddWeb(searchWatch.ElapsedMilliseconds);
             // The model judged the web useless for this request (e.g. a contact lookup): answer from Outlook data only.
             OnlyWorkspaceLog.Logger.Information("Web search skipped by the model for profile {Profile}", profile.Id);
             return list;
@@ -1911,6 +1927,7 @@ public partial class TaskPaneCoordinator : IDisposable
         {
             // The answer still rests on the Outlook data: a 180 s search timeout discarded 85 minutes of reading
             // 362 emails on 18/10/2026. The model is told, so the answer says the web is missing.
+            timings?.AddWeb(searchWatch.ElapsedMilliseconds);
             OnlyWorkspaceLog.Logger.Warning(ex, "Web search failed for profile {Profile}: the answer goes on without it", profile.Id);
             list.Add(PromptCatalog.CreateWebFailedMessage(LlmErrorText.Describe(ex, profile)));
             return list;

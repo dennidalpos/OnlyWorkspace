@@ -12,6 +12,8 @@ using OnlyWorkspace.Core.Models;
 using OnlyWorkspace.Infrastructure.Configuration;
 using Xunit;
 
+using static OnlyWorkspace.Tests.FormFields;
+
 namespace OnlyWorkspace.Tests;
 
 [Collection(WinFormsCollection.Name)]
@@ -90,8 +92,8 @@ public sealed class AdminPasswordServiceTests
                 {
                     using var form = new MainConfigForm(directory, null, directory);
                     var type = typeof(MainConfigForm);
-                    Assert.True((bool)type.GetField("_isLocked", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(form)!);
-                    Assert.False(((Button)type.GetField("_btnSave", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(form)!).Enabled);
+                    Assert.True(Field<bool>(form, "_isLocked"));
+                    Assert.False(Field<Button>(form, "_btnSave").Enabled);
                     Assert.False(((Task<bool>)type.GetMethod("SaveActiveConfiguration", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(form, null)!).GetAwaiter().GetResult());
                     Assert.False(File.Exists(Path.Combine(directory, "config.json")));
                 }

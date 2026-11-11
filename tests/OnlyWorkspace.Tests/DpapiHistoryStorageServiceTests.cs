@@ -6,6 +6,8 @@ using OnlyWorkspace.Core.Models;
 using OnlyWorkspace.Infrastructure.Security;
 using Xunit;
 
+using static OnlyWorkspace.Tests.FormFields;
+
 namespace OnlyWorkspace.Tests;
 
 public class DpapiHistoryStorageServiceTests : IDisposable
@@ -243,8 +245,7 @@ public class DpapiHistoryStorageServiceTests : IDisposable
         var writer = new DpapiHistoryStorageService(_tempDir);
         var release = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         // Hold the existing save queue, before its mutex acquisition: no scheduler ordering assumption.
-        typeof(DpapiHistoryStorageService).GetField("_saves", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
-            .SetValue(writer, release.Task);
+        Set(writer, "_saves", release.Task);
         conversation.Id = "REVOKED";
         var queued = writer.SaveConversationAsync(conversation);
         try

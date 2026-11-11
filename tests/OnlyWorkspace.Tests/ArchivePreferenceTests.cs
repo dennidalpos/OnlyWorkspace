@@ -4,6 +4,8 @@ using OnlyWorkspace.Infrastructure.Configuration;
 using OnlyWorkspace.Outlook.Services;
 using static OnlyWorkspace.Tests.ArchiveIndexerHarness;
 
+using static OnlyWorkspace.Tests.FormFields;
+
 namespace OnlyWorkspace.Tests;
 
 public sealed class ArchivePreferenceTests
@@ -24,17 +26,17 @@ public sealed class ArchivePreferenceTests
                 using (new FileStream(Path.Combine(directory, "preferences.json"), FileMode.Open, FileAccess.ReadWrite, FileShare.None))
                 {
                     panel = (System.Windows.Forms.Control)Activator.CreateInstance(type, service, tips, CancellationToken.None)!;
-                    var mine = (System.Windows.Forms.CheckBox)type.GetField("_mine", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(panel)!;
+                    var mine = Field<System.Windows.Forms.CheckBox>(panel, "_mine");
                     Assert.Equal(System.Windows.Forms.CheckState.Indeterminate, mine.CheckState);
                     mine.CheckState = System.Windows.Forms.CheckState.Checked;
                     Assert.Equal(System.Windows.Forms.CheckState.Indeterminate, mine.CheckState);
-                    var status = (System.Windows.Forms.Control)type.GetField("_status", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(panel)!;
+                    var status = Field<System.Windows.Forms.Control>(panel, "_status");
                     Assert.Contains("Scelta non salvata", status.Text);
                 }
                 using (panel)
                 {
                     type.GetMethod("RefreshUserPreference", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.Invoke(panel, null);
-                    var mine = (System.Windows.Forms.CheckBox)type.GetField("_mine", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(panel)!;
+                    var mine = Field<System.Windows.Forms.CheckBox>(panel, "_mine");
                     Assert.Equal(System.Windows.Forms.CheckState.Unchecked, mine.CheckState);
                     Assert.True(service.GetUserFlag(ArchiveScope.UserOffFlag));
                 }

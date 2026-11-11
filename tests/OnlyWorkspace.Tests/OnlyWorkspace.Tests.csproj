@@ -66,6 +66,7 @@
     <Compile Include="..\..\src\OnlyWorkspace.Outlook\UI\PaneArchiveCommands.cs" Link="Outlook\PaneArchiveCommands.cs" />
     <Compile Include="..\..\src\OnlyWorkspace.Outlook\UI\MailInputTracker.cs" Link="Outlook\MailInputTracker.cs" />
     <Compile Include="..\..\src\OnlyWorkspace.Outlook\UI\PaneMessageRules.cs" Link="Outlook\PaneMessageRules.cs" />
+    <Compile Include="..\..\src\OnlyWorkspace.Outlook\UI\PhaseTimings.cs" Link="Outlook\PhaseTimings.cs" />
     <Compile Include="..\..\src\OnlyWorkspace.Outlook\UI\ArchivedOriginalCache.cs" Link="Outlook\ArchivedOriginalCache.cs" />
     <Compile Include="..\..\src\OnlyWorkspace.Outlook\UI\ArchiveStatusMessages.cs" Link="Outlook\ArchiveStatusMessages.cs" />
     <!-- Interrompi against the other cancels of the pane: PaneOperationsTests. -->

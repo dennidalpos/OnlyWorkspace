@@ -6,6 +6,8 @@ using OnlyWorkspace.Core.Models;
 using OnlyWorkspace.Core.Privacy;
 using OnlyWorkspace.Infrastructure.Configuration;
 
+using static OnlyWorkspace.Tests.FormFields;
+
 namespace OnlyWorkspace.Tests;
 
 /// <summary>A163: what the ConfigTool shows matches what is saved (revocation, lock, warnings, confirmations).</summary>
@@ -35,8 +37,8 @@ public sealed class ConfigToolUxTests
                     OnlyWorkspace.Infrastructure.Configuration.ConfigurationBackupService.StagedDigest(Path.Combine(staging!, "secrets.bin")), arguments);
                 return completion.Task;
             };
-            typeof(MainConfigForm).GetField("_elevatedWriter", Flags)!.SetValue(form, writer);
-            typeof(MainConfigForm).GetField("_requiresElevation", Flags)!.SetValue(form, true);
+            Set(form, "_elevatedWriter", writer);
+            Set(form, "_requiresElevation", true);
             var task = (Task<bool>)typeof(MainConfigForm).GetMethod("SaveActiveConfiguration", Flags)!.Invoke(form, null)!;
             Assert.False(task.IsCompleted);
             Assert.False(Field<Button>(form, "_btnSave").Enabled);
@@ -61,7 +63,7 @@ public sealed class ConfigToolUxTests
             using var form = Open(directory, new WorkspaceConfig { DefaultProfile = "a", Profiles = new() { Local("a") } });
             Func<string, string?, Task<OnlyWorkspace.ConfigTool.Services.ElevatedConfigWriter.ElevationResult>> writer = (_, _) =>
                 Task.FromException<OnlyWorkspace.ConfigTool.Services.ElevatedConfigWriter.ElevationResult>(new IOException("synthetic failure"));
-            typeof(MainConfigForm).GetField("_elevatedWriter", Flags)!.SetValue(form, writer);
+            Set(form, "_elevatedWriter", writer);
             var task = (Task<OnlyWorkspace.ConfigTool.Services.ElevatedConfigWriter.ElevationResult>)typeof(MainConfigForm).GetMethod("RunElevatedAsync", Flags)!.Invoke(form, new object?[] { "synthetic", null })!;
             Assert.Throws<IOException>(() => task.GetAwaiter().GetResult());
             Assert.False(Field<bool>(form, "_elevationBusy"));
@@ -119,7 +121,7 @@ public sealed class ConfigToolUxTests
         {
             using var form = Open(directory, new WorkspaceConfig { DefaultProfile = "a", Profiles = new() { Local("a") } });
             Assert.True((bool)Call(form, "ConfirmSavedFilesOnly", "Il backup")!);
-            typeof(MainConfigForm).GetField("_isDirty", Flags)!.SetValue(form, true);
+            Set(form, "_isDirty", true);
             foreach (var answer in new[] { DialogResult.No, DialogResult.Yes })
             {
                 using var timer = new System.Windows.Forms.Timer { Interval = 30 };
@@ -146,8 +148,8 @@ public sealed class ConfigToolUxTests
             using var notice = new DataEgressConsentForm { StartPosition = FormStartPosition.Manual, Location = new System.Drawing.Point(-4000, -4000) };
             notice.Show();
             Application.DoEvents();
-            var scroll = (ScrollPanel)typeof(DataEgressConsentForm).GetField("_scroll", Flags)!.GetValue(notice)!;
-            var read = (CheckBox)typeof(DataEgressConsentForm).GetField("_read", Flags)!.GetValue(notice)!;
+            var scroll = Field<ScrollPanel>(notice, "_scroll");
+            var read = Field<CheckBox>(notice, "_read");
             Assert.Equal(System.Drawing.Point.Empty, scroll.AutoScrollPosition);
             // The confirmations are outside the scrolling text.
             Assert.False(scroll.Contains(read));
@@ -168,12 +170,12 @@ public sealed class ConfigToolUxTests
         OnSta(_ =>
         {
             using var notice = new DataEgressConsentForm();
-            var hint = (Label)typeof(DataEgressConsentForm).GetField("_hint", Flags)!.GetValue(notice)!;
-            var read = (CheckBox)typeof(DataEgressConsentForm).GetField("_read", Flags)!.GetValue(notice)!;
+            var hint = Field<Label>(notice, "_hint");
+            var read = Field<CheckBox>(notice, "_read");
             Assert.True(OwnVisible(hint));
             Assert.Contains("Scorri il testo fino in fondo", hint.Text);
             Assert.False(read.Enabled);
-            ((Action)typeof(DataEgressConsentForm).GetField("_unlock", Flags)!.GetValue(notice)!)();
+            Field<Action>(notice, "_unlock")();
             Assert.True(read.Enabled);
             Assert.Contains("Ho letto", hint.Text);
             // The owner-drawn checkbox paints its text with the palette: the window background must come from it too.
@@ -197,7 +199,7 @@ public sealed class ConfigToolUxTests
         {
             using var wizard = new SetupWizardForm(Local("a"), null, archiveEnabled: false, indexAttachments: false);
             Assert.True(wizard.RunAtStartup);
-            ((CheckBox)typeof(SetupWizardForm).GetField("_chkAutostart", Flags)!.GetValue(wizard)!).Checked = false;
+            Field<CheckBox>(wizard, "_chkAutostart").Checked = false;
             Assert.False(wizard.RunAtStartup);
         });
     }
@@ -224,7 +226,7 @@ public sealed class ConfigToolUxTests
                 wizard.Scale(new System.Drawing.SizeF(scale, scale));
                 Application.DoEvents();
             }
-            var steps = (List<Control>)typeof(SetupWizardForm).GetField("_steps", Flags)!.GetValue(wizard)!;
+            var steps = Field<List<Control>>(wizard, "_steps");
             var show = typeof(SetupWizardForm).GetMethod("ShowStep", Flags)!;
             int notes = 0;
             for (int i = 0; i < steps.Count; i++)
@@ -313,8 +315,6 @@ public sealed class ConfigToolUxTests
         return new MainConfigForm(directory, null, directory);
     }
 
-    private static T Field<T>(MainConfigForm form, string name) => (T)typeof(MainConfigForm).GetField(name, Flags)!.GetValue(form)!;
-
     private static object? Call(MainConfigForm form, string name, params object[] args)
     {
         var value = typeof(MainConfigForm).GetMethod(name, Flags)!.Invoke(form, args);
@@ -383,8 +383,8 @@ public sealed class ConfigToolUxTests
             var before = Saved(directory).DataEgress.Consent!;
             Func<string, string?, Task<OnlyWorkspace.ConfigTool.Services.ElevatedConfigWriter.ElevationResult>> writer = (_, _) =>
                 Task.FromResult(new OnlyWorkspace.ConfigTool.Services.ElevatedConfigWriter.ElevationResult { Cancelled = true });
-            typeof(MainConfigForm).GetField("_elevatedWriter", Flags)!.SetValue(form, writer);
-            typeof(MainConfigForm).GetField("_requiresElevation", Flags)!.SetValue(form, true);
+            Set(form, "_elevatedWriter", writer);
+            Set(form, "_requiresElevation", true);
             Exception? error = null;
             using var timer = new System.Windows.Forms.Timer { Interval = 30 };
             timer.Tick += (_, _) =>
@@ -394,11 +394,11 @@ public sealed class ConfigToolUxTests
                 timer.Stop();
                 try
                 {
-                    var read = (CheckBox)typeof(DataEgressConsentForm).GetField("_read", Flags)!.GetValue(dialog)!;
+                    var read = Field<CheckBox>(dialog, "_read");
                     Assert.False(read.Checked);
                     if (!accept) { dialog.DialogResult = DialogResult.Cancel; return; }
                     read.Checked = true;
-                    var button = (Button)typeof(DataEgressConsentForm).GetField("_accept", Flags)!.GetValue(dialog)!;
+                    var button = Field<Button>(dialog, "_accept");
                     Assert.True(button.Enabled);
                     button.PerformClick();
                 }
@@ -422,8 +422,8 @@ public sealed class ConfigToolUxTests
             using var form = Open(directory, TestEgress.Accepted(new WorkspaceConfig { DefaultProfile = "cloud", Profiles = new() { Cloud("cloud") } }));
             Func<string, string?, Task<OnlyWorkspace.ConfigTool.Services.ElevatedConfigWriter.ElevationResult>> writer = (_, _) =>
                 Task.FromResult(new OnlyWorkspace.ConfigTool.Services.ElevatedConfigWriter.ElevationResult { Cancelled = true });
-            typeof(MainConfigForm).GetField("_elevatedWriter", Flags)!.SetValue(form, writer);
-            typeof(MainConfigForm).GetField("_requiresElevation", Flags)!.SetValue(form, true);
+            Set(form, "_elevatedWriter", writer);
+            Set(form, "_requiresElevation", true);
             Assert.False((bool)Call(form, "ApplyRevocation")!);
             var config = Field<WorkspaceConfig>(form, "_config");
             Assert.NotNull(config.DataEgress.Consent);
@@ -609,7 +609,7 @@ public sealed class ConfigToolUxTests
 
             using var form = Open(directory, new WorkspaceConfig { DefaultProfile = "a", Profiles = new() { Local("a") } });
             Func<string, string?, Task<OnlyWorkspace.ConfigTool.Services.ElevatedConfigWriter.ElevationResult>> writer = (_, _) => Task.FromResult(result);
-            typeof(MainConfigForm).GetField("_elevatedWriter", Flags)!.SetValue(form, writer);
+            Set(form, "_elevatedWriter", writer);
             var task = (Task<OnlyWorkspace.ConfigTool.Services.ElevatedConfigWriter.ElevationResult>)typeof(MainConfigForm).GetMethod("RunElevatedAsync", Flags)!.Invoke(form, new object?[] { "synthetic", null })!;
             Assert.Same(result, task.GetAwaiter().GetResult());
             Assert.Contains("synthetic English detail", Field<TextBox>(form, "_txtLog").Text);

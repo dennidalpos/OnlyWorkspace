@@ -7,6 +7,8 @@ using OnlyWorkspace.Core.Models;
 using OnlyWorkspace.Infrastructure.Configuration;
 using OnlyWorkspace.Infrastructure.Security;
 
+using static OnlyWorkspace.Tests.FormFields;
+
 namespace OnlyWorkspace.Tests;
 
 /// <summary>ConfigTool editing rules that protect the administrative files and avoid paid requests.</summary>
@@ -59,8 +61,6 @@ public sealed class MainConfigFormTests
         return vault;
     }
 
-    private static T Field<T>(MainConfigForm form, string name) => (T)typeof(MainConfigForm).GetField(name, Flags)!.GetValue(form)!;
-
     private static object? Call(MainConfigForm form, string name)
     {
         var value = typeof(MainConfigForm).GetMethod(name, Flags)!.Invoke(form, null);
@@ -109,9 +109,9 @@ public sealed class MainConfigFormTests
                 Model = "synthetic",
                 External = true
             }, null, true, true);
-            var providers = (ComboBox)typeof(SetupWizardForm).GetField("_cmbProvider", Flags)!.GetValue(wizard)!;
+            var providers = Field<ComboBox>(wizard, "_cmbProvider");
             Assert.Equal(6, providers.Items.Count);
-            ((TextBox)typeof(SetupWizardForm).GetField("_txtKey", Flags)!.GetValue(wizard)!).Text = "synthetic-token";
+            Field<TextBox>(wizard, "_txtKey").Text = "synthetic-token";
             var edited = (LlmProfileConfig)typeof(SetupWizardForm).GetMethod("Edited", Flags)!.Invoke(wizard, null)!;
             Assert.Equal("bearer", edited.AuthType);
             Assert.True(edited.External);
@@ -707,7 +707,7 @@ public sealed class MainConfigFormTests
 
             var remove = Assert.Single(Descendants(panel).OfType<Button>(), b => b.AccessibleName?.StartsWith("Togli dall'archivio: ") == true);
             Assert.Equal("Togli dall'archivio: OW test (chiusa)", remove.AccessibleName);
-            var rows = (System.Collections.IDictionary)type.GetField("_rows", Flags)!.GetValue(panel)!;
+            var rows = Field<System.Collections.IDictionary>(panel, "_rows");
             var archive = (CheckBox)rows["pst"]!;
             Assert.True(archive.Checked);
             Assert.False(archive.Enabled);

@@ -6,6 +6,8 @@ using OnlyWorkspace.ConfigTool.Forms;
 using OnlyWorkspace.Core.Models;
 using OnlyWorkspace.Infrastructure.Configuration;
 
+using static OnlyWorkspace.Tests.FormFields;
+
 namespace OnlyWorkspace.Tests;
 
 /// <summary>INT03 (#073): every control the user acts on exposes a non-empty accessible name, the one a screen reader reads.</summary>
@@ -71,7 +73,7 @@ public sealed class ConfigToolAccessibleNameTests
             service.SetUserFlag("guidedSetupDone", true);
             using var form = new MainConfigForm(directory, null, directory);
             Offscreen(form);
-            var pages = (List<Control>)typeof(MainConfigForm).GetField("_pages", Flags)!.GetValue(form)!;
+            var pages = Field<List<Control>>(form, "_pages");
             var missing = new List<string>();
             for (int i = 0; i < pages.Count; i++)
             {
@@ -93,7 +95,7 @@ public sealed class ConfigToolAccessibleNameTests
             using (var wizard = new SetupWizardForm(profile, null, archiveEnabled: true, indexAttachments: true))
             {
                 Offscreen(wizard);
-                var steps = (System.Collections.IList)typeof(SetupWizardForm).GetField("_steps", Flags)!.GetValue(wizard)!;
+                var steps = Field<System.Collections.IList>(wizard, "_steps");
                 for (int i = 0; i < steps.Count; i++)
                 {
                     typeof(SetupWizardForm).GetMethod("ShowStep", Flags)!.Invoke(wizard, new object[] { i });

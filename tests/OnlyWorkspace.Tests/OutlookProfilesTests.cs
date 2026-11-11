@@ -7,6 +7,8 @@ using OnlyWorkspace.ConfigTool.Services;
 using OnlyWorkspace.Core.Models;
 using OnlyWorkspace.Infrastructure.Configuration;
 
+using static OnlyWorkspace.Tests.FormFields;
+
 namespace OnlyWorkspace.Tests;
 
 /// <summary>
@@ -62,7 +64,7 @@ public sealed class OutlookProfilesTests
             var outlook = new OutlookProfiles(Array.Empty<string>(), null);
             wizard.ReadOutlookProfiles = () => outlook;
             var next = typeof(SetupWizardForm).GetMethod("Next", Flags)!;
-            var line = (Label)typeof(SetupWizardForm).GetField("_lblOutlook", Flags)!.GetValue(wizard)!;
+            var line = Field<Label>(wizard, "_lblOutlook");
             for (int i = 0; i < 3; i++) next.Invoke(wizard, null);
             Assert.Equal(OutlookProfiles.NotConfigured, line.Text);
 
@@ -70,7 +72,7 @@ public sealed class OutlookProfilesTests
             outlook = new OutlookProfiles(new[] { "Lavoro" }, "Lavoro");
             next.Invoke(wizard, null);
             Assert.Equal("Profilo Outlook: Lavoro.", line.Text);
-            Assert.Contains("Profilo Outlook: Lavoro.", ((Label)typeof(SetupWizardForm).GetField("_lblSummary", Flags)!.GetValue(wizard)!).Text);
+            Assert.Contains("Profilo Outlook: Lavoro.", Field<Label>(wizard, "_lblSummary").Text);
         });
     }
 
@@ -123,9 +125,9 @@ public sealed class OutlookProfilesTests
         });
     }
 
-    private static ComboBox Combo(Control panel) => (ComboBox)typeof(MailboxAuthorizationPanel).GetField("_profiles", Flags)!.GetValue(panel)!;
-    private static string Status(Control panel) => ((Label)typeof(MailboxAuthorizationPanel).GetField("_status", Flags)!.GetValue(panel)!).Text;
-    private static System.Windows.Forms.Timer Poll(Control panel) => (System.Windows.Forms.Timer)typeof(MailboxAuthorizationPanel).GetField("_poll", Flags)!.GetValue(panel)!;
+    private static ComboBox Combo(Control panel) => Field<ComboBox>(panel, "_profiles");
+    private static string Status(Control panel) => Field<Label>(panel, "_status").Text;
+    private static System.Windows.Forms.Timer Poll(Control panel) => Field<System.Windows.Forms.Timer>(panel, "_poll");
 
     private static void Load(MailboxAuthorizationPanel panel)
     {

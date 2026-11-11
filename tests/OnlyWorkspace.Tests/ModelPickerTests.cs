@@ -7,6 +7,8 @@ using OnlyWorkspace.ConfigTool.Services;
 using OnlyWorkspace.Core.Interfaces;
 using OnlyWorkspace.Core.Models;
 
+using static OnlyWorkspace.Tests.FormFields;
+
 namespace OnlyWorkspace.Tests;
 
 /// <summary>«Scegli modello…» shared by the profile page and the setup wizard, where «Avanti» without a model opens the list.</summary>
@@ -78,11 +80,11 @@ public sealed class ModelPickerTests
         OnSta(() =>
         {
             using var wizard = new SetupWizardForm(Local, null, archiveEnabled: true, indexAttachments: true);
-            var page = ((List<Control>)typeof(SetupWizardForm).GetField("_steps", Flags)!.GetValue(wizard)!)[1];
+            var page = Field<List<Control>>(wizard, "_steps")[1];
             var rows = page.Controls.Cast<Control>().OfType<TableLayoutPanel>().ToList();
-            var key = (Control)typeof(SetupWizardForm).GetField("_txtKey", Flags)!.GetValue(wizard)!;
-            var model = (Control)typeof(SetupWizardForm).GetField("_txtModel", Flags)!.GetValue(wizard)!;
-            var detect = (Control)typeof(SetupWizardForm).GetField("_btnDetect", Flags)!.GetValue(wizard)!;
+            var key = Field<Control>(wizard, "_txtKey");
+            var model = Field<Control>(wizard, "_txtModel");
+            var detect = Field<Control>(wizard, "_btnDetect");
             int Row(Control c) => rows.FindIndex(r => Contains(r, c));
             Assert.Equal(3, Row(key));
             Assert.Equal(4, Row(model));
@@ -107,17 +109,17 @@ public sealed class ModelPickerTests
             next.Invoke(wizard, null);
 
             var menu = WaitForMenu();
-            Assert.Equal(1, (int)typeof(SetupWizardForm).GetField("_step", Flags)!.GetValue(wizard)!);
+            Assert.Equal(1, Field<int>(wizard, "_step"));
             Assert.Equal(Local.BaseUrl, asked!.BaseUrl);
             Assert.Equal("tok", key);
             Assert.Equal(new[] { "gemma3", "qwen3.5:9b" }, menu.Items.Cast<ToolStripItem>().Select(i => i.Text));
             menu.Items[0].PerformClick();
             menu.Close();
-            Assert.Equal("gemma3", ((Control)typeof(SetupWizardForm).GetField("_txtModel", Flags)!.GetValue(wizard)!).Text);
+            Assert.Equal("gemma3", Field<Control>(wizard, "_txtModel").Text);
             Assert.True(client.Disposed);
 
             next.Invoke(wizard, null);
-            Assert.Equal(2, (int)typeof(SetupWizardForm).GetField("_step", Flags)!.GetValue(wizard)!);
+            Assert.Equal(2, Field<int>(wizard, "_step"));
             wizard.Close();
         });
     }
@@ -135,7 +137,7 @@ public sealed class ModelPickerTests
             var test = (Task)typeof(SetupWizardForm).GetMethod("TestAsync", Flags)!.Invoke(wizard, new object[] { button })!;
             Pump(() => test.IsCompleted);
             test.GetAwaiter().GetResult();
-            Assert.Contains("3 modelli disponibili", ((Label)typeof(SetupWizardForm).GetField("_lblTest", Flags)!.GetValue(wizard)!).Text);
+            Assert.Contains("3 modelli disponibili", Field<Label>(wizard, "_lblTest").Text);
             var menu = WaitForMenu();
             Assert.Equal(3, menu.Items.Count);
             menu.Close();

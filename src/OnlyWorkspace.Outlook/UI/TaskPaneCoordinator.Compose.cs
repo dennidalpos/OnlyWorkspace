@@ -103,11 +103,14 @@ public partial class TaskPaneCoordinator
             PostPhase(turn, "Scrittura del testo…");
 
             var response = new StringBuilder();
+            var timings = new PhaseTimings();
+            var generation = Stopwatch.StartNew();
             await foreach (var chunk in client.StreamChatAsync(messages, ct))
             {
                 response.Append(chunk);
                 PostStream(turn, new { type = "stream_chunk", chunk });
             }
+            timings.AddGeneration(generation.ElapsedMilliseconds);
 
             sw.Stop();
             await RecordActionInHistoryAsync(activeProfile, opName + ": " + DraftLabel(draft), response.ToString(), ct, DraftRefOf(draft), opName);
@@ -119,7 +122,7 @@ public partial class TaskPaneCoordinator
                 op,
                 writing = subject ? new { insert = false, replace = false, newMail = false, subject = true } : WritingTargets(true, draft)
             });
-            OnlyWorkspaceLog.Logger.Information("Completed {Op} in {LatencyMs} ms", op["type"], sw.ElapsedMilliseconds);
+            timings.LogCompleted(OnlyWorkspaceLog.Logger, op["type"], sw.ElapsedMilliseconds);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
