@@ -360,6 +360,7 @@ public sealed partial class MainConfigForm
         RefillPresets(caps);
         Tip(_cmbProvider, caps.DisplayName + (caps.IsExternal ? " (cloud)" : caps.Type == ProviderCatalog.OpenAICompatible ? " (destinazione dall'indirizzo)" : " (locale)") +
             (caps.Type == ProviderCatalog.OpenAICompatible ? "\nInserisci l'indirizzo. Lettura delle capacità specifiche e ricerca web non disponibili." : "") +
+            (caps.LiveProven ? "" : "\n" + ProviderCapabilities.UntestedNote) +
             "\nSi applica con Salva. Documentazione: " + caps.DocsUrl);
     }
 

@@ -12,6 +12,7 @@ Per una cartella non disponibile controlla in Outlook se esiste ancora, anche ne
 
 - L'amministratore consente l'archivio (attivo nel modello di configurazione installato); allora si crea da sé per ogni utente su **tutte le cassette, anche future**.
 - Ogni utente lo restringe o lo spegne in **Configurazione → Archivio email → Le mie cassette** (il pulsante **Cassette** di Stato la apre direttamente): la scelta vale subito, senza Salva né UAC. Togliere una cassetta ne cancella email e dati derivati dall'archivio.
+- Togliere la spunta a una cassetta aperta la esclude e ne elimina email, fatti, allegati letti e scelte dall'archivio di questo PC. Prima di salvare, il ConfigTool chiede conferma indicando la cassetta e il numero di email; con **Annulla** la scelta e i dati restano invariati. Le email restano in Outlook e, riattivando la cassetta, vengono archiviate di nuovo. Una cassetta senza email nell'archivio non richiede conferma.
 - Una cassetta chiusa in Outlook (per esempio un PST tolto dal profilo) resta cercabile e compare in Le mie cassette come «(chiusa)». **Togli dall'archivio**, accanto al nome, ne cancella email, dati derivati e scelte dopo una conferma, anche con «Tutte le cassette, anche future» attivo; se la riapri in Outlook viene archiviata di nuovo.
 - **Indirizzi miei** (PST senza account): indirizzi dell'utente ricavati dalla Posta inviata del PST, correggibili; non diventano mai controparti.
 

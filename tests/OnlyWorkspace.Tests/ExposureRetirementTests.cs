@@ -10,14 +10,23 @@ public sealed class ExposureRetirementTests
     [Theory]
     [InlineData("\"Full\"")]
     [InlineData("\"full\"")]
-    [InlineData("3")]
-    [InlineData("\"3\"")]
     public void RetiredLevelsAreRefused(string json)
     {
         Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<ExposureLevel>(json));
     }
 
+    [Fact]
+    public void ExtendedIsNumber3_InCodeAndInTheLabel_AndSerializesByName()
+    {
+        Assert.Equal(3, (int)ExposureLevel.Extended);
+        Assert.StartsWith("3 ", ExposurePolicy.Label(ExposureLevel.Extended));
+        Assert.Equal(ExposureLevel.Extended, JsonSerializer.Deserialize<ExposureLevel>("3"));
+        Assert.Equal("\"Extended\"", JsonSerializer.Serialize(ExposureLevel.Extended));
+        Assert.Equal(ExposureLevel.Extended, JsonSerializer.Deserialize<ExposureLevel>("\"Extended\""));
+    }
+
     [Theory]
+    [InlineData("4")]
     [InlineData("5")]
     [InlineData("-1")]
     [InlineData("\"unknown\"")]
@@ -25,8 +34,8 @@ public sealed class ExposureRetirementTests
     public void InvalidLevelsAreRefusedAndAnUnconvertedValueCannotSend(string json)
     {
         Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<ExposureLevel>(json));
-        Assert.False(ExposurePolicy.For((ExposureLevel)3).ModelAllowed);
-        Assert.Throws<JsonException>(() => JsonSerializer.Serialize((ExposureLevel)3));
+        Assert.False(ExposurePolicy.For((ExposureLevel)4).ModelAllowed);
+        Assert.Throws<JsonException>(() => JsonSerializer.Serialize((ExposureLevel)4));
     }
 
     [Fact]

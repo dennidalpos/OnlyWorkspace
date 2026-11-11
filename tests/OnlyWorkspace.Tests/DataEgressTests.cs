@@ -196,7 +196,7 @@ public sealed class DataEgressTests
         Assert.Equal(EvidenceMode.FactsOnly, ExposurePolicy.Of(qwen).Evidence);
         Assert.True(ExposurePolicy.SendsFactsOnly(qwen));
 
-        qwen.Exposure = (ExposureLevel)3;
+        qwen.Exposure = (ExposureLevel)4;
         Assert.False(qwen.SendsAttachmentText);
         Assert.False(WebSearchAction.Uses(qwen, WebSearchAction.Chat));
         Assert.False(ExposurePolicy.Of(qwen).ModelAllowed);

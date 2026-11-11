@@ -45,6 +45,10 @@ internal sealed class MailboxAuthorizationPanel : TableLayoutPanel
     private IReadOnlyList<string> _persistedStores = Array.Empty<string>();
     internal Func<ArchiveClient, string, CancellationToken, Task>? WriteStores;
     internal Func<ArchiveClient, CancellationToken, Task<string?>>? ReadStores;
+    // Defaults: the engine's coverage and a message box; tests replace them (#207).
+    internal Func<ArchiveClient, CancellationToken, Task<IReadOnlyList<ArchiveStoreCoverage>>>? ReadCoverage;
+    internal Func<string, bool>? ConfirmExclusion;
+    private readonly Dictionary<string, string> _names = new(StringComparer.Ordinal);
 
     private static IReadOnlyList<string> ParseSavedStores(string? json)
     {
@@ -389,6 +393,7 @@ internal sealed class MailboxAuthorizationPanel : TableLayoutPanel
         AddRow(label, archive);
         _tips.SetToolTip(archive, "Sceglie se conservare le email nell’archivio locale. Con Tutte le cassette attivo le singole scelte sono bloccate; le cassette chiuse si modificano riaprendole in Outlook.");
         _rows[id] = archive;
+        _names[id] = name;
         if (open) _open.Add(id);
         archive.CheckedChanged += async (_, _) => { if (!_building) await ApplyAsync(); };
     }
@@ -497,6 +502,33 @@ internal sealed class MailboxAuthorizationPanel : TableLayoutPanel
         }
     }
 
+    /// <summary>
+    /// A mailbox taken out of the scope loses its emails and data in the archive: the user confirms with the mailbox and the
+    /// number of emails first (#207). True when nothing is excluded or the user confirms; the scope is saved only then.
+    /// </summary>
+    private async Task<bool> ConfirmExclusionAsync(ArchiveClient client, IReadOnlyCollection<string> storeIds, bool allChecked, IReadOnlyCollection<string> archived)
+    {
+        var excluded = MailboxExclusion.Excluded(_persistedStores, storeIds, allChecked, archived);
+        if (excluded.Count == 0) return true;
+        IReadOnlyList<ArchiveStoreCoverage>? coverage = null;
+        try { coverage = ReadCoverage != null ? await ReadCoverage(client, _lifetime) : await client.GetStoreCoverageAsync(_lifetime); }
+        catch (Exception ex) when (!_lifetime.IsCancellationRequested && ex is not OutOfMemoryException) { }
+        if (Closing) return false;
+        var asked = new List<(string Name, int? Emails)>();
+        foreach (string id in excluded)
+        {
+            int? emails = coverage?.FirstOrDefault(c => string.Equals(c.StoreId, id, StringComparison.OrdinalIgnoreCase))?.Emails ?? (coverage != null ? 0 : (int?)null);
+            // A mailbox with nothing in the archive loses nothing: no question for it.
+            if (emails == 0) continue;
+            asked.Add((_names.TryGetValue(id, out var name) ? name : id, emails));
+        }
+        if (asked.Count == 0) return true;
+        string question = MailboxExclusion.Question(asked);
+        return ConfirmExclusion != null
+            ? ConfirmExclusion(question)
+            : CopyableMessageBox.Show(FindForm(), question, "Escludi dall'archivio", MessageBoxButtons.YesNo, MessageBoxIcon.Warning, "Escludi", "Annulla") == DialogResult.Yes;
+    }
+
     private async Task ApplyAsync()
     {
         if (_busy > 0 || _scopeUnknown || Client is not { } client) return;
@@ -511,6 +543,12 @@ internal sealed class MailboxAuthorizationPanel : TableLayoutPanel
         {
             ApplySavedStores(_persistedStores);
             SetStatus("Scegli almeno una cassetta oppure spegni l'archivio per il tuo utente.", Tone.Warning);
+            return;
+        }
+        if (!await ConfirmExclusionAsync(client, stores.Select(r => r.Key).ToList(), all.Checked, archived))
+        {
+            ApplySavedStores(_persistedStores);
+            SetStatus("Scelta annullata: cassette e dati dell'archivio invariati.", Tone.Muted);
             return;
         }
         _busy++;

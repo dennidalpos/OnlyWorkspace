@@ -17,14 +17,16 @@ Nel listino Gemini verificato, il grounding con Google Search per i modelli Gemi
 
 Il ConfigTool e la procedura guidata propongono sei preset, sulle quattro famiglie di protocollo Ollama, compatibile OpenAI, Anthropic e Gemini:
 
-| Preset | Tipo | Collegamento |
-| --- | --- | --- |
-| Ollama | `ollama` | Server Ollama locale su loopback |
-| Gemini | `gemini` | Gemini API |
-| Anthropic | `anthropic` | Anthropic Messages |
-| OpenAI | `openai` | OpenAI, con ricerca web specifica quando autorizzata |
-| QwenCloud | `qwen` | Endpoint compatibile OpenAI e ricerca web specifica quando autorizzata |
-| Compatibile OpenAI | `openai-compatible` | Indirizzo e modello da compilare; nessuna autenticazione oppure token bearer |
+| Preset | Tipo | Collegamento | Prova con servizio reale |
+| --- | --- | --- | --- |
+| Ollama | `ollama` | Server Ollama locale su loopback | sì |
+| Gemini | `gemini` | Gemini API | sì |
+| Anthropic | `anthropic` | Anthropic Messages | sì |
+| OpenAI | `openai` | OpenAI, con ricerca web specifica quando autorizzata | sì |
+| QwenCloud | `qwen` | Endpoint compatibile OpenAI e ricerca web specifica quando autorizzata | sì (11/11/2026) |
+| Compatibile OpenAI | `openai-compatible` | Indirizzo e modello da compilare; nessuna autenticazione oppure token bearer | non provato |
+
+Nella scelta del servizio e nelle note del ConfigTool e della procedura guidata i servizi senza prova con un account reale sono contrassegnati «non provato»: il collegamento è verificato solo con risposte simulate. Vale per Compatibile OpenAI (e quindi per i preset cloud sotto), Azure OpenAI, Perplexity Sonar e Ollama Cloud; l'elenco è nel catalogo (`LiveProven`).
 
 Per il generico, la procedura guidata e il ConfigTool offrono la riga **Preset cloud**: compila solo l'indirizzo di Mistral AI, IONOS, OVHcloud, Scaleway o STACKIT (dati dichiarati nell'UE dai fornitori, non attestazione di conformità; schede in [provider IA europei](../tecnico/provider-ia-ue.md)) e segna il profilo come cloud. Non aggiunge tipi di provider né ripristina i preset ritirati. Senza Ollama sul loopback la procedura guidata lo segnala e indica questi preset; non cambia il profilo e non invia nulla prima dello sblocco nell'informativa. Il profilo predefinito resta una scelta dell'amministratore.
 

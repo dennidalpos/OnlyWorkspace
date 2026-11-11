@@ -251,6 +251,84 @@ public sealed class ConfigToolRequestTests
         });
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ExcludingAMailboxAsksWithNameAndCount_AndSavesOnlyAfterConfirmation(bool confirm)
+    {
+        Sta(dir =>
+        {
+            var config = new FileConfigurationService(dir, dir); using var tips = new ToolTip();
+            using var panel = new MailboxAuthorizationPanel(config, tips, CancellationToken.None);
+            Set(panel, "_building", true);
+            var profiles = Field<ComboBox>(panel, "_profiles"); profiles.Items.Add("synthetic"); profiles.SelectedIndex = 0;
+            Field<HashSet<string>>(panel, "_archived").Add("synthetic");
+            Field<CheckBox>(panel, "_mine").Checked = true;
+            Set(panel, "_building", false);
+            Call(panel, "BuildGrid", new List<ArchiveOpenStore> { new() { Id = "a", Name = "Posta lavoro", Open = true }, new() { Id = "b", Name = "B", Open = true } }, new List<string> { "a", "b" }, StoreOwnAddresses.Parse(null), Array.Empty<string>());
+            var rows = Field<Dictionary<string, CheckBox>>(panel, "_rows");
+            var writes = new List<string>(); string? asked = null;
+            panel.WriteStores = (_, json, _) => { writes.Add(json); return Task.CompletedTask; };
+            panel.ReadCoverage = (_, _) => Task.FromResult<IReadOnlyList<ArchiveStoreCoverage>>(new[] { new ArchiveStoreCoverage { StoreId = "a", Emails = 1234 } });
+            panel.ConfirmExclusion = question => { asked = question; return confirm; };
+
+            Set(panel, "_building", true); rows["a"].Checked = false; Set(panel, "_building", false);
+            var apply = (Task)Call(panel, "ApplyAsync")!; Pump(() => apply.IsCompleted); apply.GetAwaiter().GetResult();
+
+            Assert.Contains("Posta lavoro", asked);
+            Assert.Contains("1.234 email", asked);
+            Assert.Contains("eliminati", asked);
+            if (confirm) { Assert.Equal(new[] { "[\"b\"]" }, writes); Assert.False(rows["a"].Checked); }
+            else
+            {
+                Assert.Empty(writes);
+                Assert.True(rows["a"].Checked && rows["b"].Checked);
+                Assert.Contains("annullata", Field<Control>(panel, "_status").Text);
+            }
+        });
+    }
+
+    [Fact]
+    public void ExcludingAnEmptyMailboxOrAddingOneAsksNothing()
+    {
+        Sta(dir =>
+        {
+            var config = new FileConfigurationService(dir, dir); using var tips = new ToolTip();
+            using var panel = new MailboxAuthorizationPanel(config, tips, CancellationToken.None);
+            Set(panel, "_building", true);
+            var profiles = Field<ComboBox>(panel, "_profiles"); profiles.Items.Add("synthetic"); profiles.SelectedIndex = 0;
+            Field<HashSet<string>>(panel, "_archived").Add("synthetic");
+            Field<CheckBox>(panel, "_mine").Checked = true;
+            Set(panel, "_building", false);
+            Call(panel, "BuildGrid", new List<ArchiveOpenStore> { new() { Id = "a", Name = "A", Open = true }, new() { Id = "b", Name = "B", Open = true } }, new List<string> { "a" }, StoreOwnAddresses.Parse(null), Array.Empty<string>());
+            var rows = Field<Dictionary<string, CheckBox>>(panel, "_rows");
+            int writes = 0, questions = 0;
+            panel.WriteStores = (_, _, _) => { writes++; return Task.CompletedTask; };
+            panel.ReadCoverage = (_, _) => Task.FromResult<IReadOnlyList<ArchiveStoreCoverage>>(Array.Empty<ArchiveStoreCoverage>());
+            panel.ConfirmExclusion = _ => { questions++; return false; };
+
+            Set(panel, "_building", true); rows["b"].Checked = true; Set(panel, "_building", false);
+            var add = (Task)Call(panel, "ApplyAsync")!; Pump(() => add.IsCompleted); add.GetAwaiter().GetResult();
+            Set(panel, "_building", true); rows["a"].Checked = false; Set(panel, "_building", false);
+            var drop = (Task)Call(panel, "ApplyAsync")!; Pump(() => drop.IsCompleted); drop.GetAwaiter().GetResult();
+
+            Assert.Equal(0, questions);
+            Assert.Equal(2, writes);
+        });
+    }
+
+    [Fact]
+    public void MailboxExclusion_FindsWhatAChangeTakesOut()
+    {
+        var ids = new[] { "a", "b", "c" };
+        Assert.Empty(MailboxExclusion.Excluded(Array.Empty<string>(), ids, true, ids));
+        Assert.Equal(new[] { "c" }, MailboxExclusion.Excluded(Array.Empty<string>(), ids, false, new[] { "a", "b" }));
+        Assert.Equal(new[] { "b" }, MailboxExclusion.Excluded(new[] { "a", "b" }, ids, false, new[] { "a" }));
+        Assert.Empty(MailboxExclusion.Excluded(new[] { "a" }, ids, false, new[] { "a", "b" }));
+        string unknown = MailboxExclusion.Question(new[] { ("A", (int?)null) });
+        Assert.Contains("numero di email non leggibile", unknown);
+    }
+
     [Fact]
     public async Task SlowLoopbackHttpIsCancelledByTheCommonDeadline()
     {

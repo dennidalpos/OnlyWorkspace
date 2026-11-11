@@ -39,15 +39,28 @@ public sealed class ProviderCapabilities
     public WebSearchMode WebSearch { get; }
     /// <summary>Basic Responses provider that accepts tool_choice {"type":"web_search"} (QwenCloud, proved 11/11/2026).</summary>
     public bool ForcesWebTool { get; }
+    /// <summary>
+    /// A real call with an account of the service has been made (docs/tecnico/verifica.md). False = «non provato»: only
+    /// protocol fixtures back the connector (#206). The date is empty when the proof is declared but its day is not on record.
+    /// </summary>
+    public bool LiveProven { get; }
+    public string LiveProvenOn { get; }
+
+    /// <summary>Words shown beside a connector that has no real-service proof.</summary>
+    public const string UntestedLabel = "non provato";
+    public const string UntestedNote = "Non provato con un servizio reale: il collegamento è verificato solo con risposte simulate. Usa «Verifica connessione» con il tuo account prima di affidargli dati.";
     /// <summary>Official API reference, shown as tooltip.</summary>
     public string DocsUrl { get; }
 
     internal ProviderCapabilities(string type, string name, ApiFamily family, string baseUrl, bool external, string[] authTypes,
         string docsUrl, string model = "", string apiKeyHeader = "", string chatPath = "chat/completions",
         CapabilitySource capabilities = CapabilitySource.None, WebSearchMode webSearch = WebSearchMode.None,
-        bool numCtx = false, bool keepAlive = false, bool thinkToggle = false, bool forcesWebTool = false)
+        bool numCtx = false, bool keepAlive = false, bool thinkToggle = false, bool forcesWebTool = false,
+        bool liveProven = false, string liveProvenOn = "")
     {
         ForcesWebTool = forcesWebTool;
+        LiveProven = liveProven;
+        LiveProvenOn = liveProvenOn;
         Type = type;
         DisplayName = name;
         Family = family;
@@ -66,7 +79,8 @@ public sealed class ProviderCapabilities
     }
 
     public bool RequiresSecret => !AuthTypes.Contains("none");
-    public override string ToString() => DisplayName;
+    /// <summary>Text of the service choice: «non provato» is part of it where no real-service proof exists.</summary>
+    public override string ToString() => LiveProven ? DisplayName : DisplayName + " · " + UntestedLabel;
 }
 
 public sealed class ContextPreset
@@ -107,18 +121,18 @@ public static class ProviderCatalog
     {
         new ProviderCapabilities(Ollama, "Ollama", ApiFamily.Ollama, "http://127.0.0.1:11434", false, None,
             "https://docs.ollama.com/api", model: "qwen3.5:9b", capabilities: CapabilitySource.Ollama, webSearch: WebSearchMode.OllamaCom,
-            numCtx: true, keepAlive: true, thinkToggle: true),
+            numCtx: true, keepAlive: true, thinkToggle: true, liveProven: true),
         new ProviderCapabilities(Gemini, "Google Gemini", ApiFamily.Gemini, "https://generativelanguage.googleapis.com", true, Key,
             "https://ai.google.dev/api/models", apiKeyHeader: "x-goog-api-key",
-            capabilities: CapabilitySource.Gemini, webSearch: WebSearchMode.GeminiGrounding),
+            capabilities: CapabilitySource.Gemini, webSearch: WebSearchMode.GeminiGrounding, liveProven: true),
         new ProviderCapabilities(Anthropic, "Anthropic Claude", ApiFamily.Anthropic, "https://api.anthropic.com", true, Key,
             "https://platform.claude.com/docs/en/api/models", apiKeyHeader: "x-api-key",
-            capabilities: CapabilitySource.Anthropic, webSearch: WebSearchMode.AnthropicTool),
+            capabilities: CapabilitySource.Anthropic, webSearch: WebSearchMode.AnthropicTool, liveProven: true),
         new ProviderCapabilities(OpenAI, "OpenAI", ApiFamily.OpenAI, "https://api.openai.com", true, Bearer,
-            "https://developers.openai.com/api/reference", webSearch: WebSearchMode.OpenAIResponses),
+            "https://developers.openai.com/api/reference", webSearch: WebSearchMode.OpenAIResponses, liveProven: true),
         new ProviderCapabilities("qwen", "QwenCloud", ApiFamily.OpenAI, "https://token-plan.maas.qwencloudapi.com/compatible-mode/v1", true, Bearer,
             "https://www.alibabacloud.com/help/en/model-studio/compatibility-of-openai-with-dashscope", webSearch: WebSearchMode.BasicResponses,
-            thinkToggle: true, forcesWebTool: true),
+            thinkToggle: true, forcesWebTool: true, liveProven: true, liveProvenOn: "2026-11-11"),
         new ProviderCapabilities(OpenAICompatible, "Compatibile OpenAI", ApiFamily.OpenAI, "", false, None,
             "https://developers.openai.com/api/reference")
     };

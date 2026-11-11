@@ -66,6 +66,38 @@ public sealed class ProviderTextClaimsTests
     }
 
     [Fact]
+    public void LiveProof_IsDeclaredPerConnector_ShownInTheChoice_AndWrittenInTheGuide()
+    {
+        // #206: «non provato» in the service choice, notes in the ConfigTool and the wizard, column «Prova con servizio reale».
+        var proven = new[] { ProviderCatalog.Ollama, ProviderCatalog.Gemini, ProviderCatalog.Anthropic, ProviderCatalog.OpenAI, "qwen" };
+        Assert.Equal(proven.OrderBy(t => t), ProviderCatalog.All.Where(p => p.LiveProven).Select(p => p.Type).OrderBy(t => t));
+        Assert.Equal("2026-11-11", ProviderCatalog.Get("qwen").LiveProvenOn);
+
+        var generic = ProviderCatalog.Get(ProviderCatalog.OpenAICompatible);
+        Assert.False(generic.LiveProven);
+        Assert.EndsWith(ProviderCapabilities.UntestedLabel, generic.ToString());
+        foreach (var type in new[] { "azure-openai", "perplexity", "ollama-cloud" })
+            Assert.False(ProviderCatalog.Get(type).LiveProven, type);
+        Assert.All(ProviderCatalog.All.Where(p => p.LiveProven), p => Assert.Equal(p.DisplayName, p.ToString()));
+        // The name given to a new profile stays clean.
+        Assert.DoesNotContain(ProviderCapabilities.UntestedLabel, generic.DisplayName);
+
+        string guide = File.ReadAllText(Path.Combine(TestBuildPaths.RepositoryRoot, "docs", "admin", "provider-ia.md"));
+        foreach (var caps in ProviderCatalog.All)
+        {
+            // The guide row is the one with the type in backticks.
+            string row = guide.Split('\n').Single(l => l.Contains("| `" + caps.Type + "` |", StringComparison.Ordinal));
+            Assert.True(caps.LiveProven == row.Contains("| sì", StringComparison.Ordinal), caps.Type);
+            Assert.True(caps.LiveProven != row.Contains("non provato", StringComparison.Ordinal), caps.Type);
+        }
+
+        string profiles = File.ReadAllText(Path.Combine(TestBuildPaths.RepositoryRoot, "src", "OnlyWorkspace.ConfigTool", "Forms", "MainConfigForm.Profiles.cs"));
+        string wizard = File.ReadAllText(Path.Combine(TestBuildPaths.RepositoryRoot, "src", "OnlyWorkspace.ConfigTool", "Forms", "SetupWizardForm.cs"));
+        Assert.Contains("UntestedNote", profiles);
+        Assert.Contains("UntestedNote", wizard);
+    }
+
+    [Fact]
     public void CloudProviders_HaveNoDefaultModel_SoTheEmptyBoxHintApplies()
     {
         // ModelHint «Scegli il modello con «Scegli modello…»» is shown only where DefaultModel is empty.

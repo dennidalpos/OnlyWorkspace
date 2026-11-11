@@ -10,7 +10,7 @@ public sealed class ExtendedExposureTests
 {
     [Theory]
     [InlineData("\"Extended\"")]
-    [InlineData("4")]
+    [InlineData("3")]
     public void ExplicitNewValueRoundTripsAndKeepsStandardRules(string json)
     {
         var level = JsonSerializer.Deserialize<ExposureLevel>(json);

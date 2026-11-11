@@ -160,7 +160,7 @@ public sealed partial class MainConfigForm
         };
 
         _cmbProvider = AddRow(conn, "Servizio IA:", Combo(240),
-            "Sei servizi preimpostati. Compatibile OpenAI richiede un indirizzo, senza ricerca web né lettura capacità. I precedenti restano nei loro profili. Si applica con Salva.");
+            "Sei servizi preimpostati. Compatibile OpenAI richiede un indirizzo, senza ricerca web né lettura capacità. I precedenti restano nei loro profili. «non provato» indica un servizio senza prova con un account reale. Si applica con Salva.");
         _cmbProvider.Items.AddRange(ProviderCatalog.All.Cast<object>().ToArray());
         _cmbProvider.SelectedIndexChanged += (s, e) => OnProviderChanged();
 

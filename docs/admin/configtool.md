@@ -49,6 +49,8 @@ Le spiegazioni delle impostazioni sono disponibili nei tooltip e nei pulsanti **
 
 Vale per l'utente Windows corrente e si applica subito, senza Salva né UAC, anche con la configurazione bloccata. **Archivio attivo per me** spegne o riaccende l'archivio dell'utente. La griglia elenca le cassette viste da Outlook con la colonna **Archivio** e la riga **Tutte le cassette, anche future**: senza «Tutte», una casella vuota è un rifiuto esplicito.
 
+Escludere una cassetta aperta elimina i suoi dati dall'archivio: il ConfigTool chiede conferma con nome della cassetta e numero di email, e **Annulla** lascia invariati ambito e dati.
+
 Durante il salvataggio le scelte sono bloccate. Se il salvataggio non è confermato, la griglia mostra lo stato riletto dall’archivio; se anche la rilettura fallisce, le caselle diventano indeterminate e occorre **Aggiorna** prima di cambiarle. Le caselle bloccate spiegano il motivo nel suggerimento.
 
 Prima che esista l'archivio, il nome del profilo Outlook viene letto dal registro; non è ancora un elenco di cassette indicizzate. I messaggi distinguono:

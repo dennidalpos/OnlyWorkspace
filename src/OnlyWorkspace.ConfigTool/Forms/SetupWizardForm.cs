@@ -305,6 +305,8 @@ public sealed class SetupWizardForm : Form
             _lblModelNote.Text = $"{chosen.Name}: {chosen.RegionLabel} secondo il fornitore (non è un'attestazione di conformità); le azioni IA inviano dati a questo servizio entro il livello di esposizione del profilo. Documentazione: {chosen.DocsUrl}. " + _lblModelNote.Text;
         if (caps.Type == ProviderCatalog.OpenAICompatible)
             _lblModelNote.Text = "Inserisci indirizzo e modello del servizio compatibile OpenAI. Ricerca web e lettura delle capacità specifiche non sono disponibili. " + _lblModelNote.Text;
+        if (!caps.LiveProven)
+            _lblModelNote.Text = ProviderCapabilities.UntestedNote + " " + _lblModelNote.Text;
     }
 
     private LlmProfileConfig Edited()

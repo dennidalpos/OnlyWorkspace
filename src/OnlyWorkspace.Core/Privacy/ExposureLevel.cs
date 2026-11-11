@@ -17,8 +17,8 @@ public enum ExposureLevel
     Minimal = 1,
     /// <summary>Cleaned original bodies, pseudonymized; no web search.</summary>
     Standard = 2,
-    /// <summary>Standard plus explicitly authorized, locally extracted attachment text. Value 3 stays retired.</summary>
-    Extended = 4
+    /// <summary>Standard plus explicitly authorized, locally extracted attachment text. The retired "Full" name stays refused.</summary>
+    Extended = 3
 }
 
 /// <summary>Reads and writes only supported exposure levels.</summary>
