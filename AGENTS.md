@@ -1,21 +1,10 @@
 <!-- secondbrain:repository:begin -->
-Direttive comuni applicate: revisione **1.0** — 2026-11-05. <!-- secondbrain:source global=C985B7798485F70BE1A45CF57A8B19DA3C07D1A2D543A31A106B7EC3F3B04B7B workstation=0D7C7667F4003AA5041CC43071CAED6B4745B351F4B1D296237DD3A6025C6F9E -->
+Direttive comuni applicate: revisione **1.1** — 2026-11-12. <!-- secondbrain:source global=8238B8C140EC9FE3C6E4002D94B0AADBB1EAE0E15A52566BF31854D2292AC06C workstation=CFB3267FB25931AF68B8791B8D01F31AC30D940679D6D3443567A45BE9FBA9A6 -->
 ## SecondBrain
 
-Common directives and repository knowledge live in the SecondBrain dossier. Keep code, guides, and publishable assets here.
+Repository knowledge lives in the SecondBrain dossier; code, guides, and publishable assets stay here.
 
-- Resolve the dossier by Git identity, the PARA index, and repository.json. Read SECONDBRAIN_HOME from the user environment. If the root is unreachable, report that the dossier is unavailable. Use the team's UNC root for shared projects.
-- Load the slim profile with scripts/knowledge.ps1 -Startup, run from the SecondBrain checkout (it is not in this repository), or the MCP get_startup_context tool. Follow the returned references for more detail.
-- At closure, verify acceptance criteria and update the central tracker. Move completed tasks to history and record only verified changes in context and memory.
+- Load the slim startup with the SecondBrain checkout's scripts/knowledge.ps1 -Startup or MCP get_startup_context, and follow its references for detail. If the root is unreachable, report the dossier as unavailable.
+- Write only to this repository's dossier `01-projects/<repo>/`, only through SecondBrain scripts or MCP write tools. Work folders come from scripts/work.ps1 -Init; sessions, retention, and cleanup rules load from `sb prompt`.
 - Commits, pushes, deletions, and publication require specific authorization.
-
-### SecondBrain folders and sessions
-
-- Write scope in SecondBrain: the dossier `01-projects/<repo>/` of this repository (tracker, context, memory, history), only through SecondBrain scripts or MCP write tools. Other dossiers, `02-areas`, `03-resources`, `04-archives`, and `.runtime` are read-only for you, except work folders you create with work.ps1.
-- Keep product builds, caches, temporary files, fixtures, and evidence in the product's Git-ignored local folders. For SecondBrain activities, create work folders from the SecondBrain checkout with `scripts/work.ps1 -Repository <identity> -Category <work|evidence|report|fixture|tmp> -Slug <name> -Init -Task <description> -SessionId <id>`. This creates `.runtime/hosts/<host>/repos/<repo>/<category>/<yyyyMMdd>-<slug>/` with a MANIFEST.json recording owner, session, task, status, and expiration. Use this structure for every work folder.
-- Each folder belongs to one workstation, user, and session. Write only to folders you own. On the team's shared root, share only dossiers and access/.
-- For extended writes, call the SecondBrain checkout's scripts/access.ps1 -Start and -End in the same script using try/finally. `access.ps1 -Start` returns the SessionId (or accepts a new one): read it and pass the same value to SecondBrain CLIs, including work.ps1, and to `-End`. If a session is busy, wait or switch activities. Preserve locks and incomplete transaction markers.
-- At session end, move useful evidence or reports into dossier history/. Close the folder with the same command and -Close to update MANIFEST.json. Leave fixture and tmp folders to retention. They expire after seven days and the latest five are retained. Work folders expire 30 days after closure. Evidence and report folders are never removed automatically. Rebuild the index with the SecondBrain checkout's scripts/cleanup.ps1 -RuntimeReport.
-- Cleanup and migration with the SecondBrain checkout's scripts/cleanup.ps1 -Migrate or -Regenerable start in preview. Apply them only on explicit request, on your own workstation, within a concrete scope, and while sessions are inactive.
-- Preserve backups, journals, and official artifacts. Keep raw sensitive data in the local Git-ignored area.
 <!-- secondbrain:repository:end -->

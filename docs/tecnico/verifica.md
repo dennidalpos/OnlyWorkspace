@@ -110,6 +110,17 @@ Lo stato aperto e i criteri di chiusura sono nel tracker (SecondBrain: `01-proje
 
 Dal 6 nov 2026 il test legge anche i tempi scritti da ciascun writer (`worker-N-timings.json`): 60 operazioni per processo, nessun errore registrato e la più lenta sotto 5 s (il writer produttivo rinuncia a 2 s). Un fallimento riporta quindi il tempo massimo invece del solo timeout.
 
+## MAX_PATH della cartella di configurazione su net48: limite misurato
+
+Misura dell'8 nov 2026 di `ConfigurationBackupService.ReplacePair` (residuo di #117). Una sonda console net48 senza `longPathAware` nel manifest carica `OnlyWorkspace.Infrastructure.dll` Release net48 e chiama `ReplacePair` due volte per ogni cartella da 140 a 240 caratteri: la seconda chiamata trova i file e passa da `File.Replace` con la copia `.bak`. La cartella è valida se `config.json` e `secrets.bin` contengono i byte della seconda scrittura.
+
+| Codice | Nome temporaneo più lungo | Cartella massima accettata | Primo fallimento |
+| --- | --- | --- | --- |
+| `2bc1941`, prima di #117 (due GUID interi) | 90 caratteri | 169 | 170, `DirectoryNotFoundException` |
+| `f2aae46`, dopo #117 (id da 12 esadecimali) | 49 caratteri | 209 | 210, `DirectoryNotFoundException` |
+
+Il processo della sonda riporta `RtlAreLongPathsEnabled` = 0 e un file a 300 caratteri fallisce. Windows abilita i percorsi lunghi solo con il criterio di sistema e il manifest dell'applicazione insieme, quindi il processo applica MAX_PATH anche se la postazione ha `LongPathsEnabled` = 1 ([Limite di lunghezza dei percorsi](https://learn.microsoft.com/windows/win32/fileio/maximum-file-path-limitation)). **Non qualificato:** la stessa misura su una macchina o VM isolata con `LongPathsEnabled` = 0 e nei processi reali (Outlook, ConfigTool).
+
 ## Copertura dei componenti senza test diretti
 
 Copertura misurata il 10 nov 2026 (net10, `coverlet.collector`, 1995 test): righe coperte Core 93,8%, Infrastructure 93,8%, ConfigTool 72,8%. `OnlyWorkspace.Outlook` è un assembly net48 con COM e non può essere referenziato dai test (il riferimento resta solo per l'ordine di build): la sua copertura è quella dei 29 file sorgente su 53 che il progetto di test compila per collegamento. Su quei file 1383 righe su 1548 sono coperte (89,3%): ArchiveIndexer 87%, ConfigToolLauncher 27%, UiThreadWatch 33%, tutti gli altri sopra il 75%. Con `OutlookLauncherAndWatchTests` (11 nov 2026, eseguibili sintetici in una cartella temporanea, overload interno `TryLaunch(candidati, ...)`) ConfigToolLauncher sale al 70% e UiThreadWatch al 98%. I 24 file non collegati (`TaskPaneControl`, `TaskPaneManager`, `TaskPaneCoordinator`, parti COM di `OutlookDataService`, ribbon e add-in) non hanno copertura misurabile e restano provati dalle prove sull'Outlook installato. Comando: `dotnet test tests/OnlyWorkspace.Tests -f net10.0-windows --settings tests/OnlyWorkspace.Tests/coverage-outlook.runsettings --collect:"XPlat Code Coverage"` (il file include l'assembly di test, escluso di norma, e ne tiene solo i sorgenti Outlook); senza `--settings` il report riguarda i soli assembly Core, Infrastructure e ConfigTool.
