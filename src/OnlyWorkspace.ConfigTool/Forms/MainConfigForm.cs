@@ -995,12 +995,24 @@ public sealed partial class MainConfigForm : Form
         AddRow(about, "GitHub:", Link(ThirdPartyComponents.GitHubUrl, ThirdPartyComponents.GitHubUrl), "Apre il profilo GitHub dell'autore nel browser.");
 
         var credits = AddGroup(stack, "Contributi");
+        var metas = new List<SelectableLabel>();
         foreach (var component in ThirdPartyComponents.All)
         {
             string meta = (component.Version != "-" ? component.Version + " · " : string.Empty) + component.License +
                           (component.Note.Length > 0 ? " · " + component.Note : string.Empty) + (component.Distributed ? string.Empty : " · solo sviluppo");
-            AddRow(credits, component.Name, new SelectableLabel { Text = meta, AutoSize = true, MaximumSize = new Size(Metrics.TextWidthMedium, 0), Margin = new Padding(3, 6, 3, 6) }, component.Url);
+            metas.Add(AddRow(credits, component.Name, new SelectableLabel { Text = meta, AutoSize = true, MaximumSize = new Size(Metrics.TextWidthMedium, 0), Margin = new Padding(3, 6, 3, 6) }, component.Url));
         }
+        credits.Layout += (_, _) =>
+        {
+            // Wrapped at the visible width of the value column: the wide name column left less than 520 px at 150% (#224).
+            foreach (var label in metas)
+            {
+                Control cell = label.Parent is FlowLayoutPanel inline && inline.Parent == credits ? inline : label;
+                int width = Math.Min(Ui.Px(this, Metrics.TextWidthMedium),
+                    Math.Max(Ui.Px(this, 160), credits.ClientSize.Width - cell.Left - cell.Margin.Right - cell.Padding.Horizontal - label.Margin.Horizontal));
+                if (label.MaximumSize.Width != width) label.MaximumSize = new Size(width, 0);
+            }
+        };
     }
 
     /// <summary>

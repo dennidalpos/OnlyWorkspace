@@ -1,13 +1,13 @@
 ﻿# Esegue i task autonomi del tracker OnlyWorkspace, uno per sessione fresca, fino a errore o quota.
 # Uso (dalla radice del repo): pwsh -NoProfile -File scripts\automation\run-tracker.ps1 [-OnlyId '#138'] [-MaxTasks 20] [-Skip '#110','#118'] [-DryRun]
 # Richiede SECONDBRAIN_HOME (variabile utente) e la CLI claude. Non fa commit ne push: le modifiche restano nel working tree.
-# -Skip: numeri (#NNN) o id esclusi; il default elenca i task che chiedono UAC reale, LongPaths, secondo account, PC pulito, upgrade firmato o altri repo.
+# -Skip: numeri (#NNN) o id esclusi; il default elenca i task del tracker che chiedono upgrade firmato, UAC reale, LongPaths o il repo SecondBrain.
 # -NoQualification: numeri o id che ricevono il prompt normale invece di quello di qualifica.
 # -DryRun: mostra la selezione e il prompt senza avviare sessioni. -Tracker e -Claude servono ai test con tracker e CLI sintetici.
 param(
   [string]$OnlyId = '',
   [int]$MaxTasks = 20,
-  [string[]]$Skip = @('#110', '#118', '#119', '#132', '#135', '#036', '#098', '#078'),
+  [string[]]$Skip = @('#110', '#118', '#119', '#036'),
   [string[]]$NoQualification = @('#137', '#138', '#139'),
   [switch]$DryRun,
   [string]$Tracker = '',
@@ -22,7 +22,7 @@ $repo = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 $sb = [Environment]::GetEnvironmentVariable('SECONDBRAIN_HOME', 'User')
 if (-not $Tracker) {
   if (-not $sb) { throw 'SECONDBRAIN_HOME non impostata (dossier non raggiungibile).' }
-  $Tracker = Join-Path $sb '02-areas\products\OnlyWorkspace\tracker.json'
+  $Tracker = Join-Path $sb '01-projects\OnlyWorkspace\tracker.json'
 }
 # Read/Grep/Glob fuori dal repo sono negati in -p: il dossier (report in history/) e i browser di Playwright entrano con --add-dir.
 # I percorsi vengono dalla workstation, non dal file settings versionato.

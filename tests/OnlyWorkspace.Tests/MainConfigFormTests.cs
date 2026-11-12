@@ -965,6 +965,44 @@ public sealed class MainConfigFormTests
         });
     }
 
+    /// <summary>#224: at the default size every credit value ends inside its card, also at 150% and 200%.</summary>
+    [Theory]
+    [InlineData(1f)]
+    [InlineData(1.5f)]
+    [InlineData(2f)]
+    public void AboutPage_CreditValuesStayInsideTheCard(float scale)
+    {
+        OnSta(directory =>
+        {
+            Write(directory, new WorkspaceConfig { DefaultProfile = "a", Profiles = new() { Local("a") } }, new() { ["profile_a_token"] = "s" });
+            new FileConfigurationService(directory, directory).SetUserFlag("guidedSetupDone", true);
+            using var form = new MainConfigForm(directory, trayContext: null, preferencesDir: directory)
+            {
+                StartPosition = FormStartPosition.Manual,
+                Location = new System.Drawing.Point(-4000, -4000)
+            };
+            form.Show();
+            Application.DoEvents();
+            if (scale > 1f)
+            {
+                form.Font = new System.Drawing.Font(form.Font.FontFamily, form.Font.SizeInPoints * scale);
+                form.Scale(new System.Drawing.SizeF(scale, scale));
+                Application.DoEvents();
+            }
+            var pages = Field<List<Control>>(form, "_pages");
+            typeof(MainConfigForm).GetMethod("ShowPage", Flags)!.Invoke(form, new object[] { pages.Count - 1 });
+            Application.DoEvents();
+            var credits = Descendants(pages[pages.Count - 1]).OfType<TableLayoutPanel>().Where(g => g.ColumnCount == 4).Last();
+            var values = Descendants(credits).OfType<Label>().Where(l => credits.GetColumn(l.Parent == credits ? l : l.Parent!) > 0 && l.Visible).ToList();
+            Assert.Contains(values, l => l.Text.Contains("LICENSE.txt"));
+            foreach (var value in values)
+            {
+                int right = credits.PointToClient(value.PointToScreen(new System.Drawing.Point(value.Width, 0))).X;
+                Assert.True(right <= credits.ClientSize.Width, $"«{value.Text}» ends at {right}, grid is {credits.ClientSize.Width} wide (scale {scale})");
+            }
+        });
+    }
+
     private static IEnumerable<Control> Descendants(Control root)
     {
         foreach (Control child in root.Controls)
