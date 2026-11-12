@@ -16,6 +16,7 @@ function node(tag) {
     tag, className: '', textContent: '', title: '', hidden: false, style: {}, dataset: {}, children: [], attrs: {},
     appendChild(child) { this.children.push(child); return child; },
     setAttribute(k, v) { this.attrs[k] = v; },
+    addEventListener() {},
     set innerHTML(value) { this.children = []; },
   };
   n.tBodies = [n];
@@ -134,6 +135,27 @@ assert.match(indicator.title, /\nqwen · 127\.0\.0\.1\nDestinazione: questo PC o
 context.bar.info = null;
 context.setArchiveIndicator({ light: 'Off', label: 'non disponibile' });
 context.setIndicator('ai', 'IA', { light: 'Off', label: 'non verificato' });
+
+// #228: after «Configurazione necessaria» the dot names neither the model nor the destination of the profile that is gone.
+Object.assign(context, {
+  state: { configOk: true, current: null, busy: false }, conv: Object.assign(node('div'), { firstChild: null, insertBefore() {} }),
+  document: { getElementById: () => null, createTextNode: value => Object.assign(node('#text'), { textContent: value }) }, hideEmptyState() {}, updateActions() {}, finishTurn() {}, copyText() {}, post() {},
+  icon: () => '', actionButton: () => node('button'),
+});
+new vm.Script(html.slice(html.indexOf('  function updateModelBadge('), html.indexOf('  function onHostMessage('))).runInContext(context);
+context.updateModelBadge({ model: 'qwen3.8-flash', host: 'cloud.example.test', region: 'UE' }, true, 'AICloud');
+context.setIndicator('ai', 'IA', { light: 'Ok', label: 'verificato', external: true });
+assert.match(indicator.title, /AICloud · qwen3\.8-flash[\s\S]*Destinazione: cloud esterno/);
+context.showConfigError('Nessun profilo IA configurato.');
+assert.doesNotMatch(indicator.title, /AICloud|qwen|cloud esterno|questo PC/);
+assert.match(indicator.title, /\nDestinazione: nessuna, configurazione necessaria$/);
+context.setIndicator('ai', 'IA', { light: 'Error', label: 'non configurato', external: true });
+assert.doesNotMatch(indicator.title, /cloud esterno/, 'A later IA status does not bring the old destination back.');
+assert.match(html, /case 'profiles_init': \{[\s\S]{0,300}bar\.configError = false;\s*updateModelBadge\(/);
+context.bar.configError = false;
+context.bar.info = null;
+context.setIndicator('ai', 'IA', { light: 'Off', label: 'non verificato' });
+console.log('PASS #228: Configurazione necessaria clears the model and destination from the status dot');
 announced.length = 0;
 
 context.data = { message: 'Engine unavailable' };

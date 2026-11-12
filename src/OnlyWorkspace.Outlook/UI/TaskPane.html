@@ -2964,7 +2964,7 @@
   function plural(n, one, many) { return formatCount(n) + ' ' + (n === 1 ? one : many); }
   // Top-bar status dot: one light for Archivio and IA, as the host computed them; the pane reads no Italian text to decide a state.
   // Worst of the two (Error, Working, Waiting, Paused, Ok); an archive that is off does not count, an IA that is not verified is never green.
-  var bar = { info: null, archive: { light: 'Off', text: 'Archivio: non disponibile', reason: '', failing: false }, ai: { light: 'Off', text: 'IA: non verificato', reason: '', failing: false, external: false } };
+  var bar = { info: null, configError: false, archive: { light: 'Off', text: 'Archivio: non disponibile', reason: '', failing: false }, ai: { light: 'Off', text: 'IA: non verificato', reason: '', failing: false, external: false } };
   var lightRank = ['Error', 'Working', 'Waiting', 'Paused', 'Ok', 'Off'];
   function combinedLight() {
     var lights = [bar.ai.light];
@@ -2992,7 +2992,8 @@
     if (info && info.model) {
       lines.push((info.name ? info.name + ' · ' : '') + info.model + (info.host ? ' · ' + info.host : ''));
       lines.push(info.cloud ? 'Destinazione: cloud esterno' + (info.region ? ' · area ' + info.region : '') : 'Destinazione: questo PC o la rete locale');
-    } else lines.push(bar.ai.external ? 'Destinazione: cloud esterno' : 'Destinazione: questo PC o la rete locale');
+    } else lines.push(bar.configError ? 'Destinazione: nessuna, configurazione necessaria'
+      : bar.ai.external ? 'Destinazione: cloud esterno' : 'Destinazione: questo PC o la rete locale');
     b.title = lines.join('\n');
     b.setAttribute('aria-label', 'Stato: ' + bar.archive.text + '. ' + bar.ai.text + '.');
     if (light === 'Error' ? was !== light || previous !== key : was === 'Error') announce('Stato: ' + (problem || lines.slice(0, 2).join('. ')));
@@ -3446,6 +3447,9 @@
 
   function showConfigError(message) {
     state.configOk = false;
+    // The dot no longer names the model or destination of a profile that is gone (#228).
+    bar.configError = true;
+    updateModelBadge(null, false, '');
     if (state.current && !state.busy) finishTurn({ status: 'silent' });
     hideEmptyState();
     var existing = document.getElementById('configCard');
@@ -3507,6 +3511,7 @@
         var card = document.getElementById('configCard');
         if (card) card.remove();
         if (!conv.querySelector('.turn')) $('emptyState').hidden = false;
+        bar.configError = false;
         updateModelBadge(data.badge, data.isCloudActive, data.activeProfileName);
         updateEgressNotice(!!data.activeBlocked, data.blockedMessage);
         // Sent again after a ConfigTool save: attachments return to the administrator's default,
