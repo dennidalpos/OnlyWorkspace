@@ -113,8 +113,11 @@ public sealed partial class MainConfigForm : Form
     private ComboBox _cmbRegion = null!;
     private SelectableLabel _lblExposure = null!;
     private SelectableLabel _lblAttachmentsNote = null!;
+    private TableLayoutPanel? _permissionGrid;
     private SelectableLabel _lblWebActionsNote = null!;
     private CheckBox _chkWebSearch = null!;
+    /// <summary>Why a change just turned Ricerca web off (shown beside the box until it is ticked again or the profile changes).</summary>
+    private string? _webOffReason;
     private TextBox _txtWebSearchKey = null!;
     private Label _lblWebSupport = null!;
     private Label _lblModelLimits = null!;

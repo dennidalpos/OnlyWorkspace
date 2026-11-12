@@ -165,6 +165,35 @@ public sealed class ConfigToolUxTests
     }
 
     [Fact]
+    public void Notice_WheelOverTheTextScrollsWithoutAClick_AndAloneReachesTheUnlock()
+    {
+        OnSta(_ =>
+        {
+            using var notice = new DataEgressConsentForm { StartPosition = FormStartPosition.Manual, Location = new System.Drawing.Point(-4000, -4000) };
+            notice.Show();
+            Application.DoEvents();
+            var scroll = Field<ScrollPanel>(notice, "_scroll");
+            var read = Field<CheckBox>(notice, "_read");
+            // The wheel lands on the text under the pointer, not on the focused control (#225).
+            var text = Field<TextBox>(Descendants(scroll).OfType<SelectableLabel>()
+                .OrderByDescending(label => label.Text.Length).First(), "_text");
+            Assert.False(text.Focused);
+            for (int i = 0; i < 200 && !notice.ReadToEnd; i++)
+            {
+                SendMessage(text.Handle, 0x020A, (IntPtr)(-120 << 16), IntPtr.Zero);
+                if (i == 0) Assert.True(scroll.AutoScrollPosition.Y < 0, "one notch over the text moves the page");
+                notice.CheckRead();
+            }
+            Assert.True(notice.ReadToEnd);
+            Assert.True(read.Enabled);
+            notice.Close();
+        });
+    }
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
+
+    [Fact]
     public void Notice_EscAndCloseAskOnlyAfterTheBoxIsTicked_AndShowTheReasonBesideTheButton()
     {
         OnSta(_ =>

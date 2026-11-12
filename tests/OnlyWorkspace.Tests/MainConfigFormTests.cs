@@ -384,6 +384,42 @@ public sealed class MainConfigFormTests
         });
     }
 
+    /// <summary>#226: a model change turns Ricerca web off and says why beside the box, until it is ticked again.</summary>
+    [Fact]
+    public void ModelChange_TurnsWebSearchOff_AndShowsTheReasonBesideTheBox()
+    {
+        OnSta(directory =>
+        {
+            Write(directory, new WorkspaceConfig { DefaultProfile = "a", Profiles = new() { Local("a", web: true) } },
+                new() { ["profile_a_token"] = "secret" });
+            new FileConfigurationService(directory, directory).SetUserFlag("guidedSetupDone", true);
+            using var form = new MainConfigForm(directory, null, directory) { StartPosition = FormStartPosition.Manual, Location = new System.Drawing.Point(-4000, -4000) };
+            form.Show();
+            Application.DoEvents();
+            var web = Field<CheckBox>(form, "_chkWebSearch");
+            var note = Field<Label>(form, "_lblWebActionsNote");
+            Assert.True(web.Checked);
+            Assert.DoesNotContain("si è spenta", note.Text);
+
+            Field<TextBox>(form, "_txtModel").Text = "other-model";
+
+            Assert.False(web.Checked);
+            Assert.Contains("«Ricerca web attiva» si è spenta perché il modello è cambiato", note.Text);
+            Assert.True(OwnVisible(note));
+            // The long reason wraps inside the field column instead of running past the card.
+            Descendants(form).OfType<SegmentedBar>().First(b => b.Controls.Cast<Control>().Any(c => c.Text == "Autorizzazioni")).Select(2);
+            Application.DoEvents();
+            Control column = note.Parent is FlowLayoutPanel inline ? inline.Parent! : note.Parent!;
+            column.PerformLayout();
+            int right = column.PointToClient(note.PointToScreen(new System.Drawing.Point(note.Width, 0))).X;
+            Assert.True(right <= column.ClientSize.Width, $"the reason ends at {right}, column is {column.ClientSize.Width} wide");
+
+            web.Enabled = true;
+            web.Checked = true;
+            Assert.DoesNotContain("si è spenta", note.Text);
+        });
+    }
+
     /// <summary>#075: with Ricerca web off the saved actions are drawn empty, not ticked and grey; they are still saved and reappear.</summary>
     [Fact]
     public void WebActionsOfAProfileWithoutWebSearch_AreDrawnEmpty_ButKeepAndSaveTheirValues()
@@ -1002,6 +1038,47 @@ public sealed class MainConfigFormTests
             }
         });
     }
+
+    [Theory]
+    [InlineData(1f)]
+    [InlineData(1.5f)]
+    public void AboutPage_WheelOverTheTextScrollsThePageWithoutAClick(float scale)
+    {
+        OnSta(directory =>
+        {
+            Write(directory, new WorkspaceConfig { DefaultProfile = "a", Profiles = new() { Local("a") } }, new() { ["profile_a_token"] = "s" });
+            new FileConfigurationService(directory, directory).SetUserFlag("guidedSetupDone", true);
+            using var form = new MainConfigForm(directory, trayContext: null, preferencesDir: directory)
+            {
+                StartPosition = FormStartPosition.Manual,
+                Location = new System.Drawing.Point(-4000, -4000)
+            };
+            form.Show();
+            Application.DoEvents();
+            if (scale > 1f)
+            {
+                form.Font = new System.Drawing.Font(form.Font.FontFamily, form.Font.SizeInPoints * scale);
+                form.Scale(new System.Drawing.SizeF(scale, scale));
+                Application.DoEvents();
+            }
+            var pages = Field<List<Control>>(form, "_pages");
+            typeof(MainConfigForm).GetMethod("ShowPage", Flags)!.Invoke(form, new object[] { pages.Count - 1 });
+            Application.DoEvents();
+            // The wheel lands on the text under the pointer, not on the focused control (#225).
+            var label = Descendants(pages[pages.Count - 1]).OfType<SelectableLabel>().First(l => l.Visible && l.Text.Length > 0);
+            Control? up = label.Parent;
+            while (up is not null and not ScrollPanel) up = up.Parent;
+            var page = Assert.IsType<ScrollPanel>(up);
+            Assert.True(page.VerticalScroll.Visible, $"the About page scrolls at scale {scale}");
+            var text = Field<TextBox>(label, "_text");
+            Assert.False(text.Focused);
+            SendMessage(text.Handle, 0x020A, (IntPtr)(-120 << 16), IntPtr.Zero);
+            Assert.True(page.AutoScrollPosition.Y < 0, $"one notch over «{label.Text}» moves the page (scale {scale})");
+        });
+    }
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
 
     private static IEnumerable<Control> Descendants(Control root)
     {

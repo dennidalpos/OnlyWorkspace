@@ -194,6 +194,7 @@ public sealed partial class MainConfigForm
     private void LstProfiles_SelectedIndexChanged(object? sender, EventArgs e)
     {
         if (_refreshingList || _lstProfiles.SelectedItem is not ProfileItem item) return;
+        _webOffReason = null;
         Ui.ShowView(_profileHost);
         _diagnosis.CancelAll();
         SetProbeStatus(ProbeIdle, Tone.Muted);
@@ -314,6 +315,7 @@ public sealed partial class MainConfigForm
 
             if (caps.SupportsNumCtx) ApplyPreset(ProviderCatalog.Presets.First(p => p.ContextWindow == 16384));
             item.Profile.ModelCapabilities = null;
+            if (_chkWebSearch.Checked) _webOffReason = "il servizio IA è cambiato";
             _chkWebSearch.Checked = false;
             item.Profile.WebSearchEnabled = false;
         }
@@ -664,9 +666,13 @@ public sealed partial class MainConfigForm
         bool on = _chkWebSearch.Checked && (_isLocked ? _lockedControls.TryGetValue(_chkWebSearch, out var enabled) && enabled : _chkWebSearch.Enabled);
         // An external profile searches only for the actions its exposure level permits.
         var policy = _chkExternal.Checked ? ExposurePolicy.For(SelectedExposure) : ExposurePolicy.Local;
-        _lblWebActionsNote.Text = _chkExternal.Checked && !policy.AnyWeb ? "Nessuna ricerca web a questo livello: serve Esteso."
+        // A box that went off by itself says why: the earlier check belonged to the old model or service (#226).
+        _lblWebActionsNote.Text = !on && _webOffReason != null
+                ? "«Ricerca web attiva» si è spenta perché " + _webOffReason + ": la verifica precedente non vale più. Riattivala prima di Salva se il nuovo modello la supporta."
+            : _chkExternal.Checked && !policy.AnyWeb ? "Nessuna ricerca web a questo livello: serve Esteso."
             : !on ? "Attiva «Ricerca web attiva» per scegliere le azioni." : "";
         _lblWebActionsNote.Visible = _lblWebActionsNote.Text.Length > 0;
+        WrapPermissionNotes();
         foreach (Control box in _webActions.Controls)
         {
             bool allowed = on && policy.AllowsWeb((string)box.Tag!);
@@ -682,6 +688,7 @@ public sealed partial class MainConfigForm
     private void InvalidateWebSupport()
     {
         if (_isLoading) return;
+        if (_chkWebSearch.Checked) _webOffReason ??= "sono cambiati indirizzo o chiave";
         if (_lstProfiles.SelectedItem is ProfileItem item) item.Profile.WebSearchEnabled = false;
         ResetWebSupport();
     }

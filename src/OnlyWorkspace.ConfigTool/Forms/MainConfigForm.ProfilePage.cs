@@ -181,6 +181,7 @@ public sealed partial class MainConfigForm
             if (!_isLoading && _lstProfiles.SelectedItem is ProfileItem selected &&
                 !string.Equals(selected.Profile.Model, _txtModel.Text.Trim(), StringComparison.Ordinal))
             {
+                if (_chkWebSearch.Checked) _webOffReason = "il modello è cambiato";
                 _chkWebSearch.Checked = false;
                 selected.Profile.WebSearchEnabled = false;
             }
@@ -273,6 +274,23 @@ public sealed partial class MainConfigForm
         _chkDisableThinking.CheckedChanged += (s, e) => OnProfileFieldChanged();
     }
 
+    /// <summary>
+    /// Notes wrap at the visible width of the field column: at 440 px one went past the card at 100% (A159), and the
+    /// reason Ricerca web went off, set while the section was hidden, ran past the edge (#226).
+    /// </summary>
+    private void WrapPermissionNotes()
+    {
+        var net = _permissionGrid;
+        if (net == null || net.ClientSize.Width == 0) return;
+        foreach (var note in new[] { _lblExposure, _lblAttachmentsNote, _lblWebActionsNote })
+        {
+            if (note == null) continue;
+            Control cell = note.Parent is FlowLayoutPanel inline && inline.Parent == net ? inline : note;
+            int width = Math.Max(Ui.Px(this, 160), net.ClientSize.Width - cell.Left - cell.Margin.Right - cell.Padding.Horizontal - note.Margin.Horizontal);
+            if (note.MaximumSize.Width != width) note.MaximumSize = new Size(width, 0);
+        }
+    }
+
     /// <summary>Autorizzazioni: cloud service, attachment text and Ricerca web.</summary>
     private void BuildPermissionRows(TableLayoutPanel net)
     {
@@ -294,13 +312,9 @@ public sealed partial class MainConfigForm
             "Cosa esce dal PC al livello scelto.");
         Theme.SetTone(_lblExposure, Tone.Muted);
         DescriptionHelp(_lblExposure, "Protezione dei dati");
-        net.Layout += (_, _) =>
-        {
-            // Wrapped at the visible width of the field column: at 440 px it went past the card at 100% (A159).
-            Control cell = _lblExposure.Parent is FlowLayoutPanel inline && inline.Parent == net ? inline : _lblExposure;
-            int width = Math.Max(Ui.Px(this, 160), net.ClientSize.Width - cell.Left - cell.Margin.Right - cell.Padding.Horizontal - _lblExposure.Margin.Horizontal);
-            if (_lblExposure.MaximumSize.Width != width) _lblExposure.MaximumSize = new Size(width, 0);
-        };
+        _permissionGrid = net;
+        net.Layout += (_, _) => WrapPermissionNotes();
+        net.VisibleChanged += (_, _) => WrapPermissionNotes();
 
         _cmbRegion = AddRow(net, "Area del servizio:", new ThemedComboBox { Width = 200, Anchor = AnchorStyles.Left },
             "Dove il servizio elabora i dati, secondo il contratto: UE, non UE o non specificata. Non è dedotta dall'indirizzo; se non specificata, l'informativa chiede una conferma. Si applica con Salva.");
@@ -326,7 +340,12 @@ public sealed partial class MainConfigForm
             "Se il modello scelto sa cercare sul web, secondo il servizio o secondo la prova fatta con il pulsante.");
         _chkWebSearch = AddRow(net, "Abilitazione:", new ThemedCheckBox { Text = "Ricerca web attiva", AutoSize = true },
             "Abilita la ricerca web per le azioni spuntate sotto. Con Esteso la ricerca invia l'intera richiesta (testo di email e allegati compreso) pseudonimizzata sul PC; a Minimo e Standard nessuna ricerca; le query generate dal modello restano bloccate. Richiede l'informativa accettata.");
-        _chkWebSearch.CheckedChanged += (s, e) => { OnProfileFieldChanged(); UpdateWebActionsEnabled(); };
+        _chkWebSearch.CheckedChanged += (s, e) =>
+        {
+            if (_chkWebSearch.Checked) _webOffReason = null;
+            OnProfileFieldChanged();
+            UpdateWebActionsEnabled();
+        };
         // Two columns as wide as their longest action: the boxes line up from row to row, and a third column
         // did not fit the field at the default window width (the last actions were cut off).
         _webActions = new TableLayoutPanel { AutoSize = true, ColumnCount = 2, GrowStyle = TableLayoutPanelGrowStyle.AddRows, Margin = Padding.Empty };

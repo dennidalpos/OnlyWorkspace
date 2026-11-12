@@ -13,7 +13,7 @@ internal class SelectableLabel : Label
 
     public SelectableLabel()
     {
-        _text = new TextBox
+        _text = new WheelPassingTextBox
         {
             BorderStyle = BorderStyle.None,
             Multiline = true,
@@ -84,7 +84,24 @@ internal class SelectableLabel : Label
     protected override void OnBackColorChanged(EventArgs e) { base.OnBackColorChanged(e); SyncText(); }
     protected override void OnLayout(LayoutEventArgs e) { base.OnLayout(e); SyncText(); }
 
+    /// <summary>A multiline edit control swallows the wheel even with nothing to scroll: hand it to the label, whose
+    /// default handling passes it up to the scrolling page (#225).</summary>
+    private sealed class WheelPassingTextBox : TextBox
+    {
+        protected override void WndProc(ref Message m)
+        {
+            if ((m.Msg == WmMouseWheel || m.Msg == WmMouseHWheel) && Parent is { IsHandleCreated: true } parent)
+            {
+                m.Result = SendMessage(parent.Handle, m.Msg, m.WParam, m.LParam);
+                return;
+            }
+            base.WndProc(ref m);
+        }
+    }
+
     private const int EmSetMargins = 0xD3;
+    private const int WmMouseWheel = 0x020A;
+    private const int WmMouseHWheel = 0x020E;
 
     [DllImport("user32.dll")]
     private static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
