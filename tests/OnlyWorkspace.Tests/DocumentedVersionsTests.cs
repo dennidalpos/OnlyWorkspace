@@ -75,6 +75,17 @@ public sealed class DocumentedVersionsTests
     }
 
     [Fact]
+    public void AuthorizationKeyVersion_InTheGuides_IsTheCurrentOne()
+    {
+        // «authorization key 3» outlived the per-service key 4 in the administrator guide.
+        string source = File.ReadAllText(Path.Combine(TestBuildPaths.RepositoryRoot, "src", "OnlyWorkspace.Core", "Privacy", "DataEgressAuthorization.cs"));
+        int version = int.Parse(Regex.Match(source, @"AuthorizationPolicyKey\(LlmProfileConfig profile\) => Digest\(new\s*\{\s*Version = (\d+),").Groups[1].Value);
+        Assert.Empty(Mismatches(@"authorization key (\d+)\b", version));
+        Assert.Empty(Mismatches(@"chiave (?:di )?autorizzazione (\d+)\b", version));
+        Assert.Contains(Lines(), l => l.Text.Contains("authorization key " + version));
+    }
+
+    [Fact]
     public void ArchivePipeAndFormat_InTheGuides_AreTheCurrentOnes()
     {
         int pipe = ArchivePipe.Version;
