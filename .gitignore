@@ -22,7 +22,14 @@ $RECYCLE.BIN/
 *.bin
 *.owbak
 *.pfx
+*.p12
+*.pem
+*.key
+*.snk
+.env
+.env.*
 .local-secrets/
+TestResults/
 
 ## Local tooling (workstation-specific)
 .secondbrain/
