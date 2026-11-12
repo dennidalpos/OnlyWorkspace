@@ -12,7 +12,7 @@ Il lavoro aperto e gli esiti di ogni lotto sono nel tracker del dossier (`01-pro
 
 Versioni che le guide citano e che un test confronta con il codice (`DocumentedVersionsTests`): informativa sull'uscita dei dati, policy della conversazione, chiave di autorizzazione, pipe locale dell'archivio, formato dell'archivio, numero enum di Esteso. Chi le cambia aggiorna le guide nello stesso lotto.
 
-Evidenza corrente del 12/11/2026 su un clone pulito di 2124b39 con le modifiche di #232: build e tre suite complete consecutive xUnit net48 2194/2194 e net10 2195/2195 verdi; sul checkout di lavoro `check-code.ps1` e test-scripts (26) verdi, `OllamaLive.Tests.ps1` (Ollama su loopback, `qwen3.5:4b`) e gli smoke `WebViewBoundary`, `WebViewRecovery` e `WebViewFocus` x64, più `WebViewFocus` x86, PASS (#233); smoke net48 x64/x86 verdi. Controllo vulnerabilità NuGet non rieseguito in questo giro. Non è una prova sulla build installata: la build installata può essere precedente ai lotti recenti e le prove a schermo sono elencate in «Non qualificato» e nel tracker.
+Evidenza corrente del 12/11/2026 su un clone pulito di 2124b39 con le modifiche di #232: build e tre suite complete consecutive xUnit net48 2194/2194 e net10 2195/2195 verdi; sul checkout di lavoro `check-code.ps1` e test-scripts (26) verdi, `OllamaLive.Tests.ps1` (Ollama su loopback, `qwen3.5:4b`) e gli smoke `WebViewBoundary`, `WebViewRecovery` e `WebViewFocus` x64, più `WebViewFocus` x86, PASS (#233); smoke net48 x64/x86 verdi, nessuna vulnerabilità NuGet segnalata. Non è una prova sulla build installata: la build installata può essere precedente ai lotti recenti e le prove a schermo sono elencate in «Non qualificato» e nel tracker.
 
 ## Comandi
 
