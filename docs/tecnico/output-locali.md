@@ -16,7 +16,8 @@ Comandi dalla radice:
 
 ```powershell
 dotnet build OnlyWorkspace.sln -c Release --nologo
-dotnet test OnlyWorkspace.sln -c Release --no-build --nologo
+dotnet test tests/OnlyWorkspace.Tests -c Release --no-build --nologo -f net48
+dotnet test tests/OnlyWorkspace.Tests -c Release --no-build --nologo -f net10.0-windows
 pwsh -NoProfile -File scripts/test-scripts.ps1
 ```
 

@@ -1,6 +1,6 @@
 # Guida visiva ai percorsi utente
 
-Guida dei principali percorsi, riallineata staticamente al codice il 01/11/2026. Questa revisione non è una nuova prova installata; evidenze e limiti sono in [Verifica e qualifica](../tecnico/verifica.md). Il [kit social](../../assets/social_copy.md) distingue catture datate e illustrazioni.
+Guida dei principali percorsi, riallineata staticamente al codice il 12/11/2026. Questa revisione non è una nuova prova installata; evidenze e limiti sono in [Verifica e qualifica](../tecnico/verifica.md). Il [kit social](../../assets/social_copy.md) distingue catture datate e illustrazioni.
 Ciascuna sezione descrive un'area funzionale tramite un diagramma Mermaid orientato all'esperienza dell'utente finale, indicando:
 - **Punti di ingresso**: ribbon, menu contestuali, riquadro WebView2, finestra di composizione o icona nella tray.
 - **Azioni e scelte**: opzioni disponibili prima e durante l'esecuzione.
@@ -15,7 +15,7 @@ Ciascuna sezione descrive un'area funzionale tramite un diagramma Mermaid orient
 Quando selezioni un'email nell'elenco di Outlook o la apri in una finestra di lettura, puoi avviare le azioni rapide dedicate dal Ribbon, dal menu contestuale o dal riquadro.
 Il modello riceve i testi interi puliti necessari all’azione e gli allegati consentiti e leggibili per intero; quelli esclusi o incompleti sono dichiarati. La richiesta locale completa, inclusi prompt e schema, deve rientrare nel contesto. La ricerca web ha un invio distinto e limitato, descritto in [Sicurezza e dati](../admin/sicurezza.md).
 
-Tutti i percorsi IA restano soggetti al profilo: i livelli esterni correnti escludono il testo degli allegati; Minimo consente i soli fatti locali nelle azioni previste, Standard anche gli originali ripuliti. Il web esterno è limitato alla Verifica sicurezza a Standard. [Autorizzazioni e limiti](modelli-web.md).
+Tutti i percorsi IA restano soggetti al profilo: verso il cloud Minimo consente i soli fatti locali nelle azioni previste, Standard anche gli originali ripuliti e mascherati, Esteso anche il testo degli allegati con il permesso distinto. Le ricerche web delle azioni inviano dati solo a Esteso, con un provider che cerca da sé; nessuna query viene costruita dai domini della posta. [Autorizzazioni e limiti](modelli-web.md).
 
 ```mermaid
 flowchart TD
@@ -32,7 +32,7 @@ flowchart TD
 
     SCELTA -->|"Sintesi"| A_SINTESI["Lettura email, thread e allegati leggibili"]
     A_SINTESI --> C_CTX1{"Il testo entra nel contesto IA?"}
-    C_CTX1 -->|"No (profilo locale Ollama)"| ERR_CTX1["Arresto protettivo con avviso:<br/>«Testo troppo lungo per il profilo»<br/>(nessun dato inviato o troncato)"]
+    C_CTX1 -->|"No (profilo locale Ollama)"| ERR_CTX1["Arresto protettivo con avviso:<br/>«Il testo è troppo lungo per il profilo in uso»<br/>(nessun dato inviato o troncato)"]
     C_CTX1 -->|"Sì"| RES_SINTESI["Sintesi visualizzata nel riquadro<br/>con comandi Copia e Rigenera"]
 
     SCELTA -->|"Bozza risposta"| A_BOZZA{"Tipo di risposta?"}
@@ -42,21 +42,21 @@ flowchart TD
     B_CUSTOM --> GEN_BOZZA["Generazione testo da modello attivo"]
     B_ACCEPT --> GEN_BOZZA
     B_DECLINE --> GEN_BOZZA
-    GEN_BOZZA --> RES_BOZZA["Bozza pronta nel riquadro:<br/>• Inserisci al cursore<br/>• Nuova risposta Outlook<br/>• Copia negli appunti<br/>(Nessun invio automatico)"]
+    GEN_BOZZA --> RES_BOZZA["Bozza pronta nel riquadro:<br/>• «Inserisci bozza» o «A tutti» (apre la risposta in Outlook)<br/>• «Modifica» per una nuova versione<br/>• «Copia»<br/>(Nessun invio automatico)"]
 
     SCELTA -->|"Verifica sicurezza"| A_SEC["Esecuzione controlli tecnici locali:<br/>SPF/DKIM/DMARC, domini simili, allegati, Defender"]
-    A_SEC --> C_WEB_SEC{"Ricerca web reputazione attiva?"}
-    C_WEB_SEC -->|"Sì (cerca solo domini)"| W_SEC["Interroga domini del mittente e dei link"]
-    C_WEB_SEC -->|"No o non disponibile"| NO_W_SEC["Prosegue con i soli controlli locali"]
+    A_SEC --> C_WEB_SEC{"Ricerca web attiva per l'azione<br/>(profilo cloud a Esteso)?"}
+    C_WEB_SEC -->|"Sì"| W_SEC["Ricerca con la richiesta pseudonimizzata<br/>(nessuna query dai soli domini)"]
+    C_WEB_SEC -->|"No o non disponibile"| NO_W_SEC["Prosegue con i soli dati di Outlook"]
     W_SEC -->|"Errore o timeout web"| ERR_W_SEC["Segnala «Ricerca web non riuscita»"]
     W_SEC -->|"Completata"| REP_SEC["Analisi IA dei riscontri"]
     NO_W_SEC --> REP_SEC
     ERR_W_SEC --> REP_SEC
-    A_SEC -->|"Profilo cloud al livello 1"| RES_LOCAL_SEC["Rapporto con i soli controlli locali"]
+    A_SEC -->|"Senza IA, livello 0-1 o errore"| RES_LOCAL_SEC["Rapporto con i soli controlli locali"]
     REP_SEC --> RES_SEC["Rapporto sicurezza con evidenze dettagliate<br/>(L'IA non può abbassare il rischio tecnico locale)"]
 
     SCELTA -->|"Attività e appuntamenti"| A_TASK["Individua impegni nel corpo e allegati"]
-    A_TASK --> RES_TASK["Elenco proposte nel riquadro:<br/>• Rivedi dettagli<br/>• «Aggiungi a Outlook» (categoria OnlyWorkspace)"]
+    A_TASK --> RES_TASK["Elenco proposte nel riquadro:<br/>• «Apri bozza» per rivedere la voce<br/>• «Aggiungi a Outlook» (categoria OnlyWorkspace)"]
 
     SCELTA -->|"Estrai dati"| A_DATA["Estrae campi e righe documento commerciale"]
     A_DATA --> RES_DATA["Visualizzazione griglia dati:<br/>• «Copia tabella»<br/>• «Salva CSV in Download»"]
@@ -123,7 +123,7 @@ flowchart TD
 
     CHECK_SEL -->|"No"| BTN_INS["Pulsante «Inserisci» al cursore"]
 
-    BTN_REPLACE --> OPZ_FINALI["Azioni disponibili:<br/>• Inserisci / Sostituisci selezione<br/>• Copia negli appunti<br/>• Rigenera o modifica istruzione<br/>(Nessuna email viene mai inviata da sola)"]
+    BTN_REPLACE --> OPZ_FINALI["Azioni disponibili:<br/>• Inserisci / Sostituisci selezione<br/>• Copia<br/>• Rigenera<br/>(Nessuna email viene mai inviata da sola)"]
     BLK_REPLACE --> OPZ_FINALI
     BTN_INS --> OPZ_FINALI
 
@@ -136,7 +136,7 @@ flowchart TD
 ## 3. Chat nel riquadro e ricerca assistita
 
 La chat assistente risponde a domande sulla posta, sull'agenda o generali.
-L'intento viene classificato sul PC; la risposta può comunque richiedere il modello. Chat e Cerca e analizza mostrano subito l'elenco delle email trovate; un elenco o un conteggio finisce lì. Altrimenti un'unica richiesta legge fatti locali a Minimo oppure originali ripuliti a Standard e con profili locali, in ordine cronologico. Ogni punto cita le sue email [Mn]: importi, date e riferimenti non trovati nell'email citata sono marcati «non verificato». Le schede IA pregresse non alimentano la richiesta e non vengono generate automaticamente.
+L'intento viene classificato sul PC; la risposta può comunque richiedere il modello. Chat e Cerca e analizza mostrano subito l'elenco delle email trovate; un elenco o un conteggio finisce lì. Altrimenti un'unica richiesta legge fatti locali a Minimo oppure originali ripuliti a Standard, a Esteso e con profili locali, in ordine cronologico. Ogni punto cita le sue email [Mn]: importi, date e riferimenti non trovati nell'email citata sono marcati «non verificato». Le schede IA pregresse non alimentano la richiesta e non vengono generate automaticamente.
 
 ```mermaid
 flowchart TD
@@ -144,7 +144,7 @@ flowchart TD
         direction TB
         K1["Icona Chat nella barra del riquadro"]
         K2["Scheda OnlyWorkspace: pulsante Chat"]
-        K3["Campo testo «Scrivi un messaggio...»"]
+        K3["Campo testo «Chiedi o fai scrivere…»"]
     end
 
     INGRESSO_CHAT --> DOMANDA["Invio della domanda o richiesta"]
@@ -170,7 +170,7 @@ flowchart TD
     ROUTE_DATI -->|"Domanda generale / Web"| CHECK_WEB{"Ricerca web attiva o richiesta<br/>(«online», «notizie»...)?"}
     CHECK_WEB -->|"Sì"| CALL_WEB["Ricerca web secondo profilo e azione"]
     CHECK_WEB -->|"No"| SOLO_MODELLO["Risponde con la conoscenza del modello"]
-    CALL_WEB -->|"Timeout o errore web"| RECUPERO_WEB["Avviso «Riscontri web mancanti» e risposta da IA"]
+    CALL_WEB -->|"Timeout, errore o ricerca non eseguita"| RECUPERO_WEB["La risposta dichiara che mancano i riscontri web<br/>(«Il modello non ha eseguito la ricerca web…» se non ha cercato)"]
     RECUPERO_WEB --> RISP_FINALE
     CALL_WEB -->|"Successo"| RISP_FINALE
     SOLO_MODELLO --> RISP_FINALE
@@ -190,7 +190,7 @@ flowchart TD
 
 Questa schermata consente di impostare ricerche mirate su uno specifico perimetro (conversazione, cartella, cassette o intero archivio) ed eseguire analisi avanzate o estrazioni di tabelle e scadenze. Include inoltre la modalità speciale **Email senza risposta**, dedicata a monitorare la posta inviata e preparare solleciti.
 
-Il diagramma riassume le analisi della posta. Per **Appuntamenti e scadenze** la selezione è locale e la richiesta usa i soli fatti locali a Minimo oppure originali ripuliti e fatti a Standard o con un profilo locale; se viene interrotta, resta un riepilogo della lettura, non l'elenco descritto per le altre analisi. Dettagli: [Appuntamenti e scadenze](cerca-analizza.md#appuntamenti-e-scadenze).
+Il diagramma riassume le analisi della posta. Per **Appuntamenti e scadenze** la selezione è locale e la richiesta usa i soli fatti locali a Minimo oppure originali ripuliti e fatti a Standard, a Esteso o con un profilo locale; se viene interrotta, resta un riepilogo della lettura, non l'elenco descritto per le altre analisi. Dettagli: [Appuntamenti e scadenze](cerca-analizza.md#appuntamenti-e-scadenze).
 
 ```mermaid
 flowchart TD
@@ -203,7 +203,7 @@ flowchart TD
 
     INGRESSO_SEARCH --> RAMO_TIPO{"Quale modalità avvii?"}
 
-    RAMO_TIPO -->|"Email senza risposta"| ESR_SETUP["Imposta soglia giorni di attesa (es. 5 gg)<br/>e periodo (fino a 365 gg)"]
+    RAMO_TIPO -->|"Email senza risposta"| ESR_SETUP["Soglia di attesa dalla Configurazione (predefinita 5 giorni)<br/>e periodo (fino all'ultimo anno)"]
     ESR_SETUP --> ESR_RUN["Scansione locale della Posta Inviata<br/>nelle cassette scelte (senza IA)"]
     ESR_RUN --> ESR_RES["Elenco messaggi inviati senza riscontro"]
     ESR_RES --> ESR_ACT{"Azione sul messaggio:"}
@@ -267,7 +267,7 @@ flowchart TD
 
     INGRESSO_ARCH --> SCELTA_ARCH{"Quale funzione utilizzi?"}
 
-    SCELTA_ARCH -->|"Raccolta automatica"| BK_RACCOLTA["Acquisizione specchio cifrato in background:<br/>• Parte 60s dopo l'avvio di Outlook<br/>• Lavora dopo 10s di inattività dell'utente<br/>• Cede subito il passo alle azioni interattive"]
+    SCELTA_ARCH -->|"Raccolta automatica"| BK_RACCOLTA["Acquisizione specchio cifrato in background:<br/>• Parte 60s dopo l'avvio di Outlook<br/>• Lavora dopo 10s di inattività dell'utente<br/>(«Indicizza ora» in Stato anche con l'utente attivo)<br/>• Cede subito il passo alle azioni interattive"]
     BK_RACCOLTA --> CHECK_DISCO{"Spazio su disco disponibile?"}
     CHECK_DISCO -->|"< 5 GiB"| WARN_DISCO["Avviso di spazio in esaurimento nella tray"]
     CHECK_DISCO -->|"< 1 GiB"| SUSP_DISCO["Sospensione automatica protettiva delle acquisizioni<br/>(riprende da sola quando si libera spazio)"]
@@ -295,7 +295,7 @@ flowchart TD
 ## 6. ConfigTool, primo avvio e governance privacy
 
 La finestra ConfigTool gestisce la configurazione dell'add-in e la tutela dei dati.
-Nessun dato di Outlook esce verso server esterni finché un responsabile non accetta l'informativa in **Privacy e dati** (*Data Egress Gate*). In caso di problemi di avvio con Outlook, il comando **Ripara add-in** ripristina la registrazione dell'utente senza reinstallare.
+Nessun dato di Outlook esce verso server esterni finché un amministratore non autorizza i servizi in **Privacy e dati** (*Data Egress Gate*); l'autorizzazione vale per servizio. In caso di problemi di avvio con Outlook, il comando **Ripara add-in** ripristina la registrazione dell'utente senza reinstallare.
 
 ```mermaid
 flowchart TD
@@ -317,15 +317,15 @@ flowchart TD
     TEST_CONN -->|"Diagnosi"| RUN_TEST["Connessione, capacità dichiarate e prove brevi<br/>(testo, JSON, ragionamento, ricerca web se offerta)"]
     TEST_CONN -->|"Scegli modello…"| RUN_MODELS["Elenco modelli disponibili direttamente dal servizio"]
 
-    CHECK_STATO -->|"Governance Privacy e Uscita Dati"| PRIVACY["Pannello Privacy e dati:<br/>Mostra server destinatari calcolati e spazio occupato"]
-    PRIVACY --> CHECK_EGRESS{"L'uscita dati verso i server è approvata?"}
-    CHECK_EGRESS -->|"No (mancante o nuovi server)"| BLK_CLOUD["Stato: «(bloccato)» per i profili cloud e web search<br/>(Nessun dato Outlook lascia il PC)"]
-    CHECK_EGRESS -->|"Sì"| OK_CLOUD["Uscita dati attiva verso i soli server autorizzati"]
+    CHECK_STATO -->|"Governance Privacy e Uscita Dati"| PRIVACY["Pannello Privacy e dati:<br/>server configurati, stato dell'autorizzazione e spazio occupato"]
+    PRIVACY --> CHECK_EGRESS{"L'uscita dati verso i server è autorizzata?"}
+    CHECK_EGRESS -->|"No (mai autorizzata, testo cambiato o nuovi server)"| BLK_CLOUD["Stato «Non accettata», «Da rinnovare»<br/>o «Server da autorizzare»: profili cloud e ricerca web esterna bloccati<br/>(Nessun dato Outlook lascia il PC)"]
+    CHECK_EGRESS -->|"Sì"| OK_CLOUD["Uscita dati attiva verso i soli servizi autorizzati"]
 
-    BLK_CLOUD --> COMPILA_INF["Clic su «Compila informativa...»:<br/>Registrazione dati responsabile (nome, ruolo, azienda, email, data)"]
-    COMPILA_INF --> ACCETTA_INF["«Accetta e salva» (sblocca i server coperti)"]
+    BLK_CLOUD --> COMPILA_INF["Clic su «Leggi e autorizza…»:<br/>testo da scorrere fino in fondo, conferma «Ho letto e autorizzo…»<br/>(e l'area non specificata, se presente); registra utente Windows, PC e data"]
+    COMPILA_INF --> ACCETTA_INF["«Autorizza e salva» (diritti di amministratore;<br/>sblocca i servizi coperti)"]
     ACCETTA_INF --> OK_CLOUD
-    OK_CLOUD --> REVOCA_INF["«Revoca»: prima scegliere un profilo predefinito locale;<br/>non richiama dati già inviati"]
+    OK_CLOUD --> REVOCA_INF["«Revoca» con conferma: blocca profili cloud e ricerca web esterna<br/>per tutti gli utenti del PC; non richiama dati già inviati"]
     REVOCA_INF --> BLK_CLOUD
 
     CHECK_STATO -->|"Riparazione add-in Outlook"| REPAIR["Pannello Generale → Primo avvio:<br/>Diagnosi stato di caricamento e disattivazioni Office"]
@@ -344,7 +344,7 @@ flowchart TD
 | **Nessun invio automatico** | Bozze, solleciti e risposte vengono sempre mostrati all'utente o aperti in Outlook per la revisione prima dell'invio. |
 | **Modifiche esplicite** | Le proposte per calendario e attività vengono salvate con un’azione dell’utente. La Chat può cercare contatti Outlook; non esiste un flusso di scrittura della rubrica. |
 | **Protezione contesto locale** | Se il testo supera il limite con Ollama, l'azione si ferma con un messaggio chiaro anziché inviare estratti mozzati. |
-| **Governance uscita dati** | Gli invii di dati Outlook a servizi esterni richiedono l’informativa accettata per le destinazioni, anche per il web con Ollama locale. Le prove di connessione usano dati sintetici. |
+| **Governance uscita dati** | Gli invii di dati Outlook a servizi esterni richiedono l’autorizzazione per servizio in Privacy e dati. Con un profilo locale le ricerche web con dati della posta sono bloccate. Le prove di connessione usano dati sintetici. |
 | **Ricerca web non disponibile** | L'azione può proseguire senza riscontri web e ne segnala l'assenza; il modello configurato può comunque richiedere una connessione. |
 
 L’archivio cifrato locale non rende locale un’elaborazione cloud. Solo l’inferenza su loopback senza web può lavorare offline; uso e conservazione dei dati esterni dipendono dal contratto/piano del provider. Vedere [Sicurezza e dati](../admin/sicurezza.md). Le keytip del ribbon sono distinte dalle scorciatoie del riquadro (per esempio B per Bozza risposta nel ribbon, Alt+R nel riquadro).

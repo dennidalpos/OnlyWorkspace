@@ -43,7 +43,7 @@ L'archivio usa la modalità `--archive` dell'estrattore: documenti leggibili, MS
 
 La regola vale anche dentro MSG, EML e P7M. I contenitori leggibili riportano i riferimenti dei figli esclusi e conservano il proprio testo; per un riferimento MIME la dimensione dichiarata nel testo è quella codificata, esplicitamente indicata, senza attribuirle il significato di dimensione decodificata. Password, errori, OCR non disponibile e limiti restano motivi di lettura incompleta.
 
-La revisione del lettore **2** rende inutilizzabili i vecchi testi allegati in cache e i loro termini, riaccodando la lettura senza cancellare i corpi. Le nuove colonne dei riferimenti sono aggiunte nel formato 13 senza ricostruire il database ([SQLite ADD COLUMN](https://www.sqlite.org/lang_altertable.html#alter_table_add_column)). La pipe **v15** richiede l'aggiornamento congiunto di tray e add-in. La lettura generica delle azioni dirette e `--security` mantengono il supporto ai compressi: l'esclusione descritta qui riguarda l'archivio.
+La revisione del lettore **2** rende inutilizzabili i vecchi testi allegati in cache e i loro termini, riaccodando la lettura senza cancellare i corpi. Le nuove colonne dei riferimenti sono aggiunte nel formato 13 senza ricostruire il database ([SQLite ADD COLUMN](https://www.sqlite.org/lang_altertable.html#alter_table_add_column)). La pipe corrente **v16** richiede l'aggiornamento congiunto di tray e add-in. La lettura generica delle azioni dirette e `--security` mantengono il supporto ai compressi: l'esclusione descritta qui riguarda l'archivio.
 
 ## OCR (E8)
 

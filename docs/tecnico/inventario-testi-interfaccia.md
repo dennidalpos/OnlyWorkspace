@@ -10,7 +10,7 @@ Esito per schermata del passaggio di riduzione del 4 novembre 2026 (vedi [vocabo
 | Guida: dati inviati al profilo IA, Cloud/PC/globo | Mantenuta e asciugata: sono avvisi su uscita dei dati |
 | Guida: legenda del pallino di stato | Accorciata; i glifi vengono dal CSS (`--glyph`); un solo pallino per Archivio e IA, senza marchio nella barra |
 | Tooltip Follow-up, Scrivi, filtro persona | Accorciati; «Elimina archivio» mantenuto (dice che le email non vengono toccate) |
-| Tooltip «Invio del testo degli allegati» | Invariato; i messaggi di rifiuto per livello (`TaskPaneCoordinator`) ora citano «2 · Standard» e «3 · Esteso» allo stesso modo |
+| Tooltip «Invio del testo degli allegati» | Invariato; i messaggi di rifiuto per livello (`TaskPaneCoordinator`) citavano «2 · Standard» e «3 · Esteso» allo stesso modo (al 12/11 resta solo il rifiuto a Minimo, che cita «2 · Standard») |
 
 ## ConfigTool
 
@@ -26,7 +26,7 @@ Esito per schermata del passaggio di riduzione del 4 novembre 2026 (vedi [vocabo
 ## Non fatto
 
 - Tray: nessun testo lungo.
-- Prova dal vivo a 100% e 200%: ancora aperta in #012. Inventario dei campi completato nel passaggio seguente.
+- Prova dal vivo a 100% e 200%: #012 è chiuso (7/11) e la prova a schermo è passata a #021, ancora aperto. Inventario dei campi completato nel passaggio seguente.
 
 
 ## Campi del profilo IA — 5 novembre 2026
@@ -61,15 +61,15 @@ Inventario per campo del lotto #087/A202. «Accorciato» riguarda il tooltip, no
 | Autorizzazioni | Descrizione del livello | Mantenuta: dettaglio dei dati in uscita nell’aiuto esistente |
 | Autorizzazioni | Area del servizio | Mantenuto: dichiarazione contrattuale, conferma se non specificata, Salva |
 | Autorizzazioni | Includi allegati verso il cloud (già «Testo degli allegati») | Rinominato; invariato: Esteso, permesso, testo estratto mascherato; nomi e file locali, Salva |
-| Autorizzazioni | Sostituzione importi/date | Mantenuti e nascosti come prima; la futura UI locale resta nel task #084 |
+| Autorizzazioni | Sostituzione importi/date | Mantenuti e nascosti come prima; da #084 «Sostituisci gli importi/le date con segnaposto» compaiono solo per i profili locali, nel cloud restano nascoste |
 | Autorizzazioni | Supporto Ricerca web | Mantenuto: supporto dichiarato o provato |
 | Autorizzazioni | Ricerca web attiva | Mantenuto: ricerche delle azioni bloccate, nessun testo/query inviato, informativa necessaria |
 | Autorizzazioni | Azioni con ricerca | Mantenuti aiuti delle singole azioni e riepilogo |
 | Autorizzazioni | Chiave Ollama Web | Accorciato: distinta dalla chiave modello, cifratura locale con Salva |
 | Avanzate | Introduzione e tabella capacità | Mantenute: differenza tra comandi, esito/provenienza e limiti delle funzioni non usate |
 | Profilo | Diagnosi | Unico pulsante di prova: connessione, capacità dichiarate, richieste sintetiche, durata, nessun dato Outlook, token e possibile costo web; annulla con lo stesso pulsante |
-| Avanzate | Annulla | Mantenuto: arresto, esiti già ottenuti conservati |
-| Avanzate | Prova anche Ricerca web | Accorciato: richiesta sintetica senza dati Outlook, possibili addebiti, inizialmente spento; aiuto costi mantenuto |
+| Avanzate | Annulla | Superato: durante la prova il pulsante Diagnosi diventa «Annulla diagnosi»; gli esiti già ottenuti restano |
+| Avanzate | Prova anche Ricerca web | Superato: la casella non esiste più; Diagnosi prova la ricerca web con una richiesta sintetica quando il servizio la offre, con l'avviso sui possibili addebiti |
 | Avanzate | Esito delle prove | Mantenuto: avanzamento, esito e Salva |
 | Procedura guidata | Verifica connessione | Accorciato: servizio/chiave/modello, richiesta sintetica senza dati Outlook, nessun salvataggio (le prove di capacità sono solo nel profilo) |
 

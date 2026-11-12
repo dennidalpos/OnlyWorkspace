@@ -89,15 +89,16 @@ public sealed class DocumentedVersionsTests
     public void ArchivePipeAndFormat_InTheGuides_AreTheCurrentOnes()
     {
         int pipe = ArchivePipe.Version;
-        // A retired field «ritirati dalla pipe v14» states when it went away, not the current pipe.
-        Assert.Empty(Mismatches(@"pipe v(\d+)", pipe, text => text.Contains("ritirat")));
+        // A retired field «ritirati dalla pipe v14» states when it went away, not the current pipe. Bold counts too: «pipe **v15**»
+        // outlived pipe 16 in three pages while the pattern wanted «pipe v».
+        Assert.Empty(Mismatches(@"pipe (?:corrente )?\*{0,2}v(\d+)", pipe, text => text.Contains("ritirat")));
         Assert.Contains(Lines(), l => l.Text.Contains("pipe v" + pipe));
 
         var schema = typeof(ArchivePipe).Assembly.GetType("OnlyWorkspace.Infrastructure.Archive.ArchiveDb")!
             .GetField("SchemaVersion", BindingFlags.NonPublic | BindingFlags.Static)!;
         int format = (int)schema.GetRawConstantValue()!;
         // Singular «formato N» is the current one; «formati 11 e 12» (plural) are the migrated ones.
-        Assert.Empty(Mismatches(@"formato (\d+)\b", format));
+        Assert.Empty(Mismatches(@"formato \*{0,2}(\d+)\b", format));
         Assert.Contains(Lines(), l => l.Text.Contains("formato " + format));
     }
 

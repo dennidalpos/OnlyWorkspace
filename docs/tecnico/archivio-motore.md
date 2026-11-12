@@ -4,7 +4,7 @@ La tray possiede i database e li espone su pipe; Outlook raccoglie e invia i lot
 
 ## Formato, conservazione e ricostruzione
 
-Il formato corrente è **13**, la pipe **v15**. Aggiornare insieme tray e add-in. I nuovi archivi nascono direttamente nel formato corrente, senza generazione IA automatica. Il motore rifiuta i formati precedenti, inclusi 11 e 12, preservando i dati.
+Il formato corrente è **13**, la pipe **v16**. Aggiornare insieme tray e add-in. I nuovi archivi nascono direttamente nel formato corrente, senza generazione IA automatica. Il motore rifiuta i formati precedenti, inclusi 11 e 12, preservando i dati.
 
 Le copie di migrazione già esistenti sotto `%LOCALAPPDATA%\OnlyWorkspace\archive-migration-backups` restano disponibili. Per il recupero fermare Outlook e tray, conservare lo stato corrente e usare insieme la build compatibile, il database verificato e la chiave DPAPI dello stesso utente Windows.
 
@@ -14,7 +14,7 @@ La ricostruzione riguarda soltanto i derivati: gli indici mancanti sono recupera
 
 | Fase | Quando |
 | --- | --- |
-| Avvio della raccolta | 60 s dopo l'avvio di Outlook, poi solo dopo 10 s senza tastiera né mouse |
+| Avvio della raccolta | 60 s dopo l'avvio di Outlook, poi solo dopo 10 s senza tastiera né mouse; **Indicizza ora** (Stato) lavora anche con l'utente attivo, a passi più distanziati |
 | Posta recente ed elenco cartelle | Ogni 2 minuti; nel log solo quando le cartelle cambiano |
 | Controllo completo | 4 minuti dopo la chiusura del precedente, appena scade; nel log solo quando toglie email |
 | Impostazioni | Rilette ogni 5 secondi |
@@ -50,7 +50,7 @@ La transazione registra `archive_deletions`, conservata anche durante una ricost
 | Testo indicizzato | Tutto il testo acquisito, senza taglio a 60.000 caratteri |
 | Anteprima | 255 caratteri |
 | Metadati | 50 destinatari e 30 nomi di allegati per email |
-| Allegati | Tutti, copiati 10 per chiamata a Outlook, fino a 30 MiB ciascuno; testo complessivo fino a 4 milioni di caratteri |
+| Allegati | Tutti, copiati 2 per chiamata a Outlook, fino a 30 MiB ciascuno; testo complessivo fino a 4 milioni di caratteri |
 | Ricerca | Pagine da 50 |
 | Flusso | 20.000 email visibili, 20 possibili collegamenti (oggetto o mittente simili entro 30 giorni), i 20 messaggi più recenti della conversazione Outlook, con il totale dichiarato quando sono di più |
 
@@ -66,7 +66,7 @@ L'estrattore alla **revisione 3** conserva la valuta anche negli importi etichet
 
 Modifiche del corpo, degli allegati o della cache condivisa invalidano i fatti; cancellazioni e ricostruzioni li eliminano. Disabilitare il testo allegati rimuove anche i derivati e impedisce il commit di lavoro precedente. I dati PEC `facts-only` restano esclusi da FTS e prompt; il loro contenuto resta locale. Il recupero conserva originali, preferenze e Storico.
 
-`ArchiveQuery.FactFilters` combina filtri per tipo/valore, importo/valuta e giorno prima di `LIMIT/OFFSET`; filtri distinti sono in AND e possono trovare occorrenze differenti della stessa email. `IncludeAttachmentText=false` esclude anche i fatti degli allegati; `IncludeFacts` aggiunge la provenienza ai risultati solo quando richiesta. `GetFactProgress` è esposto nella pipe corrente **v15** e i fatti arrivano con la ricerca (`IncludeFacts`): aggiornare tray e add-in insieme. Importi salvati come decimali canonici in TEXT, confrontati da una funzione SQLite deterministica con `decimal`, senza conversione a REAL: [tipi](https://learn.microsoft.com/en-us/dotnet/standard/data/sqlite/types), [funzioni definite dall'applicazione](https://learn.microsoft.com/en-us/dotnet/standard/data/sqlite/user-defined-functions).
+`ArchiveQuery.FactFilters` combina filtri per tipo/valore, importo/valuta e giorno prima di `LIMIT/OFFSET`; filtri distinti sono in AND e possono trovare occorrenze differenti della stessa email. `IncludeAttachmentText=false` esclude anche i fatti degli allegati; `IncludeFacts` aggiunge la provenienza ai risultati solo quando richiesta. `GetFactProgress` è esposto nella pipe corrente **v16** e i fatti arrivano con la ricerca (`IncludeFacts`): aggiornare tray e add-in insieme. Importi salvati come decimali canonici in TEXT, confrontati da una funzione SQLite deterministica con `decimal`, senza conversione a REAL: [tipi](https://learn.microsoft.com/en-us/dotnet/standard/data/sqlite/types), [funzioni definite dall'applicazione](https://learn.microsoft.com/en-us/dotnet/standard/data/sqlite/user-defined-functions).
 
 Riferimenti: [iCalendar RFC 5545](https://www.rfc-editor.org/rfc/rfc5545.html), [regole tecniche PEC AgID](https://www.agid.gov.it/sites/default/files/repository_files/documentazione_trasparenza/dm_2-nov-2005.pdf), [registro IBAN SWIFT](https://www.swift.com/standards/data-standards/iban-international-bank-account-number) e [regex .NET con timeout](https://learn.microsoft.com/en-us/dotnet/standard/base-types/best-practices). Il download corrente del registro IBAN non era accessibile durante il lotto: nessuna certificazione del registro nazionale corrente.
 
@@ -96,7 +96,7 @@ Non esistono stati o chiusure delle pratiche nel contratto attivo. I nuovi archi
 
 La ricerca locale, le correlazioni, la ricostruzione locale della pratica e l'OCR restano supportati. Le qualifiche del generatore ritirato sono soltanto storiche e restano nelle ricevute del dossier; il banco attivo misura esclusivamente i fatti locali, senza provider. Requisiti e qualifiche aperte sono nel tracker SecondBrain. Analisi e chat usano originali oppure fatti locali, secondo il livello di esposizione.
 
-Il formato corrente mantiene copie distinte per cartella/EntryID e conserva i testi integrali. L'inattività di 10 secondi rimane nel raccoglitore; il 20/10 sono state tolte le opzioni configurabili di inattività e fascia oraria, non questa protezione del thread UI.
+Il formato corrente mantiene copie distinte per cartella/EntryID e conserva i testi integrali. L'inattività di 10 secondi rimane nel raccoglitore, salvo **Indicizza ora**; il 20/10 sono state tolte le opzioni configurabili di inattività e fascia oraria, non questa protezione del thread UI.
 
 ### Limite noto: copie lente degli allegati
 
