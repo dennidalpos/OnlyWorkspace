@@ -50,7 +50,7 @@ La [guida del riquadro](utente/riquadro.md) spiega azioni, scorciatoie e interru
 ## Dove vanno i dati
 
 - **Archivio**: database cifrato sul PC, gestito dalla tray, con chiave protetta da DPAPI Windows. Conserva i testi acquisiti degli allegati, non i file allegati originali.
-- **IA locale**: Ollama su loopback elabora sul PC. Per lavorare offline occorre anche disattivare la ricerca web.
+- **IA locale**: Ollama su loopback elabora sul PC. Con Ollama le azioni non cercano sul web: le query generate dal modello sono bloccate e ollama.com riceve solo la verifica sintetica del ConfigTool.
 - **Servizi esterni**: il livello 0 blocca gli invii. Minimo ammette solo fatti strutturati protetti; Standard anche email e testo libero, già mascherati (identificativi, importi e date sostituiti da segnaposto, ripristinati sul PC); Esteso aggiunge il testo degli allegati con permesso distinto. Nomi dei file e file binari restano sul PC; le azioni cercano sul web solo a Esteso, con la richiesta già mascherata; i dati sensibili non riconosciuti dalla maschera non sono anonimizzati. Anche i modelli locali ricevono il testo con gli identificativi mascherati. Gli invii richiedono autorizzazione tecnica per servizio con informativa 8 e l'area del servizio (UE, non UE, non specificata), senza campi manuali.
 - **Pseudonimizzazione**: sostituisce i valori riconosciuti e li ripristina nella risposta sul PC. Può lasciare dati non riconosciuti; non garantisce anonimato. Importi e date hanno opzioni separate, inizialmente disattivate.
 
@@ -72,7 +72,7 @@ dotnet test tests/OnlyWorkspace.Tests -c Release --no-build -f net48 --nologo
 dotnet test tests/OnlyWorkspace.Tests -c Release --no-build -f net10.0-windows --nologo
 ```
 
-Esegui i due runtime in sequenza. La compilazione non installa l'add-in. Il setup richiede anche NSIS 3.13, `signtool.exe`, il certificato di firma e la password del PFX nell'ambiente: [procedura di packaging](admin/installazione.md#setup-firmato). Comandi confrontati con progetti, script e [CI](../.github/workflows/ci.yml); questa revisione documentale non ripete build o test applicativi. Gate e smoke: [Verifica e qualifica](tecnico/verifica.md).
+Esegui i due runtime in sequenza. La compilazione non installa l'add-in. Il setup richiede anche NSIS 3.13, `signtool.exe`, il certificato di firma e la password del PFX nell'ambiente: [procedura di packaging](admin/installazione.md#setup-firmato). Comandi eseguiti il 12/11/2026 su un clone pulito di c6fffef: build 0 avvisi, net48 2194/2194, net10 2195/2195, `test-scripts.ps1` 26 script, `check-code.ps1` OK. Non qualificano la build installata. Gate e smoke: [Verifica e qualifica](tecnico/verifica.md).
 
 Controlli essenziali e formattazione circoscritta: [Analisi statica](tecnico/analisi-statica.md).
 

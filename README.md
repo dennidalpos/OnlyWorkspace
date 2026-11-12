@@ -46,7 +46,7 @@ First run: open **Configurazione**, choose the AI service, model and default pro
 ## Data and privacy
 
 - **Archive**: encrypted database on the PC, managed by the tray, with the key protected by Windows DPAPI. It keeps the extracted text of attachments, not the original files. Excluding a mailbox deletes its data from the local archive.
-- **Local AI**: Ollama on loopback processes data on the PC. To work offline, web search must also be disabled.
+- **Local AI**: Ollama on loopback processes data on the PC. Actions do not search the web with Ollama: model-generated queries are blocked, and ollama.com receives only the ConfigTool's synthetic capability check.
 - **External services**: level 0 blocks all sending; the minimal level sends only protected structured facts; standard also sends emails and free text after mechanical masking, and the extended level adds attachment text with a separate permission. File names and files stay on the PC; actions search the web only at the extended level, with the request already masked. Identifiers, amounts and dates are replaced by placeholders and restored locally; sensitive data the masker does not recognize is not anonymized. Each cloud profile declares the service area (EU, non-EU, unspecified).
 - **Pseudonymization** replaces recognized values and restores them in the response on the PC. It can miss unrecognized data and does not guarantee anonymity.
 

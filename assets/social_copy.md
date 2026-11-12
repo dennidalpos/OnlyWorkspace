@@ -23,8 +23,8 @@ Le tre catture originali in `screenshots/installed/` mostrano Outlook classico s
 **La tua posta. Un contesto chiaro.** OnlyWorkspace affianca Outlook classico con sintesi, verifica sicurezza, tabelle, bozze e ricerca nell'archivio acquisito. I risultati IA vanno rivisti: la verifica sicurezza mostra indizi tecnici, senza garantire che un messaggio sia sicuro.
 
 - L'archivio resta sul PC in un database cifrato; la chiave è protetta da DPAPI Windows. I file allegati originali non sono conservati nell'archivio, mentre il testo acquisito può esserlo.
-- L'inferenza con Ollama su loopback può lavorare offline **senza ricerca web**. La ricerca web usa servizi esterni anche con un modello locale; un endpoint su un'altra macchina non equivale a elaborazione sul proprio PC.
-- Con un profilo cloud escono fatti locali a Minimo oppure anche originali ripuliti a Standard, con segnaposto e senza testo degli allegati. L'uscita dei dati Outlook richiede l'informativa accettata dal responsabile per le destinazioni. Le catture 01-04 sono storiche (2026-10-21) e possono mostrare comportamenti precedenti.
+- L'inferenza con Ollama su loopback può lavorare offline. Con Ollama le azioni non cercano sul web (le query generate dal modello sono bloccate; ollama.com riceve solo la verifica sintetica del ConfigTool); un endpoint su un'altra macchina non equivale a elaborazione sul proprio PC.
+- Con un profilo cloud escono fatti locali a Minimo oppure anche originali ripuliti a Standard, con segnaposto; il testo degli allegati e la ricerca web delle azioni solo a Esteso, il primo con un permesso distinto. L'uscita dei dati Outlook richiede l'informativa accettata dal responsabile per le destinazioni. Le catture 01-04 sono storiche (2026-10-21) e possono mostrare comportamenti precedenti.
 - Uso per addestramento, conservazione e condizioni del servizio dipendono dal provider e dal contratto/piano effettivo. Il prodotto non certifica i provider e non promette privacy assoluta. Vedere [Sicurezza e dati](../docs/admin/sicurezza.md), [Provider IA](../docs/admin/provider-ia.md) e, come esempio di condizioni differenti tra piani, [Gemini API](https://ai.google.dev/gemini-api/docs/pricing).
 - Nessuna email viene inviata automaticamente: l'utente rivede le bozze e sceglie le azioni su Outlook.
 
@@ -32,7 +32,7 @@ Le tre catture originali in `screenshots/installed/` mostrano Outlook classico s
 
 Una decisione in una risposta, una scadenza in un allegato, un ordine da trasformare in tabella: OnlyWorkspace porta l'assistente IA in Microsoft Outlook classico.
 
-Sintetizza le email, raccogli indizi su link e allegati sospetti, copia le tabelle o esportale in CSV e prepara bozze da rivedere prima dell'invio. L'archivio cifrato è sul PC; scegli il servizio IA e controlla le destinazioni autorizzate. Per lavorare offline usa un modello locale su loopback senza ricerca web. Con cloud o web, verifica le condizioni del servizio scelto.
+Sintetizza le email, raccogli indizi su link e allegati sospetti, copia le tabelle o esportale in CSV e prepara bozze da rivedere prima dell'invio. L'archivio cifrato è sul PC; scegli il servizio IA e controlla le destinazioni autorizzate. Per lavorare offline usa un modello locale su loopback. Con cloud o web, verifica le condizioni del servizio scelto.
 
 Le immagini 01–04 derivano da catture installate del 21/10/2026 su dati sintetici; 05–07 sono illustrazioni. Qualifica interna in corso.
 

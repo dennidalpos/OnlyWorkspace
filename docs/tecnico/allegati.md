@@ -59,7 +59,7 @@ Con l'OCR acceso il motore della tray rimette in coda una sola volta (`meta.ocr_
 | --- | --- |
 | Dimensione di ogni allegato | 30 MiB |
 | Testo per estrazione | 4.000.000 di caratteri; anche come somma di corpo e allegati destinabili alle analisi nell'archivio. I dati PEC locali hanno il proprio limite di estrazione e non consumano quel budget |
-| Tempo di estrazione | 60 s per allegato, 20 s per il solo controllo macro; lettura completa di un'email per l'archivio entro 2 minuti, recupero dell'originale dalla tray entro 3 |
+| Tempo di estrazione | 60 s per allegato, anche per la lettura statica della Verifica sicurezza; lettura completa di un'email per l'archivio entro 2 minuti, recupero dell'originale dalla tray entro 3 |
 | Memoria dell'estrattore | 1 GiB |
 | Scansione Defender | 60 s per file |
 

@@ -11,7 +11,7 @@ Riferimenti principali ricontrollati il **21 ottobre 2026**; tariffe, crediti e 
 | Anthropic | Accesso alla Console e API key; controllare credito e fatturazione API | I piani chat e l'API sono distinti; alcuni piani includono crediti API, ma serve comunque l'accesso Console | [Abbonamento e API](https://support.claude.com/en/articles/9876003-i-have-a-paid-claude-subscription-pro-max-team-or-enterprise-plans-why-is-claude-api-usage-billed-separately-from-my-paid-claude-plan) |
 | Google Gemini | Gemini API in un progetto AI Studio con fatturazione adeguata; per posta reale valutare il livello a pagamento | Google AI Pro/Ultra | [Fatturazione](https://ai.google.dev/gemini-api/docs/billing/), [prezzi e dati](https://ai.google.dev/gemini-api/docs/pricing) |
 
-Nel listino Gemini verificato, il grounding con Google Search per i modelli Gemini 3 e successivi consultati non è disponibile nel livello gratuito. Le condizioni sull'uso dei dati differiscono tra livelli: controllare il piano esatto prima di inviare posta reale, senza dedurre la disponibilità dalla sola risposta a Test connessione.
+Nel listino Gemini verificato, il grounding con Google Search per i modelli Gemini 3 e successivi consultati non è disponibile nel livello gratuito. Le condizioni sull'uso dei dati differiscono tra livelli: controllare il piano esatto prima di inviare posta reale, senza dedurre la disponibilità dalla sola risposta a **Verifica connessione**.
 
 ## Preset disponibili
 

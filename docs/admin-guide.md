@@ -67,7 +67,7 @@ Pane reload follows messages; indexing rereads settings periodically. [Workspace
 
 ## AI profiles and capability checks
 
-Six new-profile presets: Ollama, Gemini, Anthropic, OpenAI, QwenCloud and OpenAI-compatible. Generic requires explicit endpoint/model and none/bearer authentication. Existing Azure/Perplexity/Ollama Cloud paths and preset conversion remain current code, separate from the open greenfield alignment.
+Six new-profile presets: Ollama, Gemini, Anthropic, OpenAI, QwenCloud and OpenAI-compatible. Generic requires explicit endpoint/model and none/bearer authentication. Azure OpenAI, Perplexity Sonar and Ollama Cloud stay available only to profiles that already use them; retired types (LM Studio, llama.cpp, vLLM, LocalAI, Jan, Mistral, xAI, DeepSeek, OpenRouter, Groq, Together, Fireworks) are converted to the generic preset in memory and persisted on the next save, import or restore. For the generic preset, **Preset cloud** fills the address of Mistral AI, IONOS, OVHcloud, Scaleway or STACKIT.
 
 baseUrl/authType/secretRef/model specify endpoint/authentication/vault/model. Remote requires HTTPS; HTTP only loopback. Non-loopback is external even with external:false. Redirects are refused: configure the final URL. allowAttachmentUpload additionally gates attachment text at Extended. Web settings and the separate Ollama web key do not grant arbitrary mail-derived searches.
 
@@ -101,7 +101,7 @@ The vault, archive and history are user-bound (DPAPI CurrentUser). Do not transp
 | show [config_path] | Masked configuration from named directory/file or common default. |
 | test [config_path] | Contact configured providers. |
 | import <source.json> [target_dir] [--skip-test] | Import/validate pair; tests connections unless skipped. |
-| backup [dest.owbak] [config_dir] | Config and vault only. |
+| backup [dest.owbak] [config_dir] | config.json; secrets.bin only for a custom config folder (with the standard folder each user's keys stay out and are entered again after restore). |
 | restore <source.owbak> [config_dir] | Validated same-machine restore. |
 
 Import moves inline auth.secret to the vault, rejects duplicate case-insensitive auth/profiles/secret properties and retains references when no inline secret is given. Import/restore recover ordinary second-file replacement failures; crash/power-loss atomicity is not guaranteed. Preserve any recovery copy named by an error. Backup excludes archive/history/preferences/admin verifier. Active admin password prompts for import/restore; it does not replace filesystem ACLs.

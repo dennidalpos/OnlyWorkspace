@@ -10,4 +10,4 @@ pwsh -NoProfile -File scripts/measure-fidelity.ps1 -OutputDirectory "$env:TEMP\o
 
 `-CorpusPath` sceglie un corpus alternativo. Il rapporto `offline.json` contiene precisione, richiamo, duplicati e attribuzioni errate rispetto alle attese indipendenti per origine e posizione. `manifest-offline.json` registra hash del corpus e degli assembly. Una cartella di output già associata ad altri byte del corpus viene rifiutata. Il runtime copiato e il corpus sono evidenze intenzionali da conservare con il rapporto.
 
-Le metriche numeriche non attestano fedeltà semantica universale, conformità normativa o funzionamento di provider reali. Il recupero dell'archivio è verificato separatamente dai test di migrazione e storage.
+Le metriche numeriche non attestano fedeltà semantica universale, conformità normativa o funzionamento di provider reali. Il recupero dell'archivio è verificato separatamente dai test dell'archivio e dello storage.

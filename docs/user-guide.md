@@ -51,7 +51,7 @@ Search covers full acquired text, not only the 255-character preview. Local fact
 
 Tray search/status/maintenance works with Outlook closed. **Pausa/Riprendi**, **Aggiorna da Outlook**, **Ottimizza indice** and **Compatta database** are distinct actions. Compaction needs about twice database size plus 1 GiB free. Warning below 5 GiB; acquisition pauses below 1 GiB.
 
-Removing the last verified copy invalidates dependent text/facts/unshared attachments and conversations that used it; existing exports/backups need separate handling. Confirmed **Elimina archivio** removes the user's archive, not Outlook mail, independent history or external backups. Unreadable archives/missing DPAPI keys are never replaced with an empty archive. Known old formats migrate only after verified backups; unknown formats are refused.
+Removing the last verified copy invalidates dependent text/facts/unshared attachments and conversations that used it; existing exports/backups need separate handling. Confirmed **Elimina archivio** removes the user's archive, not Outlook mail, independent history or external backups. Unreadable archives/missing DPAPI keys are never replaced with an empty archive. The archive opens only format 13: earlier formats are refused with an explicit error and their files stay in place for recovery with a compatible build.
 
 Limits: 3,000 folders/mailbox, depth 12, metadata for 50 recipients and 30 attachment names, 30 MiB/attachment and four million extracted characters. Partial documents remain explicitly unread/partial.
 

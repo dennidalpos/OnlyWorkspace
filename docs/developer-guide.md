@@ -31,7 +31,7 @@ scripts/build-paths.ps1 evaluates TargetPath/TargetDir/ProjectAssetsFile/Artifac
 
     pwsh -NoProfile -File scripts/check-code.ps1
 
-The gate builds Release with warnings as errors, SDK analyzer level 10 including net48, analyzer verification, selected PSScriptAnalyzer 1.25.0 correctness rules, JavaScript/embedded TaskPane syntax, Python in-memory compilation, JSON and XML checks. It does not lint every YAML/NSIS/SVG/CSS or qualify Outlook/security. Missing tools require explicit provisioning, not silent installation.
+The gate builds Release with warnings as errors, SDK analyzer level 10 including net48, `dotnet format analyzers` and `dotnet format whitespace` in verify mode, selected PSScriptAnalyzer 1.25.0 correctness rules, JavaScript/embedded TaskPane syntax, Python in-memory compilation, JSON and XML checks. It does not lint every YAML/NSIS/SVG/CSS or qualify Outlook/security. Missing tools require explicit provisioning, not silent installation.
 
 Run `test-scripts.ps1` after the build. `Packaging.Tests.ps1` compiles a synthetic fixture against the production NSIS macros. It uses short case directories under a unique temporary root, exercises quoted paths with spaces and checks the contents of files that should remain. The long-path fixture checks the original failure, preservation of a junction target and the direct uninstaller exit code when a file is locked. It uses the NSIS `_?=` mechanism to observe the uninstaller process. [Dated verification](tecnico/verifica.md)
 
@@ -76,7 +76,7 @@ Archive mode stores generic archives/executables only as references (name/extens
 
 Windows OCR uses installed profile-language recognizers. OnlyWorkspace.AttachmentExtractor.exe --ocr-languages lists capability. PDF renders at 300 dpi; images honor EXIF/orientation/dimension limits. Each page needs 25 alphanumeric characters, otherwise the document stays unread. Disabled/unavailable OCR are distinct; enabling OCR/new recognizer requeues eligible items once. OCR can misread values: verification compares acquired text, not the image.
 
-Limits: 30 MiB/file, four million extracted characters, 60 seconds extraction/file, 20 seconds macro-only, two minutes archived message, three minutes original retrieval, 60 seconds Defender/file. Password/error/unsupported/partial documents retain reasons rather than becoming fully read. Security mode statically reads scripts/pages/links/macros without execution/network. Failed Defender is not clean.
+Limits: 30 MiB/file, four million extracted characters, 60 seconds extraction or security inspection per file, two minutes archived message, three minutes original retrieval, 60 seconds Defender/file. Password/error/unsupported/partial documents retain reasons rather than becoming fully read. Security mode statically reads scripts/pages/links/macros without execution/network. Failed Defender is not clean.
 
 ## Pseudonymization and policy
 

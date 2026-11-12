@@ -8,7 +8,7 @@ L’archivio è uno specchio di Outlook: include testo integrale cifrato, con ma
 | --- | --- | --- |
 | Configurazione | `%ProgramData%\OnlyWorkspace\config.json` | Leggibile dagli utenti, scrivibile da amministratori e SYSTEM |
 | Chiavi IA | `%LOCALAPPDATA%\OnlyWorkspace\secrets.bin` di ogni utente | DPAPI CurrentUser, mai scritto con diritti di amministratore; un altro utente standard non lo decifra |
-| Password amministrativa | `admin-password.json` nella stessa cartella | Verificatore derivato |
+| Password amministrativa | `admin-password.json` accanto a `config.json` | Verificatore derivato |
 | Preferenze | `%APPDATA%\OnlyWorkspace\preferences.json` | Utente |
 | Archivio | `%LOCALAPPDATA%\OnlyWorkspace\archive\` | SQLite cifrato, chiave casuale protetta DPAPI CurrentUser; corpi integrali, testi degli allegati deduplicati, metadati, indici e fatti locali |
 | Storico | `%LOCALAPPDATA%\OnlyWorkspace\history\` | DPAPI CurrentUser; 90 giorni o 200 conversazioni; conversazioni coinvolte rimosse quando l’ultima copia dell’email viene eliminata |
@@ -40,4 +40,4 @@ La rimozione dell’ultima copia verificata elimina anche le conversazioni dipen
 
 ## Log, diagnostica e firma
 
-[OnlyWorkspaceLog](../../src/OnlyWorkspace.Infrastructure/Logging/OnlyWorkspaceLog.cs) registra eventi operativi senza chiavi. [DiagnosticsExporter](../../src/OnlyWorkspace.Infrastructure/Logging/DiagnosticsExporter.cs) esporta soltanto metadati di sistema e misure di spazio: esclude configurazione, log, testi, database e chiavi, senza aprire il database né inviare lo ZIP. Binari e setup sono firmati con il PFX privato; il setup installa il certificato pubblico in Root e TrustedPublisher ([Installazione](installazione.md)).
+[OnlyWorkspaceLog](../../src/OnlyWorkspace.Infrastructure/Logging/OnlyWorkspaceLog.cs) registra eventi operativi senza chiavi. [DiagnosticsExporter](../../src/OnlyWorkspace.Infrastructure/Logging/DiagnosticsExporter.cs) esporta soltanto metadati di sistema e misure di spazio: esclude configurazione, log, testi, database e chiavi, senza aprire il database né inviare lo ZIP. Binari e setup sono firmati con il PFX privato; il setup installa il certificato pubblico solo in TrustedPublisher e rimuove un'eventuale voce Root di versioni precedenti ([Installazione](installazione.md)).
