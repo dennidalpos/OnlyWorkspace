@@ -17,6 +17,7 @@
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+    <PackageReference Include="System.Diagnostics.DiagnosticSource" VersionOverride="11.0.0" />
     <Reference Include="System.Web" />
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" PrivateAssets="All" />
     <PackageReference Include="System.Text.Json" />
