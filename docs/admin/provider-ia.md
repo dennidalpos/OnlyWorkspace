@@ -19,7 +19,7 @@ Il ConfigTool e la procedura guidata propongono sei preset, sulle quattro famigl
 
 | Preset | Tipo | Collegamento | Prova con servizio reale |
 | --- | --- | --- | --- |
-| Ollama | `ollama` | Server Ollama locale su loopback | sì |
+| Ollama | `ollama` | Server Ollama locale su loopback | sì (12/11/2026) |
 | Gemini | `gemini` | Gemini API | sì |
 | Anthropic | `anthropic` | Anthropic Messages | sì |
 | OpenAI | `openai` | OpenAI, con ricerca web specifica quando autorizzata | sì |

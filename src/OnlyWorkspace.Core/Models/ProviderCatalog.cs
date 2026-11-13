@@ -121,7 +121,7 @@ public static class ProviderCatalog
     {
         new ProviderCapabilities(Ollama, "Ollama", ApiFamily.Ollama, "http://127.0.0.1:11434", false, None,
             "https://docs.ollama.com/api", model: "qwen3.5:9b", capabilities: CapabilitySource.Ollama, webSearch: WebSearchMode.OllamaCom,
-            numCtx: true, keepAlive: true, thinkToggle: true, liveProven: true),
+            numCtx: true, keepAlive: true, thinkToggle: true, liveProven: true, liveProvenOn: "2026-11-12"),
         new ProviderCapabilities(Gemini, "Google Gemini", ApiFamily.Gemini, "https://generativelanguage.googleapis.com", true, Key,
             "https://ai.google.dev/api/models", apiKeyHeader: "x-goog-api-key",
             capabilities: CapabilitySource.Gemini, webSearch: WebSearchMode.GeminiGrounding, liveProven: true),

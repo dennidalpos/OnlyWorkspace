@@ -72,6 +72,7 @@ public sealed class ProviderTextClaimsTests
         var proven = new[] { ProviderCatalog.Ollama, ProviderCatalog.Gemini, ProviderCatalog.Anthropic, ProviderCatalog.OpenAI, "qwen" };
         Assert.Equal(proven.OrderBy(t => t), ProviderCatalog.All.Where(p => p.LiveProven).Select(p => p.Type).OrderBy(t => t));
         Assert.Equal("2026-11-11", ProviderCatalog.Get("qwen").LiveProvenOn);
+        Assert.Equal("2026-11-12", ProviderCatalog.Get(ProviderCatalog.Ollama).LiveProvenOn);
 
         var generic = ProviderCatalog.Get(ProviderCatalog.OpenAICompatible);
         Assert.False(generic.LiveProven);
@@ -89,6 +90,8 @@ public sealed class ProviderTextClaimsTests
             string row = guide.Split('\n').Single(l => l.Contains("| `" + caps.Type + "` |", StringComparison.Ordinal));
             Assert.True(caps.LiveProven == row.Contains("| sì", StringComparison.Ordinal), caps.Type);
             Assert.True(caps.LiveProven != row.Contains("non provato", StringComparison.Ordinal), caps.Type);
+            if (caps.LiveProvenOn.Length > 0)
+                Assert.Contains("(" + DateTime.ParseExact(caps.LiveProvenOn, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture).ToString("dd/MM/yyyy", System.Globalization.CultureInfo.InvariantCulture) + ")", row, StringComparison.Ordinal);
         }
 
         string profiles = File.ReadAllText(Path.Combine(TestBuildPaths.RepositoryRoot, "src", "OnlyWorkspace.ConfigTool", "Forms", "MainConfigForm.Profiles.cs"));
