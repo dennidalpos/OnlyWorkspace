@@ -22,7 +22,7 @@
     <PackageVersion Include="Serilog" Version="4.4.0" />
     <PackageVersion Include="Serilog.Sinks.File" Version="7.0.0" />
     <PackageVersion Include="SQLite3MC.PCLRaw.bundle" Version="2.6.1" />
-    <PackageVersion Include="SQLite3MC.PCLRaw.lib" Version="2.6.1" />
+    <PackageVersion Include="SQLite3MC.PCLRaw.lib" Version="2.7.0" />
     <PackageVersion Include="System.Diagnostics.DiagnosticSource" Version="10.0.14" />
     <PackageVersion Include="System.Security.Cryptography.ProtectedData" Version="10.0.14" />
     <PackageVersion Include="System.Text.Json" Version="10.0.14" />

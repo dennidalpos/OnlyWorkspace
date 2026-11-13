@@ -60,9 +60,9 @@
       },
       "SQLite3MC.PCLRaw.lib": {
         "type": "Direct",
-        "requested": "[2.6.1, )",
-        "resolved": "2.6.1",
-        "contentHash": "X1XqnN35+/53ZryMSR/ogqSBcHJ+iUwCTkXP6GDHoxWZbbGz31j1Xi1HSvfsjS5V2iRuloUBDrdev0gvhqQGJg=="
+        "requested": "[2.7.0, )",
+        "resolved": "2.7.0",
+        "contentHash": "8ihlCvFVq6svD79hXtisTsf/TZYaiGpmpJpIJYciwQprz3IL+ICSIdTa00Cl+i5QXmUSfRl5Gs8Awdmz7UfG3Q=="
       },
       "System.Diagnostics.DiagnosticSource": {
         "type": "Direct",
@@ -352,7 +352,7 @@
       },
       "SQLite3MC.PCLRaw.lib": {
         "type": "CentralTransitive",
-        "requested": "[2.6.1, )",
+        "requested": "[2.7.0, )",
         "resolved": "2.6.1",
         "contentHash": "X1XqnN35+/53ZryMSR/ogqSBcHJ+iUwCTkXP6GDHoxWZbbGz31j1Xi1HSvfsjS5V2iRuloUBDrdev0gvhqQGJg=="
       }
