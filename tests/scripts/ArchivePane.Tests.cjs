@@ -151,8 +151,15 @@ assert.doesNotMatch(indicator.title, /AICloud|qwen|cloud esterno|questo PC/);
 assert.match(indicator.title, /\nDestinazione: nessuna, configurazione necessaria$/);
 context.setIndicator('ai', 'IA', { light: 'Error', label: 'non configurato', external: true });
 assert.doesNotMatch(indicator.title, /cloud esterno/, 'A later IA status does not bring the old destination back.');
-assert.match(html, /case 'profiles_init': \{[\s\S]{0,300}bar\.configError = false;\s*updateModelBadge\(/);
-context.bar.configError = false;
+// The real handler, not a pattern: a var named bar elsewhere in onHostMessage once made profiles_init throw.
+Object.assign(context, { updateEgressNotice() {}, requestAnalysisContext() {} });
+context.state.analysis = {};
+context.conv.querySelector = () => null;
+context.$('analysisDrawer').hidden = true;
+new vm.Script(html.slice(html.indexOf('  function onHostMessage('), html.indexOf('  if (webview) {', html.indexOf('  function onHostMessage(')))).runInContext(context);
+context.onHostMessage({ type: 'profiles_init', badge: { model: 'qwen3.8-flash', host: 'cloud.example.test', region: 'UE' }, isCloudActive: true, activeProfileName: 'AICloud' });
+assert.equal(context.bar.configError, false);
+assert.match(indicator.title, /AICloud · qwen3\.8-flash/, 'profiles_init reaches updateModelBadge.');
 context.bar.info = null;
 context.setIndicator('ai', 'IA', { light: 'Off', label: 'non verificato' });
 console.log('PASS #228: Configurazione necessaria clears the model and destination from the status dot');
