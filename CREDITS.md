@@ -9,9 +9,9 @@ Third-party components used by OnlyWorkspace, with the license each one declares
 | `DocumentFormat.OpenXml` | 3.5.1 | MIT | direct | https://github.com/dotnet/Open-XML-SDK |
 | `DocumentFormat.OpenXml.Framework` | 3.5.1 | MIT | transitive | https://github.com/dotnet/Open-XML-SDK |
 | `ExcelDataReader` | 3.9.0 | MIT | direct | https://github.com/ExcelDataReader/ExcelDataReader |
-| `Microsoft.Bcl.AsyncInterfaces` | 10.0.14 | MIT | direct | https://dot.net/ |
+| `Microsoft.Bcl.AsyncInterfaces` | 11.0.0 | MIT | direct | https://dot.net/ |
 | `Microsoft.Bcl.HashCode` | 6.0.0 | MIT | transitive | https://dot.net/ |
-| `Microsoft.Data.Sqlite.Core` | 10.0.14 | MIT | direct | https://docs.microsoft.com/dotnet/standard/data/sqlite/ |
+| `Microsoft.Data.Sqlite.Core` | 10.0.15 | MIT | direct | https://docs.microsoft.com/dotnet/standard/data/sqlite/ |
 | `Microsoft.Extensions.Configuration.Abstractions` | 10.0.3 | MIT | transitive | https://dot.net/ |
 | `Microsoft.Extensions.DependencyInjection.Abstractions` | 10.0.3 | MIT | transitive | https://dot.net/ |
 | `Microsoft.Extensions.Logging.Abstractions` | 10.0.3 | MIT | transitive | https://dot.net/ |
@@ -28,14 +28,14 @@ Third-party components used by OnlyWorkspace, with the license each one declares
 | `SQLite3MC.PCLRaw.provider` | 2.7.0 | MIT | transitive | https://utelle.github.io/SQLite3MultipleCiphers/ |
 | `SQLitePCLRaw.core` | 3.0.2 | Apache-2.0 | transitive | https://github.com/ericsink/SQLitePCL.raw |
 | `System.Buffers` | 4.6.1 | MIT | transitive | https://dot.net/ |
-| `System.Diagnostics.DiagnosticSource` | 10.0.14 | MIT | direct | https://dot.net/ |
-| `System.IO.Pipelines` | 10.0.14 | MIT | transitive | https://dot.net/ |
+| `System.Diagnostics.DiagnosticSource` | 11.0.0 | MIT | direct | https://dot.net/ |
+| `System.IO.Pipelines` | 11.0.0 | MIT | transitive | https://dot.net/ |
 | `System.Memory` | 4.6.3 | MIT | transitive | https://dot.net/ |
 | `System.Numerics.Vectors` | 4.6.1 | MIT | transitive | https://dot.net/ |
 | `System.Runtime.CompilerServices.Unsafe` | 6.1.2 | MIT | transitive | https://dot.net/ |
-| `System.Text.Encodings.Web` | 10.0.14 | MIT | transitive | https://dot.net/ |
-| `System.Text.Json` | 10.0.14 | MIT | direct | https://dot.net/ |
-| `System.Threading.Channels` | 10.0.14 | MIT | direct | https://dot.net/ |
+| `System.Text.Encodings.Web` | 11.0.0 | MIT | transitive | https://dot.net/ |
+| `System.Text.Json` | 11.0.0 | MIT | direct | https://dot.net/ |
+| `System.Threading.Channels` | 11.0.0 | MIT | direct | https://dot.net/ |
 | `System.Threading.Tasks.Extensions` | 4.6.3 | MIT | transitive | https://dot.net/ |
 | Public Suffix List | 2026-10-07 | MPL-2.0 | embedded in Core | https://publicsuffix.org/ |
 | Adobe Core 14 AFM files | - | Adobe ReadMe terms (LicenseRef) | embedded in PdfPig | https://github.com/UglyToad/PdfPig |
