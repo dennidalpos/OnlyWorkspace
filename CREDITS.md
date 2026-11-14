@@ -51,7 +51,7 @@ Third-party components used by OnlyWorkspace, with the license each one declares
 | `Microsoft.Windows.SDK.Contracts` | 10.0.28000.2957 | licenseUrl https://aka.ms/WinSDKLicenseURL | OCR and PDF API metadata at build |
 | `Microsoft.NETFramework.ReferenceAssemblies` | 1.0.3 | licenseUrl https://github.com/Microsoft/dotnet/blob/master/LICENSE | build |
 | `System.Security.Cryptography.ProtectedData` | 10.0.14 | MIT | net10 build and tests; net48 uses the .NET Framework DPAPI |
-| `Microsoft.NET.Test.Sdk` | 18.11.0 | MIT | tests |
+| `Microsoft.NET.Test.Sdk` | 18.12.0 | MIT | tests |
 | `xunit` | 2.9.3 | Apache-2.0 | tests |
 | `xunit.runner.visualstudio` | 4.0.1 | Apache-2.0 | tests |
 | `coverlet.collector` | 10.1.0 | MIT | tests |
