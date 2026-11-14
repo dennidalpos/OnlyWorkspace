@@ -86,7 +86,7 @@ CloudFactsRequest keeps values/provenance local and sends embedded categories/op
 
 ## Packaging, dependencies and UI vocabulary
 
-scripts/build-installer.ps1 [-SkipTests] [-OutputDirectory <new-directory>] builds, verifies unless skipped, stages/signs binaries/uninstaller, compiles/signs NSIS. Existing output directories are refused; failed/old packages stay. Use existing PFX/certificate and ONLYAPPS_PFX_PASSWORD environment; never command-line passwords or implicit certificate regeneration. Timestamp failure stops signing; AllowNoTimestamp is for explicit local tests only.
+scripts/build-installer.ps1 [-SkipTests] [-OutputDirectory <new-directory>] builds, verifies unless skipped, stages/signs binaries/uninstaller, compiles/signs NSIS. Without -OutputDirectory the package is always the same folder (`package` under the central artifacts, else under `dist`): staging goes to `package.staging` and replaces `package` only after the installer is built and signed, so a failed run keeps the previous package; an explicit -OutputDirectory must be new. Use existing PFX/certificate and ONLYAPPS_PFX_PASSWORD environment; never command-line passwords or implicit certificate regeneration. Timestamp failure stops signing; AllowNoTimestamp is for explicit local tests only.
 
 [Notices](../THIRD-PARTY-NOTICES.txt), [credits](../CREDITS.md) and manifests describe shipped libraries. Office interop types are embedded build references, not redistribution rights or proof of installed Office version. Windows SDK OCR/PDF metadata is build-only. Providers use HTTP rather than provider SDKs. Match actual restored/shipped assemblies to notices.
 

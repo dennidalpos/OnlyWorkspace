@@ -24,12 +24,16 @@ function Assert-SignedFile([string]$Path, [string]$Thumbprint) {
 $repoRoot = (Resolve-Path "$PSScriptRoot\..").Path
 . (Join-Path $PSScriptRoot 'build-paths.ps1')
 $outlookPaths = Get-OnlyWorkspaceBuildPaths -RepositoryRoot $repoRoot -Configuration $Configuration
-if (!$OutputDirectory) {
+# One fixed package folder, always the same: the build stages in a sibling folder and replaces it only after the installer is built and signed.
+$customOutput = [bool]$OutputDirectory
+if (!$customOutput) {
     $packageParent = if ($outlookPaths.ArtifactsPath) { Join-Path $outlookPaths.ArtifactsPath 'package' } else { Join-Path $repoRoot 'dist' }
-    $OutputDirectory = Join-Path $packageParent ('package-' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '-' + [Guid]::NewGuid().ToString('N').Substring(0, 8))
+    $finalDirectory = [IO.Path]::GetFullPath((Join-Path $packageParent 'package'))
+    $OutputDirectory = $finalDirectory + '.staging'
+    if (Test-Path -LiteralPath $OutputDirectory) { Remove-Item -LiteralPath $OutputDirectory -Recurse -Force }
 }
 $OutputDirectory = [IO.Path]::GetFullPath($OutputDirectory)
-if (Test-Path -LiteralPath $OutputDirectory) { throw "La cartella del pacchetto esiste già: $OutputDirectory. Usare una destinazione nuova." }
+if ($customOutput -and (Test-Path -LiteralPath $OutputDirectory)) { throw "La cartella del pacchetto esiste già: $OutputDirectory. Usare una destinazione nuova o omettere -OutputDirectory." }
 $publishDir = Join-Path $OutputDirectory 'publish'
 $distDir = Join-Path $OutputDirectory 'dist'
 $certsDir = Join-Path $repoRoot "certs"
@@ -55,7 +59,7 @@ if (!$SkipTests) {
 }
 
 Write-Host "==> 3. Preparazione cartella publish..." -ForegroundColor Cyan
-# Every invocation owns a new staging directory; previous packages and failed attempts are retained.
+# Staging is rebuilt from scratch on every run; a failed run leaves the previous package untouched.
 New-Item -ItemType Directory -Path $publishDir -Force | Out-Null
 if (!(Test-Path $distDir)) {
     New-Item -ItemType Directory -Path $distDir -Force | Out-Null
@@ -148,6 +152,13 @@ Write-Host "==> 6. Firma digitale dell'installer NSIS..." -ForegroundColor Cyan
 & pwsh -ExecutionPolicy Bypass -File "$PSScriptRoot\sign-binaries.ps1" -Files $installerPath
 if ($LASTEXITCODE -ne 0) { throw "Firma installer fallita con codice $LASTEXITCODE" }
 Assert-SignedFile $installerPath $signerThumbprint
+
+if (!$customOutput) {
+    if (Test-Path -LiteralPath $finalDirectory) { Remove-Item -LiteralPath $finalDirectory -Recurse -Force }
+    Move-Item -LiteralPath $OutputDirectory -Destination $finalDirectory
+    $installerPath = Join-Path (Join-Path $finalDirectory 'dist') 'OnlyWorkspaceSetup.exe'
+    Assert-SignedFile $installerPath $signerThumbprint
+}
 
 Write-Host "==> Pacchetto di installazione completato con successo:" -ForegroundColor Green
 Write-Host "    $installerPath ($( [math]::Round((Get-Item $installerPath).Length / 1MB, 2) ) MB)" -ForegroundColor Green
