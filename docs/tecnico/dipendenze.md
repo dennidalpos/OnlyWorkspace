@@ -25,7 +25,7 @@ Le interop Office 15.0.4797.1004 servono alla compilazione per leggere Outlook e
 | ExcelDataReader 3.9.0 | Celle dei fogli XLS binari |
 | MimeKitLite 4.18.1 | `.eml` e MIME |
 | Microsoft.Windows.SDK.Contracts 10.0.28000.2957 | Solo compilazione: metadati di Windows.Media.Ocr e Windows.Data.Pdf per l'OCR (E8); nessun file distribuito. Licenza del Windows SDK con accettazione richiesta dal pacchetto ([termini](https://aka.ms/WinSDKLicenseURL)) |
-| Microsoft.Data.Sqlite.Core 10.0.14, SQLite3MC.PCLRaw 2.6.1 | Database cifrato e FTS5 |
+| Microsoft.Data.Sqlite.Core 10.0.14, SQLite3MC.PCLRaw 2.7.0 | Database cifrato e FTS5 |
 | Nager.PublicSuffix 3.8.0 | Domini nei controlli di sicurezza (lista locale) |
 | Serilog 4.4.0, Serilog.Sinks.File 7.0.0 | Log |
 | System.Text.Json e pacchetti .NET 10.0.14 | JSON, canali, DPAPI su .NET Framework |
