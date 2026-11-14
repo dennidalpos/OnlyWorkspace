@@ -73,7 +73,7 @@ public sealed class LlmRedirectTests
             using var response = await client.SendAsync(post);
             Assert.Equal(status, (int)response.StatusCode);
             var error = await Assert.ThrowsAsync<LlmRequestException>(() => LlmHttp.EnsureSuccessAsync(response, "Fixture", CancellationToken.None));
-            Assert.Contains("Configura l'URL finale", error.Message);
+            Assert.Contains("Imposta l'indirizzo finale del servizio", error.Message);
             string original = await received;
             Assert.Contains("SYNTHETIC-BODY", original);
             Assert.Contains("SYNTHETIC-KEY", original);

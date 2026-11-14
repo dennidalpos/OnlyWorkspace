@@ -711,7 +711,22 @@ public sealed class ArchiveSearchForm : Form
             column.DefaultCellStyle.Alignment = column.HeaderCell.Style.Alignment =
                 figure ? DataGridViewContentAlignment.MiddleRight : DataGridViewContentAlignment.MiddleLeft;
         }
+        // Fill columns never shrink below the longest word of their header (headers wrap between words):
+        // at the minimum window size the grid scrolls instead of cutting «Restano» to «itano».
+        void FitHeaders()
+        {
+            // The grid font: FontChanged fires before the grid copies it into the header style.
+            foreach (DataGridViewColumn column in grid.Columns)
+                column.MinimumWidth = HeaderWordWidth(column.HeaderText, grid.Font) + Ui.Px(grid, 16);
+        }
+        FitHeaders();
+        grid.FontChanged += (_, _) => FitHeaders();
+        grid.DpiChangedAfterParent += (_, _) => FitHeaders();
     }
+
+    /// <summary>Width of the longest word of a header, in pixels of the given font.</summary>
+    internal static int HeaderWordWidth(string header, Font font) =>
+        header.Split(' ').Max(word => TextRenderer.MeasureText(word, font).Width);
 
     private static TableLayoutPanel Rows(params SizeType[] rows)
     {

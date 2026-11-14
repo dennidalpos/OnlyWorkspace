@@ -74,6 +74,18 @@ public sealed class ArchiveSearchFormTests
                 form.Size = new Size(680, 480);
                 Application.DoEvents();
                 Assert.True(split.Panel1.Height > 45 && split.Panel2.Height > 45, "Both panes must remain visible at the minimum window size.");
+                // #253: at the minimum size no header word is cut (headers wrap between words); the grid scrolls instead of cutting «Restano» to «itano».
+                tabs.SelectTab(1);
+                Application.DoEvents();
+                foreach (var grid in new[] { Field<DataGridView>(form, "_stores"), Field<DataGridView>(form, "_metrics") })
+                {
+                    var font = grid.ColumnHeadersDefaultCellStyle.Font ?? grid.Font;
+                    foreach (DataGridViewColumn column in grid.Columns)
+                        Assert.True(column.Width >= ArchiveSearchForm.HeaderWordWidth(column.HeaderText, font),
+                            $"Header «{column.HeaderText}» cut at the minimum size ({column.Width} px).");
+                }
+                tabs.SelectTab(0);
+                Application.DoEvents();
                 var fields = Descendants(form).Where(c => c.Name.StartsWith("Fact", StringComparison.Ordinal)).ToDictionary(c => c.Name);
                 fields["FactAmountMin"].Text = "1.000,00"; fields["FactAmountMax"].Text = "1000.01"; fields["FactCurrency"].Text = "eur";
                 var from = (DateTimePicker)fields["FactDueFrom"]; from.Value = new DateTime(2026, 11, 1); from.Checked = true;
