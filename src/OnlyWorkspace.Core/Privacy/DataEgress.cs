@@ -234,11 +234,11 @@ public static partial class DataEgress
 
     /// <summary>What the pane says when a cloud profile is blocked.</summary>
     public const string BlockedMessage =
-        "Invio a servizi esterni non autorizzato: l'amministratore deve leggere e accettare l'informativa sull'uscita dei dati nel ConfigTool " +
+        "Invio a servizi esterni non autorizzato: l'amministratore deve leggere e accettare l'informativa sull'uscita dei dati nella Configurazione " +
         "(Privacy e dati) per questo profilo, destinazione, livello e chiavi. Si può salvare la configurazione senza autorizzare l'invio.";
 
     public const string LocalOnlyMessage =
-        "Il profilo cloud è impostato su «Solo locale» e non invia dati: usare un profilo locale o alzare il livello nel ConfigTool.";
+        "Il profilo cloud è impostato su «Solo locale» e non invia dati: usare un profilo locale o alzare il livello nella Configurazione.";
 
     public static string BlockedMessageFor(LlmProfileConfig profile) =>
         profile.IsExternal && !ExposurePolicy.Of(profile).ModelAllowed ? LocalOnlyMessage : BlockedMessage;

@@ -41,9 +41,12 @@ function remove(id) { const trigger = id == null ? ctx.$('btnDeleteAll') : butto
 function assertFocus(id, action = 'open') { assert.equal(document.activeElement, button(id, action)); }
 
 render(['a', 'b', 'c']);
-button('b', 'resume').focus();
+// #244: one Riprendi per row (the row button) and Elimina tutto hidden until the list is known.
+assert.equal(list.querySelectorAll().filter(b => b.dataset.historyAction === 'resume').length, 0, 'second Riprendi control per row');
+assert.match(html, /<button id="btnDeleteAll"[^>]* hidden>/, 'Elimina tutto must start hidden');
+button('b', 'delete').focus();
 render(['c', 'b', 'a']);
-assertFocus('b', 'resume');
+assertFocus('b', 'delete');
 let requestId = remove('b');
 assert.equal(spoken.length, 0, 'No success before persistence');
 render(['a'], { requestId: 'obsolete', deleted: true });
@@ -95,9 +98,9 @@ render(['b'], { requestId, deleted: true });
 assert.equal(document.activeElement, ctx.$('btnHistory'), 'Do not steal focus after another control is selected');
 render(['a', 'b', 'c']);
 requestId = remove('a');
-button('c', 'resume').focus();
+button('c', 'delete').focus();
 render(['b', 'c'], { requestId, deleted: true });
-assertFocus('c', 'resume');
+assertFocus('c', 'delete');
 render(['a', 'b']);
 requestId = remove('a');
 ctx.historyPageVersion += 2; // Left and reopened the page while awaiting persistence.

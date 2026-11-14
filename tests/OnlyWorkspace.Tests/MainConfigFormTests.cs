@@ -4,6 +4,7 @@ using System.Windows.Forms;
 using OnlyWorkspace.ConfigTool.Forms;
 using OnlyWorkspace.Core.Archive;
 using OnlyWorkspace.Core.Models;
+using OnlyWorkspace.Core.Validation;
 using OnlyWorkspace.Infrastructure.Configuration;
 using OnlyWorkspace.Infrastructure.Security;
 
@@ -522,6 +523,41 @@ public sealed class MainConfigFormTests
             Assert.Equal("s2", vault.GetSecret("profile_b_token"));
             var saved = new FileConfigurationService(directory, directory).LoadConfiguration();
             Assert.Equal(string.Empty, saved.Profiles.Single(p => p.Id == "a").SecretRef);
+        });
+    }
+
+    // #241: after a failed validation the ConfigTool selects the profile and the page with the field.
+    [Fact]
+    public void ValidationIssue_SelectsTheProfileAndThePageOfTheField()
+    {
+        OnSta(directory =>
+        {
+            var config = new WorkspaceConfig { DefaultProfile = "a", Profiles = new() { Local("a"), Local("b") } };
+            Write(directory, config, new() { ["profile_a_token"] = "s1", ["profile_b_token"] = "s2" });
+            using var form = new MainConfigForm(directory, null, directory);
+            var show = typeof(MainConfigForm).GetMethod("ShowIssue", Flags)!;
+            var pages = Field<List<Control>>(form, "_pages");
+            var navButtons = (System.Collections.IList)typeof(MainConfigForm).GetField("_navButtons", Flags)!.GetValue(form)!;
+            int Selected() { for (int i = 0; i < navButtons.Count; i++) if ((bool)navButtons[i]!.GetType().GetProperty("Selected")!.GetValue(navButtons[i])!) return i; return -1; }
+            var profiles = Field<ListBox>(form, "_lstProfiles");
+
+            show.Invoke(form, new object[] { new ValidationIssue("x", "b", ValidationField.Endpoint) });
+            Assert.Equal(1, profiles.SelectedIndex);
+            Assert.True(pages[Selected()].Contains(Field<TextBox>(form, "_txtEndpoint")));
+
+            show.Invoke(form, new object[] { new ValidationIssue("x", null, ValidationField.DefaultProfile) });
+            Assert.True(pages[Selected()].Contains(Field<ComboBox>(form, "_cmbDefaultProfile")));
+
+            show.Invoke(form, new object[] { new ValidationIssue("x", "A", ValidationField.Temperature) });
+            Assert.Equal(0, profiles.SelectedIndex);
+            Assert.True(pages[Selected()].Contains(Field<NumericUpDown>(form, "_numTemp")));
+
+            // Every field the validator names has a control on some page.
+            foreach (var field in typeof(ValidationField).GetFields().Select(f => (string)f.GetValue(null)!).Where(f => f != ValidationField.Consent))
+            {
+                var control = (Control?)typeof(MainConfigForm).GetMethod("IssueField", Flags)!.Invoke(form, new object[] { field });
+                Assert.True(control != null && pages.Any(p => p.Contains(control)), field);
+            }
         });
     }
 

@@ -51,6 +51,7 @@ public sealed class ArchiveSearchForm : Form
     private readonly string? _archiveDirectory;
     private bool _disposed;
     private CancellationTokenSource? _retrieval;
+    private bool _retrievalCancelled;
     private IReadOnlyList<ArchiveHit> _hits = Array.Empty<ArchiveHit>();
     private int _offset;
     private bool _loadingProfiles;
@@ -238,8 +239,11 @@ public sealed class ArchiveSearchForm : Form
         _results.Columns[1].FillWeight = 90;
         _results.Columns[2].FillWeight = 50;
         _results.Columns[3].FillWeight = 55;
-        Columns(_metrics, ("Voce", 70, false), ("Fatti", 35, true), ("Totale", 35, true), ("%", 25, true), ("Restano", 35, true), ("Non letti", 45, true));
-        _metrics.Columns[3].HeaderCell.ToolTipText = "Percentuale sugli elementi leggibili; non include la colonna Non letti.";
+        Columns(_metrics, ("Voce", 70, false), ("Completati", 40, true), ("Totale", 35, true), ("%", 25, true), ("Restano", 35, true), ("Non leggibili", 50, true));
+        // Same headers and tooltips as the pane's progress table (TaskPane.html).
+        _metrics.Columns[1].HeaderCell.ToolTipText = "Elementi già completati";
+        _metrics.Columns[3].HeaderCell.ToolTipText = "Percentuale sugli elementi leggibili; non include la colonna Non leggibili";
+        _metrics.Columns[5].HeaderCell.ToolTipText = "Non leggibili, esclusi o falliti";
         Columns(_stores, ("Cassetta", 70, false), ("Stato", 40, false), ("Email", 30, true), ("Testi %", 28, true), ("Restano", 30, true), ("Allegati", 32, true),
             ("Cartelle", 30, true), ("Ultimo inventario", 50, true), ("Errore", 110, false));
         // The reason of a failed mailbox is the point of the column: it wraps (rows grow) and the full text is in the tooltip.
@@ -307,7 +311,7 @@ public sealed class ArchiveSearchForm : Form
             catch (Exception ex) { OnlyWorkspaceLog.Logger.Debug(ex, "Archive status refresh failed"); }
         };
         _statusTimer.Start();
-        _cancel.Click += (_, _) => _retrieval?.Cancel();
+        _cancel.Click += (_, _) => { if (_retrieval is { } running) { _retrievalCancelled = true; running.Cancel(); } };
         if (refreshOnShow) Shown += async (_, _) => await GuardAsync(RefreshAsync);
         Theme.Watch();
         Theme.Changed += OnThemeChanged;
@@ -321,7 +325,8 @@ public sealed class ArchiveSearchForm : Form
         _busy = true;
         foreach (Control control in _commands) if (!ReferenceEquals(control, _cancel)) control.Enabled = false;
         try { await action(); }
-        catch (OperationCanceledException) { if (!_lifetime.IsCancellationRequested) { _status.Text = "Recupero annullato."; _searchStatus.Text = _status.Text; } }
+        // Only Annulla of the retrieval says «annullato» (RetrieveOriginalAsync); anything else ran out of time.
+        catch (OperationCanceledException) { if (!_lifetime.IsCancellationRequested) { _status.Text = "Operazione non completata in tempo: riprova."; _searchStatus.Text = _status.Text; } }
         catch (Exception ex)
         {
             OnlyWorkspaceLog.Logger.Warning(ex, "Archive search operation failed");
@@ -374,7 +379,9 @@ public sealed class ArchiveSearchForm : Form
         if (Client is not { } client) return;
         if (reset) _offset = 0;
         int version = ++_searchVersion;
-        var hits = await client.SearchAsync(CreateQuery());
+        var query = CreateQuery();
+        _searchStatus.Text = "Ricerca in corso…";
+        var hits = await client.SearchAsync(query);
         if (_lifetime.IsCancellationRequested || version != _searchVersion) return;
         _hits = hits;
         _results.Rows.Clear();
@@ -383,9 +390,15 @@ public sealed class ArchiveSearchForm : Form
         if (_lifetime.IsCancellationRequested || version != _searchVersion) return;
         var facts = await client.GetFactProgressAsync(_lifetime.Token);
         if (_lifetime.IsCancellationRequested || version != _searchVersion) return;
-        _searchStatus.Text = hits.Count + " risultati nella pagina · " + (_outlookConnected ? "Outlook collegato" : "Ricerca offline") + FactCoverage(facts);
+        _searchStatus.Text = ResultCount(hits.Count, _offset) + " · " + (_outlookConnected ? "Outlook collegato" : "Ricerca offline") + FactCoverage(facts);
         ShowPreview();
     }
+
+    /// <summary>Zero results suggest the next step instead of a bare «0 risultati».</summary>
+    internal static string ResultCount(int count, int offset) =>
+        count > 0 ? count + " risultati nella pagina"
+        : offset > 0 ? "Nessun altro risultato"
+        : "Nessun risultato: prova con meno parole o togli un filtro";
 
     internal ArchiveQuery CreateQuery()
     {
@@ -563,6 +576,7 @@ public sealed class ArchiveSearchForm : Form
         using var retrieval = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token);
         retrieval.CancelAfter(TimeSpan.FromMinutes(3));
         _retrieval = retrieval;
+        _retrievalCancelled = false;
         _cancel.Enabled = true;
         _original.Enabled = false;
         string? requestId = null;
@@ -591,6 +605,10 @@ public sealed class ArchiveSearchForm : Form
                 }
                 await Task.Delay(500, retrieval.Token);
             }
+        }
+        catch (OperationCanceledException) when (!_lifetime.IsCancellationRequested)
+        {
+            _status.Text = _retrievalCancelled ? "Recupero annullato." : "Recupero non completato entro 3 minuti: riprova.";
         }
         finally
         {

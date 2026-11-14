@@ -68,13 +68,13 @@ chip.click();
 assert.deepEqual(sent.pop(), { type: 'archive_open_email', entryId: 'E1', storeId: 'S1' });
 assert.equal(ctx.mailChip({ itemType: 'draft', subject: 'nuova email' }).tagName, 'SPAN');
 
-// History rows show the email and a Riprendi icon button (named for screen readers) that loads the conversation.
+// History rows show the email; the row button (the only Riprendi, #244) loads the conversation.
 new vm.Script(section('  function renderHistoryList(data) {', '  function renderLoadedConversation(')).runInContext(ctx);
 ctx.historyReadRequest = 'writing-read';
 ctx.renderHistoryList({ requestId: 'writing-read', items: [{ id: 'c1', title: 'Sintesi: Offerta', updatedAt: '20/10/2026 10:00', messageCount: 2, email: { subject: 'Offerta', meta: 'Rossi', itemType: 'email' } }] });
 const list = ctx.nodes.historyList;
 assert.ok(all(list).some(n => n.className === 'history-mail'));
-const resume = all(list).filter(n => n.tagName === 'BUTTON').find(b => b.attrs['aria-label'] === 'Riprendi Sintesi: Offerta');
+const resume = all(list).find(n => n.className === 'history-open');
 resume.click();
 assert.deepEqual(sent.pop(), { type: 'load_history', id: 'c1' });
 // The tooltip carries the full title and email subject, which the row truncates with an ellipsis.

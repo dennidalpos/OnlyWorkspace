@@ -31,7 +31,7 @@ public static class LlmErrorText
             // net48 HttpRequestException has no StatusCode: clients write "HTTP 404" / EnsureSuccessStatusCode "success: 404".
             var status = HttpStatusRegex.Match(http.Message);
             if (http is LlmRequestException { Status: >= 300 and < 400 })
-                return "Il server ha richiesto un reindirizzamento HTTP, bloccato per proteggere dati e credenziali. Configura l'URL finale dell'endpoint nel ConfigTool.";
+                return "Il server ha richiesto un reindirizzamento HTTP, bloccato per proteggere dati e credenziali. Imposta l'indirizzo finale del servizio nella Configurazione.";
             // Provider/stream text may be in any language and contain request data. Keep it in the log.
             if (!status.Success && http.InnerException == null)
                 return $"{target} ha interrotto o rifiutato la risposta. Riprova; se il problema continua, consulta il log.";
@@ -44,12 +44,12 @@ public static class LlmErrorText
                 ? $"Impossibile contattare {target}. Verifica la rete, l'URL dell'endpoint o che il server sia attivo."
                 : status.Groups[1].Value switch
                 {
-                    "401" or "403" => $"{target} ha rifiutato le credenziali. Verifica token/API key nel ConfigTool.",
-                    "404" => $"{target}: endpoint o modello non trovato. Verifica URL e nome del modello nel ConfigTool.",
+                    "401" or "403" => $"{target} ha rifiutato le credenziali. Verifica la chiave di accesso nella Configurazione.",
+                    "404" => $"{target}: indirizzo o modello non trovato. Verifica «Indirizzo del servizio» e «Modello» nella Configurazione.",
                     "408" => $"{target} non ha risposto in tempo. Riprova tra qualche istante.",
                     "429" => $"{target} sta limitando le richieste (troppe richieste o quota esaurita). Riprova tra poco.",
                     var code when code.StartsWith("5") => $"{target} ha un problema temporaneo (errore {code}). Riprova più tardi.",
-                    var code => $"{target} ha rifiutato la richiesta (errore {code}). Verifica le impostazioni del profilo nel ConfigTool."
+                    var code => $"{target} ha rifiutato la richiesta (errore {code}). Verifica le impostazioni del profilo nella Configurazione."
                 };
         }
 

@@ -1,5 +1,5 @@
 <!-- secondbrain:repository:begin -->
-Direttive comuni applicate: revisione **1.2** — 2026-11-12. <!-- secondbrain:source global=0552D722AEAED0A96BC7C968F6ECED2371EF292CAF1DE4734A728F13D32620B3 workstation=DBF47C4088B567FDBA1695B60D338A09D04A4106FAB5CF2B8B7BDCB775220923 -->
+Common directives applied: revision **1.3** — 2026-11-13. <!-- secondbrain:source global=6B4E10F48D98505DB4ABF6C08AD8BB01229A0D33FF844A2C91781D63F291B480 workstation=BD2E210B49B3B77000F570E6F6191DC694798722B50900E6C3864E3DBDD78FF7 -->
 ## SecondBrain
 
 Repository knowledge lives in the SecondBrain dossier; code, guides, and publishable assets stay here.

@@ -76,7 +76,7 @@ internal static class LlmHttp
         if (response.IsSuccessStatusCode) return;
 
         if ((int)response.StatusCode >= 300 && (int)response.StatusCode < 400)
-            throw new LlmRequestException("Il server ha richiesto un reindirizzamento HTTP, bloccato per proteggere dati e credenziali. Configura l'URL finale dell'endpoint nel ConfigTool.", (int)response.StatusCode);
+            throw new LlmRequestException("Il server ha richiesto un reindirizzamento HTTP, bloccato per proteggere dati e credenziali. Imposta l'indirizzo finale del servizio nella Configurazione.", (int)response.StatusCode);
 
         string? details = null, param = null;
         try

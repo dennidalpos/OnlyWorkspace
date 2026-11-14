@@ -179,7 +179,7 @@ public partial class TaskPaneCoordinator : IDisposable
                 _control.PostMessage(new
                 {
                     type = "config_error",
-                    message = "Configurazione non valida o assente. Apri ConfigTool per verificarla."
+                    message = "Configurazione non valida o assente: apri la Configurazione per verificarla."
                 });
                 return;
             }
@@ -1831,7 +1831,7 @@ public partial class TaskPaneCoordinator : IDisposable
         // The action goes on from Outlook data, as after any failed search, and says why. SearchAsync blocks every
         // query except the masked ones of an Esteso cloud profile; the notice is checked first so the reason names the host.
         if (!DataEgress.AllowsWeb(_config, profile, _configService.ResolveSecret))
-            throw new DataEgressBlockedException("ricerca web verso " + string.Join(", ", DataEgress.WebHosts(profile)) + " non autorizzata dall'informativa sull'uscita dei dati (ConfigTool, Privacy e dati).");
+            throw new DataEgressBlockedException("ricerca web verso " + string.Join(", ", DataEgress.WebHosts(profile)) + " non autorizzata dall'informativa sull'uscita dei dati (Configurazione, Privacy e dati).");
         var secret = string.IsNullOrEmpty(profile.SecretRef) ? null : _configService.ResolveSecret(profile.SecretRef);
         var webSecret = string.IsNullOrEmpty(profile.WebSearchSecretRef) ? null : _configService.ResolveSecret(profile.WebSearchSecretRef);
         UiSync.Ensure();
@@ -1947,7 +1947,7 @@ public partial class TaskPaneCoordinator : IDisposable
         _control.PostMessage(new
         {
             type = "config_error",
-            message = "OnlyWorkspace non è ancora configurato. Configura un profilo IA con lo strumento di configurazione."
+            message = "OnlyWorkspace non è ancora configurato: crea un profilo IA nella Configurazione."
         });
     }
 

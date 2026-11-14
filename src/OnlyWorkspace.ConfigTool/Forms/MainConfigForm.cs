@@ -1359,6 +1359,7 @@ public sealed partial class MainConfigForm : Form
         if (!validation.IsValid)
         {
             CopyableMessageBox.Show(this, SaveMessages.ValidationFailed(validation.Errors), "Validazione non riuscita", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            ShowIssue(validation.Issues[0]);
             return false;
         }
 

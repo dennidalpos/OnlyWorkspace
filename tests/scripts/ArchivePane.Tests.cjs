@@ -245,7 +245,7 @@ assert.match(spoken.at(-1), /^Errore: Il riquadro/, 'A failed log post must not 
 
 // The terminal event routes keep errors and deliberate interruptions distinct.
 const terminalResults = [];
-const terminal = vm.createContext({ setupContextHelp() {}, addDocumentReport() {}, state: { current: {} }, finishTurn: result => terminalResults.push(result) });
+const terminal = vm.createContext({ setupContextHelp() {}, addDocumentReport() {}, clearPendingSend() {}, state: { current: {} }, finishTurn: result => terminalResults.push(result) });
 const terminalCases = html.slice(html.indexOf("      case 'stream_error':"), html.indexOf("      case 'toast':"));
 vm.runInContext('function dispatch(data) { switch(data.type) {' + terminalCases + '} }', terminal);
 terminal.dispatch({ type: 'stream_error', message: 'Operazione non riuscita.' });

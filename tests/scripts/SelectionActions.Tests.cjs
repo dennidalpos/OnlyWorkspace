@@ -93,6 +93,8 @@ state.selectedEmail = { entryId: 'reply-email', storeId: 'reply-store', subject:
 ctx.setComposerMode('reply');
 state.selectedEmail = { entryId: 'other-email', storeId: 'other-store' };
 ctx.prompt.value = 'Conferma';
+// The provisional prompt of #240 has its own test (ChatPendingSend.Tests.cjs).
+ctx.beginPendingSend = () => {};
 ctx.submitPrompt();
 assert.deepEqual(posted.pop(), { type: 'custom_reply', instruction: 'Conferma', entryId: 'reply-email', storeId: 'reply-store' });
 state.selectedEmail = null;

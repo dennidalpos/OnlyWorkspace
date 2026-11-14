@@ -938,7 +938,7 @@
   <aside id="historyDrawer" class="drawer" role="region" aria-labelledby="historyTitle" hidden>
     <div class="drawer-header">
       <h2 id="historyTitle" tabindex="-1">Storico conversazioni</h2>
-      <button id="btnDeleteAll" class="btn btn-sm btn-danger" type="button" title="Elimina tutte le conversazioni salvate (chiede conferma)">Elimina tutto</button>
+      <button id="btnDeleteAll" class="btn btn-sm btn-danger" type="button" title="Elimina tutte le conversazioni salvate (chiede conferma)" hidden>Elimina tutto</button>
       <button class="icon-btn" type="button" data-close-drawer title="Chiudi (Esc)" aria-label="Chiudi"><svg class="i"><use href="#i-dismiss"/></svg></button>
     </div>
     <div id="historyList" class="drawer-body">
@@ -1232,7 +1232,7 @@
     refine: null, // { draft, source }: the draft the next instruction rewrites
     // "Cerca e analizza" form; stores[id] === false = account unticked, role = where the person must appear
     // max = emails to read chosen by the user (null = configured default, 0 = all)
-    analysis: { ctx: null, contextRequestId: 0, folders: [], preset: 'summary', stores: {}, role: 'sender' },
+    analysis: { ctx: null, loaded: false, contextRequestId: 0, folders: [], preset: 'summary', stores: {}, role: 'sender' },
     analysisId: null,
     contextKey: '',
     contextStoreId: '',
@@ -2291,6 +2291,39 @@
     prompt.value = '';
     autoresize();
     updateSendButton();
+    beginPendingSend(text);
+  }
+
+  // #240: Invia shows the prompt and «In attesa…» at once; the host's stream_start replaces them.
+  // Without an answer from the host within 15 s the text goes back to the field.
+  var pendingSend = null;
+  function beginPendingSend(text) {
+    clearPendingSend();
+    hideEmptyState();
+    var turn = el('div', 'turn pending-send');
+    turn.appendChild(el('div', 'msg msg-user', text));
+    var wait = el('div', 'msg msg-assistant');
+    var phase = el('div', 'msg-phase');
+    phase.innerHTML = '<span class="phase-msg">In attesa…</span><span class="spinner" aria-hidden="true"></span>';
+    wait.appendChild(phase);
+    turn.appendChild(wait);
+    conv.appendChild(turn);
+    scrollToBottom();
+    announce('In attesa…');
+    pendingSend = { turn: turn, text: text, timer: setTimeout(function () {
+      var lost = pendingSend;
+      clearPendingSend();
+      if (!lost) return;
+      if (!prompt.value.trim()) { prompt.value = lost.text; autoresize(); }
+      updateSendButton();
+      showToast('La richiesta non è partita: il testo è tornato nel campo. Puoi riprovare.', 'error');
+    }, 15000) };
+  }
+  function clearPendingSend() {
+    if (!pendingSend) return;
+    clearTimeout(pendingSend.timer);
+    if (pendingSend.turn.parentNode) pendingSend.turn.parentNode.removeChild(pendingSend.turn);
+    pendingSend = null;
   }
 
   prompt.addEventListener('input', function () { autoresize(); updateSendButton(); });
@@ -2385,6 +2418,8 @@
     var a = state.analysis;
     var scope = analysisScope();
     a.contextRequestId += 1;
+    // Until analysis_context answers, stores and scope are unknown: Avvia analisi stays off.
+    a.loaded = false;
     a.ctx = Object.assign({}, a.ctx || {}, { selectionScope: 'none', hasEmail: false, entryId: null, storeId: null, subject: null, folder: null, senderEmail: null, senderName: null });
     refreshAnalysisForm();
     // The form waits blank for the host: after 15 s say so and offer Riprova, as Storico does.
@@ -2412,11 +2447,12 @@
     var needsSelection = (scope === 'thread' || scope === 'folder' || scope === 'flow') &&
       (ctx.selectionScope !== scope || !ctx.hasEmail || !ctx.entryId || !ctx.storeId || (scope === 'folder' && !ctx.folder));
     var reconstruct = state.analysis.preset === 'reconstruct';
-    $('anStart').disabled = (!state.configOk && !reconstruct) || state.busy || needsText || needsSelection || (reconstruct && !(ctx.archive && ctx.archive.active));
+    var loading = !state.analysis.loaded;
+    $('anStart').disabled = loading || (!state.configOk && !reconstruct) || state.busy || needsText || needsSelection || (reconstruct && !(ctx.archive && ctx.archive.active));
     $('anStart').lastChild.textContent = state.busy ? 'Operazione in corso…' : reconstruct ? 'Ricostruisci la pratica' : 'Avvia analisi';
     $('anStart').title = needsSelection ? 'Seleziona o apri un\'email in Outlook' : needsText ? 'Scrivi prima cosa vuoi trovare' : 'Avvia l\'analisi: puoi interromperla in qualsiasi momento';
     // The reason is written under the button too: a disabled button shows no tooltip to keyboard or touch.
-    var why = needsSelection ? 'Seleziona o apri un\'email in Outlook.' : needsText ? 'Scrivi prima cosa vuoi trovare.' : reconstruct && !(ctx.archive && ctx.archive.active) ? 'Attiva l\'archivio per ricostruire la pratica.' : '';
+    var why = loading ? 'Caricamento del modulo in corso…' : needsSelection ? 'Seleziona o apri un\'email in Outlook.' : needsText ? 'Scrivi prima cosa vuoi trovare.' : reconstruct && !(ctx.archive && ctx.archive.active) ? 'Attiva l\'archivio per ricostruire la pratica.' : '';
     $('anStartNote').textContent = why;
     $('anStartNote').hidden = !why;
   }
@@ -2537,6 +2573,7 @@
     var a = state.analysis;
     if ($('analysisDrawer').hidden || ctx.requestId !== a.contextRequestId) return;
     a.ctx = ctx;
+    a.loaded = true;
     renderAnalysisStores(ctx.stores || []);
     $('anSenderFill').textContent = ctx.selectionScope === 'folder' && ctx.senderEmail ? 'Solo da ' + (ctx.senderName || ctx.senderEmail) : '';
     if (ctx.attachmentsAllowed === false) $('anAttachments').checked = false;
@@ -2560,6 +2597,9 @@
     var a = state.analysis;
     var ctx = a.ctx || {};
     var kind = analysisScope();
+    if (!a.loaded) return;
+    // The selection was read: its slow-load toast must not appear once an analysis is running.
+    finishDrawerLoad('analysis');
     if (a.preset === 'reconstruct') {
       if (ctx.selectionScope !== 'flow' || !ctx.hasEmail) { showToast('Seleziona o apri un\'email in Outlook.', 'info'); return; }
       requestReconstruction({ entryId: ctx.entryId, storeId: ctx.storeId, subject: ctx.subject });
@@ -3291,13 +3331,7 @@
         + (it.email ? ' · ' + (it.email.subject || '(senza oggetto)') : '');
       var resume = function () { if (!busyBlocked()) post({ type: 'load_history', id: it.id }); };
       open.addEventListener('click', resume);
-      // The whole row resumes too: an icon is enough and leaves the width to the title and date.
-      var again = historyControl(el('button', 'icon-btn'), it.id, 'resume');
-      again.type = 'button';
-      again.title = 'Riprendi: riapri la conversazione e continua a scrivere da dove eri rimasto';
-      again.setAttribute('aria-label', 'Riprendi ' + (it.title || 'conversazione'));
-      again.innerHTML = icon('refresh');
-      again.addEventListener('click', resume);
+      // The row button is the only Riprendi: a second icon for the same action cost a tab stop per row.
       var del = historyControl(el('button', 'icon-btn'), it.id, 'delete');
       del.type = 'button';
       del.title = 'Elimina conversazione';
@@ -3307,7 +3341,6 @@
         armConfirm(del, 'Elimina', function () { deleteHistory(del, it.id); });
       });
       var actions = el('div', 'history-actions');
-      actions.appendChild(again);
       actions.appendChild(del);
       row.appendChild(open);
       row.appendChild(actions);
@@ -3545,6 +3578,7 @@
         break;
 
       case 'stream_start':
+        clearPendingSend();
         if (data.turnId && state.current && state.current.turnId === data.turnId) break;
         hideEmailContext();
         closeDrawers();
@@ -3645,11 +3679,13 @@
         break;
 
       case 'stream_error':
+        clearPendingSend();
         if (!state.current) state.current = createTurn('action', 'Errore', null);
         finishTurn({ status: 'error', message: data.message, retryable: data.retryable !== false, op: data.op, documents: data.documents });
         break;
 
       case 'stream_cancelled':
+        clearPendingSend();
         finishTurn({ status: 'cancelled', message: data.message, documents: data.documents });
         break;
 
@@ -3758,6 +3794,8 @@
           res.className = 'health err';
           res.innerHTML = icon('warning');
           res.appendChild(el('span', null, (data.errorMessage || 'Connessione non riuscita.') + ' (alle ' + clockTime() + ')'));
+          // The next step: address, key and model are set in the Configurazione.
+          res.appendChild(actionButton('settings', 'Apri configurazione', function () { post({ type: 'open_config' }); }, 'Correggi indirizzo, chiave o modello del profilo nella Configurazione'));
         }
         break;
       }

@@ -53,4 +53,11 @@ for (const [, inner] of html.matchAll(/<li>(.*?)<\/li>/g)) {
 for (const [, title] of html.matchAll(/ title="([^"]{1,})"/g)) {
   assert.ok(title.length <= 130, `tooltip too long (${title.length}): ${title}`);
 }
-console.log('PASS UI vocabulary: one glyph per state, shared working colours, no unused icons, short Guida texts, interrotta/annullata by control');
+// Progress metrics: the ConfigTool archive search uses the pane's headers and tooltips («Non letti» reads as unread mail).
+const search = read('src/OnlyWorkspace.ConfigTool/Forms/ArchiveSearchForm.cs');
+const paneHead = /<th scope="col" title="([^"]+)">Completati<\/th>[\s\S]*?title="([^"]+)">%<\/th>[\s\S]*?title="([^"]+)">Non leggibili<\/th>/.exec(html);
+assert.ok(paneHead, 'pane progress table headers changed');
+assert.match(search, /\("Completati", \d+, true\)[\s\S]*\("Non leggibili", \d+, true\)/, 'ArchiveSearchForm metric headers differ from the pane');
+assert.doesNotMatch(search, /"Non letti"|\("Fatti", /, 'ArchiveSearchForm still says Fatti / Non letti');
+for (const tip of paneHead.slice(1)) assert.ok(search.includes(`"${tip}"`), `ArchiveSearchForm misses the pane tooltip: ${tip}`);
+console.log('PASS UI vocabulary: one glyph per state, shared working colours, no unused icons, short Guida texts, interrotta/annullata by control, same metric headers');

@@ -38,7 +38,7 @@ internal static class ModelPicker
     public static async Task<Result> ListAsync(LlmProfileConfig profile, string? secret,
         Func<LlmProfileConfig, string?, ILlmClient>? factory = null, TimeSpan? timeout = null)
     {
-        if (string.IsNullOrWhiteSpace(profile.BaseUrl)) return new(Array.Empty<string>(), "Inserire un URL endpoint valido.");
+        if (string.IsNullOrWhiteSpace(profile.BaseUrl)) return new(Array.Empty<string>(), "Inserire un «Indirizzo del servizio» valido.");
         try
         {
             var client = (factory ?? ((p, s) => LlmClientFactory.CreateClient(p, s)))(profile, secret);

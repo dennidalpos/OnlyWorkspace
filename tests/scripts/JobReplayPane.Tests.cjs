@@ -9,7 +9,7 @@ assert.ok(from > 0 && to > from);
 const turns = [];
 const state = { current: null, job: {} };
 const ctx = vm.createContext({
-  state, hideEmailContext() {}, closeDrawers() {}, updateJobBar() {}, setBusy() {}, announce() {},
+  state, hideEmailContext() {}, clearPendingSend() {}, closeDrawers() {}, updateJobBar() {}, setBusy() {}, announce() {},
   createTurn(kind, action) { const turn = { kind, action, text: '', cancelled: false }; turns.push(turn); return turn; },
   finishTurn() { state.current.cancelled = true; state.current = null; }
 });

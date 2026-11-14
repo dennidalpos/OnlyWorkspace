@@ -10,6 +10,26 @@ namespace OnlyWorkspace.Tests;
 [Collection(WinFormsCollection.Name)]
 public sealed class ArchiveSearchFormTests
 {
+    // #244: zero results suggest the next step; a later page with nothing left says so.
+    [Theory]
+    [InlineData(3, 0, "3 risultati nella pagina")]
+    [InlineData(0, 0, "Nessun risultato: prova con meno parole o togli un filtro")]
+    [InlineData(0, 50, "Nessun altro risultato")]
+    public void ResultCount_SuggestsTheNextStep(int count, int offset, string expected) =>
+        Assert.Equal(expected, ArchiveSearchForm.ResultCount(count, offset));
+
+    // #244: «Recupero annullato» belongs to Annulla of the retrieval only; a search shows «in corso» while it runs.
+    [Fact]
+    public void SearchAndRetrievalStatusTexts_AreDistinct()
+    {
+        string source = File.ReadAllText(Path.Combine(TestBuildPaths.RepositoryRoot, "src", "OnlyWorkspace.ConfigTool", "Forms", "ArchiveSearchForm.cs"));
+        string guard = source.Substring(source.IndexOf("private async Task GuardAsync", StringComparison.Ordinal));
+        guard = guard.Substring(0, guard.IndexOf("private async Task RefreshAsync", StringComparison.Ordinal));
+        Assert.DoesNotContain("Recupero annullato", guard);
+        Assert.Contains("_retrievalCancelled ? \"Recupero annullato.\"", source);
+        Assert.Contains("_searchStatus.Text = \"Ricerca in corso…\";", source);
+    }
+
     [Theory]
     [InlineData(1.0f)]
     [InlineData(1.25f)]

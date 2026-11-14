@@ -772,4 +772,43 @@ public sealed partial class MainConfigForm
             if (!IsDisposed) { _btnTestProfile.Text = label; _btnTestProfile.Enabled = !_isLocked; }
         }
     }
+    /// <summary>After a failed validation: the page and profile of the error, with its field focused (#241).</summary>
+    internal void ShowIssue(ValidationIssue issue)
+    {
+        if (issue.ProfileId != null)
+        {
+            for (int i = 0; i < _lstProfiles.Items.Count; i++)
+            {
+                if (_lstProfiles.Items[i] is ProfileItem item && string.Equals(item.Profile.Id ?? string.Empty, issue.ProfileId, StringComparison.OrdinalIgnoreCase))
+                {
+                    _lstProfiles.SelectedIndex = i;
+                    break;
+                }
+            }
+        }
+        Control? field = IssueField(issue.Field);
+        Control? page = field != null ? _pages.FirstOrDefault(p => p.Contains(field))
+            : issue.Field == ValidationField.Consent ? _privacyPage
+            : issue.ProfileId != null ? _pages.FirstOrDefault(p => p.Contains(_lstProfiles)) : null;
+        if (page == null) return;
+        ShowPage(_pages.IndexOf(page));
+        if (field is { Enabled: true }) field.Focus();
+        else if (issue.ProfileId != null) _lstProfiles.Focus();
+    }
+
+    internal Control? IssueField(string field) => field switch
+    {
+        ValidationField.ProfileId => _txtProfileId,
+        ValidationField.Provider => _cmbProvider,
+        ValidationField.Exposure => _cmbExposure,
+        ValidationField.Endpoint => _txtEndpoint,
+        ValidationField.Budget => _numBudget,
+        ValidationField.MaxOutput => _numMaxTokens,
+        ValidationField.NumCtx => _numNumCtx,
+        ValidationField.Temperature => _numTemp,
+        ValidationField.FirstTokenTimeout => _numFirstTokenTimeout,
+        ValidationField.IdleTimeout => _numIdleTimeout,
+        ValidationField.DefaultProfile => _cmbDefaultProfile,
+        _ => null
+    };
 }

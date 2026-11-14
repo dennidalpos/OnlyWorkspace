@@ -203,7 +203,7 @@ public class PaneRequestTests
 
     [Theory]
     [InlineData("HTTP 401: unauthorized", "ha rifiutato le credenziali")]
-    [InlineData("Response status code does not indicate success: 404 (Not Found).", "endpoint o modello non trovato")]
+    [InlineData("Response status code does not indicate success: 404 (Not Found).", "indirizzo o modello non trovato")]
     [InlineData("HTTP 429", "sta limitando le richieste")]
     [InlineData("HTTP 503 Service Unavailable", "problema temporaneo (errore 503)")]
     [InlineData("HTTP 422: bad field", "ha rifiutato la richiesta (errore 422)")]

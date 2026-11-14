@@ -55,7 +55,7 @@ public class ConfigurationValidatorTests
 
         var result = ConfigurationValidator.Validate(config);
         Assert.False(result.IsValid);
-        Assert.Contains(result.Errors, e => e.Contains("tipo di provider non supportato 'gateway'"));
+        Assert.Contains(result.Errors, e => e.Contains("«Servizio IA» non supportato (gateway)"));
     }
 
     [Fact]
@@ -101,7 +101,7 @@ public class ConfigurationValidatorTests
 
         var result = ConfigurationValidator.Validate(config);
         Assert.False(result.IsValid);
-        Assert.Contains(result.Errors, e => e.Contains("la temperatura deve essere fra 0,0 e 2,0"));
+        Assert.Contains(result.Errors, e => e.Contains("«Temperatura» deve essere fra 0,0 e 2,0"));
     }
 
     [Fact]
@@ -163,7 +163,7 @@ public class ConfigurationValidatorTests
 
         var result = ConfigurationValidator.Validate(config);
 
-        Assert.Contains(result.Errors, e => e.Contains("tipo di provider non supportato"));
+        Assert.Contains(result.Errors, e => e.Contains("«Servizio IA» non supportato"));
     }
 
     [Theory]
@@ -183,8 +183,56 @@ public class ConfigurationValidatorTests
 
         var result = ConfigurationValidator.Validate(config);
 
-        Assert.Equal(expectWarning, result.Warnings.Exists(w => w.Contains("Cloud/Esterno")));
+        Assert.Equal(expectWarning, result.Warnings.Exists(w => w.Contains("servizio esterno")));
     }
 
+    // #241: errors name the profile as the list shows it and the field by its on-screen label, and say where it is.
+    [Fact]
+    public void Errors_UseDisplayedNameAndScreenLabels_AndNameTheField()
+    {
+        var config = new WorkspaceConfig
+        {
+            SchemaVersion = 0,
+            DefaultProfile = "gone",
+            Profiles = new List<LlmProfileConfig>
+            {
+                new() { Id = "p-local", DisplayName = "Ollama ufficio", Type = "ollama", BaseUrl = "ftp://x", NumCtx = 0, FirstTokenTimeoutSeconds = 0, IdleTimeoutSeconds = -1, Temperature = 3 }
+            }
+        };
+
+        var result = ConfigurationValidator.Validate(config);
+
+        Assert.Equal(result.Errors, result.Issues.ConvertAll(i => i.Message));
+        foreach (var error in result.Errors)
+        {
+            foreach (var internalName in new[] { "URL endpoint", "SchemaVersion", "p-local", "NumCtx deve", "AuthType", "budget token" })
+                Assert.DoesNotContain(internalName, error);
+        }
+        var profileIssues = result.Issues.FindAll(i => i.ProfileId == "p-local");
+        Assert.All(profileIssues, i => Assert.StartsWith("Profilo «Ollama ufficio»: «", i.Message));
+        Assert.Contains(profileIssues, i => i.Field == ValidationField.Endpoint && i.Message.Contains("«Indirizzo del servizio»"));
+        Assert.Contains(profileIssues, i => i.Field == ValidationField.NumCtx && i.Message.Contains("«NumCtx (Ollama)»"));
+        Assert.Contains(profileIssues, i => i.Field == ValidationField.Temperature);
+        Assert.Contains(profileIssues, i => i.Field == ValidationField.FirstTokenTimeout && i.Message.Contains("«Timeout primo token (s)»"));
+        Assert.Contains(profileIssues, i => i.Field == ValidationField.IdleTimeout);
+        Assert.Contains(result.Issues, i => i.ProfileId == null && i.Field == ValidationField.DefaultProfile && i.Message.StartsWith("Generale: «Profilo predefinito»"));
+        Assert.Contains(result.Issues, i => i.ProfileId == null && i.Field == "" && i.Message.Contains("Manutenzione e backup"));
+    }
+
+    [Fact]
+    public void Errors_FallBackToTheId_WhenTheProfileHasNoDisplayedName()
+    {
+        var config = new WorkspaceConfig
+        {
+            DefaultProfile = "p1",
+            Profiles = new List<LlmProfileConfig> { new() { Id = "p1", Type = "ollama", BaseUrl = "" } }
+        };
+
+        var issue = Assert.Single(ConfigurationValidator.Validate(config).Issues);
+
+        Assert.Equal("p1", issue.ProfileId);
+        Assert.Equal(ValidationField.Endpoint, issue.Field);
+        Assert.StartsWith("Profilo «p1»: «Indirizzo del servizio»", issue.Message);
+    }
 
 }

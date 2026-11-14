@@ -103,9 +103,48 @@ context.analysisScope = () => 'flow';
 context.$('anInstruction').value = '';
 context.$('anStart').lastChild = {};
 new vm.Script(scriptBetween('  function updateAnalysisStart() {', '  function setAnalysisScope')).runInContext(context);
+state.analysis.loaded = true;
 context.updateAnalysisStart();
 assert.equal(context.$('anStart').disabled, true, 'missing StoreId must not offer a broken reconstruction');
 state.analysis.ctx.storeId = 'S';
 context.updateAnalysisStart();
 assert.equal(context.$('anStart').disabled, false, 'complete identity is sufficient without an AI profile');
 console.log('PASS A208/A212 complete physical identity required before local reconstruction');
+
+// #243: Avvia analisi stays off with a note until analysis_context answers; starting cancels the 15 s toast.
+{
+  state.analysis.preset = 'summary';
+  state.configOk = true;
+  state.busy = false;
+  scope = 'accounts';
+  context.analysisScope = () => scope;
+  context.requestAnalysisContext();
+  assert.equal(state.analysis.loaded, false, 'a new request marks the form as loading');
+  context.updateAnalysisStart();
+  assert.equal(context.$('anStart').disabled, true, 'Avvia analisi is active before the form is loaded');
+  assert.equal(context.$('anStartNote').hidden, false);
+  assert.match(context.$('anStartNote').textContent, /Caricamento/);
+  nodes.get('analysisDrawer').hidden = false;
+  // Only the loaded flag matters here; the rest of the form filling is not stubbed.
+  try { context.fillAnalysisForm({ requestId: state.analysis.contextRequestId, stores: [] }); } catch { /* not stubbed */ }
+  assert.equal(state.analysis.loaded, true, 'the answer to the current request loads the form');
+  context.updateAnalysisStart();
+  assert.equal(context.$('anStart').disabled, false);
+  assert.equal(context.$('anStartNote').hidden, true);
+
+  const finished = [];
+  context.finishDrawerLoad = key => finished.push(key);
+  context.$('anWhole').disabled = true; context.$('anSubfolders').checked = false; context.$('anPerson').disabled = true;
+  context.$('anRole').value = 'sender'; context.$('anSubject').disabled = true; context.$('anFactsRow').hidden = true; context.$('anText').disabled = true;
+  // Only the function: the code after it wires listeners on the real document.
+  const startSource = scriptBetween('  function startAnalysis() {', '\n  }\n') + '\n  }\n';
+  new vm.Script(startSource).runInContext(context);
+  state.analysis.loaded = false;
+  posted = null;
+  context.startAnalysis();
+  assert.equal(posted, null, 'no analysis starts before the form is loaded');
+  state.analysis.loaded = true;
+  try { context.startAnalysis(); } catch { /* the rest of the form is not stubbed */ }
+  assert.ok(finished.includes('analysis'), 'starting an analysis cancels the selection timeout');
+}
+console.log('PASS #243 Avvia analisi waits for the form and cancels the selection timeout');
