@@ -23,9 +23,9 @@ Third-party components used by OnlyWorkspace, with the license each one declares
 | `PdfPig` | 0.1.16 | Apache-2.0 | direct | https://github.com/UglyToad/PdfPig |
 | `Serilog` | 4.4.0 | Apache-2.0 | direct | https://serilog.net/ |
 | `Serilog.Sinks.File` | 7.0.0 | Apache-2.0 | direct | https://github.com/serilog/serilog-sinks-file |
-| `SQLite3MC.PCLRaw.bundle` | 2.6.1 | MIT | direct | https://utelle.github.io/SQLite3MultipleCiphers/ |
-| `SQLite3MC.PCLRaw.lib` | 2.6.1 | MIT | direct | https://utelle.github.io/SQLite3MultipleCiphers/ |
-| `SQLite3MC.PCLRaw.provider` | 2.6.1 | MIT | transitive | https://utelle.github.io/SQLite3MultipleCiphers/ |
+| `SQLite3MC.PCLRaw.bundle` | 2.7.0 | MIT | direct | https://utelle.github.io/SQLite3MultipleCiphers/ |
+| `SQLite3MC.PCLRaw.lib` | 2.7.0 | MIT | direct | https://utelle.github.io/SQLite3MultipleCiphers/ |
+| `SQLite3MC.PCLRaw.provider` | 2.7.0 | MIT | transitive | https://utelle.github.io/SQLite3MultipleCiphers/ |
 | `SQLitePCLRaw.core` | 3.0.2 | Apache-2.0 | transitive | https://github.com/ericsink/SQLitePCL.raw |
 | `System.Buffers` | 4.6.1 | MIT | transitive | https://dot.net/ |
 | `System.Diagnostics.DiagnosticSource` | 10.0.14 | MIT | direct | https://dot.net/ |
