@@ -42,6 +42,41 @@ public class OcrExtractionTests
         Assert.Contains("1.250,00", result.Text);
     }
 
+    [Theory]
+    [InlineData(RotateFlipType.Rotate90FlipNone)]
+    [InlineData(RotateFlipType.Rotate180FlipNone)]
+    [InlineData(RotateFlipType.Rotate270FlipNone)]
+    public async Task RotatedScan_IsReadInItsOwnOrientation(RotateFlipType rotation)
+    {
+        // A page scanned sideways or upside down reads as fragments: it is turned until it reads as text.
+        var bitmap = Bitmap(Line1, Line2, Line3);
+        bitmap.RotateFlip(rotation);
+        var result = await AttachmentExtractionTests.ExtractAsync("scansione.png", Encode(bitmap, ImageFormat.Png));
+        if (!OcrAvailable.Value) { Assert.Equal("ocr-unavailable", result.Problem); return; }
+        Assert.Null(result.Problem);
+        Assert.Contains("FT-2026/77", result.Text);
+        Assert.Contains("30/11/2026", result.Text);
+        Assert.Contains("1.250,00", result.Text);
+    }
+
+    [Fact]
+    public async Task SmallScan_IsReadEnlarged()
+    {
+        // A page shrunk to ~500 px wide (text 7 px high) is read poorly as is and better enlarged.
+        using var page = Bitmap(Line1, Line2, Line3);
+        var bitmap = new Bitmap(496, 702);
+        using (var graphics = Graphics.FromImage(bitmap))
+        {
+            graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+            graphics.DrawImage(page, 0, 0, bitmap.Width, bitmap.Height);
+        }
+        var result = await AttachmentExtractionTests.ExtractAsync("foto.png", Encode(bitmap, ImageFormat.Png));
+        if (!OcrAvailable.Value) { Assert.Equal("ocr-unavailable", result.Problem); return; }
+        Assert.Null(result.Problem);
+        Assert.Contains("30/11/2026", result.Text);
+        Assert.Contains("1.250,00", result.Text);
+    }
+
     [Fact]
     public async Task ImageWithoutText_IsNotRead()
     {
