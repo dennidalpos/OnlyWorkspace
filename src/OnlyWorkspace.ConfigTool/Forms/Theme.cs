@@ -279,17 +279,21 @@ internal static class Theme
         // A grid draws its bars with child scroll bar controls, created when first needed: they do not take the grid's theme.
         if (control is DataGridView grid)
         {
-            foreach (Control child in grid.Controls) if (child is ScrollBar) ApplyScrollBars(child);
+            // The grid creates them in its constructor and their handles come later, so each applies the theme when created and shown.
+            void Hook(Control child)
+            {
+                if (child is not ScrollBar bar) return;
+                ApplyScrollBars(bar);
+                bar.HandleCreated += (_, _) => ApplyScrollBars(bar);
+                bar.VisibleChanged += (_, _) => ApplyScrollBars(bar);
+            }
             if (!ThemedGrids.TryGetValue(grid, out _))
             {
                 ThemedGrids.Add(grid, null);
-                grid.ControlAdded += (_, e) =>
-                {
-                    if (e.Control is not ScrollBar bar) return;
-                    ApplyScrollBars(bar);
-                    bar.HandleCreated += (_, _) => ApplyScrollBars(bar);
-                };
+                foreach (Control child in grid.Controls) Hook(child);
+                grid.ControlAdded += (_, e) => Hook(e.Control);
             }
+            else foreach (Control child in grid.Controls) if (child is ScrollBar) ApplyScrollBars(child);
         }
     }
 
