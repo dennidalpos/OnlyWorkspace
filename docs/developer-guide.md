@@ -21,7 +21,7 @@ Set ONLYWORKSPACE_RUNTIME_ROOT to an existing absolute managed runtime directory
     dotnet build OnlyWorkspace.sln -c Release --nologo
     dotnet test tests/OnlyWorkspace.Tests -c Release --no-build -f net48 --nologo
     dotnet test tests/OnlyWorkspace.Tests -c Release --no-build -f net10.0-windows --nologo
-    pwsh -NoProfile -File scripts/test-scripts.ps1
+    pwsh -NoProfile -File tests/scripts/Run-Tests.ps1
 
 Run runtimes/scripts sequentially on one output graph. NuGet caches are separate (NUGET_PACKAGES, NUGET_HTTP_CACHE_PATH, NUGET_PLUGINS_CACHE_PATH, NUGET_SCRATCH); inspect with dotnet nuget locals all --list. Do not change shared user settings implicitly.
 
@@ -33,7 +33,7 @@ scripts/build-paths.ps1 evaluates TargetPath/TargetDir/ProjectAssetsFile/Artifac
 
 The gate builds Release with warnings as errors, SDK analyzer level 10 including net48, `dotnet format analyzers` and `dotnet format whitespace` in verify mode, selected PSScriptAnalyzer 1.25.0 correctness rules, JavaScript/embedded TaskPane syntax, Python in-memory compilation, JSON and XML checks. It does not lint every YAML/NSIS/SVG/CSS or qualify Outlook/security. Missing tools require explicit provisioning, not silent installation.
 
-Run `test-scripts.ps1` after the build. `Packaging.Tests.ps1` compiles a synthetic fixture against the production NSIS macros. It uses short case directories under a unique temporary root, exercises quoted paths with spaces and checks the contents of files that should remain. The long-path fixture checks the original failure, preservation of a junction target and the direct uninstaller exit code when a file is locked. It uses the NSIS `_?=` mechanism to observe the uninstaller process. [Dated verification](tecnico/verifica.md)
+Run `Run-Tests.ps1` after the build. `Packaging.Tests.ps1` compiles a synthetic fixture against the production NSIS macros. It uses short case directories under a unique temporary root, exercises quoted paths with spaces and checks the contents of files that should remain. The long-path fixture checks the original failure, preservation of a junction target and the direct uninstaller exit code when a file is locked. It uses the NSIS `_?=` mechanism to observe the uninstaller process. [Dated verification](tecnico/verifica.md)
 
 Windows PowerShell 5.1 is needed for the net48 and WebView smoke tests. Loopback Ollama, external providers, signing, installation, registry repair and real Outlook tests have separate prerequisites and side effects. The maintainer currently disables GitHub Actions and uses local gates despite retaining CI source.
 
@@ -86,7 +86,7 @@ CloudFactsRequest keeps values/provenance local and sends embedded categories/op
 
 ## Packaging, dependencies and UI vocabulary
 
-scripts/build-installer.ps1 [-SkipTests] [-OutputDirectory <new-directory>] builds, verifies unless skipped, stages/signs binaries/uninstaller, compiles/signs NSIS. Without -OutputDirectory the package is always the same folder (`package` under the central artifacts, else under `dist`): staging goes to `package.staging` and replaces `package` only after the installer is built and signed, so a failed run keeps the previous package; an explicit -OutputDirectory must be new. Use existing PFX/certificate and ONLYAPPS_PFX_PASSWORD environment; never command-line passwords or implicit certificate regeneration. Timestamp failure stops signing; AllowNoTimestamp is for explicit local tests only.
+scripts/build-installer.ps1 [-OutputDirectory <new-directory>] builds (never runs tests), stages/signs binaries/uninstaller, compiles/signs NSIS. Without -OutputDirectory the package is always the same folder (`package` under the central artifacts, else under `dist`): staging goes to `package.staging` and replaces `package` only after the installer is built and signed, so a failed run keeps the previous package; an explicit -OutputDirectory must be new. Use existing PFX/certificate and ONLYAPPS_PFX_PASSWORD environment; never command-line passwords or implicit certificate regeneration. Timestamp failure stops signing; AllowNoTimestamp is for explicit local tests only.
 
 [Notices](../THIRD-PARTY-NOTICES.txt), [credits](../CREDITS.md) and manifests describe shipped libraries. Office interop types are embedded build references, not redistribution rights or proof of installed Office version. Windows SDK OCR/PDF metadata is build-only. Providers use HTTP rather than provider SDKs. Match actual restored/shipped assemblies to notices.
 

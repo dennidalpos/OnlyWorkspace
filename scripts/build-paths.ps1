@@ -34,16 +34,3 @@ function Get-OnlyWorkspaceOutputDirectory {
     # A trailing backslash escapes the closing quote in a native Windows command line.
     $paths.TargetDir.TrimEnd('\', '/')
 }
-
-function Set-OnlyWorkspaceVerificationEnvironment {
-    [CmdletBinding()]
-    param([Parameter(Mandatory = $true)][string]$RepositoryRoot)
-    if (!$env:ONLYWORKSPACE_RUNTIME_ROOT) { return }
-    $paths = Get-OnlyWorkspaceBuildPaths -RepositoryRoot $RepositoryRoot
-    $settings = Join-Path $paths.ArtifactsPath 'script.runsettings'
-    & (Join-Path $PSScriptRoot 'test-environment.ps1') -SettingsPath $settings -CheckoutKey $paths.OnlyWorkspaceCheckoutKey
-    $xml = [xml](Get-Content -Raw -LiteralPath $settings)
-    foreach ($node in $xml.SelectSingleNode('//EnvironmentVariables').ChildNodes) {
-        [Environment]::SetEnvironmentVariable($node.Name, $node.InnerText, 'Process')
-    }
-}

@@ -698,50 +698,35 @@ public sealed partial class MainConfigForm : Form
 
     private static string WindowsUser => Environment.UserDomainName + "\\" + Environment.UserName;
 
-    /// <summary>Opens the notice; an acceptance is recorded in the configuration being edited (saved by the caller).</summary>
-    private bool AskDataEgress()
-    {
-        if (_isLocked || LoadBlocked || _elevationBusy) return false;
-        UpdateSelectedProfileFromUi();
-        PrepareProfileSecrets();
-        var profiles = DataEgress.EgressProfiles(_config).ToList();
-        if (profiles.Count == 0) return false;
-        using var dialog = new DataEgressConsentForm(profiles);
-        if (dialog.ShowDialog(this) != DialogResult.OK) return false;
-        var consent = DataEgress.Accept(_config, WindowsUser, Environment.MachineName, DateTime.UtcNow, _vault.GetSecret,
-            dialog.ConfirmedUnspecifiedRegionProfiles);
-        LogActivity($"Informativa accettata, in attesa di salvataggio, da {consent.Describe()} per: " +
-            string.Join(", ", consent.Providers.Select(p => $"{p.Host} ({ExposurePolicy.Label(p.Level)})")) + ".");
-        MarkDirty();
-        RefreshEgress();
-        return true;
-    }
+    private DataEgressFlow? _egressFlow;
+    private DataEgressFlow EgressFlow => _egressFlow ??= new DataEgressFlow(new DataEgressHost(this));
 
-    private async Task<bool> AcceptAndSaveDataEgressAsync()
+    private sealed class DataEgressHost : IDataEgressHost
     {
-        var previous = _config.DataEgress?.Consent;
-        int events = _config.DataEgress?.History.Count ?? 0;
-        bool dirty = _isDirty;
-        if (dirty && CopyableMessageBox.Show(this, "«Leggi e autorizza» salva anche tutte le altre modifiche non ancora salvate.\n\nProseguire?",
-                "Modifiche non salvate", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return false;
-        if (!AskDataEgress()) return false;
-        if (await SaveActiveConfiguration())
+        private readonly MainConfigForm _f;
+        public DataEgressHost(MainConfigForm form) { _f = form; }
+        public WorkspaceConfig Config => _f._config;
+        public string WindowsUser => MainConfigForm.WindowsUser;
+        public string Machine => Environment.MachineName;
+        public bool IsBusy => _f._isLocked || _f.LoadBlocked || _f._elevationBusy;
+        public bool IsLockedOrBlocked => _f._isLocked || _f.LoadBlocked;
+        public bool IsDirty => _f._isDirty;
+        public string? ResolveSecret(string reference) => _f._vault.GetSecret(reference);
+        public void PrepareProfiles() { _f.UpdateSelectedProfileFromUi(); _f.PrepareProfileSecrets(); }
+        public IReadOnlyList<string>? ShowNotice(IReadOnlyList<LlmProfileConfig> profiles)
         {
-            LogActivity("Autorizzazioni per profilo registrate e salvate.");
-            return true;
+            using var dialog = new DataEgressConsentForm(profiles);
+            return dialog.ShowDialog(_f) == DialogResult.OK ? dialog.ConfirmedUnspecifiedRegionProfiles : null;
         }
-        RestoreDataEgress(previous, events, dirty);
-        return false;
-    }
-
-    private void RestoreDataEgress(DataEgressConsent? previous, int events, bool dirty)
-    {
-        _config.DataEgress.Consent = previous;
-        _config.DataEgress.History.RemoveRange(events, _config.DataEgress.History.Count - events);
-        DataEgress.BindProfiles(_config, _vault.GetSecret);
-        _isDirty = dirty;
-        UpdateTitle();
-        RefreshEgress();
+        public bool Confirm(string message, string title, string? yes = null, string? no = null) =>
+            (yes == null
+                ? CopyableMessageBox.Show(_f, message, title, MessageBoxButtons.YesNo, MessageBoxIcon.Warning)
+                : CopyableMessageBox.Show(_f, message, title, MessageBoxButtons.YesNo, MessageBoxIcon.Warning, yes, no ?? "Annulla")) == DialogResult.Yes;
+        public Task<bool> SaveAsync() => _f.SaveActiveConfiguration();
+        public void MarkDirty() => _f.MarkDirty();
+        public void RestoreDirty(bool dirty) { _f._isDirty = dirty; _f.UpdateTitle(); }
+        public void RefreshStatus() => _f.RefreshEgress();
+        public void LogActivity(string message) => _f.LogActivity(message);
     }
 
     /// <summary>The saved configuration (what is in force) as a printable PDF; edits not yet saved are not in it.</summary>
@@ -793,32 +778,6 @@ public sealed partial class MainConfigForm : Form
         {
             _btnEgressExport.Enabled = true;
         }
-    }
-
-    private async void RevokeDataEgress()
-    {
-        if (_isLocked || LoadBlocked || _config.DataEgress?.Consent == null) return;
-        if (CopyableMessageBox.Show(this, "Revocare l'autorizzazione all'uscita dei dati?\n\nDopo il salvataggio i profili cloud e la ricerca web esterna si bloccano per tutti gli utenti di questo PC. " +
-                "Le richieste già ricevute dai fornitori non si possono ritirare.", "Uscita dei dati", MessageBoxButtons.YesNo, MessageBoxIcon.Warning, "Revoca", "Annulla") != DialogResult.Yes) return;
-        await ApplyRevocation();
-    }
-
-    /// <summary>Revokes and saves; a save that does not go through (UAC refused, write error) leaves the notice as it was.</summary>
-    private async Task<bool> ApplyRevocation()
-    {
-        var consent = _config.DataEgress!.Consent;
-        int events = _config.DataEgress.History.Count;
-        bool dirty = _isDirty;
-        DataEgress.Revoke(_config, WindowsUser, Environment.MachineName, DateTime.UtcNow);
-        MarkDirty();
-        bool saved = await SaveActiveConfiguration();
-        if (saved) LogActivity("Informativa sull'uscita dei dati revocata.");
-        else
-        {
-            RestoreDataEgress(consent, events, dirty);
-        }
-        RefreshEgress();
-        return saved;
     }
 
     private void RefreshEgress()
@@ -926,9 +885,9 @@ public sealed partial class MainConfigForm : Form
         _lblEgress = AddWide(egress, new SelectableLabel { AutoSize = true, MaximumSize = new Size(Metrics.TextWidthPage, 0), Margin = new Padding(3, 3, 3, 6) },
             "Se e da chi è stata accettata l'informativa che autorizza l'invio di dati di Outlook a servizi esterni. Senza, i profili cloud e la ricerca web esterna sono bloccati per tutti gli utenti di questo PC.");
         _btnEgressAccept = SecondaryButton("Leggi e autorizza…");
-        _btnEgressAccept.Click += async (s, e) => await AcceptAndSaveDataEgressAsync();
+        _btnEgressAccept.Click += async (s, e) => await EgressFlow.AcceptAndSaveAsync();
         _btnEgressRevoke = SecondaryButton("Revoca");
-        _btnEgressRevoke.Click += (s, e) => RevokeDataEgress();
+        _btnEgressRevoke.Click += async (s, e) => await EgressFlow.RevokeAsync();
         _btnEgressExport = SecondaryButton("Esporta PDF…");
         _btnEgressExport.Click += async (s, e) => await ExportDataEgressAsync();
         AddRow(egress, "", Inline(_btnEgressAccept, _btnEgressRevoke, _btnEgressExport), "Accettazione, revoca ed esportazione dell'informativa sull'uscita dei dati.");

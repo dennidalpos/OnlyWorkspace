@@ -346,7 +346,17 @@ public sealed class ConfigToolUxTests
 
     private static object? Call(MainConfigForm form, string name, params object[] args)
     {
-        var value = typeof(MainConfigForm).GetMethod(name, Flags)!.Invoke(form, args);
+        object target = form;
+        var type = typeof(MainConfigForm);
+        // #177: acceptance and revocation live in DataEgressFlow, reached through the form's EgressFlow property.
+        var moved = name switch { "AcceptAndSaveDataEgressAsync" => "AcceptAndSaveAsync", "ApplyRevocation" => "ApplyRevocationAsync", _ => null };
+        if (moved != null)
+        {
+            target = type.GetProperty("EgressFlow", Flags)!.GetValue(form)!;
+            type = target.GetType();
+            name = moved;
+        }
+        var value = type.GetMethod(name, Flags | BindingFlags.Public)!.Invoke(target, args);
         if (value is Task<bool> task)
         {
             var timer = System.Diagnostics.Stopwatch.StartNew();

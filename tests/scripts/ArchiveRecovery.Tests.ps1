@@ -3,6 +3,7 @@ $ErrorActionPreference = 'Stop'
 if ($PSVersionTable.PSVersion.Major -ne 5) { throw 'Run with Windows PowerShell 5.1.' }
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 . (Join-Path $PSScriptRoot "../../scripts/build-paths.ps1")
+. (Join-Path $PSScriptRoot 'TestEnvironment.ps1')
 Set-OnlyWorkspaceVerificationEnvironment -RepositoryRoot $repo
 if (!$Dir) { $Dir = Get-OnlyWorkspaceOutputDirectory -RepositoryRoot (Resolve-Path "$PSScriptRoot/../..").Path }
 $scratch = Join-Path ([IO.Path]::GetTempPath()) ('OnlyWorkspace_Recovery_' + [guid]::NewGuid().ToString('N'))

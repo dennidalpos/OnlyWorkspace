@@ -4,6 +4,7 @@ if ($PSVersionTable.PSVersion.Major -ne 5) { throw 'Run with Windows PowerShell 
 if ($Emails -lt 100 -or $Emails -gt 100000 -or $Emails % 100 -ne 0) { throw 'Emails must be a multiple of 100 between 100 and 100000.' }
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 . (Join-Path $PSScriptRoot "../../scripts/build-paths.ps1")
+. (Join-Path $PSScriptRoot 'TestEnvironment.ps1')
 Set-OnlyWorkspaceVerificationEnvironment -RepositoryRoot $repo
 if (!$Dir) { $Dir = Get-OnlyWorkspaceOutputDirectory -RepositoryRoot (Resolve-Path "$PSScriptRoot/../..").Path }
 [void][Reflection.Assembly]::LoadFrom((Join-Path $Dir 'OnlyWorkspace.Outlook.dll'))

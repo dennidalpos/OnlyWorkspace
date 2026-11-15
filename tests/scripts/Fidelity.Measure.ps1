@@ -7,10 +7,10 @@ param(
     [string]$CorpusPath = ''
 )
 $ErrorActionPreference = 'Stop'
-$repo = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+$repo = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 if (!$CorpusPath) { $CorpusPath = Join-Path $repo 'tests\fixtures\fidelity\corpus.json' }
 $framework = if ($PSVersionTable.PSVersion.Major -lt 7) { 'net48' } else { 'net10.0-windows' }
-. (Join-Path $PSScriptRoot "build-paths.ps1")
+. (Join-Path $PSScriptRoot 'TestEnvironment.ps1')
 $bin = Get-OnlyWorkspaceOutputDirectory -RepositoryRoot $repo -Project OnlyWorkspace.Tests -Framework $framework
 $output = [IO.Path]::GetFullPath($OutputDirectory)
 [void][IO.Directory]::CreateDirectory($output)

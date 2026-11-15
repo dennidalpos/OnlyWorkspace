@@ -4,8 +4,8 @@
 .DESCRIPTION
     Da eseguire dopo un aggiornamento di librerie: in Outlook le dipendenze (System.Text.Json, Serilog...)
     passano solo dall'AssemblyResolve dell'add-in. Va lanciato con Windows PowerShell 5.1, a 64 e a 32 bit:
-      powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\smoke-net48.ps1
-      %WINDIR%\SysWOW64\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\smoke-net48.ps1
+      powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests\scripts\Net48.Smoke.ps1
+      %WINDIR%\SysWOW64\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests\scripts\Net48.Smoke.ps1
     Non tocca configurazione, storico o Outlook: lavora in una cartella temporanea.
 .PARAMETER Dir
     Cartella con OnlyWorkspace.Outlook.dll (default: output Release risolto da MSBuild).
@@ -14,8 +14,8 @@ param([string]$Dir = "")
 $ErrorActionPreference = 'Stop'
 
 if ($PSVersionTable.PSVersion.Major -ne 5) { throw "Serve Windows PowerShell 5.1 (CLR di .NET Framework), non pwsh." }
-$repoRoot = (Resolve-Path "$PSScriptRoot\..").Path
-. (Join-Path $PSScriptRoot "build-paths.ps1")
+$repoRoot = (Resolve-Path "$PSScriptRoot\..\..").Path
+. (Join-Path $PSScriptRoot 'TestEnvironment.ps1')
 Set-OnlyWorkspaceVerificationEnvironment -RepositoryRoot $repoRoot
 if (!$Dir) { $Dir = Get-OnlyWorkspaceOutputDirectory -RepositoryRoot $repoRoot }
 "Host: CLR $([Environment]::Version), 64 bit: $([Environment]::Is64BitProcess) - $Dir"

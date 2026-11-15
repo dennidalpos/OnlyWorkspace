@@ -5,7 +5,7 @@ Il banco attivo misura gli estrattori deterministici sul corpus sintetico, senza
 Dopo il build Release:
 
 ```powershell
-pwsh -NoProfile -File scripts/measure-fidelity.ps1 -OutputDirectory "$env:TEMP\ow-local-facts-evidence"
+pwsh -NoProfile -File tests/scripts/Fidelity.Measure.ps1 -OutputDirectory "$env:TEMP\ow-local-facts-evidence"
 ```
 
 `-CorpusPath` sceglie un corpus alternativo. Il rapporto `offline.json` contiene precisione, richiamo, duplicati e attribuzioni errate rispetto alle attese indipendenti per origine e posizione. `manifest-offline.json` registra hash del corpus e degli assembly. Una cartella di output già associata ad altri byte del corpus viene rifiutata. Il runtime copiato e il corpus sono evidenze intenzionali da conservare con il rapporto.

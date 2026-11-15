@@ -3,6 +3,7 @@
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 . (Join-Path $PSScriptRoot "../../scripts/build-paths.ps1")
+. (Join-Path $PSScriptRoot 'TestEnvironment.ps1')
 Set-OnlyWorkspaceVerificationEnvironment -RepositoryRoot $root
 $output = Get-OnlyWorkspaceOutputDirectory -RepositoryRoot (Resolve-Path "$PSScriptRoot/../..").Path
 Add-Type -AssemblyName System.Windows.Forms

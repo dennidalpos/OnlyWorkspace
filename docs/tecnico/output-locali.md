@@ -18,9 +18,9 @@ Comandi dalla radice:
 dotnet build OnlyWorkspace.sln -c Release --nologo
 dotnet test tests/OnlyWorkspace.Tests -c Release --no-build --nologo -f net48
 dotnet test tests/OnlyWorkspace.Tests -c Release --no-build --nologo -f net10.0-windows
-pwsh -NoProfile -File scripts/test-scripts.ps1
+pwsh -NoProfile -File tests/scripts/Run-Tests.ps1
 ```
 
-I due target di test restano sequenziali. Gli script WebView e `smoke-net48.ps1` richiedono Windows PowerShell 5.1; gli output predefiniti vengono risolti dalla build corrente. `BuildPaths.Tests.ps1` verifica configurazione assente o invalida, percorsi con spazi, isolamento dei checkout e rifiuto dei binari precedenti. Le prove isolate restano distinte dalla qualifica della build installata.
+I due target di test restano sequenziali. Gli script WebView e `Net48.Smoke.ps1` richiedono Windows PowerShell 5.1; gli output predefiniti vengono risolti dalla build corrente. `BuildPaths.Tests.ps1` verifica configurazione assente o invalida, percorsi con spazi, isolamento dei checkout e rifiuto dei binari precedenti. Le prove isolate restano distinte dalla qualifica della build installata.
 
 Riferimenti: [layout artifact SDK](https://learn.microsoft.com/en-us/dotnet/core/sdk/artifacts-output), [proprietà MSBuild](https://learn.microsoft.com/en-us/visualstudio/msbuild/evaluate-items-and-properties), [cache NuGet](https://learn.microsoft.com/en-us/nuget/consume-packages/managing-the-global-packages-and-cache-folders).

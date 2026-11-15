@@ -1,6 +1,7 @@
 param([int]$TimeoutSeconds = 30)
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot "../../scripts/build-paths.ps1")
+. (Join-Path $PSScriptRoot 'TestEnvironment.ps1')
 Set-OnlyWorkspaceVerificationEnvironment -RepositoryRoot (Resolve-Path "$PSScriptRoot/../..").Path
 $output = Get-OnlyWorkspaceOutputDirectory -RepositoryRoot (Resolve-Path "$PSScriptRoot/../..").Path
 Add-Type -AssemblyName System.Windows.Forms

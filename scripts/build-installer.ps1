@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Compila la soluzione, prepara il pacchetto di distribuzione, firma i binari e genera l'installer NSIS.
+    Compila la soluzione (senza eseguire i test: vedi tests\scripts\Run-Tests.ps1), prepara il pacchetto di distribuzione, firma i binari e genera l'installer NSIS.
 .DESCRIPTION
     Conforme alle specifiche di distribuzione OnlyWorkspace (docs/admin/installazione.md).
 #>
@@ -8,7 +8,6 @@
 [CmdletBinding()]
 param(
     [string]$Configuration = "Release",
-    [switch]$SkipTests,
     [string]$OutputDirectory = ''
 )
 
@@ -52,13 +51,7 @@ Write-Host "==> 1. Compilazione soluzione ($Configuration)..." -ForegroundColor 
 & dotnet build "$repoRoot\OnlyWorkspace.sln" -c $Configuration
 if ($LASTEXITCODE -ne 0) { throw "Compilazione fallita con codice $LASTEXITCODE" }
 
-if (!$SkipTests) {
-    Write-Host "==> 2. Esecuzione test di regressione..." -ForegroundColor Cyan
-    & dotnet test "$repoRoot\OnlyWorkspace.sln" -c $Configuration --no-build
-    if ($LASTEXITCODE -ne 0) { throw "Test falliti con codice $LASTEXITCODE" }
-}
-
-Write-Host "==> 3. Preparazione cartella publish..." -ForegroundColor Cyan
+Write-Host "==> 2. Preparazione cartella publish..." -ForegroundColor Cyan
 # Staging is rebuilt from scratch on every run; a failed run leaves the previous package untouched.
 New-Item -ItemType Directory -Path $publishDir -Force | Out-Null
 if (!(Test-Path $distDir)) {
@@ -126,7 +119,7 @@ $certificate = [System.Security.Cryptography.X509Certificates.X509Certificate2]:
 try { $signerThumbprint = $certificate.Thumbprint }
 finally { $certificate.Dispose() }
 
-Write-Host "==> 4. Firma digitale binari in publish..." -ForegroundColor Cyan
+Write-Host "==> 3. Firma digitale binari in publish..." -ForegroundColor Cyan
 $binariesToSign = @(Get-ChildItem -Path $publishDir -Include "OnlyWorkspace.*.dll", "OnlyWorkspace.ConfigTool.exe", "OnlyWorkspace.AttachmentExtractor.exe" -Recurse -File | Select-Object -ExpandProperty FullName)
 if ($binariesToSign.Count -eq 0) { throw "Nessun binario OnlyWorkspace da firmare in $publishDir." }
 foreach ($bin in $binariesToSign) {
@@ -135,7 +128,7 @@ foreach ($bin in $binariesToSign) {
     Assert-SignedFile $bin $signerThumbprint
 }
 
-Write-Host "==> 5. Compilazione Installer NSIS..." -ForegroundColor Cyan
+Write-Host "==> 4. Compilazione Installer NSIS..." -ForegroundColor Cyan
 $nsiScript = Join-Path $repoRoot "installer\OnlyWorkspaceSetup.nsi"
 # Versione del prodotto: unica fonte Directory.Build.props
 $version = ([xml](Get-Content (Join-Path $repoRoot "Directory.Build.props") -Raw)).Project.PropertyGroup.Version
@@ -148,7 +141,7 @@ if (!(Test-Path $installerPath)) {
     throw "Installer generato non trovato in $installerPath"
 }
 
-Write-Host "==> 6. Firma digitale dell'installer NSIS..." -ForegroundColor Cyan
+Write-Host "==> 5. Firma digitale dell'installer NSIS..." -ForegroundColor Cyan
 & pwsh -ExecutionPolicy Bypass -File "$PSScriptRoot\sign-binaries.ps1" -Files $installerPath
 if ($LASTEXITCODE -ne 0) { throw "Firma installer fallita con codice $LASTEXITCODE" }
 Assert-SignedFile $installerPath $signerThumbprint

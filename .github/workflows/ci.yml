@@ -43,11 +43,11 @@ jobs:
       # The add-in loaded by a .NET Framework host without binding redirects, as inside Outlook, at both bitnesses.
       - name: Smoke net48 (64 bit)
         shell: cmd
-        run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\smoke-net48.ps1
+        run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests\scripts\Net48.Smoke.ps1
 
       - name: Smoke net48 (32 bit)
         shell: cmd
-        run: '%WINDIR%\SysWOW64\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\smoke-net48.ps1'
+        run: '%WINDIR%\SysWOW64\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests\scripts\Net48.Smoke.ps1'
 
       # Packaging.Tests.ps1 compiles an NSIS fixture; the runner image has no NSIS. Same version as build-installer.ps1.
       # community.chocolatey.org answered 503 on 19/10/2026: retry before failing.
@@ -64,7 +64,7 @@ jobs:
       # TaskPane.html JavaScript (node), signing and NSIS pipeline (pwsh), archive recovery/capacity and pane policy (Windows PowerShell 5.1).
       - name: Script tests
         shell: pwsh
-        run: pwsh -NoProfile -File scripts\test-scripts.ps1
+        run: pwsh -NoProfile -File tests\scripts\Run-Tests.ps1
 
       # The command exits 0 either way: the JSON report has a "vulnerabilities" entry only when something is found.
       - name: Vulnerable packages

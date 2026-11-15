@@ -120,7 +120,7 @@
   </Target>
 
   <Target Name="PrepareTestEnvironment" BeforeTargets="PrepareForBuild;VSTest" Condition="'$(ONLYWORKSPACE_RUNTIME_ROOT)' != ''">
-    <Exec Command="pwsh -NoProfile -File &quot;$(OnlyWorkspaceRepositoryRoot)scripts\test-environment.ps1&quot; -SettingsPath &quot;$(RunSettingsFilePath)&quot; -CheckoutKey &quot;$(OnlyWorkspaceCheckoutKey)&quot;" />
+    <Exec Command="pwsh -NoProfile -File &quot;$(OnlyWorkspaceRepositoryRoot)tests\scripts\New-RunSettings.ps1&quot; -SettingsPath &quot;$(RunSettingsFilePath)&quot; -CheckoutKey &quot;$(OnlyWorkspaceCheckoutKey)&quot;" />
   </Target>
 
   <!-- Same layout as the installation: "extractor" next to the assemblies, from this graph. -->

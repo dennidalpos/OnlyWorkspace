@@ -2,6 +2,7 @@
 param([string]$Dir = '', [switch]$Writer, [string]$Fixture, [string]$Signal)
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot '../../scripts/build-paths.ps1')
+. (Join-Path $PSScriptRoot 'TestEnvironment.ps1')
 if (!$Dir) { $Dir = Get-OnlyWorkspaceOutputDirectory -RepositoryRoot (Resolve-Path "$PSScriptRoot/../..").Path }
 [void][Reflection.Assembly]::LoadFrom((Join-Path $Dir 'OnlyWorkspace.Core.dll'))
 [void][Reflection.Assembly]::LoadFrom((Join-Path $Dir 'OnlyWorkspace.Infrastructure.dll'))

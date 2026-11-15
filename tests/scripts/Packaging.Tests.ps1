@@ -2,6 +2,7 @@
 $ErrorActionPreference = 'Stop'
 $repoRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
 . (Join-Path $repoRoot 'scripts/build-paths.ps1')
+. (Join-Path $PSScriptRoot 'TestEnvironment.ps1')
 Set-OnlyWorkspaceVerificationEnvironment -RepositoryRoot $repoRoot
 $coreOutput = Get-OnlyWorkspaceOutputDirectory -RepositoryRoot $repoRoot -Project OnlyWorkspace.Core
 $scratchRoot = Join-Path ([IO.Path]::GetTempPath()) ('OnlyWorkspace-packaging-' + [guid]::NewGuid())
@@ -17,7 +18,7 @@ $global:packagingfixtureThumbprint = $certificate.Thumbprint
 
 try {
     New-Item -ItemType Directory -Path $scratchRoot | Out-Null
-    foreach ($global:packagingscenario in @('build', 'tests', 'certificate', 'binary', 'binary-signature', 'wrong-signer', 'nsis', 'setup', 'setup-signature', 'success')) {
+    foreach ($global:packagingscenario in @('build', 'certificate', 'binary', 'binary-signature', 'wrong-signer', 'nsis', 'setup', 'setup-signature', 'success')) {
         & {
             $global:packagingfixture = Join-Path $scratchRoot $global:packagingscenario
             foreach ($folder in @('scripts', 'certs', 'installer', 'src\OnlyWorkspace.Outlook\bin\Release\net48', 'src\OnlyWorkspace.ConfigTool\bin\Release\net48', 'src\OnlyWorkspace.AttachmentExtractor\bin\Release\net48')) {
@@ -53,7 +54,9 @@ try {
                     $global:LASTEXITCODE = 0
                     return
                 }
-                $stage = if ($args[0] -eq 'build') { 'build' } else { 'tests' }
+                # Packaging only builds: running the tests is a separate step (tests\scripts\Run-Tests.ps1).
+                if ($args[0] -ne 'build') { throw "Packaging ran 'dotnet $($args[0])'." }
+                $stage = 'build'
                 $global:packagingcalls.Add($stage)
                 $global:LASTEXITCODE = if ($global:packagingscenario -eq $stage) { 23 } else { 0 }
             }
@@ -88,7 +91,7 @@ try {
             }
             else {
                 # A missing certificate pair stops the build before signing, without generating a new identity.
-                $expected = if ($global:packagingscenario -eq 'wrong-signer') { 'binary-signature' } elseif ($global:packagingscenario -eq 'certificate') { 'tests' } else { $global:packagingscenario }
+                $expected = if ($global:packagingscenario -eq 'wrong-signer') { 'binary-signature' } elseif ($global:packagingscenario -eq 'certificate') { 'build' } else { $global:packagingscenario }
                 if (!$failure -or $global:packagingcalls[-1] -ne $expected) { throw "Failure did not stop at ${expected}: $failure; calls=$global:packagingcalls" }
                 if ($global:packagingscenario -eq 'certificate' -and ($global:packagingcalls -contains 'certificate' -or $failure.ToString() -notlike '*certs\OnlyApps.cer*')) { throw "Missing certificate handled wrongly: $failure; calls=$global:packagingcalls" }
                 if ($global:packagingmessages -match 'completato con successo') { throw 'Pipeline reported success after failure.' }

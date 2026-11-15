@@ -3,7 +3,7 @@
     Esegue i test a script di tests\scripts: riquadro (node), pipeline di firma e NSIS (pwsh), archivio e riquadro net48 (Windows PowerShell 5.1: ArchiveRecovery, ArchiveCapacity, PanePolicy, EndpointInitialization).
 .DESCRIPTION
     Da lanciare con pwsh dalla radice, dopo il Build Release:
-      pwsh -NoProfile -File scripts\test-scripts.ps1
+      pwsh -NoProfile -File tests\scripts\Run-Tests.ps1
     Richiede node e NSIS in C:\Program Files (x86)\NSIS. Quattro script esclusi, da eseguire a mano:
     OllamaLive.Tests.ps1 con pwsh (serve Ollama sul loopback);
     WebViewBoundary.Smoke.ps1, WebViewRecovery.Smoke.ps1 e WebViewFocus.Smoke.ps1
@@ -17,9 +17,9 @@ param([string]$Dir = '')
 $ErrorActionPreference = 'Stop'
 
 if ($PSVersionTable.PSVersion.Major -lt 7) { throw 'Serve pwsh 7: Packaging.Tests.ps1 usa API di .NET moderno.' }
-$repoRoot = (Resolve-Path "$PSScriptRoot\..").Path
-$tests = Join-Path $repoRoot 'tests\scripts'
-. (Join-Path $PSScriptRoot "build-paths.ps1")
+$repoRoot = (Resolve-Path "$PSScriptRoot\..\..").Path
+$tests = $PSScriptRoot
+. (Join-Path $PSScriptRoot 'TestEnvironment.ps1')
 Set-OnlyWorkspaceVerificationEnvironment -RepositoryRoot $repoRoot
 if (!$Dir) { $Dir = Get-OnlyWorkspaceOutputDirectory -RepositoryRoot $repoRoot }
 if (!(Test-Path "$Dir\OnlyWorkspace.Outlook.dll")) { throw "OnlyWorkspace.Outlook.dll non trovato in ${Dir}: eseguire prima il Build Release." }

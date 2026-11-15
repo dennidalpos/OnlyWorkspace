@@ -2,6 +2,7 @@
 $ErrorActionPreference = 'Stop'
 if ($PSVersionTable.PSEdition -eq 'Core') { throw 'PanePolicy.Tests.ps1 exercises the net48 add-in: run it with Windows PowerShell 5.1 (powershell.exe), as scripts/test-scripts.ps1 does.' }
 . (Join-Path $PSScriptRoot "../../scripts/build-paths.ps1")
+. (Join-Path $PSScriptRoot 'TestEnvironment.ps1')
 Set-OnlyWorkspaceVerificationEnvironment -RepositoryRoot (Resolve-Path "$PSScriptRoot/../..").Path
 if (!$Dir) { $Dir = Get-OnlyWorkspaceOutputDirectory -RepositoryRoot (Resolve-Path "$PSScriptRoot/../..").Path }
 $buildOutput = (Get-OnlyWorkspaceBuildPaths -RepositoryRoot (Resolve-Path "$PSScriptRoot/../..").Path).TargetDir

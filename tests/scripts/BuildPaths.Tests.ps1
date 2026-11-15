@@ -2,6 +2,7 @@
 $ErrorActionPreference = 'Stop'
 $repo = (Resolve-Path "$PSScriptRoot/../..").Path
 . (Join-Path $repo 'scripts/build-paths.ps1')
+. (Join-Path $PSScriptRoot 'TestEnvironment.ps1')
 Set-OnlyWorkspaceVerificationEnvironment -RepositoryRoot $repo
 $savedRuntime = $env:ONLYWORKSPACE_RUNTIME_ROOT
 $fixture = Join-Path ([IO.Path]::GetTempPath()) ('OnlyWorkspace-BuildPaths-' + [Guid]::NewGuid().ToString('N'))
