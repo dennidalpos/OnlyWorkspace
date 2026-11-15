@@ -282,11 +282,13 @@ internal sealed class FlatButton : Button, IThemed
         switch (Kind)
         {
             case ButtonKind.Primary:
-                fill = border = _hover ? c.AccentHover : c.Accent;
+                fill = _hover ? c.AccentHover : c.Accent;
+                border = Edge(fill, c);
                 text = c.OnAccent;
                 break;
             case ButtonKind.Danger:
-                fill = border = _hover ? c.DangerHover : c.DangerFill;
+                fill = _hover ? c.DangerHover : c.DangerFill;
+                border = Edge(fill, c);
                 text = Color.White;
                 break;
             default:
@@ -313,8 +315,20 @@ internal sealed class FlatButton : Button, IThemed
             TextRenderer.DrawText(g, Text, Font, ClientRectangle, text,
                 TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine | TextFormatFlags.EndEllipsis);
         }
-        if (Focused && ShowFocusCues) ControlPaint.DrawFocusRectangle(g, Rectangle.Inflate(ClientRectangle, -3, -3));
+        if (Focused && ShowFocusCues)
+        {
+            // Accent outline like the fields; an accent button gets a text-coloured one, its own accent would vanish.
+            var ring = Kind == ButtonKind.Secondary ? c.Accent : c.OnAccent;
+            using var pen = new Pen(ring, 2f);
+            g.SmoothingMode = SmoothingMode.None;
+            g.DrawRectangle(pen, 2, 2, Width - 5, Height - 5);
+        }
     }
+
+    /// <summary>Perimeter of a filled button: a shade apart from the fill, so the edge holds against the page (3:1).</summary>
+    private static Color Edge(Color fill, Palette c) => Theme.IsHighContrast
+        ? c.Text
+        : Theme.IsDark ? Ui.Blend(fill, Color.White, 0.4f) : Ui.Blend(fill, Color.Black, 0.35f);
 }
 
 /// <summary>Sidebar entry (glyph + text) or, with TabStyle, a section tab with an underline.</summary>

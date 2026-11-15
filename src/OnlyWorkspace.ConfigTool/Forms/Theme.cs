@@ -101,10 +101,10 @@ internal static class Theme
         Muted = Color.FromArgb(96, 96, 96),
         Disabled = Color.FromArgb(160, 160, 160),
         Input = Color.White,
-        // Field borders at 3:1 (WCAG 1.4.11); buttons keep the lighter border, their text identifies them.
+        // Field and button borders at 3:1 (WCAG 1.4.11): the label names a button, the border shows its perimeter.
         InputBorder = Color.FromArgb(138, 138, 138),
         InputDisabled = Color.FromArgb(243, 243, 243),
-        ButtonBorder = Color.FromArgb(196, 196, 196),
+        ButtonBorder = Color.FromArgb(138, 138, 138),
         Accent = Color.FromArgb(24, 90, 157),
         AccentHover = Color.FromArgb(34, 108, 184),
         OnAccent = Color.White,
@@ -129,7 +129,7 @@ internal static class Theme
         Input = Color.FromArgb(55, 55, 55),
         InputBorder = Color.FromArgb(128, 128, 128),
         InputDisabled = Color.FromArgb(46, 46, 46),
-        ButtonBorder = Color.FromArgb(92, 92, 92),
+        ButtonBorder = Color.FromArgb(128, 128, 128),
         Accent = Color.FromArgb(96, 165, 235),
         AccentHover = Color.FromArgb(120, 180, 240),
         OnAccent = Color.FromArgb(12, 12, 12),

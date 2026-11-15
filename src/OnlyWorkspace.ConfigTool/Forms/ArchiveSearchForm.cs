@@ -244,8 +244,8 @@ public sealed class ArchiveSearchForm : Form
         _metrics.Columns[1].HeaderCell.ToolTipText = "Elementi già completati";
         _metrics.Columns[3].HeaderCell.ToolTipText = "Percentuale sugli elementi leggibili; non include la colonna Non leggibili";
         _metrics.Columns[5].HeaderCell.ToolTipText = "Non leggibili, esclusi o falliti";
-        Columns(_stores, ("Cassetta", 70, false), ("Stato", 40, false), ("Email", 30, true), ("Testi %", 28, true), ("Restano", 30, true), ("Allegati", 32, true),
-            ("Cartelle", 30, true), ("Ultimo inventario", 50, true), ("Errore", 110, false));
+        Columns(_stores, ("Cassetta", 100, false), ("Stato", 65, false), ("Email", 30, true), ("Testi %", 28, true), ("Restano", 30, true), ("Allegati", 32, true),
+            ("Cartelle", 30, true), ("Ultimo inventario", 50, true), ("Errore", 55, false));
         // The reason of a failed mailbox is the point of the column: it wraps (rows grow) and the full text is in the tooltip.
         _stores.Columns[8].DefaultCellStyle.WrapMode = DataGridViewTriState.True;
         Ui.ScaleFromDesignDpi(this);
