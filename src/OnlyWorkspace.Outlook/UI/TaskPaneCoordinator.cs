@@ -41,6 +41,8 @@ public partial class TaskPaneCoordinator : IDisposable
     private readonly IContextBuilder _contextBuilder;
     private readonly IHistoryStorageService _historyStorage;
     private ConversationHistory _currentConversation = new();
+    private HistoryPanePresenter? _historyPresenter;
+    private HistoryPanePresenter _history => _historyPresenter ??= new HistoryPanePresenter(new HistoryHost(this));
     private readonly PaneOperations _operations = new();
     // What the page shows of the running work: replayed to a page loaded again, listed by the other windows' panes.
     private readonly PaneJobReplay _replay = new();
@@ -2002,10 +2004,7 @@ public partial class TaskPaneCoordinator : IDisposable
         }
     }
 
-    private static string DisplayNameOf(LlmProfileConfig profile)
-    {
-        return string.IsNullOrWhiteSpace(profile.DisplayName) ? profile.Id : profile.DisplayName;
-    }
+    private static string DisplayNameOf(LlmProfileConfig profile) => HistoryPanePresenter.DisplayNameOf(profile);
 
     private static string Truncate(string text, int max)
     {
@@ -2021,117 +2020,30 @@ public partial class TaskPaneCoordinator : IDisposable
         catch { } // best-effort release of a client already replaced
     }
 
-    private async Task SendHistoryListAsync(string? requestId = null, bool deleted = false)
+    private Task SendHistoryListAsync(string? requestId = null, bool deleted = false) => _history.SendListAsync(requestId, deleted);
+
+    private Task LoadHistoryAsync(string? id) => _history.LoadAsync(id);
+
+    private Task DeleteHistoryAsync(string? id, string? requestId) => _history.DeleteAsync(id, requestId);
+
+    private Task DeleteAllHistoryAsync(string? requestId) => _history.DeleteAllAsync(requestId);
+
+    /// <summary>The coordinator as seen by the history presenter (#177).</summary>
+    private sealed class HistoryHost : IHistoryPaneHost
     {
-        try
-        {
-            var list = await _historyStorage.ListConversationsAsync();
-            var items = list.Select(l => new
-            {
-                id = l.Id,
-                title = l.Title,
-                updatedAt = l.UpdatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm"),
-                messageCount = l.MessageCount,
-                email = MailRefForPane(l.Email)
-            }).ToList();
-
-            _control.PostMessage(new { type = "history_list", items, enabled = _config?.History?.Enabled == true, requestId, deleted });
-        }
-        catch (Exception ex)
-        {
-            OnlyWorkspaceLog.Logger.Warning(ex, "Failed to list conversation history");
-            _control.PostMessage(new { type = "history_list", items = Array.Empty<object>(), enabled = _config?.History?.Enabled == true, error = "Impossibile leggere lo storico.", requestId, deleted });
-        }
-    }
-
-    /// <summary>The email of a history entry as the pane shows it: subject, then sender and date.</summary>
-    private static object? MailRefForPane(HistoryContextReference? email) => email == null ? null : new
-    {
-        entryId = email.EntryId,
-        storeId = email.StoreId,
-        subject = email.Subject,
-        itemType = email.ItemType,
-        meta = string.Join(" · ", new[] { email.Sender, email.Date?.ToString("dd/MM/yyyy HH:mm") }.Where(v => !string.IsNullOrWhiteSpace(v)))
-    };
-
-    private async Task LoadHistoryAsync(string? id)
-    {
-        if (string.IsNullOrWhiteSpace(id)) return;
-        try
-        {
-            var conv = await _historyStorage.LoadConversationAsync(id!);
-            if (conv != null)
-            {
-                CancelActiveTask();
-                _currentConversation = conv;
-                _analysisEvidence = null;
-                var msgs = conv.Messages.Select(m => new
-                {
-                    role = m.Role,
-                    content = m.Content,
-                    webSources = m.WebSources,
-                    mailSources = m.MailSources,
-                    email = MailRefForPane(m.Email),
-                    action = m.Action,
-                    documents = m.Documents,
-                    security = m.Security
-                }).ToList();
-                // Another profile continues in a new conversation (BeginConversationTurn): the pane says so.
-                var active = GetActiveProfile();
-                var made = _config?.Profiles.FirstOrDefault(p => p.Id == conv.ProfileId);
-
-                _control.PostMessage(new
-                {
-                    type = "history_loaded",
-                    title = conv.Title,
-                    messages = msgs,
-                    otherProfile = active != null && made != null && made.Id != active.Id ? DisplayNameOf(made) : null,
-                    policyChanged = active != null && !ConversationPolicy.Matches(conv, active)
-                });
-            }
-        }
-        catch (Exception ex)
-        {
-            OnlyWorkspaceLog.Logger.Warning(ex, "Failed to load conversation {Id}", id);
-            Toast("Impossibile aprire la conversazione.", "error");
-        }
-    }
-
-    private async Task DeleteHistoryAsync(string? id, string? requestId)
-    {
-        if (string.IsNullOrWhiteSpace(id)) return;
-        try
-        {
-            if (!await _historyStorage.DeleteConversationAsync(id!))
-                throw new InvalidOperationException("The requested conversation was not deleted.");
-            if (_currentConversation.Id == id)
-            {
-                ResetConversation(preservePage: true);
-            }
-            await SendHistoryListAsync(requestId, deleted: true);
-        }
-        catch (Exception ex)
-        {
-            OnlyWorkspaceLog.Logger.Warning(ex, "Failed to delete conversation {Id}", id);
-            _control.PostMessage(new { type = "history_delete_failed", requestId });
-            Toast("Eliminazione non riuscita.", "error");
-        }
-    }
-
-    private async Task DeleteAllHistoryAsync(string? requestId)
-    {
-        try
-        {
-            await _historyStorage.DeleteAllConversationsAsync();
-            ResetConversation(preservePage: true);
-            await SendHistoryListAsync(requestId, deleted: true);
-        }
-        catch (Exception ex)
-        {
-            OnlyWorkspaceLog.Logger.Warning(ex, "Failed to delete all history");
-            _control.PostMessage(new { type = "history_delete_failed", requestId });
-            Toast("Eliminazione non riuscita.", "error");
-        }
+        private readonly TaskPaneCoordinator _c;
+        public HistoryHost(TaskPaneCoordinator coordinator) { _c = coordinator; }
+        public IHistoryStorageService Storage => _c._historyStorage;
+        public void Post(object message) => _c._control.PostMessage(message);
+        public bool HistoryEnabled => _c._config?.History?.Enabled == true;
+        public ConversationHistory Conversation { get => _c._currentConversation; set => _c._currentConversation = value; }
+        public LlmProfileConfig? ActiveProfile => _c.GetActiveProfile();
+        public LlmProfileConfig? FindProfile(string profileId) => _c._config?.Profiles.FirstOrDefault(p => p.Id == profileId);
+        public void CancelActiveTask() => _c.CancelActiveTask();
+        public void ForgetAnalysisEvidence() => _c._analysisEvidence = null;
+        public void ResetConversation(bool preservePage) => _c.ResetConversation(preservePage);
+        public void StartNewChat() => _c.StartNewChat();
+        public void Toast(string message, string kind) => _c.Toast(message, kind);
     }
 
     public bool CanClearChat => !_operations.HasWork && _currentConversation.Messages.Count > 0;
@@ -2158,24 +2070,7 @@ public partial class TaskPaneCoordinator : IDisposable
     }
 
     private DateTime _sourceReadUtc = DateTime.UtcNow;
-    private bool _checkingDeletedHistory;
-    internal async Task CheckDeletedHistoryAsync()
-    {
-        if (_checkingDeletedHistory || _currentConversation.ContextReferences.Count == 0 && _currentConversation.Messages.Count == 0 || _historyStorage is not IHistorySourceInvalidation invalidation) return;
-        _checkingDeletedHistory = true;
-        var conversation = _currentConversation;
-        try
-        {
-            if (!await invalidation.IsValidAsync(conversation) && ReferenceEquals(conversation, _currentConversation))
-            {
-                StartNewChat();
-                _control.PostMessage(new { type = "history_changed" });
-                Toast("Conversazione rimossa: usava un'email eliminata dall'archivio.", "info");
-            }
-        }
-        catch (Exception ex) { OnlyWorkspaceLog.Logger.Warning("History invalidation check failed: {Kind}", ex.GetType().Name); }
-        finally { _checkingDeletedHistory = false; }
-    }
+    internal Task CheckDeletedHistoryAsync() => _history.CheckDeletedAsync();
 
     private void InsertDraft(string text, bool replyAll, EmailRef? source, bool followUp = false)
     {

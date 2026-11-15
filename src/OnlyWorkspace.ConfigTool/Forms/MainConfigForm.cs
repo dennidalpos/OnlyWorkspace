@@ -218,10 +218,10 @@ public sealed partial class MainConfigForm : Form
             "Serve un amministratore (richiesta UAC). Il riquadro di Outlook applica le modifiche entro pochi secondi.");
 
         _btnUnlock = Metrics.DialogButton(new FlatButton { Text = "Sblocca" });
-        _btnUnlock.Click += (s, e) => UnlockConfiguration();
+        _btnUnlock.Click += (s, e) => AdminFlow.Unlock();
         Tip(_btnUnlock, "La configurazione è protetta da password: inseriscila per modificare i campi in questa finestra. Le scelte personali (Le mie cassette) restano sempre modificabili.");
         _btnResetPassword = Metrics.DialogButton(new FlatButton { Text = "Reimposta password (UAC)" });
-        _btnResetPassword.Click += async (s, e) => await ResetAdminPassword();
+        _btnResetPassword.Click += async (s, e) => await AdminFlow.ResetAsync();
         Tip(_btnResetPassword, "Password dimenticata: un amministratore di Windows (richiesta UAC) ne imposta una nuova o la toglie.");
 
         var btnClose = SecondaryButton("Chiudi");
@@ -529,7 +529,7 @@ public sealed partial class MainConfigForm : Form
         AddSubheading(behavior, "Protezione della configurazione");
         _btnManagePassword = AddRow(behavior, "Password amministrativa:", SecondaryButton("Imposta / cambia / disattiva…"),
             "Facoltativa: chi apre questa finestra vede le impostazioni ma può cambiarle solo con la password. Se la dimentichi, «Reimposta password» la reimposta con i diritti di amministratore.");
-        _btnManagePassword.Click += async (s, e) => await ManageAdminPassword();
+        _btnManagePassword.Click += async (s, e) => await AdminFlow.ManageAsync();
 
         AddSubheading(behavior, "Limiti e registro");
         _numMaxSearch = Numeric(10, 200, 50, 10);
@@ -1533,136 +1533,23 @@ public sealed partial class MainConfigForm : Form
         foreach (Control child in root.Controls) LockInputs(child);
     }
 
-    private static string? AskPassword(IWin32Window owner, string title, string label)
-    {
-        using var dialog = new Form
-        {
-            Text = title,
-            FormBorderStyle = FormBorderStyle.FixedDialog,
-            StartPosition = FormStartPosition.CenterParent,
-            AutoSize = true,
-            AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            MaximizeBox = false,
-            MinimizeBox = false,
-            ShowInTaskbar = false,
-            Font = new Font("Segoe UI", 9F),
-            BackColor = Theme.Colors.Window,
-            ForeColor = Theme.Colors.Text
-        };
-        var layout = new TableLayoutPanel { AutoSize = true, ColumnCount = 1, Padding = new Padding(16, 14, 16, 12) };
-        var caption = new SelectableLabel { Text = label, AutoSize = true, MaximumSize = new Size(Metrics.TextWidthCaption, 0), Margin = new Padding(0, 0, 0, 6) };
-        var input = new ThemedTextBox { Width = 360, UseSystemPasswordChar = true };
-        var ok = Metrics.DialogButton(new FlatButton { Text = "OK", Kind = ButtonKind.Primary, DialogResult = DialogResult.OK });
-        var cancel = Metrics.DialogButton(new FlatButton { Text = "Annulla", DialogResult = DialogResult.Cancel });
-        cancel.Margin = Padding.Empty;
-        var actions = new FlowLayoutPanel { AutoSize = true, FlowDirection = FlowDirection.RightToLeft, WrapContents = false, Anchor = AnchorStyles.Right, Margin = new Padding(0, 12, 0, 0) };
-        actions.Controls.AddRange(new Control[] { ok, cancel });
-        // Laid out right to left: Tab follows the reading order instead.
-        cancel.TabIndex = 0;
-        ok.TabIndex = 1;
-        layout.Controls.Add(caption, 0, 0);
-        layout.Controls.Add(new InputFrame(input) { Margin = Padding.Empty }, 0, 1);
-        layout.Controls.Add(actions, 0, 2);
-        dialog.Controls.Add(layout);
-        dialog.AcceptButton = ok;
-        dialog.CancelButton = cancel;
-        Ui.ScaleFromDesignDpi(dialog);
-        dialog.Shown += (s, e) => { Theme.Apply(dialog); Theme.ApplyWindowChrome(dialog); input.Focus(); };
-        var result = dialog.ShowDialog(owner) == DialogResult.OK ? input.Text : null;
-        input.Clear();
-        return result;
-    }
+    private AdminPasswordFlow? _adminFlow;
+    private AdminPasswordFlow AdminFlow => _adminFlow ??= new AdminPasswordFlow(_adminPassword, new AdminPasswordHost(this));
 
-    private void UnlockConfiguration()
+    /// <summary>The window as seen by the administrator-password flow (#177).</summary>
+    private sealed class AdminPasswordHost : IAdminPasswordHost
     {
-        var password = AskPassword(this, "Sblocca configurazione", "Password amministrativa:");
-        if (password == null) return;
-        if (!_adminPassword.Verify(password))
-        {
-            CopyableMessageBox.Show(this, "Password non corretta.", "Configurazione bloccata", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            return;
-        }
-        SetLocked(false);
-        SetStatus("Configurazione sbloccata per questa finestra.", Tone.Success);
-    }
-
-    private string? AskNewPassword()
-    {
-        var next = AskPassword(this, "Password amministrativa", "Nuova password (vuota per disattivarla, minimo 8 caratteri):");
-        if (next == null) return null;
-        if (next.Length > 0 && next.Length < AdminPasswordService.MinLength)
-        {
-            CopyableMessageBox.Show(this, "La password deve contenere almeno " + AdminPasswordService.MinLength + " caratteri.", "Password", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            return null;
-        }
-        var confirm = AskPassword(this, "Conferma password", "Ripeti la nuova password:");
-        if (confirm == null) return null;
-        if (next != confirm)
-        {
-            CopyableMessageBox.Show(this, "Le password non coincidono.", "Password", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            return null;
-        }
-        return next;
-    }
-
-    private async Task ManageAdminPassword()
-    {
-        if (_isLocked) return;
-        if (_adminPassword.Enabled)
-        {
-            var current = AskPassword(this, "Modifica password", "Password amministrativa corrente:");
-            if (current == null) return;
-            if (!_adminPassword.Verify(current))
-            {
-                CopyableMessageBox.Show(this, "Password non corretta.", "Password", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-        }
-        var next = AskNewPassword();
-        if (next == null) return;
-        await ApplyAdminPassword(next);
-    }
-
-    private async Task ResetAdminPassword()
-    {
-        var next = AskNewPassword();
-        if (next == null) return;
-        await ApplyAdminPassword(next, requireUac: true);
-    }
-
-    private async Task ApplyAdminPassword(string next, bool requireUac = false)
-    {
-        string? staging = null;
-        try
-        {
-            byte[]? record = next.Length == 0 ? null : AdminPasswordService.CreateRecord(next);
-            if (!requireUac && ElevatedConfigWriter.CanWriteConfig(_configDir))
-            {
-                _adminPassword.ApplyRecord(record);
-            }
-            else
-            {
-                staging = ElevatedConfigWriter.CreateStagingDirectory();
-                if (record != null) File.WriteAllBytes(Path.Combine(staging, "verifier.json"), record);
-                var applied = await RunElevatedAsync(
-                    "admin-password-apply " + ElevatedConfigWriter.Quote(staging) + " " + ElevatedConfigWriter.Quote(_configDir), staging);
-                if (applied.Cancelled)
-                {
-                    SetStatus("Password non modificata: autorizzazione amministratore non concessa.", Tone.Warning);
-                    LogActivity("Password amministrativa non applicata: autorizzazione annullata dall'utente (UAC).");
-                    return;
-                }
-                if (!applied.Success) throw new InvalidOperationException(applied.Message);
-            }
-            SetLocked(false);
-            SetStatus(_adminPassword.Enabled ? "Password amministrativa aggiornata." : "Password amministrativa disattivata.", Tone.Success);
-        }
-        catch (Exception ex)
-        {
-            LogActivity("Password amministrativa non applicata: " + ex.Message);
-            CopyableMessageBox.Show(this, ErrorText.For(ex), "Password amministrativa", MessageBoxButtons.OK, MessageBoxIcon.Error);
-        }
-        finally { ElevatedConfigWriter.DeleteStagingDirectory(staging); }
+        private readonly MainConfigForm _f;
+        public AdminPasswordHost(MainConfigForm form) { _f = form; }
+        public string ConfigDirectory => _f._configDir;
+        public bool IsLocked => _f._isLocked;
+        public string? AskPassword(string title, string label) => AdminPasswordFlow.ShowPasswordDialog(_f, title, label);
+        public void Warn(string message, string title) => CopyableMessageBox.Show(_f, message, title, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        public void ShowError(string message, string title) => CopyableMessageBox.Show(_f, message, title, MessageBoxButtons.OK, MessageBoxIcon.Error);
+        public Task<ElevatedConfigWriter.ElevationResult> RunElevatedAsync(string arguments, string? resultDir) => _f.RunElevatedAsync(arguments, resultDir);
+        public void SetLocked(bool locked) => _f.SetLocked(locked);
+        public void SetStatus(string message, Tone tone) => _f.SetStatus(message, tone);
+        public void LogActivity(string message) => _f.LogActivity(message);
     }
 
     private bool _closingForExit;

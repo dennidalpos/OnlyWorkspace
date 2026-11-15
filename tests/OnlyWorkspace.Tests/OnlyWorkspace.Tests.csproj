@@ -72,6 +72,8 @@
     <!-- Interrompi against the other cancels of the pane: PaneOperationsTests. -->
     <Compile Include="..\..\src\OnlyWorkspace.Outlook\UI\PaneOperations.cs" Link="Outlook\PaneOperations.cs" />
     <Compile Include="..\..\src\OnlyWorkspace.Outlook\UI\TurnWebSources.cs" Link="Outlook\TurnWebSources.cs" />
+    <!-- History drawer of the pane: HistoryPanePresenterTests. -->
+    <Compile Include="..\..\src\OnlyWorkspace.Outlook\UI\HistoryPanePresenter.cs" Link="Outlook\HistoryPanePresenter.cs" />
     <!-- Evidence reading of the chat and Cerca e analizza: MailEvidenceReaderTests. -->
     <Compile Include="..\..\src\OnlyWorkspace.Outlook\UI\MailEvidenceReader.cs" Link="Outlook\MailEvidenceReader.cs" />
     <Compile Include="..\..\src\OnlyWorkspace.Outlook\UI\AnalysisFinalization.cs" Link="Outlook\AnalysisFinalization.cs" />

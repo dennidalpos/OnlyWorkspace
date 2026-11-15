@@ -291,7 +291,7 @@ internal static class Theme
             {
                 ThemedGrids.Add(grid, null);
                 foreach (Control child in grid.Controls) Hook(child);
-                grid.ControlAdded += (_, e) => Hook(e.Control);
+                grid.ControlAdded += (_, e) => { if (e.Control != null) Hook(e.Control); };
             }
             else foreach (Control child in grid.Controls) if (child is ScrollBar) ApplyScrollBars(child);
         }
