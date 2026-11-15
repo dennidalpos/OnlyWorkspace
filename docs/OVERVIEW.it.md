@@ -32,9 +32,9 @@ flowchart TD
 
 ## Uno sguardo al prodotto
 
-![Outlook classico con email sintetica del progetto Aurora e risultato di Sintesi nel riquadro OnlyWorkspace, cattura del 21 ottobre 2026](../assets/screenshots/installed/01-sintesi.png)
+![Outlook classico con email sintetica del progetto Aurora e risultato di Sintesi nel riquadro OnlyWorkspace, cattura del 15 novembre 2026](../assets/screenshots/installed/01-sintesi-20261115.png)
 
-Cattura reale già presente nel repository: Outlook classico, PST sintetico con indirizzi `.example`, profilo QwenCloud, 21 ottobre 2026. Mostra l'interfaccia di allora, precedente alle attuali restrizioni cloud sugli allegati; la versione esatta della build non è attestata nel corredo della cattura. [Provenienza delle immagini](../assets/social_copy.md#inventario-e-provenienza) e [stato delle verifiche](tecnico/verifica.md). Non rappresenta una prova della build corrente.
+Cattura reale: Outlook classico, cartella locale sintetica con indirizzi `.example`, profilo QwenCloud (livello Esteso, ricerca web non eseguita), build installata 1.0.0+cf66170, 15 novembre 2026. Le catture di [Verifica sicurezza](../assets/screenshots/installed/02-verifica-sicurezza-20261115.png) ed [Estrai dati](../assets/screenshots/installed/03-estrai-dati-20261115.png) sono state fatte allo stesso modo. [Provenienza delle immagini](../assets/social_copy.md#inventario-e-provenienza) e [stato delle verifiche](tecnico/verifica.md). Non rappresenta una prova della build corrente.
 
 ## Iniziare su un PC Windows
 

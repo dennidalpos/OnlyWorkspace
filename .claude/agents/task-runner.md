@@ -1,5 +1,5 @@
 ---
-name: pippo
+name: task-runner
 description: Launches and monitors the sequential task orchestrator for this repository (one claude -p session per tracker task, local commit after each). Use only when the parent explicitly asks to start or check it.
 tools: "*"
 ---

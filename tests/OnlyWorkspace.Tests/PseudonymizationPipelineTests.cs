@@ -27,7 +27,7 @@ public sealed class PseudonymizationPipelineTests
         string outgoing = Assert.Single(mask.Mask(new[] { ChatMessage.User(input) })).Content;
         Assert.Contains("[" + category + "_1]", outgoing);
         Assert.Equal(input, mask.Restore(outgoing));
-        Assert.Equal(1, mask.Audit.Counts[category]); Assert.Equal("4", mask.Audit.Revisions["catalog"]);
+        Assert.Equal(1, mask.Audit.Counts[category]); Assert.Equal("5", mask.Audit.Revisions["catalog"]);
         string audit = JsonSerializer.Serialize(mask.Audit); Assert.DoesNotContain(input, audit);
     }
 
@@ -89,6 +89,22 @@ public sealed class PseudonymizationPipelineTests
         string input = $"Totale ({amount}).";
         string outgoing = Assert.Single(mask.Mask(new[] { ChatMessage.User(input) })).Content;
         Assert.Equal("Totale ([IMPORTO_1]).", outgoing);
+        Assert.Equal(input, mask.Restore(outgoing));
+    }
+
+    // Outlook renders table cells separated by tabs: a quantity must not join the currency of the next cell (catalog 5).
+    [Theory]
+    [InlineData("AC-100\tCavo\t20\tEUR 3,50\tEUR 70,00", "AC-100\tCavo\t20\t[IMPORTO_1]\t[IMPORTO_2]")]
+    [InlineData("AC-100\tCavo\t20\t€ 3,50\t€ 70,00", "AC-100\tCavo\t20\t[IMPORTO_1]\t[IMPORTO_2]")]
+    [InlineData("AC-100\tCavo\t20\teuro 3,50\teuro 70,00", "AC-100\tCavo\t20\t[IMPORTO_1]\t[IMPORTO_2]")]
+    [InlineData("AC-100\tCavo\t20\t3,50 EUR\t70,00 EUR", "AC-100\tCavo\t20\t[IMPORTO_1]\t[IMPORTO_2]")]
+    [InlineData("Codice\tImporto\tValuta\nA1\t1.250,00\tEUR", "Codice\tImporto\tValuta\nA1\t[IMPORTO_1]")]
+    [InlineData("Totale 20 EUR e 3,50 EUR", "Totale [IMPORTO_1] e [IMPORTO_2]")]
+    public void TableCellsKeepTheQuantityOutsideTheAmount(string input, string expected)
+    {
+        var mask = new Pseudonymizer(maskAmounts: true);
+        string outgoing = Assert.Single(mask.Mask(new[] { ChatMessage.User(input) })).Content;
+        Assert.Equal(expected, outgoing);
         Assert.Equal(input, mask.Restore(outgoing));
     }
 

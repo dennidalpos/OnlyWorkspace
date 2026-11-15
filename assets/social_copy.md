@@ -18,6 +18,8 @@ Set unico di **sette PNG 1080 × 1350 px (4:5)** in `assets/social/`, generato d
 
 Le tre catture originali in `screenshots/installed/` mostrano Outlook classico su WS-DP01, PST sintetico con indirizzi `.example` e QwenCloud. La copertina usa la cattura Sintesi. Date ed evidenze sono in [Verifica e qualifica](../docs/tecnico/verifica.md). Le catture documentano quella build, non ogni modifica successiva; non sono prove su cassette clienti.
 
+Catture aggiornate del **15/11/2026** (#235) in `screenshots/installed/`: [01-sintesi-20261115.png](screenshots/installed/01-sintesi-20261115.png), [02-verifica-sicurezza-20261115.png](screenshots/installed/02-verifica-sicurezza-20261115.png), [03-estrai-dati-20261115.png](screenshots/installed/03-estrai-dati-20261115.png). Build installata 1.0.0+cf66170, Outlook classico su WS-DP01 (monitor a 100%), cartella locale sintetica con indirizzi `.example` e `.example.test`, profilo QwenCloud (qwen3.8-flash, livello Esteso); nessuna ricerca web eseguita, nessun dato reale nelle immagini. README e panoramica IT puntano a queste. I sette PNG social e il generatore (`generate-social-assets.py`, `generate-assets.py`) usano ancora le tre catture del 21/10/2026: rigenerarli con le nuove richiede una richiesta specifica.
+
 ## Messaggio e condizioni sui dati
 
 **La tua posta. Un contesto chiaro.** OnlyWorkspace affianca Outlook classico con sintesi, verifica sicurezza, tabelle, bozze e ricerca nell'archivio acquisito. I risultati IA vanno rivisti: la verifica sicurezza mostra indizi tecnici, senza garantire che un messaggio sia sicuro.

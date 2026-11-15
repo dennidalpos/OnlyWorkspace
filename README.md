@@ -32,9 +32,9 @@ flowchart TD
 
 ## Screenshot
 
-![Classic Outlook with a synthetic Aurora project email and the Summary result in the OnlyWorkspace pane, captured on 21 October 2026](assets/screenshots/installed/01-sintesi.png)
+![Classic Outlook with a synthetic Aurora project email and the Summary result in the OnlyWorkspace pane, captured on 15 November 2026](assets/screenshots/installed/01-sintesi-20261115.png)
 
-Real capture: classic Outlook, synthetic PST with `.example` addresses, QwenCloud profile, 21 October 2026. It shows the interface at that time and is not proof of the current build. See the [image provenance](assets/social_copy.md#inventario-e-provenienza) and [verification status](docs/tecnico/verifica.md).
+Real capture: classic Outlook, synthetic local folder with `.example` addresses, QwenCloud profile (Extended level, web search not run), installed build 1.0.0+cf66170, 15 November 2026. Captures of [Security check](assets/screenshots/installed/02-verifica-sicurezza-20261115.png) and [Extract data](assets/screenshots/installed/03-estrai-dati-20261115.png) were taken the same way. They show the interface on that day and are not proof of later builds. See the [image provenance](assets/social_copy.md#inventario-e-provenienza) and [verification status](docs/tecnico/verifica.md).
 
 ## Requirements
 

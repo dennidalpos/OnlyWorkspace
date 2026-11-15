@@ -23,7 +23,7 @@ Il contratto non è serializzabile come autorizzazione: la prova (`CloudRequestP
 
 ## Strategie e audit locali
 
-Il catalogo incorporato è alla revisione 4. La pipeline mantiene sostituzioni reversibili, priorità fra pattern, budget di dieci secondi, timeout delle regex e annullamento. Le identità vengono raccolte dagli store autorizzati e cercate con un indice letterale compilato una volta per richiesta. Query web libere, domini ricavati dalla posta e query generate da Ollama restano bloccati.
+Il catalogo incorporato è alla revisione 5. La pipeline mantiene sostituzioni reversibili, priorità fra pattern, budget di dieci secondi, timeout delle regex e annullamento. Le identità vengono raccolte dagli store autorizzati e cercate con un indice letterale compilato una volta per richiesta. Query web libere, domini ricavati dalla posta e query generate da Ollama restano bloccati.
 
 Il registro DPAPI conserva identificativo casuale, data, esito, revisioni e conteggi per categoria; non contiene originali o mappa. Il mutex protegge gli aggiornamenti. Scadono dopo trenta giorni solo i metadati di questo registro. Un errore precedente al trasporto impedisce l'invio; un errore successivo non ritira richieste già ricevute. `dispatching` indica un tentativo, non una ricevuta. Il PDF di Privacy e dati include i metadati disponibili.
 
@@ -35,14 +35,16 @@ Il catalogo 3 riconosce anche il nome «euro» come parola intera, senza distinz
 
 Il catalogo 4 maschera gli indirizzi postali italiani (categoria `INDIRIZZO`): via, viale, piazza, piazzale, corso, largo, vicolo, strada, lungotevere, contrada o località seguiti da un nome con iniziale maiuscola e da un numero civico, con CAP, una parola di città e sigla di provincia se presenti. Una parola comune come «via» o «corso» senza nome proprio e civico resta com’è; una città di più parole può restare in parte visibile. Indirizzi esteri e scritti in altro modo, e **le ragioni sociali nel testo libero**, non sono mascherati: escono come scritti, salvo le aziende note agli store autorizzati. La revisione 4 richiede di rinnovare le autorizzazioni dei profili interessati (stessa regola della 3).
 
+Il catalogo 5 corregge gli importi nelle tabelle: Outlook separa le celle con tabulazioni e la quantità di una riga (`20`) seguita dalla cella con la valuta davanti al numero (`EUR 3,50`) veniva mascherata come importo («20 EUR»), mentre l'ultimo importo della riga restava in chiaro. Ora un numero seguito da una valuta non è un importo se alla valuta segue, nella stessa cella, un altro numero (`20<TAB>EUR 3,50` maschera solo `EUR 3,50`); valuta dopo il numero in celle separate (`3,50 EUR<TAB>70,00 EUR`) e colonne di sola valuta restano mascherate. Limite: in testo con soli spazi, `3,50 EUR 70,00 EUR` è ambiguo e può lasciare in chiaro il primo numero. La revisione 5 richiede di rinnovare le autorizzazioni dei profili interessati (stessa regola della 3).
+
 ## Misura del riconoscimento
 
-Misura dell'11 novembre 2026 sul catalogo incorporato (revisione 4), senza entità locali né elenchi del cliente: è il riconoscimento dei soli modelli del catalogo. Il corpus è sintetico e deterministico, generato da `PseudonymizationBench` in `tests/OnlyWorkspace.Tests`: nomi comuni combinati a caso, indirizzi e-mail `.test`, numeri di telefono in blocchi non assegnati, IBAN, codici fiscali e partite IVA costruiti per regola da parti inventate. Nessun dato reale. Ogni testo è etichettato con i valori che dovrebbero uscire mascherati; le esche sono testi senza dati che somigliano a dati (numeri d'ordine di 11 cifre, versioni con tre numeri, nomi di prodotto).
+Misura dell'11 novembre 2026, ripetuta il 15 novembre 2026 con lo stesso risultato sul catalogo incorporato (revisione 5), senza entità locali né elenchi del cliente: è il riconoscimento dei soli modelli del catalogo. Il corpus è sintetico e deterministico, generato da `PseudonymizationBench` in `tests/OnlyWorkspace.Tests`: nomi comuni combinati a caso, indirizzi e-mail `.test`, numeri di telefono in blocchi non assegnati, IBAN, codici fiscali e partite IVA costruiti per regola da parti inventate. Nessun dato reale. Ogni testo è etichettato con i valori che dovrebbero uscire mascherati; le esche sono testi senza dati che somigliano a dati (numeri d'ordine di 11 cifre, versioni con tre numeri, nomi di prodotto).
 
 **Mascherati**: il valore non compare più nel testo inviato. **Categoria giusta**: il segnaposto che lo copre è della categoria attesa. **Mancati**: valori rimasti in chiaro. **Falsi positivi**: segnaposto su testo che non era un dato.
 
 <!-- bench:start -->
-Catalogo revisione 4: corpus sintetico di 280 testi, 248 valori etichettati e 40 testi senza dati personali (esche).
+Catalogo revisione 5: corpus sintetico di 280 testi, 248 valori etichettati e 40 testi senza dati personali (esche).
 
 | Categoria | Valori | Mascherati | Categoria giusta | Mancati | Falsi positivi |
 | --- | --- | --- | --- | --- | --- |
