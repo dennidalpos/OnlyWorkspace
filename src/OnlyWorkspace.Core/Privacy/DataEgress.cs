@@ -107,7 +107,7 @@ public sealed class WorkspaceDataEgressConfig
 /// <summary>Text the responsible person accepts. A new version voids every earlier acceptance.</summary>
 public static class DataEgressNotice
 {
-    public const int Version = 8;
+    public const int Version = 9;
 
     public const string Title = "Informativa sull'uscita dei dati verso servizi di intelligenza artificiale esterni";
 
@@ -119,7 +119,7 @@ public static class DataEgressNotice
         "Per ogni profilo cloud l'amministratore dichiara dove il servizio elabora i dati (UE, non UE o non specificata); un'area non specificata richiede una conferma esplicita.",
         "Le prove di connessione e capacità usano richieste sintetiche fisse, senza contenuti di Outlook. Le credenziali necessarie all'autenticazione sono trasmesse al servizio configurato.",
         "Autorizzi esclusivamente i servizi e le destinazioni riepilogati, con i permessi e le chiavi attuali. L'autorizzazione vale per servizio: copre ogni profilo e modello dello stesso servizio con gli stessi permessi e le stesse chiavi, e le combinazioni già autorizzate restano valide fino alla revoca o a una nuova versione di questa informativa. L'autorizzazione si può revocare; le richieste già ricevute dal servizio non si possono ritirare.",
-        "L'autorizzazione tecnica non certifica adempimenti, contratti o conformità normativa. L'organizzazione verifica le condizioni del fornitore e gli obblighi applicabili al proprio utilizzo. Rileggi sempre i risultati dell'IA."
+        "L'autorizzazione tecnica non certifica adempimenti, contratti o conformità normativa. L'organizzazione verifica le condizioni del fornitore e gli obblighi applicabili al proprio utilizzo. Titolare del trattamento, tempi di conservazione presso il fornitore e diritti degli interessati sono definiti dall'organizzazione e dal contratto con il fornitore. Rileggi sempre i risultati dell'IA."
     });
 
     public static string Hash { get; } = HashOf(Text);

@@ -111,7 +111,7 @@ public sealed class ServiceRegionTests
     [Fact]
     public void Notice_IsVersionEightAndSaysSensitiveDataAreNotAnonymized()
     {
-        Assert.Equal(8, DataEgressNotice.Version);
+        Assert.Equal(9, DataEgressNotice.Version);
         Assert.Contains("L'autorizzazione vale per servizio", DataEgressNotice.Text);
         Assert.Contains("livello Esteso la ricerca web", DataEgressNotice.Text);
         Assert.Contains("viene inviato al servizio", DataEgressNotice.Text);
