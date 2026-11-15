@@ -276,7 +276,24 @@ internal static class Theme
     public static void ApplyScrollBars(Control control)
     {
         if (control.IsHandleCreated) SetWindowTheme(control.Handle, IsDark && !IsHighContrast ? "DarkMode_Explorer" : null, null);
+        // A grid draws its bars with child scroll bar controls, created when first needed: they do not take the grid's theme.
+        if (control is DataGridView grid)
+        {
+            foreach (Control child in grid.Controls) if (child is ScrollBar) ApplyScrollBars(child);
+            if (!ThemedGrids.TryGetValue(grid, out _))
+            {
+                ThemedGrids.Add(grid, null);
+                grid.ControlAdded += (_, e) =>
+                {
+                    if (e.Control is not ScrollBar bar) return;
+                    ApplyScrollBars(bar);
+                    bar.HandleCreated += (_, _) => ApplyScrollBars(bar);
+                };
+            }
+        }
     }
+
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<DataGridView, object?> ThemedGrids = new();
 
     public static void Style(ContextMenuStrip menu)
     {

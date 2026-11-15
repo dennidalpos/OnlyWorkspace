@@ -170,6 +170,9 @@ public sealed class ArchiveIndexer : IArchiveIndexer, IDisposable
     /// </summary>
     public ArchiveClient? Db => _db;
 
+    /// <summary>Shown when the local dictionary is not ready (archive starting or busy): nothing is sent, the user retries.</summary>
+    public const string DictionaryNotReadyMessage = "Dizionario locale dell'archivio non ancora pronto (l'archivio si sta avviando o è occupato): nessun dato inviato. Riprova tra circa un minuto.";
+
     public async Task<ArchiveClient?> OpenForSearchAsync()
     {
         using (await PaneLockAsync())
@@ -537,6 +540,13 @@ public sealed class ArchiveIndexer : IArchiveIndexer, IDisposable
             _publishedStores = null;
             _timer.Interval = WaitIntervalMs;
             if (!_stopping) _timer.Start();
+        }
+        catch (ArchiveCollectorBusyException ex)
+        {
+            OnlyWorkspaceLog.Logger.Information(ex, "Archive collector busy; will retry");
+            _phase = "starting";
+            _error = null;
+            _connectAfterUtc = DateTime.UtcNow.AddSeconds(5);
         }
         catch (Exception ex) when (ex is InvalidOperationException || ex is IOException || ex is TimeoutException)
         {

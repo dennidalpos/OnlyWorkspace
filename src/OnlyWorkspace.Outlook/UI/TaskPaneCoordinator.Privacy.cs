@@ -37,10 +37,10 @@ public partial class TaskPaneCoordinator
         var indexer = CurrentArchive;
         if (_config?.Archive?.Enabled == true)
         {
-            if (indexer == null) throw new DataEgressBlockedException("Dizionario locale dell'archivio non disponibile: nessun dato inviato.");
+            if (indexer == null) throw new DataEgressBlockedException(ArchiveIndexer.DictionaryNotReadyMessage);
             var stores = await indexer.GetAllowedSearchStoresAsync();
             var db = await indexer.OpenForSearchAsync();
-            if (db == null) throw new DataEgressBlockedException("Dizionario locale dell'archivio non disponibile: nessun dato inviato.");
+            if (db == null) throw new DataEgressBlockedException(ArchiveIndexer.DictionaryNotReadyMessage);
             long cursor = 0;
             while (true)
             {

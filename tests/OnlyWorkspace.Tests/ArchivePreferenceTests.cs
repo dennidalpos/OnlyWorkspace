@@ -73,6 +73,13 @@ public sealed class ArchivePreferenceTests
     }
 
     [Fact]
+    public void DictionaryNotReadyMessage_SaysNothingWasSent_AndAsksToRetry()
+    {
+        Assert.Contains("nessun dato inviato", ArchiveIndexer.DictionaryNotReadyMessage);
+        Assert.Contains("Riprova", ArchiveIndexer.DictionaryNotReadyMessage);
+    }
+
+    [Fact]
     public void UnreadableArchiveChoice_DoesNotStartCollection_AndRecovers()
     {
         string directory = Path.Combine(Path.GetTempPath(), "ow-preference-guard-" + Guid.NewGuid().ToString("N"));
