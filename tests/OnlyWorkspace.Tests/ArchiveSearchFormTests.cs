@@ -111,6 +111,43 @@ public sealed class ArchiveSearchFormTests
         if (error != null) ExceptionDispatchInfo.Capture(error).Throw();
     }
 
+    // #260: mailbox name and state wrap (no ellipsis) at 1020x720, 100% and 150%; optional synthetic capture of the Stato page.
+    [Theory]
+    [InlineData(1.0f)]
+    [InlineData(1.5f)]
+    public void StatusGrid_WrapsNameAndState_At1020x720(float scale)
+    {
+        Exception? error = null;
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                using var form = new ArchiveSearchForm(false, IsolatedArchive.NewPath()) { StartPosition = FormStartPosition.Manual, Location = new Point(-4000, -4000), Size = new Size(1020, 720), Font = new Font("Segoe UI", 9 * scale) };
+                form.Show();
+                Application.DoEvents();
+                var tabs = Assert.Single(Descendants(form).OfType<TabControl>());
+                tabs.SelectTab(1);
+                var stores = Field<DataGridView>(form, "_stores");
+                stores.Rows.Add("Archivio sintetico principale di prova Utente Esempio", "Inventario in corso", "1.200", "80%", "240", "10/12", "5/6", "16/11/2026 09:00", "");
+                Application.DoEvents();
+                Assert.Equal(DataGridViewTriState.True, stores.Columns[0].DefaultCellStyle.WrapMode);
+                Assert.Equal(DataGridViewTriState.True, stores.Columns[1].DefaultCellStyle.WrapMode);
+                var dir = Environment.GetEnvironmentVariable("ONLYWORKSPACE_SHOT_DIR");
+                if (!string.IsNullOrEmpty(dir))
+                {
+                    using var bitmap = new Bitmap(form.Width, form.Height);
+                    form.DrawToBitmap(bitmap, form.ClientRectangle);
+                    bitmap.Save(Path.Combine(dir, $"archive-status-1020x720-{(int)(scale * 100)}.png"), System.Drawing.Imaging.ImageFormat.Png);
+                }
+            }
+            catch (Exception ex) { error = ex; }
+        });
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        Assert.True(thread.Join(TimeSpan.FromSeconds(10)));
+        if (error != null) ExceptionDispatchInfo.Capture(error).Throw();
+    }
+
     /// <summary>INT01: invoice filters are folded away, a hint tells when one is set, results get the height, compacting is not red.</summary>
     [Fact]
     public void ArchiveWindow_FoldsInvoiceFilters_GivesResultsTheHeight_AndKeepsCompactNeutral()

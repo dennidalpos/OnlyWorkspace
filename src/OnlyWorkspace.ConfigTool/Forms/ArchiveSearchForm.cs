@@ -248,6 +248,9 @@ public sealed class ArchiveSearchForm : Form
             ("Cartelle", 30, true), ("Ultimo inventario", 50, true), ("Errore", 55, false));
         // The reason of a failed mailbox is the point of the column: it wraps (rows grow) and the full text is in the tooltip.
         _stores.Columns[8].DefaultCellStyle.WrapMode = DataGridViewTriState.True;
+        // Mailbox name and state wrap too (#260): at the minimum size they grow the row instead of ending in an ellipsis.
+        _stores.Columns[0].DefaultCellStyle.WrapMode = DataGridViewTriState.True;
+        _stores.Columns[1].DefaultCellStyle.WrapMode = DataGridViewTriState.True;
         Ui.ScaleFromDesignDpi(this);
         void MatchMinimumSize() => MinimumSize = new Size(Ui.Px(this, Metrics.SearchWindowMin.Width), Ui.Px(this, Metrics.SearchWindowMin.Height));
         Load += (_, _) => MatchMinimumSize();
@@ -464,6 +467,9 @@ public sealed class ArchiveSearchForm : Form
             int index = _stores.Rows.Add(s.Name, s.State, s.Emails.ToString("N0"), Pct(s.BodiesPercent), s.BodiesRemaining.ToString("N0"),
                 s.AttachmentsDone.ToString("N0") + "/" + s.AttachmentsTotal.ToString("N0"), s.FoldersDone.ToString("N0") + "/" + s.Folders.ToString("N0"),
                 s.LastInventoryUtc.HasValue ? s.LastInventoryUtc.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm") : "mai", s.Error);
+            // At the minimum size the name and the state can be cut with an ellipsis: the full text is in the tooltip.
+            _stores.Rows[index].Cells[0].ToolTipText = s.Name;
+            _stores.Rows[index].Cells[1].ToolTipText = s.State;
             if (!string.IsNullOrEmpty(s.Error)) _stores.Rows[index].Cells[8].ToolTipText = s.Error;
         }
         // Read-only figures: no row looks selected.
