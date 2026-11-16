@@ -180,6 +180,9 @@ public sealed partial class ArchiveDb : IDisposable
         if (File.Exists(native)) LoadLibrary(native);
     }
 
+    /// <summary>Loads the native SQLite before the first <see cref="SqliteConnection"/>, for callers that bypass <see cref="Open"/>.</summary>
+    internal static void EnsureNativeLoaded() => _ = Native.Value;
+
     public static string DefaultDirectory =>
         OnlyWorkspace.Core.AppPaths.ArchiveDirectory;
 
