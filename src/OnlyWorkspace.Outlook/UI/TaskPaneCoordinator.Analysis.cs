@@ -827,9 +827,7 @@ public partial class TaskPaneCoordinator
                 PostStream(turn, new
                 {
                     type = "stream_error",
-                    message = request.EntryId.Length > 0
-                    ? "L'email scelta per questa analisi non è più disponibile (spostata o eliminata)."
-                    : "Seleziona o apri un'email, poi riprova.",
+                    message = AnalysisNotices.StartingEmailUnavailable(request.EntryId.Length > 0),
                     retryable = true,
                     op
                 });
@@ -837,7 +835,7 @@ public partial class TaskPaneCoordinator
             }
             if (found.Count == 0)
             {
-                PostStream(turn, new { type = "stream_chunk", chunk = $"Nessuna candidata trovata ({scopeLabel}). {coverage.Explain()}" });
+                PostStream(turn, new { type = "stream_chunk", chunk = AnalysisNotices.NoCandidates(scopeLabel, coverage.Explain()) });
                 PostStream(turn, new { type = "stream_end", latencyMs = sw.ElapsedMilliseconds, truncated = false, op });
                 return;
             }
@@ -845,7 +843,7 @@ public partial class TaskPaneCoordinator
             bool contentAllowed = AttachmentContentAllowed(activeProfile);
             int budget = ProviderCatalog.PromptBudget(activeProfile);
             string goalText = goal.Describe();
-            if (request.Kind == "flow") goalText += " Ricostruisci in ordine cronologico tappe, decisioni, punti aperti e sintesi finale. Segnala espressamente le email non disponibili e le lacune di copertura.";
+            if (request.Kind == "flow") goalText += AnalysisNotices.FlowGoalSuffix;
             // The answer's web search runs on the goal while the emails are read.
             var webSearch = request.Kind != "flow" && !goal.IsTable && !MailRequest.IsListOrCount(goal.Instruction)
                 ? kept?.Web != null ? ReuseWeb(kept.Web) : StartWebSearch(activeProfile, goalText, turn, ct) : null;
@@ -914,9 +912,8 @@ public partial class TaskPaneCoordinator
                 }
                 else if (pack.Count == 0)
                 {
-                    const string none = "\n\nNessuna email è stata letta.";
-                    result.Append(none);
-                    PostStream(turn, new { type = "stream_chunk", chunk = none });
+                    result.Append(AnalysisNotices.NoneRead);
+                    PostStream(turn, new { type = "stream_chunk", chunk = AnalysisNotices.NoneRead });
                 }
                 else
                 {
@@ -936,9 +933,7 @@ public partial class TaskPaneCoordinator
                             var parsed = MailTable.Parse(json);
                             MailAnswerVerifier.Verify(parsed, pack);
                             stats.Relevant = parsed.Rows.Where(r => r.Source >= 1 && r.Source <= pack.Count).Select(r => r.Source).Distinct().Count();
-                            answerText = (parsed.Rows.Count == 0 ? "Nessun dato pertinente trovato nelle email lette."
-                                : $"{(parsed.Rows.Count == 1 ? "1 riga" : parsed.Rows.Count + " righe")} per l'obiettivo richiesto. Verifica i valori con i documenti originali prima di usarli.") +
-                                "\n\n" + MailAnswerRenderer.Coverage(pack, parsed);
+                            answerText = AnalysisNotices.TableAnswer(parsed.Rows.Count) + "\n\n" + MailAnswerRenderer.Coverage(pack, parsed);
                             if (parsed.Rows.Count > 0) table = AnalysisNotices.TableMessage(parsed.Columns, MailAnswerRenderer.TableRows(parsed, pack));
                         }
                         else

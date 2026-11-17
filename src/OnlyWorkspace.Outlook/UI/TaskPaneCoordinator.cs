@@ -253,10 +253,7 @@ public partial class TaskPaneCoordinator : IDisposable
     }
 
     // Exchange senders expose an X.500 DN ("/o=…"): show the display name only.
-    private static string SenderOf(SelectedEmailInfo email) =>
-        string.IsNullOrWhiteSpace(email.SenderEmail) || email.SenderEmail.StartsWith("/", StringComparison.Ordinal)
-            ? email.SenderName
-            : $"{email.SenderName} <{email.SenderEmail}>";
+    private static string SenderOf(SelectedEmailInfo email) => PaneWording.Sender(email.SenderName, email.SenderEmail);
 
     /// <summary>The email a history entry is about: the pane shows it under the prompt and reopens it.</summary>
     private HistoryContextReference HistoryRefOf(SelectedEmailInfo email) => new()
@@ -272,17 +269,8 @@ public partial class TaskPaneCoordinator : IDisposable
     };
 
     /// <summary>Header lines prepended to the email text so the model knows subject, sender and date.</summary>
-    private static string EmailHeaderOf(SelectedEmailInfo email, bool withSender)
-    {
-        var sb = new StringBuilder();
-        if (!string.IsNullOrWhiteSpace(email.Subject)) sb.AppendLine("Oggetto: " + email.Subject);
-        if (withSender)
-        {
-            sb.AppendLine("Da: " + SenderOf(email));
-            sb.AppendLine($"Data: {email.ReceivedTime:dd/MM/yyyy HH:mm}");
-        }
-        return sb.Length == 0 ? string.Empty : sb.AppendLine().ToString();
-    }
+    private static string EmailHeaderOf(SelectedEmailInfo email, bool withSender) =>
+        PaneWording.EmailHeader(email.Subject, email.SenderName, email.SenderEmail, email.ReceivedTime, withSender);
 
     /// <param name="mode">"chat" for free questions, "reply" for a reply draft guided by an instruction.</param>
     public void ShowCustomInstructionInput(string mode = "chat", string? initialPrompt = null)
@@ -363,18 +351,9 @@ public partial class TaskPaneCoordinator : IDisposable
     }
 
     /// <summary>Model and server shown under the pane's top bar: who receives the data of the next action.</summary>
-    private static object BadgeOf(LlmProfileConfig profile) => new
-    {
-        model = profile.Model,
-        host = HostOf(profile.BaseUrl),
-        region = profile.IsExternal ? ServiceRegions.Label(profile.ServiceRegion) : string.Empty,
-        webHosts = WebActionLabels(profile).Count > 0 ? string.Join(", ", WebSearchService.Destinations(profile)) : string.Empty,
-        webActions = WebActionLabels(profile)
-    };
+    private static object BadgeOf(LlmProfileConfig profile) => PaneWording.Badge(profile);
 
-    /// <summary>Names of the actions that search the web with this profile (empty when Web Search is off).</summary>
-    private static List<string> WebActionLabels(LlmProfileConfig profile) =>
-        WebSearchAction.All.Where(a => WebSearchAction.Uses(profile, a.Key)).Select(a => a.Value).ToList();
+    private static List<string> WebActionLabels(LlmProfileConfig profile) => PaneWording.WebActionLabels(profile);
 
     private void OnMessageReceived(JsonElement message)
     {
@@ -792,16 +771,11 @@ public partial class TaskPaneCoordinator : IDisposable
     /// Lines under an answer on one email: the attachments not read and why, whatever the model says; then, with a
     /// local profile that read some, a caution (a small model can pair an amount with the wrong label on a dense form).
     /// </summary>
-    private static string? AttachmentNoticeFor(LlmProfileConfig profile, EmailAttachments attachments)
-    {
-        var notice = AnalysisReport.EmailDocuments(attachments.Documents);
-        if (!profile.IsExternal && attachments.Documents.Any(d => d.WasRead)) notice += "\n\n*Importi e date letti dagli allegati: verificali sul documento.*";
-        return notice.Length == 0 ? null : notice;
-    }
+    private static string? AttachmentNoticeFor(LlmProfileConfig profile, EmailAttachments attachments) =>
+        PaneWording.AttachmentNotice(profile, attachments.Documents);
 
     /// <summary>Line under an answer built on part of a list: a fixed context takes whole items while they fit.</summary>
-    private static string? LeftOutNotice(int included, int total, string what) =>
-        included >= total ? null : $"\n\n*Risposta basata su {included} {what} su {total}: gli altri non entrano nel contesto del profilo in uso.*";
+    private static string? LeftOutNotice(int included, int total, string what) => PaneWording.LeftOutNotice(included, total, what);
 
     /// <summary>Asking again cannot help when the text does not fit the profile.</summary>
     private static bool Retryable(Exception ex) => ex is not ContextTooLongException and not DataEgressBlockedException;
@@ -1288,43 +1262,15 @@ public partial class TaskPaneCoordinator : IDisposable
                 triageFailure = ex.Message + " Priorità e categorie non assegnate.";
             }
 
-            if (briefing.Summary.Length > 0) md.AppendLine().AppendLine("**In sintesi**").AppendLine().AppendLine(briefing.Summary);
-            md.AppendLine().Append("**Email non lette (").Append(unread.Count).AppendLine(")**").AppendLine();
-            if (triageFailure != null) md.AppendLine(triageFailure).AppendLine();
-
-            var triaged = briefing.Emails.OrderBy(t => t.PriorityRank).ThenBy(t => t.Index).ToList();
-            var untriaged = Enumerable.Range(0, unread.Count).Where(i => triaged.All(t => t.Index != i));
-            foreach (var t in triaged)
-            {
-                var e = unread[t.Index];
-                md.Append("- **").Append(char.ToUpperInvariant(t.Priority[0]) + t.Priority.Substring(1)).Append("** — ").Append(e.Subject).Append(" (").Append(e.SenderName).Append(')');
-                if (t.Reason.Length > 0) md.Append(": ").Append(t.Reason);
-                md.AppendLine();
-            }
-            foreach (var i in untriaged)
-            {
-                md.Append("- ").Append(unread[i].Subject).Append(" (").Append(unread[i].SenderName).AppendLine(")");
-            }
+            var triaged = BriefingReport.Triaged(briefing);
+            BriefingReport.AppendUnread(md, briefing, triaged, unread, triageFailure);
             PostStream(turn, new { type = "stream_chunk", chunk = md.ToString() });
 
-            var items = triaged.Where(t => t.Category.Length > 0).Select(t => new
-            {
-                kind = "triage",
-                title = unread[t.Index].Subject,
-                when = $"Priorità {t.Priority} · {unread[t.Index].SenderName}",
-                buttonLabel = $"Applica categoria «{t.Category}»",
-                buttonTip = "Aggiunge la categoria all'email in Outlook",
-                once = true,
-                message = new { type = "apply_category", entryId = unread[t.Index].EntryId, storeId = unread[t.Index].StoreId, category = t.Category }
-            }).ToList();
+            var items = BriefingReport.CategoryCards(triaged, unread);
 
             sw.Stop();
             // Reuse only the validated model result at Minimal: the display also lists local-only mail metadata.
-            string? modelContent = ExposurePolicy.Of(activeProfile).WholeEmails ? null : JsonSerializer.Serialize(new
-            {
-                summary = briefing.Summary,
-                emails = triaged.Select(t => new { id = t.Index + 1, priority = t.Priority, category = t.Category, reason = t.Reason })
-            });
+            string? modelContent = ExposurePolicy.Of(activeProfile).WholeEmails ? null : BriefingReport.ModelContent(briefing, triaged);
             await RecordActionInHistoryAsync(activeProfile, "Briefing di oggi", md.ToString(), ct, modelContent: modelContent);
             PostStream(turn, new { type = "stream_end", latencyMs = sw.ElapsedMilliseconds, truncated = client.LastCompletion?.IsTruncated == true, op, items });
             timings.LogCompleted(OnlyWorkspaceLog.Logger, "briefing", sw.ElapsedMilliseconds);
@@ -1611,10 +1557,7 @@ public partial class TaskPaneCoordinator : IDisposable
         }
     }
 
-    private static string WholeEmailsRefused(LlmProfileConfig profile) =>
-        ExposurePolicy.Of(profile).Level == ExposureLevel.LocalOnly
-            ? "Il profilo cloud è al livello di esposizione «0 · Solo locale»: non invia nulla. Per questa azione usare un profilo locale."
-            : FactsOnlyMessage;
+    private static string WholeEmailsRefused(LlmProfileConfig profile) => PaneWording.WholeEmailsRefused(profile);
 
     private async Task<IReadOnlyList<SecuritySource>> BuildSecuritySourcesAsync(EmailSecurityData data, EmailSecurityReport report,
         LlmProfileConfig profile, int turn, CancellationToken ct)
@@ -1625,20 +1568,16 @@ public partial class TaskPaneCoordinator : IDisposable
             var facts = data.Input.Attachments[i];
             if (facts.IsInline || facts.IsPecReceiptData) continue;
             var saved = data.SavedAttachments.FirstOrDefault(s => ReferenceEquals(s.Key, facts));
-            bool forbidden = !SecurityContentAnalysis.AttachmentContentAllowed(profile, facts) && facts.ScanStatus is not (AttachmentScanStatus.Threat or AttachmentScanStatus.Removed);
-            string? excluded = !SecurityContentAnalysis.AttachmentContentAllowed(profile, facts)
-                ? forbidden ? "invio del contenuto non consentito dal profilo" : "escluso dopo il controllo antivirus"
-                : !AttachmentTextFormats.HasTextReader(facts.Extension) ? "formato senza estrazione del testo" : saved.Key == null ? "copia locale non disponibile" : null;
+            var (excluded, forbidden) = SecurityAttachmentPolicy.BeforeReading(profile, facts, saved.Key != null);
             if (excluded == null)
             {
                 PostPhase(turn, "Lettura dell’allegato per la verifica sicurezza…");
                 var extraction = await AttachmentTextExtractor.ExtractAsync(saved.Value, AttachmentTextExtractor.WholeDocumentChars, AnalysisExtractorTimeout, ct, OcrEnabled);
-                if (extraction.Truncated || extraction.Error != null || extraction.Problem != null || string.IsNullOrWhiteSpace(extraction.Text))
-                    excluded = extraction.Truncated ? "oltre il limite di lettura: nessun testo parziale usato" : "testo non leggibile integralmente";
-                else sources.Add(SecuritySource.Attachment(i, facts.Name, extraction.Text));
+                excluded = SecurityAttachmentPolicy.AfterReading(extraction);
+                if (excluded == null) sources.Add(SecuritySource.Attachment(i, facts.Name, extraction.Text));
             }
             // Not sending a text the profile forbids is policy, not a gap of the check.
-            if (excluded != null) report.Limit("«" + facts.Name + "»: contenuto non incluso nella lettura IA (" + excluded + ").", partial: !forbidden);
+            if (excluded != null) report.Limit(SecurityAttachmentPolicy.LimitText(facts.Name, excluded), partial: !forbidden);
         }
         return sources;
     }
@@ -1656,7 +1595,7 @@ public partial class TaskPaneCoordinator : IDisposable
         }
     }
 
-    private static string HostOf(string url) => Uri.TryCreate(url, UriKind.Absolute, out var uri) ? uri.Host : url;
+    private static string HostOf(string url) => PaneWording.HostOf(url);
 
     /// <summary>The administrator enabled Web Search for the action that started this turn (no question to the user).</summary>
     private bool WebForTurn(LlmProfileConfig profile) => WebSearchAction.Uses(profile, _webActionForTurn);
@@ -2180,9 +2119,7 @@ public partial class TaskPaneCoordinator : IDisposable
     }
 
     // Only Minimo sends typed facts alone; Standard and Esteso send masked text, so raising the level unlocks the action.
-    public const string FactsOnlyMessage =
-        "Questa azione richiede il testo dell'email, che il livello «1 · Minimo» non invia: escono solo fatti estratti in locale. " +
-        "Alzare il livello a «2 · Standard» o usare un profilo locale.";
+    public const string FactsOnlyMessage = PaneWording.FactsOnly;
 
     /// <summary>The action sends whole emails, appointments or contacts: refused at a cards-only exposure level, before any request.</summary>
     private static void EnsureWholeEmails(LlmProfileConfig profile)

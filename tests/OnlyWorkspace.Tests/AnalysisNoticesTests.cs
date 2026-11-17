@@ -74,6 +74,34 @@ public sealed class AnalysisNoticesTests
     }
 
     [Fact]
+    public void NoCandidates_NamesTheScopeAndAppendsTheCoverage() =>
+        Assert.Equal("Nessuna candidata trovata (ultimi 30 giorni). Copertura completa.", AnalysisNotices.NoCandidates("ultimi 30 giorni", "Copertura completa."));
+
+    [Fact]
+    public void StartingEmailUnavailable_DependsOnWhetherAnEmailWasChosen()
+    {
+        Assert.Equal("L'email scelta per questa analisi non è più disponibile (spostata o eliminata).", AnalysisNotices.StartingEmailUnavailable(true));
+        Assert.Equal("Seleziona o apri un'email, poi riprova.", AnalysisNotices.StartingEmailUnavailable(false));
+    }
+
+    [Fact]
+    public void FlowGoalSuffix_AsksForAChronologicalReconstructionWithTheGaps()
+    {
+        Assert.StartsWith(" Ricostruisci in ordine cronologico", AnalysisNotices.FlowGoalSuffix, StringComparison.Ordinal);
+        Assert.Contains("lacune di copertura", AnalysisNotices.FlowGoalSuffix, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void NoneRead_IsAParagraphOfItsOwn() =>
+        Assert.Equal("\n\nNessuna email è stata letta.", AnalysisNotices.NoneRead);
+
+    [Theory]
+    [InlineData(0, "Nessun dato pertinente trovato nelle email lette.")]
+    [InlineData(1, "1 riga per l'obiettivo richiesto. Verifica i valori con i documenti originali prima di usarli.")]
+    [InlineData(4, "4 righe per l'obiettivo richiesto. Verifica i valori con i documenti originali prima di usarli.")]
+    public void TableAnswer_CountsTheRows(int rows, string expected) => Assert.Equal(expected, AnalysisNotices.TableAnswer(rows));
+
+    [Fact]
     public void TableMessage_AddsTheEmailColumnAndBothExports()
     {
         var rows = new List<string[]> { new[] { "Alfa", "10", "[M1]" } };

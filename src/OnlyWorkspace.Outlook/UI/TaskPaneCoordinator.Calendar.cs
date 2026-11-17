@@ -78,7 +78,7 @@ public partial class TaskPaneCoordinator
             }
             if (headers.Count == 0)
             {
-                PostStream(turn, new { type = "stream_chunk", chunk = $"Nessuna candidata trovata ({scopeLabel}). {coverage.Explain()}" });
+                PostStream(turn, new { type = "stream_chunk", chunk = AnalysisNotices.NoCandidates(scopeLabel, coverage.Explain()) });
                 PostStream(turn, new { type = "stream_end", latencyMs = sw.ElapsedMilliseconds, truncated = false, op });
                 return;
             }

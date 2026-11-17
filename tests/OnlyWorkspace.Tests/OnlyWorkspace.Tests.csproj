@@ -90,6 +90,10 @@
     <Compile Include="..\..\src\OnlyWorkspace.Outlook\UI\AnalysisNotices.cs" Link="Outlook\AnalysisNotices.cs" />
     <!-- Results of the structured actions on one email: StructuredEmailReportTests. -->
     <Compile Include="..\..\src\OnlyWorkspace.Outlook\UI\StructuredEmailReport.cs" Link="Outlook\StructuredEmailReport.cs" />
+    <!-- Sender line, email header, badge and notes around an answer: PaneWordingTests. -->
+    <Compile Include="..\..\src\OnlyWorkspace.Outlook\UI\PaneWording.cs" Link="Outlook\PaneWording.cs" />
+    <!-- Unread list, category cards and reusable result of the briefing: BriefingReportTests. -->
+    <Compile Include="..\..\src\OnlyWorkspace.Outlook\UI\BriefingReport.cs" Link="Outlook\BriefingReport.cs" />
     <!-- The extractor runs as its own process; its STA helper is tested here directly: StaThreadTests. -->
     <Compile Include="..\..\src\OnlyWorkspace.AttachmentExtractor\StaThread.cs" Link="Extractor\StaThread.cs" />
   </ItemGroup>
