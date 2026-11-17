@@ -466,35 +466,9 @@ public partial class TaskPaneCoordinator
     /// </summary>
     private List<ChatMessage> WithPriorTurns(IEnumerable<ChatMessage> messages, string userInstruction, int budget)
     {
-        var messagesList = new List<ChatMessage>();
-        var sysMsg = messages.FirstOrDefault(m => m.Role == "system");
-        if (sysMsg != null) messagesList.Add(sysMsg);
-
-        int dataChars = messages.LastOrDefault(m => m.Role == "user")?.Content.Length ?? 0;
-        int historyRoom = Math.Min(ContextBuilder.MaxChars(budget / 3), Math.Max(0, ContextBuilder.MaxChars(budget) - dataChars));
-        var priorTurns = new List<ChatMessage>();
         var active = GetActiveProfile();
         bool compatible = active != null && ConversationPolicy.Matches(_currentConversation, active);
-        for (int i = compatible ? _currentConversation.Messages.Count - 2 : -1; i >= 0; i--)
-        {
-            var prior = _currentConversation.Messages[i];
-            bool fromAssistant = string.Equals(prior.Role, "assistant", StringComparison.OrdinalIgnoreCase);
-            if (!fromAssistant && !string.Equals(prior.Role, "user", StringComparison.OrdinalIgnoreCase)) continue;
-            // The email tables already on screen do not go back to an external provider with every turn.
-            string permitted = prior.ModelContent ?? prior.Content;
-            string content = fromAssistant && active!.IsExternal ? ChatMailDigest.WithoutTables(permitted) : permitted;
-            if (content.Length == 0) continue;
-            if (content.Length > historyRoom) break;
-            historyRoom -= content.Length;
-            priorTurns.Add(fromAssistant ? ChatMessage.Assistant(content) : ChatMessage.User(content));
-        }
-        priorTurns.Reverse();
-        // Providers expect the conversation to open with a user turn.
-        if (priorTurns.Count > 0 && priorTurns[0].Role == "assistant") priorTurns.RemoveAt(0);
-        messagesList.AddRange(priorTurns);
-
-        messagesList.Add(messages.LastOrDefault(m => m.Role == "user") ?? ChatMessage.User(userInstruction));
-        return messagesList;
+        return PriorTurns.Build(messages.ToList(), userInstruction, budget, compatible ? _currentConversation.Messages : null, compatible && active!.IsExternal);
     }
 
     private async Task SaveConversationAsync()

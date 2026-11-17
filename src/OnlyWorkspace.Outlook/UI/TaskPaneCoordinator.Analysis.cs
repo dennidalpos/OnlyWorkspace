@@ -84,17 +84,12 @@ public partial class TaskPaneCoordinator
             (Copies == 0 ? string.Empty : Copies == 1 ? "1 copia dello stesso messaggio in un'altra cartella non è stata letta di nuovo. "
                 : $"{Copies} copie dello stesso messaggio in altre cartelle non sono state lette di nuovo. ") +
             (MetadataIncomplete ? "Intestazioni della catena incomplete. " : "") + (FactsIncomplete ? "Estrazione dei fatti incompleta. " : "") +
-            ConversationNotice(ConversationRead, ConversationTotal) +
+            AnalysisNotices.Conversation(ConversationRead, ConversationTotal) +
             "La cache Outlook può coprire solo parte della cassetta.";
     }
 
-    /// <summary>The Outlook conversation was cut to its most recent messages: say how many were left out.</summary>
-    private static string ConversationNotice(int read, int total) => total > read
-        ? $"La conversazione ha {total} messaggi: letti i {read} più recenti, {total - read} più vecchi esclusi. "
-        : string.Empty;
-
     private static string ConversationNotice(SelectedEmailInfo email) =>
-        email.ThreadMessages is { Count: > 0 } thread ? ConversationNotice(thread.Count, email.ConversationTotal) : string.Empty;
+        email.ThreadMessages is { Count: > 0 } thread ? AnalysisNotices.Conversation(thread.Count, email.ConversationTotal) : string.Empty;
 
     /// <summary>
     /// Emails read by the latest analysis: its follow-up questions are answered on them without reading the mailbox
@@ -253,7 +248,7 @@ public partial class TaskPaneCoordinator
             (coverage.Copies > 0 ? $"{coverage.Copies} copie dello stesso messaggio in altre cartelle non sono state lette di nuovo. " : string.Empty) +
             $"{coverage.FoldersFailed} cartelle non accessibili, {coverage.Unavailable} originali non disponibili, " +
             $"{coverage.UnreadAttachments} allegati non leggibili, {reading.TooLong.Count} email troppo lunghe per il profilo. " +
-            ExposureNotice(reading) +
+            AnalysisNotices.Exposure(reading) +
             (attachments ? string.Empty : "Il contenuto degli allegati non è stato cercato con questo profilo. ") +
             (coverage.MetadataIncomplete ? "Intestazioni della catena incomplete. " : "") + (coverage.FactsIncomplete ? "Estrazione dei fatti incompleta. " : "") +
             "La pertinenza semantica che non compare nel testo cercabile può sfuggire alla ricerca locale.";
@@ -284,11 +279,6 @@ public partial class TaskPaneCoordinator
         coverage.Unavailable += reading.Missing.Count;
         return reading;
     }
-
-    /// <summary>What the profile's exposure level kept out of the request, for the coverage line; empty when nothing.</summary>
-    private static string ExposureNotice(EvidenceReading reading) =>
-        (reading.NoFacts.Count > 0 ? $"{reading.NoFacts.Count} email senza fatti locali non inviate (il livello di esposizione non invia originali). " : string.Empty) +
-        (reading.OverBudget.Count > 0 ? $"{reading.OverBudget.Count} email oltre il limite di dati del livello di esposizione non inviate. " : string.Empty);
 
     /// <summary>
     /// The single request on the pack: structured answer, citations checked against each cited email.
@@ -949,7 +939,7 @@ public partial class TaskPaneCoordinator
                             answerText = (parsed.Rows.Count == 0 ? "Nessun dato pertinente trovato nelle email lette."
                                 : $"{(parsed.Rows.Count == 1 ? "1 riga" : parsed.Rows.Count + " righe")} per l'obiettivo richiesto. Verifica i valori con i documenti originali prima di usarli.") +
                                 "\n\n" + MailAnswerRenderer.Coverage(pack, parsed);
-                            if (parsed.Rows.Count > 0) table = AnalysisTableMessage(parsed.Columns, MailAnswerRenderer.TableRows(parsed, pack));
+                            if (parsed.Rows.Count > 0) table = AnalysisNotices.TableMessage(parsed.Columns, MailAnswerRenderer.TableRows(parsed, pack));
                         }
                         else
                         {
@@ -1007,22 +997,6 @@ public partial class TaskPaneCoordinator
         }
     }
 
-    /// <summary>Table of the analysis for the pane, copyable as TSV and saved as CSV with the list separator of the user's locale.</summary>
-    private static object AnalysisTableMessage(IReadOnlyList<string> columns, List<string[]> rows)
-    {
-        var headers = columns.Concat(new[] { "Email" }).ToArray();
-        var separator = System.Globalization.CultureInfo.CurrentCulture.TextInfo.ListSeparator == ";" ? ';' : ',';
-        return new
-        {
-            documentType = "analisi",
-            fields = Array.Empty<string[]>(),
-            lineHeaders = headers,
-            lines = rows,
-            tsv = AnalysisTable.ToDelimited(headers, rows, '\t', quote: false),
-            csv = AnalysisTable.ToDelimited(headers, rows, separator, quote: true)
-        };
-    }
-
     /// <summary>Closing of an analysis: counts, coverage, archive still being built, originals no longer found.</summary>
     private async Task<string> AnalysisFooterAsync(AnalysisRequest request, AnalysisStats stats, MailSearchCoverage coverage,
         IReadOnlyList<AnalysisEmail> emails, int missing, List<string> missingFlowMail)
@@ -1039,9 +1013,7 @@ public partial class TaskPaneCoordinator
             if (emails.Any(e => e.ArchiveId > 0) && CurrentArchive is { } missingIndexer) await missingIndexer.ReportMissingAsync();
             footer += request.Kind == "flow"
                 ? FlowAnalysisReport.MissingOriginals(missing, missingFlowMail)
-                : missing == 1
-                    ? "\n1 email non è più dove l'archivio l'aveva trovata (spostata o eliminata) e non è stata letta: l'archivio la cerca di nuovo nei prossimi momenti liberi."
-                    : $"\n{missing} email non sono più dove l'archivio le aveva trovate (spostate o eliminate) e non sono state lette: l'archivio le cerca di nuovo nei prossimi momenti liberi.";
+                : AnalysisNotices.MissingFromArchive(missing);
         }
         return footer;
     }

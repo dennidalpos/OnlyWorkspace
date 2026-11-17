@@ -84,6 +84,12 @@
     <Compile Include="..\..\src\OnlyWorkspace.Outlook\UI\ActionItemSaves.cs" Link="Outlook\ActionItemSaves.cs" />
     <!-- Wording of the Appuntamenti e scadenze result: CalendarScanReportTests. -->
     <Compile Include="..\..\src\OnlyWorkspace.Outlook\UI\CalendarScanReport.cs" Link="Outlook\CalendarScanReport.cs" />
+    <!-- Prior turns sent with a chat question: PriorTurnsTests. -->
+    <Compile Include="..\..\src\OnlyWorkspace.Outlook\UI\PriorTurns.cs" Link="Outlook\PriorTurns.cs" />
+    <!-- Notices and table message that close a mailbox analysis: AnalysisNoticesTests. -->
+    <Compile Include="..\..\src\OnlyWorkspace.Outlook\UI\AnalysisNotices.cs" Link="Outlook\AnalysisNotices.cs" />
+    <!-- Results of the structured actions on one email: StructuredEmailReportTests. -->
+    <Compile Include="..\..\src\OnlyWorkspace.Outlook\UI\StructuredEmailReport.cs" Link="Outlook\StructuredEmailReport.cs" />
     <!-- The extractor runs as its own process; its STA helper is tested here directly: StaThreadTests. -->
     <Compile Include="..\..\src\OnlyWorkspace.AttachmentExtractor\StaThread.cs" Link="Extractor\StaThread.cs" />
   </ItemGroup>

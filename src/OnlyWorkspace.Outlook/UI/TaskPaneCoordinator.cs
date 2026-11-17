@@ -905,42 +905,17 @@ public partial class TaskPaneCoordinator : IDisposable
         ExecuteStructuredEmailAsync("action_items", target, "Attività e appuntamenti", "Ricerca di attività e appuntamenti…",
             (body, email) => PromptCatalog.CreateActionItemsPrompt(body, ReferenceDateOf(email.ReceivedTime)), PromptCatalog.ActionItemsJsonSchema, RenderActionItems);
 
-    private static (string Text, object? Extra) RenderActionItems(string json, SelectedEmailInfo email)
-    {
-        var items = ActionItemParser.Parse(json);
-        var source = $"Da email «{email.Subject}» di {SenderOf(email)} del {email.ReceivedTime:dd/MM/yyyy}.";
-        var sb = new StringBuilder();
-        if (items.Diagnostics.IsPartial) sb.AppendLine(items.Diagnostics.Describe());
-        if (items.Count == 0)
-        {
-            sb.Append("Nessuna attività o appuntamento individuato nell'email.");
-        }
-        else
-        {
-            sb.Append(items.Count == 1 ? "Trovata 1 voce" : $"Trovate {items.Count} voci").AppendLine(": apri la bozza, verifica i dati e salvala in Outlook.");
-            foreach (var item in items)
-            {
-                sb.Append("- **").Append(item.IsAppointment ? "Appuntamento" : "Attività").Append("** — ").Append(item.Title).Append(" (").Append(item.WhenLabel).AppendLine(")");
-            }
-        }
+    private static (string Text, object? Extra) RenderActionItems(string json, SelectedEmailInfo email) =>
+        StructuredEmailReport.ActionItems(json, EmailSourceOf(email));
 
-        var payload = items.Select(i => new
-        {
-            kind = i.Kind,
-            title = i.Title,
-            when = i.WhenLabel,
-            due = i.Due?.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture),
-            start = i.Start?.ToString("yyyy-MM-ddTHH:mm", System.Globalization.CultureInfo.InvariantCulture),
-            end = i.End?.ToString("yyyy-MM-ddTHH:mm", System.Globalization.CultureInfo.InvariantCulture),
-            allDay = i.AllDay,
-            location = i.Location,
-            notes = string.IsNullOrWhiteSpace(i.Notes) ? source : i.Notes + "\n\n" + source,
-            source = new { entryId = email.EntryId, storeId = email.StoreId, label = email.Subject }
-        }).ToList();
-        var export = ListExport(new[] { "Tipo", "Titolo", "Quando", "Luogo", "Note" },
-            items.Select(i => new[] { i.Kind, i.Title, i.WhenLabel, i.Location, i.Notes }), items.Diagnostics);
-        return (sb.ToString(), new { items = payload, export });
-    }
+    private static EmailSource EmailSourceOf(SelectedEmailInfo email) => new()
+    {
+        Subject = email.Subject,
+        Sender = SenderOf(email),
+        Received = email.ReceivedTime,
+        EntryId = email.EntryId,
+        StoreId = email.StoreId
+    };
 
     public Task ExecuteDataExtractionAsync() => WithWebAction("extract_data", () => ExecuteDataExtractionAsync(null));
 
@@ -949,26 +924,8 @@ public partial class TaskPaneCoordinator : IDisposable
         ExecuteStructuredEmailAsync("extract_data", target, "Estrazione dati", "Estrazione di importi, riferimenti e scadenze…",
             (body, _) => PromptCatalog.CreateStructuredDataPrompt(body), PromptCatalog.StructuredDataJsonSchema, RenderStructuredData);
 
-    private static (string Text, object? Extra) RenderStructuredData(string json, SelectedEmailInfo email)
-    {
-        var data = StructuredDataParser.Parse(json);
-        if (data.IsEmpty) return ((data.Diagnostics.IsPartial ? data.Diagnostics.Describe() + "\n" : "") + "Nessun dato commerciale strutturato valido individuato nell'email.", null);
-
-        var text = $"Dati estratti ({data.DocumentType}): {data.Fields.Count} campi" + (data.Lines.Count > 0 ? $", {data.Lines.Count} righe" : "") +
-                   ". Verifica i valori con l'email originale prima di usarli.";
-        if (data.Diagnostics.IsPartial) text = data.Diagnostics.Describe() + "\n" + text;
-        var separator = System.Globalization.CultureInfo.CurrentCulture.TextInfo.ListSeparator == ";" ? ';' : ',';
-        var table = new
-        {
-            documentType = data.DocumentType,
-            fields = data.Fields.Select(f => new[] { f.Key, f.Value }).ToList(),
-            lineHeaders = ExtractedData.LineHeaders,
-            lines = data.Lines,
-            tsv = data.ToTsv(),
-            csv = data.ToCsv(separator)
-        };
-        return (text, new { table });
-    }
+    private static (string Text, object? Extra) RenderStructuredData(string json, SelectedEmailInfo email) =>
+        StructuredEmailReport.StructuredData(json);
 
     /// <summary>
     /// Shared flow for JSON operations on one email: resolve, confirm external send, CompleteStructuredAsync,
@@ -1082,7 +1039,7 @@ public partial class TaskPaneCoordinator : IDisposable
             }
             var (text, extra) = render(json, email);
             PostStream(turn, new { type = "stream_chunk", chunk = text });
-            await RecordActionInHistoryAsync(activeProfile, actionName + ": " + email.Subject, StructuredHistoryText(text, extra), ct, HistoryRefOf(email), actionName);
+            await RecordActionInHistoryAsync(activeProfile, actionName + ": " + email.Subject, StructuredEmailReport.HistoryText(text, extra), ct, HistoryRefOf(email), actionName);
             if (attachmentNotice.Length > 0) PostStream(turn, new { type = "stream_chunk", chunk = attachmentNotice });
 
             sw.Stop();
@@ -1114,23 +1071,6 @@ public partial class TaskPaneCoordinator : IDisposable
             DisposeClient(client);
             EndOperation(cts);
         }
-    }
-
-    /// <summary>Keep every extracted row in history too, with a fence email data cannot terminate.</summary>
-    private static string StructuredHistoryText(string text, object? extra)
-    {
-        if (extra == null) return text;
-        var table = extra.GetType().GetProperty("table")?.GetValue(extra) ?? extra.GetType().GetProperty("export")?.GetValue(extra);
-        var tsv = table?.GetType().GetProperty("tsv")?.GetValue(table) as string;
-        if (string.IsNullOrEmpty(tsv)) return text;
-        int longest = 0, run = 0;
-        foreach (char c in tsv!)
-        {
-            run = c == '`' ? run + 1 : 0;
-            longest = Math.Max(longest, run);
-        }
-        string fence = new('`', Math.Max(3, longest + 1));
-        return text + "\n\n" + fence + "text\n" + tsv + "\n" + fence;
     }
 
     /// <summary>CSV goes to the user's Downloads folder (no file dialog: owner-less dialogs can open behind Outlook).</summary>
@@ -1491,19 +1431,8 @@ public partial class TaskPaneCoordinator : IDisposable
         }
     }
 
-    /// <summary>A result list as clipboard text (TSV) and CSV, for the same Copia/Salva CSV buttons of the tables; null when empty.</summary>
-    private static object? ListExport(string[] headers, IEnumerable<string[]> rows, ExtractionDiagnostics? diagnostics = null)
-    {
-        var list = rows.ToList();
-        if (list.Count == 0 && diagnostics?.IsPartial != true) return null;
-        var separator = System.Globalization.CultureInfo.CurrentCulture.TextInfo.ListSeparator == ";" ? ';' : ',';
-        string warning = diagnostics?.IsPartial == true ? diagnostics.Describe() : string.Empty;
-        return new
-        {
-            tsv = (warning.Length > 0 ? AnalysisTable.ToDelimited(new[] { "Copertura", warning }, Array.Empty<string[]>(), '\t', quote: false) : "") + AnalysisTable.ToDelimited(headers, list, '\t', quote: false),
-            csv = (warning.Length > 0 ? AnalysisTable.ToDelimited(new[] { "Copertura", warning }, Array.Empty<string[]>(), separator, quote: true) : "") + AnalysisTable.ToDelimited(headers, list, separator, quote: true)
-        };
-    }
+    private static object? ListExport(string[] headers, IEnumerable<string[]> rows, ExtractionDiagnostics? diagnostics = null) =>
+        StructuredEmailReport.ListExport(headers, rows, diagnostics);
 
     public Task ExecuteSecurityCheckAsync() => WithWebAction("security", () => ExecuteSecurityCheckAsync(null));
 
