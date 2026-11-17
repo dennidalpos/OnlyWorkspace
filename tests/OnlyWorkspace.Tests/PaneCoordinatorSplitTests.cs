@@ -17,6 +17,21 @@ public sealed class PaneCoordinatorSplitTests
             Assert.DoesNotContain("ArchiveIndexer.Current", File.ReadAllText(file));
     }
 
+    // The coordinator needs a live Outlook host, so the real send is exercised by tests/scripts/PanePolicy.Tests.ps1 (PS 5.1).
+    // This guard keeps the pipeline in step with it: ef9c337 once dropped the summary chunk while extracting CalendarScanReport (#271).
+    [Fact]
+    public void CalendarScan_PostsItsSummaryAsAStreamChunk_BeforeTheItemsAreAppended()
+    {
+        string source = File.ReadAllText(Path.Combine(TestBuildPaths.RepositoryRoot, "src", "OnlyWorkspace.Outlook", "UI", "TaskPaneCoordinator.Calendar.cs"));
+        int summary = source.IndexOf("CalendarScanReport.Summary(", StringComparison.Ordinal);
+        int post = source.IndexOf("type = \"stream_chunk\", chunk = sb.ToString()", summary, StringComparison.Ordinal);
+        int items = source.IndexOf("CalendarScanReport.AppendItems(sb", StringComparison.Ordinal);
+
+        Assert.True(summary >= 0, "The calendar scan no longer builds its summary with CalendarScanReport.Summary.");
+        Assert.True(post > summary, "The calendar scan summary is built but never posted as a stream_chunk.");
+        Assert.True(items > post, "The items are appended to the summary before it is posted: the chunk would carry them twice.");
+    }
+
     [Fact]
     public void MailInputTracker_KeepsOneEntryPerMessage_AndResolvesTheMissingMessageIdOnce()
     {
