@@ -150,126 +150,32 @@ public sealed partial class MainConfigForm
         if (_diagnosis.ProbeRunning) SetTestResult(text, tone, light ?? StateForTone(tone));
     }
 
-    /// <summary>
-    /// The probing stage of «Diagnosi», after the connection answered. The results of a run whose profile changed meanwhile
-    /// (selection, model, endpoint, key) are dropped: a late answer never paints another configuration.
-    /// </summary>
-    private async Task RunProbesAsync(ProfileItem item)
+    private ProbeFlow? _probeFlow;
+    private ProbeFlow Probes => _probeFlow ??= new ProbeFlow(new ProbeHost(this));
+
+    /// <summary>The probing stage of «Diagnosi», after the connection answered (#177: the flow lives in <see cref="ProbeFlow"/>).</summary>
+    private Task RunProbesAsync(ProfileItem item) => Probes.RunAsync(item.Profile);
+
+    private sealed class ProbeHost : IProbeHost
     {
-        if (_isLoading || _diagnosis.ProbeRunning) return;
-        var p = item.Profile;
-        if (string.IsNullOrWhiteSpace(p.Model) || string.IsNullOrWhiteSpace(p.BaseUrl))
+        private readonly MainConfigForm _f;
+        public ProbeHost(MainConfigForm form) { _f = form; }
+        public bool IsLoading => _f._isLoading;
+        public bool IsClosed => _f.IsDisposed;
+        public DiagnosisRun Diagnosis => _f._diagnosis;
+        public bool IsSelected(LlmProfileConfig profile) => _f._lstProfiles.SelectedItem is ProfileItem item && ReferenceEquals(item.Profile, profile);
+        public string CapabilityKey(LlmProfileConfig profile) => MainConfigForm.CapabilityKey(profile);
+        public string? SecretFor(string profileId) => _f.Profiles.SecretFor(profileId);
+        public string? WebSecretFor(string profileId) => _f.Profiles.WebSecretFor(profileId);
+        public void SetStatus(string text, Tone tone, StatusLight? light = null) => _f.SetProbeStatus(text, tone, light);
+        public void RecordResult(LlmProfileConfig profile, CapabilityProbeResult result)
         {
-            SetProbeStatus("Inserisci indirizzo e modello prima della diagnosi.", Tone.Warning);
-            return;
+            CacheFor(profile).Record(result);
+            _f.MarkDirty();
+            _f.RefreshCapabilityRows();
         }
-
-        string key = CapabilityKey(p);
-        string? secret = Profiles.SecretFor(p.Id);
-        string? webSecret = Profiles.WebSecretFor(p.Id);
-        bool webAvailable = ProviderCatalog.Get(p.Type).WebSearch != WebSearchMode.None;
-        var kinds = new List<ProbeKind> { ProbeKind.Text, ProbeKind.Json, ProbeKind.Reasoning };
-        if (webAvailable) kinds.Add(ProbeKind.Web);
-
-        bool Current() => !IsDisposed && ReferenceEquals(_lstProfiles.SelectedItem, item) && CapabilityKey(p) == key &&
-                          secret == Profiles.SecretFor(p.Id);
-
-        var run = new CancellationTokenSource();
-        _diagnosis.BeginProbe(run);
-        int done = 0;
-        var progress = new Progress<CapabilityProbeResult>(result =>
-        {
-            done++;
-            if (!Current()) return;
-            CacheFor(p).Record(result);
-            MarkDirty();
-            RefreshCapabilityRows();
-            if (result.Kind == ProbeKind.Web) ShowWebSupport(p, result.Outcome, result.Detail);
-            // Posted: a callback may land after the run ended, and must not overwrite its final status.
-            if (_diagnosis.IsProbe(run)) SetProbeStatus($"Prova {done} di {kinds.Count}: {ProbeName(result.Kind)} {OutcomeWord(result.Outcome)}.", Tone.Warning, StatusLight.Working);
-        });
-
-        var plain = Probing(p, reasoning: false);
-        var thinking = Probing(p, reasoning: true);
-        ILlmClient? client = null, reasoningClient = null;
-        try
-        {
-            client = LlmClientFactory.CreateClient(plain, secret);
-            reasoningClient = LlmClientFactory.CreateClient(thinking, secret);
-            SetProbeStatus($"Prove in corso (0 di {kinds.Count})…", Tone.Warning, StatusLight.Working);
-            Func<CancellationToken, Task<(bool?, string)>>? web = webAvailable ? ct => WebProbeAsync(p, secret, webSecret, ct) : null;
-            await ModelCapabilityProbe.RunAsync(client, reasoningClient, kinds, web, progress, run.Token);
-            if (Current())
-            {
-                SetProbeStatus("Diagnosi completata. Gli esiti si salvano con Salva.", Tone.Success);
-                LogActivity($"[CAPACITÀ] Profilo '{p.Id}', modello '{p.Model}': diagnosi completata.");
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            if (Current()) SetProbeStatus($"Diagnosi interrotta: {done} di {kinds.Count} esiti conservati.", Tone.Warning);
-        }
-        catch (Exception ex)
-        {
-            if (Current()) SetProbeStatus("Diagnosi non avviata: " + ErrorText.For(ex), Tone.Danger);
-        }
-        finally
-        {
-            (client as IDisposable)?.Dispose();
-            (reasoningClient as IDisposable)?.Dispose();
-            _diagnosis.EndProbe(run);
-            run.Dispose();
-        }
-    }
-
-    private static string ProbeName(ProbeKind kind) => kind switch
-    {
-        ProbeKind.Text => "risposta testuale",
-        ProbeKind.Json => "JSON strutturato",
-        ProbeKind.Reasoning => "ragionamento",
-        _ => "Ricerca web"
-    };
-
-    private static string OutcomeWord(ProbeOutcome outcome) => outcome switch
-    {
-        ProbeOutcome.Supported => "riuscita",
-        ProbeOutcome.Unsupported => "non supportata",
-        _ => "inconcludente"
-    };
-
-    /// <summary>
-    /// The profile as configured, without the cached capabilities; the reasoning probe allows thinking, the
-    /// others do not, so they stay short. Timeouts are bounded by the probe's own 60 seconds.
-    /// </summary>
-    private static LlmProfileConfig Probing(LlmProfileConfig p, bool reasoning)
-    {
-        var copy = JsonSerializer.Deserialize<LlmProfileConfig>(JsonSerializer.Serialize(p))!;
-        copy.ModelCapabilities = null;
-        copy.DisableThinking = !reasoning;
-        // Same temperature as real use: the profile's for text and reasoning, 0 for the structured probe (set by the client).
-        return copy;
-    }
-
-    /// <summary>The real web check, with only what it needs of the profile (no exposure, actions or cached capabilities).</summary>
-    private static async Task<(bool?, string)> WebProbeAsync(LlmProfileConfig profile, string? secret, string? webSecret, CancellationToken cancellationToken)
-    {
-        var check = new LlmProfileConfig
-        {
-            Type = profile.Type,
-            BaseUrl = profile.BaseUrl,
-            Model = profile.Model,
-            AuthType = profile.AuthType,
-            External = profile.External,
-            UseSystemProxy = profile.UseSystemProxy
-        };
-        using var search = WebSearchService.ForCheck(check, secret, webSecret);
-        var support = await search.CheckSupportAsync(cancellationToken);
-        return support switch
-        {
-            WebSearchSupport.Supported => (true, "Ricerca di prova eseguita dal servizio."),
-            WebSearchSupport.Unsupported => (false, "Il modello ha risposto senza cercare sul web."),
-            _ => (null, "Verifica non conclusa: " + (search.LastCheckError ?? "nessuna ricerca eseguita"))
-        };
+        public void ShowWebSupport(LlmProfileConfig profile, ProbeOutcome outcome, string detail) => _f.ShowWebSupport(profile, outcome, detail);
+        public void LogActivity(string message) => _f.LogActivity(message);
     }
 
     /// <summary>A diagnosis of the profile, a manual change in Connessione: the earlier outcomes no longer apply.</summary>

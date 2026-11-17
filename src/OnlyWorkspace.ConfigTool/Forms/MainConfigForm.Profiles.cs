@@ -717,61 +717,42 @@ public sealed partial class MainConfigForm
         UpdateWebActionsEnabled();
     }
 
+    private ConnectionCheckFlow? _connectionFlow;
+    private ConnectionCheckFlow Connection => _connectionFlow ??= new ConnectionCheckFlow(new ConnectionCheckHost(this),
+        (profile, key) => (ConnectionClientFactory ?? ((pr, k) => LlmClientFactory.CreateClient(pr, secret: k)))(profile, key));
+
+    private sealed class ConnectionCheckHost : IConnectionCheckHost
+    {
+        private readonly MainConfigForm _f;
+        public ConnectionCheckHost(MainConfigForm form) { _f = form; }
+        public bool IsClosed => _f.IsDisposed;
+        public DiagnosisRun Diagnosis => _f._diagnosis;
+        public bool IsSelected(LlmProfileConfig profile) => _f._lstProfiles.SelectedItem is ProfileItem item && ReferenceEquals(item.Profile, profile);
+        public void SetResult(string text, Tone tone, StatusLight? light = null) => _f.SetTestResult(text, tone, light);
+        public Task<string?> LoadLimitsAsync(LlmProfileConfig profile, System.Threading.CancellationToken cancellationToken) => _f.LoadModelLimitsCoreAsync(profile, cancellationToken);
+        public void LogActivity(string message) => _f.LogActivity(message);
+    }
+
     private async void BtnTestProfile_Click(object? sender, EventArgs e)
     {
         if (_diagnosis.CancelRunning()) return;
         if (_lstProfiles.SelectedItem is not ProfileItem item) return;
         UpdateSelectedProfileFromUi();
         var p = item.Profile;
-        string identity = ConversationPolicy.Key(p);
         string? secret = _inMemorySecrets.TryGetValue(p.Id, out var s) ? s : null;
-        using var run = new InteractiveRequest();
-        _diagnosis.BeginConnection(run);
         string label = _btnTestProfile.Text;
         _btnTestProfile.Text = "Annulla diagnosi";
-        SetTestResult("Verifica della connessione in corso (massimo 10 secondi)…", Tone.Warning, StatusLight.Working);
-        bool healthy = false;
-        bool Current() => !IsDisposed && ReferenceEquals(_lstProfiles.SelectedItem, item) && identity == ConversationPolicy.Key(p);
-        try
-        {
-            var client = (ConnectionClientFactory ?? ((profile, key) => LlmClientFactory.CreateClient(profile, secret: key)))(p, secret);
-            try
-            {
-                var sw = Stopwatch.StartNew();
-                var health = await client.CheckHealthAsync(run.Token);
-                run.Token.ThrowIfCancellationRequested();
-                if (!Current()) return;
-                if (health.IsHealthy)
-                {
-                    SetTestResult($"OK ({sw.ElapsedMilliseconds} ms, {health.AvailableModels.Count} modelli)", Tone.Success);
-                    await LoadModelLimitsCoreAsync(p, run.Token);
-                    run.Token.ThrowIfCancellationRequested();
-                    healthy = Current();
-                }
-                else SetTestResult("Fallito: " + health.ErrorMessage, Tone.Danger);
-            }
-            finally { (client as IDisposable)?.Dispose(); }
-        }
-        catch (OperationCanceledException)
-        {
-            if (Current()) SetTestResult(run.TimedOut ? "Tempo massimo di 10 secondi superato." : "Diagnosi annullata.", Tone.Warning);
-        }
-        catch (Exception ex)
-        {
-            if (Current()) SetTestResult("Errore: " + ErrorText.For(ex), Tone.Danger);
-            if (!IsDisposed) LogActivity("[TEST ERROR] " + ex.Message);
-        }
-        finally { _diagnosis.EndConnection(run); }
         try
         {
             // The connection answered: the same button goes on with the capability probes (no second command, no extra tick).
-            if (healthy && !IsDisposed) await RunProbesAsync(item);
+            if (await Connection.RunAsync(p, secret) && !IsDisposed) await RunProbesAsync(item);
         }
         finally
         {
             if (!IsDisposed) { _btnTestProfile.Text = label; _btnTestProfile.Enabled = !_isLocked; }
         }
     }
+
     /// <summary>After a failed validation: the page and profile of the error, with its field focused (#241).</summary>
     internal void ShowIssue(ValidationIssue issue)
     {
