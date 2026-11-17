@@ -207,67 +207,25 @@ public partial class TaskPaneCoordinator
             var items = ActionItemMerger.Merge(found, DateTime.Now, datedOnly: true);
             var inOutlook = InOutlook(items);
 
-            var sb = new StringBuilder();
-            sb.Append(stopped ? "Analisi interrotta: " : string.Empty)
-              .Append($"lette {read} email su {headers.Count} ({scopeLabel}), ")
-              .Append(CalendarScanSummary.Request(pack.Count, requested, stopped));
-            sb[0] = char.ToUpperInvariant(sb[0]);
-            if (!stopped)
-                sb.Append(items.Count == 0 ? "Nessuna voce futura con una data certa."
-                    : items.Count == 1 ? "Trovata 1 voce: controllala e aggiungila a Outlook."
-                    : $"Trovate {items.Count} voci: controlla le date, seleziona quelle giuste e aggiungile a Outlook.");
-            int existing = items.Count(inOutlook);
-            if (existing > 0) sb.Append(existing == 1 ? " 1 è già in Outlook e non è selezionata." : $" {existing} sono già in Outlook e non sono selezionate.");
-            int unverified = items.Count(i => i.Unverified.Count > 0);
-            if (unverified > 0) sb.Append(unverified == 1 ? " 1 voce ha una data non verificata nell'email citata e non è selezionata." : $" {unverified} voci hanno una data non verificata nell'email citata e non sono selezionate.");
-            sb.Append(' ').Append(coverage.Explain());
-            if (extractionDiagnostics.IsPartial) sb.Append(' ').Append(extractionDiagnostics.Describe());
-            if (tooLong > 0) sb.Append(tooLong == 1 ? " 1 email non letta: è troppo lunga per il contesto del profilo in uso." : $" {tooLong} email non lette: sono troppo lunghe per il contesto del profilo in uso.");
-            if (noFacts > 0) sb.Append(noFacts == 1 ? " 1 email senza fatti locali utilizzabili." : $" {noFacts} email senza fatti locali utilizzabili.");
-            var unreadDocuments = documents.Documents.Count(d => !d.WasRead);
-            if (unreadDocuments > 0) sb.Append($" {unreadDocuments} allegati non letti; il loro contenuto può mancare dal risultato.");
-            sb.Append(webNote);
-            PostStream(turn, new { type = "stream_chunk", chunk = sb.ToString() });
+            var sb = new StringBuilder(CalendarScanReport.Summary(new CalendarScanReport.Outcome
+            {
+                Stopped = stopped,
+                Read = read,
+                Total = headers.Count,
+                ScopeLabel = scopeLabel,
+                Candidates = pack.Count,
+                Requested = requested,
+                TooLong = tooLong,
+                NoFacts = noFacts,
+                UnreadDocuments = documents.Documents.Count(d => !d.WasRead),
+                Coverage = coverage.Explain(),
+                WebNote = webNote,
+                Diagnostics = extractionDiagnostics
+            }, items, inOutlook));
+            int unverified = CalendarScanReport.Unverified(items);
 
-            string Origin(ExtractedActionItem i)
-            {
-                if (i.Source < 1 || i.Source > pack.Count) return "email non indicata";
-                var m = pack.Items[i.Source - 1].Mail;
-                return $"[M{i.Source}] {m.Received:dd/MM/yyyy} · {Truncate(m.Subject, 60)}";
-            }
-            // The email each item comes from, shown on its card and openable from there (A121).
-            object? SourceOf(ExtractedActionItem i)
-            {
-                if (i.Source < 1 || i.Source > pack.Count) return null;
-                var m = pack.Items[i.Source - 1].Mail;
-                return new { label = $"[M{i.Source}] {Truncate(m.Subject, 60)}", meta = m.Received.ToString("dd/MM/yyyy", System.Globalization.CultureInfo.InvariantCulture), entryId = m.EntryId, storeId = m.StoreId };
-            }
-
-            var payload = items.Select(i => new
-            {
-                kind = i.Kind,
-                title = i.Title,
-                when = i.WhenLabel,
-                due = i.Due?.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture),
-                start = i.Start?.ToString("yyyy-MM-ddTHH:mm", System.Globalization.CultureInfo.InvariantCulture),
-                end = i.End?.ToString("yyyy-MM-ddTHH:mm", System.Globalization.CultureInfo.InvariantCulture),
-                allDay = i.AllDay,
-                location = i.Location,
-                notes = i.Notes,
-                source = SourceOf(i),
-                dateText = i.DateText,
-                selectable = true,
-                exists = inOutlook(i),
-                verified = i.Unverified.Count == 0,
-                warning = i.Unverified.Count > 0 ? "Non verificata: " + string.Join("; ", i.Unverified) : null
-            }).ToList();
-            string Check(ExtractedActionItem i) => i.Unverified.Count == 0 ? string.Empty : "⚠ " + string.Join("; ", i.Unverified);
-
-            foreach (var i in items)
-            {
-                sb.AppendLine().Append("- **").Append(i.IsAppointment ? "Appuntamento" : "Attività").Append("** — ").Append(i.Title).Append(" (").Append(i.WhenLabel).Append(") — ").Append(Origin(i));
-                if (i.Unverified.Count > 0) sb.Append(" — ").Append(Check(i));
-            }
+            var payload = CalendarScanReport.Payload(items, pack, inOutlook);
+            CalendarScanReport.AppendItems(sb, items, pack);
             if (items.Count > 0 || stopped || webNote.Length > 0 || extractionDiagnostics.IsPartial)
             {
                 // Source labels and scope stay visible locally, without re-entering a subsequent Minimal request.
@@ -289,7 +247,7 @@ public partial class TaskPaneCoordinator
             }
 
             var export = ListExport(new[] { "Tipo", "Titolo", "Quando", "Luogo", "Note", "Email", "Verifica" },
-                items.Select(i => new[] { i.IsAppointment ? "Appuntamento" : "Scadenza", i.Title, (i.IsAppointment ? i.Start : i.Due)?.ToString(i.AllDay || !i.IsAppointment ? "dd/MM/yyyy" : "dd/MM/yyyy HH:mm") ?? string.Empty, i.Location, i.Notes, Origin(i), Check(i) }), extractionDiagnostics);
+                CalendarScanReport.ExportRows(items, pack), extractionDiagnostics);
 
             sw.Stop();
             PostStream(turn, new { type = "stream_end", latencyMs = sw.ElapsedMilliseconds, truncated = false, op, items = payload, export });
