@@ -764,7 +764,7 @@ try {
     Assert-Pass ($rendered.Item2.table.fields.Count -eq 41 -and $rendered.Item2.table.lines.Count -eq 201) 'Pane discarded valid table entries'
     Assert-Pass ($rendered.Item1.Contains('Risultato parziale') -and $rendered.Item1.Contains('2 voci')) 'Pane lost validation diagnostics'
     Assert-Pass ($rendered.Item2.table.csv.Contains('row201') -and $rendered.Item2.table.tsv.Contains("'=UNTRUSTED()")) 'Pane export lost final row or formula protection'
-    $historyText = Call-Static 'StructuredHistoryText' @($rendered.Item1, $rendered.Item2)
+    $historyText = $type.Assembly.GetType('OnlyWorkspace.Outlook.UI.StructuredEmailReport').GetMethod('HistoryText', [Reflection.BindingFlags]'Public,NonPublic,Static').Invoke($null, @($rendered.Item1, $rendered.Item2.PSObject.BaseObject))
     $config.History.Enabled = $true
     Set-Field '_config' $config
     $conversation = [OnlyWorkspace.Core.Privacy.ConversationPolicy]::Create($llmProfile)

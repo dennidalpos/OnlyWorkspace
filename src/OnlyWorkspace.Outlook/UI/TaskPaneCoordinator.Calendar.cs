@@ -222,6 +222,7 @@ public partial class TaskPaneCoordinator
                 WebNote = webNote,
                 Diagnostics = extractionDiagnostics
             }, items, inOutlook));
+            PostStream(turn, new { type = "stream_chunk", chunk = sb.ToString() });
             int unverified = CalendarScanReport.Unverified(items);
 
             var payload = CalendarScanReport.Payload(items, pack, inOutlook);

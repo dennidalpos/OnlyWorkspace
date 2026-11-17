@@ -14,7 +14,12 @@ public sealed class PaneWordingTests
 
     private static LlmProfileConfig Cloud(ExposureLevel level) => new()
     {
-        Id = "c", Type = ProviderCatalog.Ollama, BaseUrl = "https://cloud.example/v1", Model = "qwen-flash", External = true, Exposure = level
+        Id = "c",
+        Type = ProviderCatalog.Ollama,
+        BaseUrl = "https://cloud.example/v1",
+        Model = "qwen-flash",
+        External = true,
+        Exposure = level
     };
 
     [Theory]

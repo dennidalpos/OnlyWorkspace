@@ -8,7 +8,11 @@ public sealed class StructuredEmailReportTests
 {
     private static EmailSource Email() => new()
     {
-        Subject = "Sopralluogo", Sender = "Lucia <lucia@example.test>", Received = new DateTime(2026, 11, 2), EntryId = "e1", StoreId = "s1"
+        Subject = "Sopralluogo",
+        Sender = "Lucia <lucia@example.test>",
+        Received = new DateTime(2026, 11, 2),
+        EntryId = "e1",
+        StoreId = "s1"
     };
 
     private static object? Get(object source, string name) => source.GetType().GetProperty(name)!.GetValue(source);

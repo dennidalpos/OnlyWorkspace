@@ -45,7 +45,10 @@ public sealed class ConnectionCheckFlowTests
 
     private static LlmProfileConfig Profile() => new()
     {
-        Id = "p1", Type = ProviderCatalog.Ollama, BaseUrl = "http://127.0.0.1:11434", Model = "qwen"
+        Id = "p1",
+        Type = ProviderCatalog.Ollama,
+        BaseUrl = "http://127.0.0.1:11434",
+        Model = "qwen"
     };
 
     [Fact]

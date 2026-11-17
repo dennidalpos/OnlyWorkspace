@@ -46,7 +46,10 @@ public sealed class ProbeFlowTests
 
     private static LlmProfileConfig Profile() => new()
     {
-        Id = "p1", Type = ProviderCatalog.Ollama, BaseUrl = "http://127.0.0.1:11434", Model = "qwen"
+        Id = "p1",
+        Type = ProviderCatalog.Ollama,
+        BaseUrl = "http://127.0.0.1:11434",
+        Model = "qwen"
     };
 
     private static CapabilityProbeResult Result(ProbeKind kind, ProbeOutcome outcome = ProbeOutcome.Supported) =>

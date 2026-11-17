@@ -11,7 +11,13 @@ public sealed class SecurityAttachmentPolicyTests
 
     private static LlmProfileConfig Cloud(ExposureLevel level, bool upload) => new()
     {
-        Id = "c", Type = ProviderCatalog.Ollama, BaseUrl = "https://cloud.example/v1", Model = "qwen-flash", External = true, Exposure = level, AllowAttachmentUpload = upload
+        Id = "c",
+        Type = ProviderCatalog.Ollama,
+        BaseUrl = "https://cloud.example/v1",
+        Model = "qwen-flash",
+        External = true,
+        Exposure = level,
+        AllowAttachmentUpload = upload
     };
 
     private static AttachmentFacts Pdf(AttachmentScanStatus status = AttachmentScanStatus.Clean) => new("offerta.pdf", 10) { ScanStatus = status };

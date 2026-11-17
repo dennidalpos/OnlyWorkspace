@@ -23,13 +23,23 @@ public sealed class CalendarScanReportTests
 
     private static ExtractedActionItem Appointment(int source = 1, string title = "Sopralluogo") => new()
     {
-        Kind = "appointment", Title = title, Start = new DateTime(2026, 11, 20, 10, 0, 0), End = new DateTime(2026, 11, 20, 11, 0, 0),
-        Location = "Cantiere", Notes = "n", Source = source, DateText = "venerdì alle 10"
+        Kind = "appointment",
+        Title = title,
+        Start = new DateTime(2026, 11, 20, 10, 0, 0),
+        End = new DateTime(2026, 11, 20, 11, 0, 0),
+        Location = "Cantiere",
+        Notes = "n",
+        Source = source,
+        DateText = "venerdì alle 10"
     };
 
     private static ExtractedActionItem Task(int source = 2) => new()
     {
-        Kind = "task", Title = "Inviare il modulo", Due = new DateTime(2026, 11, 30), Source = source, DateText = "entro il 30/11/2026"
+        Kind = "task",
+        Title = "Inviare il modulo",
+        Due = new DateTime(2026, 11, 30),
+        Source = source,
+        DateText = "entro il 30/11/2026"
     };
 
     private static CalendarScanReport.Outcome Outcome(Action<CalendarScanReport.Outcome>? edit = null)
