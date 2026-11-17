@@ -8,7 +8,9 @@
 [CmdletBinding()]
 param(
     [string]$Configuration = "Release",
-    [string]$OutputDirectory = ''
+    [string]$OutputDirectory = '',
+    # Community builds: skip every signing step and the certificate checks. The setup is then NOT signed and Windows shows an unknown publisher.
+    [switch]$Unsigned
 )
 
 $ErrorActionPreference = "Stop"
@@ -39,7 +41,7 @@ $certsDir = Join-Path $repoRoot "certs"
 $nsisExe = "C:\Program Files (x86)\NSIS\makensis.exe"
 
 # Gli script di firma leggono la password del PFX da questa variabile: meglio fermarsi prima di compilare.
-if ([string]::IsNullOrWhiteSpace($env:ONLYAPPS_PFX_PASSWORD)) {
+if (!$Unsigned -and [string]::IsNullOrWhiteSpace($env:ONLYAPPS_PFX_PASSWORD)) {
     throw "Variabile d'ambiente ONLYAPPS_PFX_PASSWORD non impostata (password di certs\OnlyApps.pfx)."
 }
 
@@ -102,6 +104,12 @@ if (Test-Path $noticesSrc) {
     Copy-Item -Path $noticesSrc -Destination $publishDir -Force
 }
 
+# Apache-2.0 section 4: redistributions carry the license and the NOTICE file.
+foreach ($licenseName in @('LICENSE','NOTICE')) {
+    $licenseSrc = Join-Path $repoRoot $licenseName
+    if (Test-Path $licenseSrc) { Copy-Item -Path $licenseSrc -Destination $publishDir -Force }
+}
+
 # Copia configurazione template di base
 $templateSrc = Join-Path $repoRoot "deployment\config.template.json"
 if (Test-Path $templateSrc) {
@@ -112,20 +120,27 @@ if (Test-Path $templateSrc) {
 # e firmerebbe con un'identità diversa da quella installata sui PC.
 $cerPath = Join-Path $certsDir "OnlyApps.cer"
 $pfxPath = Join-Path $certsDir "OnlyApps.pfx"
-if (!(Test-Path $cerPath) -or !(Test-Path $pfxPath)) {
+if (!$Unsigned -and (!(Test-Path $cerPath) -or !(Test-Path $pfxPath))) {
     throw "Certificato assente o incompleto: servono certs\OnlyApps.cer e certs\OnlyApps.pfx del certificato distribuito. Ripristinarli dal backup; scripts\create-code-signing-cert.ps1 crea un'identità nuova solo per un primo rilascio, da rendere attendibile prima della build."
 }
-$certificate = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($cerPath)
-try { $signerThumbprint = $certificate.Thumbprint }
-finally { $certificate.Dispose() }
+if (!$Unsigned) {
+    $certificate = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($cerPath)
+    try { $signerThumbprint = $certificate.Thumbprint }
+    finally { $certificate.Dispose() }
+}
 
-Write-Host "==> 3. Firma digitale binari in publish..." -ForegroundColor Cyan
-$binariesToSign = @(Get-ChildItem -Path $publishDir -Include "OnlyWorkspace.*.dll", "OnlyWorkspace.ConfigTool.exe", "OnlyWorkspace.AttachmentExtractor.exe" -Recurse -File | Select-Object -ExpandProperty FullName)
-if ($binariesToSign.Count -eq 0) { throw "Nessun binario OnlyWorkspace da firmare in $publishDir." }
-foreach ($bin in $binariesToSign) {
-    & pwsh -ExecutionPolicy Bypass -File "$PSScriptRoot\sign-binaries.ps1" -Files @($bin)
-    if ($LASTEXITCODE -ne 0) { throw "Firma binario fallita con codice ${LASTEXITCODE}: $bin" }
-    Assert-SignedFile $bin $signerThumbprint
+if ($Unsigned) {
+    Write-Host "==> 3. Firma digitale saltata (-Unsigned)." -ForegroundColor Yellow
+}
+else {
+    Write-Host "==> 3. Firma digitale binari in publish..." -ForegroundColor Cyan
+    $binariesToSign = @(Get-ChildItem -Path $publishDir -Include "OnlyWorkspace.*.dll", "OnlyWorkspace.ConfigTool.exe", "OnlyWorkspace.AttachmentExtractor.exe" -Recurse -File | Select-Object -ExpandProperty FullName)
+    if ($binariesToSign.Count -eq 0) { throw "Nessun binario OnlyWorkspace da firmare in $publishDir." }
+    foreach ($bin in $binariesToSign) {
+        & pwsh -ExecutionPolicy Bypass -File "$PSScriptRoot\sign-binaries.ps1" -Files @($bin)
+        if ($LASTEXITCODE -ne 0) { throw "Firma binario fallita con codice ${LASTEXITCODE}: $bin" }
+        Assert-SignedFile $bin $signerThumbprint
+    }
 }
 
 Write-Host "==> 4. Compilazione Installer NSIS..." -ForegroundColor Cyan
@@ -134,23 +149,27 @@ $nsiScript = Join-Path $repoRoot "installer\OnlyWorkspaceSetup.nsi"
 $version = ([xml](Get-Content (Join-Path $repoRoot "Directory.Build.props") -Raw)).Project.PropertyGroup.Version
 if ($version -notmatch '^\d+\.\d+\.\d+$') { throw "Versione non valida in Directory.Build.props: '$version' (atteso x.y.z)." }
 $installerPath = Join-Path $distDir "OnlyWorkspaceSetup.exe"
-& $nsisExe "/DPRODUCT_VERSION=$version" "/DPUBLISH_DIR=$publishDir" "/DINSTALLER_PATH=$installerPath" $nsiScript
+$nsisArguments = @("/DPRODUCT_VERSION=$version", "/DPUBLISH_DIR=$publishDir", "/DINSTALLER_PATH=$installerPath")
+if ($Unsigned) { $nsisArguments += '/DUNSIGNED' }
+& $nsisExe @nsisArguments $nsiScript
 if ($LASTEXITCODE -ne 0) { throw "Compilazione NSIS fallita con codice $LASTEXITCODE" }
 
 if (!(Test-Path $installerPath)) {
     throw "Installer generato non trovato in $installerPath"
 }
 
-Write-Host "==> 5. Firma digitale dell'installer NSIS..." -ForegroundColor Cyan
-& pwsh -ExecutionPolicy Bypass -File "$PSScriptRoot\sign-binaries.ps1" -Files $installerPath
-if ($LASTEXITCODE -ne 0) { throw "Firma installer fallita con codice $LASTEXITCODE" }
-Assert-SignedFile $installerPath $signerThumbprint
+if (!$Unsigned) {
+    Write-Host "==> 5. Firma digitale dell'installer NSIS..." -ForegroundColor Cyan
+    & pwsh -ExecutionPolicy Bypass -File "$PSScriptRoot\sign-binaries.ps1" -Files $installerPath
+    if ($LASTEXITCODE -ne 0) { throw "Firma installer fallita con codice $LASTEXITCODE" }
+    Assert-SignedFile $installerPath $signerThumbprint
+}
 
 if (!$customOutput) {
     if (Test-Path -LiteralPath $finalDirectory) { Remove-Item -LiteralPath $finalDirectory -Recurse -Force }
     Move-Item -LiteralPath $OutputDirectory -Destination $finalDirectory
     $installerPath = Join-Path (Join-Path $finalDirectory 'dist') 'OnlyWorkspaceSetup.exe'
-    Assert-SignedFile $installerPath $signerThumbprint
+    if (!$Unsigned) { Assert-SignedFile $installerPath $signerThumbprint }
 }
 
 Write-Host "==> Pacchetto di installazione completato con successo:" -ForegroundColor Green

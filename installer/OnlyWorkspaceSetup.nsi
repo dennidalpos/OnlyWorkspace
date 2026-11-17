@@ -21,7 +21,10 @@ Unicode True
 ManifestDPIAware true
 
 ; Firma digitale disinstallatore (§7.4)
+; /DUNSIGNED (build-installer.ps1 -Unsigned, community builds) skips it.
+!ifndef UNSIGNED
 !uninstfinalize 'powershell.exe -NoProfile -ExecutionPolicy Bypass -File "..\scripts\sign-binaries.ps1" -Files "%1"' = 0
+!endif
 
 ; Versione x.y.z passata da scripts\build-installer.ps1 (unica fonte: Directory.Build.props)
 !ifndef PRODUCT_VERSION

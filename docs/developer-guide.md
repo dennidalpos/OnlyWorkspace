@@ -39,6 +39,8 @@ Windows PowerShell 5.1 is needed for the net48 and WebView smoke tests. Loopback
 
 ### Tracker runner
 
+Maintainer tooling, not needed to build, test or contribute: it depends on the maintainer's private SecondBrain dossier (`SECONDBRAIN_HOME`) and on the `claude` CLI. The same applies to `.secondbrain/`, `AGENTS.md`, `CLAUDE.md` and `GEMINI.md`.
+
 `scripts/automation/run-tracker.ps1` runs the autonomous tasks of the SecondBrain tracker one at a time, each in a fresh `claude -p` session with `run-tracker.settings.json` and `--permission-mode acceptEdits`. It never commits or pushes, and changes stay in the working tree. It needs `SECONDBRAIN_HOME` in the user environment and reads `01-projects/OnlyWorkspace/tracker.json` there unless `-Tracker` is given. The SecondBrain launcher `.secondbrain/run-tasks.ps1` (git-ignored, installed by SecondBrain) runs the same kind of sessions through SecondBrain's `run-ready-tasks.ps1` and takes its selection from the tracker's ready tasks instead of `-Skip`.
 
     pwsh -NoProfile -File scripts/automation/run-tracker.ps1 -DryRun
@@ -86,7 +88,9 @@ CloudFactsRequest keeps values/provenance local and sends embedded categories/op
 
 ## Packaging, dependencies and UI vocabulary
 
-scripts/build-installer.ps1 [-OutputDirectory <new-directory>] builds (never runs tests), stages/signs binaries/uninstaller, compiles/signs NSIS. Without -OutputDirectory the package is always the same folder (`package` under the central artifacts, else under `dist`): staging goes to `package.staging` and replaces `package` only after the installer is built and signed, so a failed run keeps the previous package; an explicit -OutputDirectory must be new. Use existing PFX/certificate and ONLYAPPS_PFX_PASSWORD environment; never command-line passwords or implicit certificate regeneration. Timestamp failure stops signing; AllowNoTimestamp is for explicit local tests only.
+scripts/build-installer.ps1 [-OutputDirectory <new-directory>] [-Unsigned] builds (never runs tests), stages/signs binaries/uninstaller, compiles/signs NSIS. Without -OutputDirectory the package is always the same folder (`package` under the central artifacts, else under `dist`): staging goes to `package.staging` and replaces `package` only after the installer is built and signed, so a failed run keeps the previous package; an explicit -OutputDirectory must be new. Use existing PFX/certificate and ONLYAPPS_PFX_PASSWORD environment; never command-line passwords or implicit certificate regeneration. Timestamp failure stops signing; AllowNoTimestamp is for explicit local tests only.
+
+Community builds: `-Unsigned` needs neither the PFX nor `ONLYAPPS_PFX_PASSWORD`; it skips signing and the certificate checks and defines `UNSIGNED` for NSIS so the uninstaller is not signed either. The result is an unsigned setup for your own use or tests. A signed package for other PCs needs your own certificate from `scripts/create-code-signing-cert.ps1`; the OnlyApps certificate and its private key are not part of the repository.
 
 [Notices](../THIRD-PARTY-NOTICES.txt), [credits](../CREDITS.md) and manifests describe shipped libraries. Office interop types are embedded build references, not redistribution rights or proof of installed Office version. Windows SDK OCR/PDF metadata is build-only. Providers use HTTP rather than provider SDKs. Match actual restored/shipped assemblies to notices.
 
