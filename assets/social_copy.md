@@ -8,17 +8,17 @@ Set unico di **sette PNG 1080 × 1350 px (4:5)** in `assets/social/`, generato d
 
 | File | Contenuto | Provenienza |
 |---|---|---|
-| [01-copertina.png](social/01-copertina.png) | Panoramica Outlook e assistente | Derivata dalla cattura installata del 21/10/2026 |
-| [02-sintesi-email.png](social/02-sintesi-email.png) | Sintesi email | Derivata dalla cattura installata del 21/10/2026 |
-| [03-verifica-sicurezza.png](social/03-verifica-sicurezza.png) | Evidenze tecniche e rischi | Derivata dalla cattura installata del 21/10/2026 |
-| [04-estrai-dati.png](social/04-estrai-dati.png) | Tabella da ordine o preventivo | Derivata dalla cattura installata del 21/10/2026 |
+| [01-copertina.png](social/01-copertina.png) | Panoramica Outlook e assistente | Derivata dalla cattura installata del 15/11/2026 |
+| [02-sintesi-email.png](social/02-sintesi-email.png) | Sintesi email | Derivata dalla cattura installata del 15/11/2026 |
+| [03-verifica-sicurezza.png](social/03-verifica-sicurezza.png) | Evidenze tecniche e rischi | Derivata dalla cattura installata del 15/11/2026 |
+| [04-estrai-dati.png](social/04-estrai-dati.png) | Tabella da ordine o preventivo | Derivata dalla cattura installata del 15/11/2026 |
 | [05-bozze-scrittura.png](social/05-bozze-scrittura.png) | Scrittura assistita | Illustrazione, non schermata dell'app |
 | [06-ricostruisci-flusso.png](social/06-ricostruisci-flusso.png) | Cronologia della corrispondenza | Illustrazione, non schermata dell'app |
 | [07-privacy-sovranita.png](social/07-privacy-sovranita.png) | Archivio, IA e destinazioni | Illustrazione, non schermata dell'app |
 
 Le tre catture originali in `screenshots/installed/` mostrano Outlook classico su WS-DP01, PST sintetico con indirizzi `.example` e QwenCloud. La copertina usa la cattura Sintesi. Date ed evidenze sono in [Verifica e qualifica](../docs/tecnico/verifica.md). Le catture documentano quella build, non ogni modifica successiva; non sono prove su cassette clienti.
 
-Catture aggiornate del **15/11/2026** (#235) in `screenshots/installed/`: [01-sintesi-20261115.png](screenshots/installed/01-sintesi-20261115.png), [02-verifica-sicurezza-20261115.png](screenshots/installed/02-verifica-sicurezza-20261115.png), [03-estrai-dati-20261115.png](screenshots/installed/03-estrai-dati-20261115.png). Build installata 1.0.0+cf66170, Outlook classico su WS-DP01 (monitor a 100%), cartella locale sintetica con indirizzi `.example` e `.example.test`, profilo QwenCloud (qwen3.8-flash, livello Esteso); nessuna ricerca web eseguita, nessun dato reale nelle immagini. README e panoramica IT puntano a queste. I sette PNG social e il generatore (`generate-social-assets.py`, `generate-assets.py`) usano ancora le tre catture del 21/10/2026: rigenerarli con le nuove richiede una richiesta specifica.
+Catture aggiornate del **15/11/2026** (#235) in `screenshots/installed/`: [01-sintesi-20261115.png](screenshots/installed/01-sintesi-20261115.png), [02-verifica-sicurezza-20261115.png](screenshots/installed/02-verifica-sicurezza-20261115.png), [03-estrai-dati-20261115.png](screenshots/installed/03-estrai-dati-20261115.png). Build installata 1.0.0+cf66170, Outlook classico su WS-DP01 (monitor a 100%), cartella locale sintetica con indirizzi `.example` e `.example.test`, profilo QwenCloud (qwen3.8-flash, livello Esteso); nessuna ricerca web eseguita, nessun dato reale nelle immagini. README e panoramica IT puntano a queste. I sette PNG social sono stati rigenerati con queste tre catture (#261, `generate-social-assets.py`, ritaglio adattato al nuovo riquadro); `generate-assets.py` usa ancora le catture senza data.
 
 ## Messaggio e condizioni sui dati
 
@@ -36,7 +36,7 @@ Una decisione in una risposta, una scadenza in un allegato, un ordine da trasfor
 
 Sintetizza le email, raccogli indizi su link e allegati sospetti, copia le tabelle o esportale in CSV e prepara bozze da rivedere prima dell'invio. L'archivio cifrato è sul PC; scegli il servizio IA e controlla le destinazioni autorizzate. Per lavorare offline usa un modello locale su loopback. Con cloud o web, verifica le condizioni del servizio scelto.
 
-Le immagini 01–04 derivano da catture installate del 21/10/2026 su dati sintetici; 05–07 sono illustrazioni. Qualifica interna in corso.
+Le immagini 01–04 derivano da catture installate del 15/11/2026 su dati sintetici; 05–07 sono illustrazioni. Qualifica interna in corso.
 
 OnlyWorkspace per Microsoft Outlook classico. Ti interessa una demo sul tuo flusso di lavoro? Scrivici in privato.
 

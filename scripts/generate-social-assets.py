@@ -1,4 +1,4 @@
-"""Generate social cards: 01-04 use installed captures dated 2026-10-21; 05-07 are illustrations.
+"""Generate social cards: 01-04 use installed captures dated 2026-11-15; 05-07 are illustrations.
 
 Produces a unified, single-format set of PNG visual cards directly in assets/social/:
 - 01-copertina.png
@@ -305,7 +305,7 @@ def render_slide(slide_index: int, icon_im: Image.Image) -> Image.Image:
     mock_h = mock_bottom - mock_top
     
     if kind == "hero":
-        im_source = Image.open(SCREENSHOTS / "01-sintesi.png")
+        im_source = Image.open(SCREENSHOTS / "01-sintesi-20261115.png")
         draw_mockup_window(base, margin_x, mock_top, content_w, mock_h, im_source, "Microsoft Outlook con OnlyWorkspace", draw)
         
         badge_y = mock_bottom - 68
@@ -315,24 +315,24 @@ def render_slide(slide_index: int, icon_im: Image.Image) -> Image.Image:
         draw_pill(draw, bx, badge_y, "Archivio cifrato sul PC", F_TITLE(16), bg="#0B2642", border="#FFC83D", fg="#FFFFFF")
         
     elif kind == "sintesi":
-        raw = Image.open(SCREENSHOTS / "01-sintesi.png")
-        cropped = raw.crop((580, 120, 1920, 990))
+        raw = Image.open(SCREENSHOTS / "01-sintesi-20261115.png")
+        cropped = raw.crop((730, 160, 1920, 1028))
         draw_mockup_window(base, margin_x, mock_top, content_w, mock_h, cropped, "Sintesi dell'email selezionata · Progetto Aurora", draw)
         
         badge_y = mock_bottom - 64
         draw_pill(draw, margin_x + 22, badge_y, "Punti chiave, scadenze e decisioni estratti in un clic", F_TITLE(16), bg="#0A2D3D", border="#62E6C6", fg="#E2FDF5")
         
     elif kind == "sicurezza":
-        raw = Image.open(SCREENSHOTS / "02-verifica-sicurezza.png")
-        cropped = raw.crop((580, 120, 1920, 990))
+        raw = Image.open(SCREENSHOTS / "02-verifica-sicurezza-20261115.png")
+        cropped = raw.crop((730, 160, 1920, 1028))
         draw_mockup_window(base, margin_x, mock_top, content_w, mock_h, cropped, "Verifica sicurezza e anti-phishing · Giudizio tecnico", draw)
         
         badge_y = mock_bottom - 64
         draw_pill(draw, margin_x + 22, badge_y, "Allerta immediata: link ingannevoli e domini sospetti segnalati", F_TITLE(16), bg="#3B1C1D", border="#FF7B72", fg="#FFDFDD")
         
     elif kind == "dati":
-        raw = Image.open(SCREENSHOTS / "03-estrai-dati.png")
-        cropped = raw.crop((580, 120, 1920, 990))
+        raw = Image.open(SCREENSHOTS / "03-estrai-dati-20261115.png")
+        cropped = raw.crop((730, 160, 1920, 1028))
         draw_mockup_window(base, margin_x, mock_top, content_w, mock_h, cropped, "Estrazione tabella dati · Ordine AUR-2026-118", draw)
         
         badge_y = mock_bottom - 64
@@ -446,7 +446,7 @@ def render_slide(slide_index: int, icon_im: Image.Image) -> Image.Image:
         
         base.alpha_composite(card, (margin_x, mock_top))
 
-    provenance = "Da catture installate · 21/10/2026 · Dati sintetici" if slide_index <= 4 else "Illustrazione delle funzioni · Non è una schermata dell'app"
+    provenance = "Da catture installate · 15/11/2026 · Dati sintetici" if slide_index <= 4 else "Illustrazione delle funzioni · Non è una schermata dell'app"
     draw.text((margin_x, mock_bottom + 16), provenance, font=F_REGULAR(17), fill=TEXT_MUTED)
     page_str = f"0{slide_index} / 07"
     draw_footer(draw, margin_x, footer_y, content_w, page_str)
