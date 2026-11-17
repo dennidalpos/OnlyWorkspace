@@ -8,3 +8,7 @@ Repository knowledge lives in the SecondBrain dossier; code, guides, and publish
 - Write only to this repository's dossier `01-projects/<repo>/`, only through SecondBrain scripts or MCP write tools. Work folders come from scripts/work.ps1 -Init; sessions, retention, and cleanup rules load from `sb prompt`.
 - Commits, pushes, deletions, and publication require specific authorization.
 <!-- secondbrain:repository:end -->
+
+## Git workflow (push policy)
+
+- The repository owner is an admin and changes are verified locally before any push. When a push is authorized, push directly to `main` and do not open a pull request. This applies only to pushes the user has authorized; it does not authorize committing or pushing on its own. If anything is unclear (failed checks, unexpected remote state, protected-branch rejection), stop and ask.
