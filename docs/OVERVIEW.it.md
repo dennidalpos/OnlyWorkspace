@@ -84,4 +84,4 @@ Per un problema di configurazione parti da **Stato (Archivio e IA)** e dalle gui
 
 ## Licenza
 
-OnlyWorkspace è software proprietario OnlyApps, autore Danny Perondi ([GitHub](https://github.com/dennidalpos)). Licenze delle dipendenze: [THIRD-PARTY-NOTICES.txt](../THIRD-PARTY-NOTICES.txt); i crediti sono nella pagina **Informazioni** della Configurazione.
+OnlyWorkspace è software open source OnlyApps con licenza Apache 2.0, autore Danny Perondi ([GitHub](https://github.com/dennidalpos)). Licenze delle dipendenze: [THIRD-PARTY-NOTICES.txt](../THIRD-PARTY-NOTICES.txt); i crediti sono nella pagina **Informazioni** della Configurazione.

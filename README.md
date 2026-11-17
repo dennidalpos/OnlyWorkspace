@@ -62,7 +62,7 @@ dotnet test tests/OnlyWorkspace.Tests -c Release --no-build -f net48 --nologo
 dotnet test tests/OnlyWorkspace.Tests -c Release --no-build -f net10.0-windows --nologo
 ```
 
-Run the two test runtimes in sequence. For managed workspaces, first configure the existing isolated runtime with ONLYWORKSPACE_RUNTIME_ROOT as described in the [developer guide](docs/developer-guide.md#build-and-isolated-outputs). Building does not install the add-in. The setup needs NSIS 3.13, `signtool.exe`, the signing certificate and the PFX password in the environment: see the [packaging procedure](docs/developer-guide.md#packaging-dependencies-and-ui-vocabulary). The repository contains a CI workflow ([ci.yml](.github/workflows/ci.yml)), but it has not yet completed a run on GitHub (Actions were re-enabled on 17 November 2026, restricted to GitHub-owned actions): build and test locally. Gates and smoke tests: [verification and qualification](docs/tecnico/verifica.md).
+Run the two test runtimes in sequence. For managed workspaces, first configure the existing isolated runtime with ONLYWORKSPACE_RUNTIME_ROOT as described in the [developer guide](docs/developer-guide.md#build-and-isolated-outputs). Building does not install the add-in. The setup needs NSIS 3.13, `signtool.exe`, the signing certificate and the PFX password in the environment: see the [packaging procedure](docs/developer-guide.md#packaging-dependencies-and-ui-vocabulary). To build the setup from source without the maintainer certificate, install NSIS 3.13 and run `pwsh scripts/build-installer.ps1 -Unsigned`: it skips every signing step and produces an unsigned `OnlyWorkspaceSetup.exe` (Windows shows an unknown publisher). To sign with your own certificate, create one with `scripts/create-code-signing-cert.ps1` (password in `ONLYAPPS_PFX_PASSWORD`) and trust it on the target PCs; do not reuse the OnlyApps identity. The repository contains a CI workflow ([ci.yml](.github/workflows/ci.yml)), but it has not yet completed a run on GitHub (Actions were re-enabled on 17 November 2026, restricted to GitHub-owned actions): build and test locally. Gates and smoke tests: [verification and qualification](docs/tecnico/verifica.md).
 
 ## Documentation
 
@@ -76,4 +76,4 @@ For a report, include version, action, error message and a synthetic reproducibl
 
 ## License
 
-OnlyWorkspace is proprietary software by OnlyApps, author Danny Perondi ([GitHub](https://github.com/dennidalpos)). See [LICENSE](LICENSE). Third-party licenses: [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt).
+OnlyWorkspace is open source under the Apache License 2.0, by OnlyApps, author Danny Perondi ([GitHub](https://github.com/dennidalpos)). See [LICENSE](LICENSE) and [NOTICE](NOTICE). Third-party licenses: [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt).

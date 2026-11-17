@@ -36,7 +36,7 @@ public static class ThirdPartyComponents
     public const string Author = "Danny Perondi";
     public const string Publisher = "OnlyApps";
     public const string GitHubUrl = "https://github.com/dennidalpos";
-    public const string License = "Software proprietario OnlyApps";
+    public const string License = "Apache License 2.0 (OnlyApps)";
 
     public static IReadOnlyList<ThirdPartyComponent> All { get; } = new[]
     {

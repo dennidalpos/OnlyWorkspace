@@ -305,7 +305,7 @@ def one_pager():
     content += text(116, 1402, "Requisiti", 30, weight=600)
     content += lines(116, 1452, ["Outlook classico 2016 e successivi, a 32 o 64 bit · Windows x64", ".NET Framework 4.8 · WebView2 Evergreen · nessun connettore Graph/IMAP/OAuth"], 23, gap=40, fill=MUTED)
     content += line(80, 1612, 1160, 1612)
-    content += text(80, 1662, "OnlyApps · Software proprietario · Qualifica interna in corso", 21, MUTED)
+    content += text(80, 1662, "OnlyApps · Apache-2.0 · Qualifica interna in corso", 21, MUTED)
     content += text(80, 1702, "Le risposte IA richiedono verifica. Elementi grafici dimostrativi, senza dati reali.", 19, MUTED)
     save("print/scheda-prodotto.svg", w, h, content, "OnlyWorkspace · Scheda prodotto", "Funzioni, controllo dell'IA, archivio locale e requisiti di OnlyWorkspace per Outlook classico.")
 

@@ -1,6 +1,6 @@
 # CREDITS: OnlyWorkspace
 
-Third-party components used by OnlyWorkspace, with the license each one declares. Checked on 2026-11-12 against the `packages.lock.json` files, the nuspec of each restored NuGet package and the files the setup stages (`scripts/build-installer.ps1`: add-in output, `OnlyWorkspace.ConfigTool.exe`, `extractor\`). Project license: proprietary, all rights reserved, see [LICENSE](LICENSE). Notices and license texts for what is distributed: [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt).
+Third-party components used by OnlyWorkspace, with the license each one declares. Checked on 2026-11-12 against the `packages.lock.json` files, the nuspec of each restored NuGet package and the files the setup stages (`scripts/build-installer.ps1`: add-in output, `OnlyWorkspace.ConfigTool.exe`, `extractor\`). Project license: Apache-2.0, see [LICENSE](LICENSE) and [NOTICE](NOTICE). Notices and license texts for what is distributed: [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt).
 
 ## Distributed with the setup
 
