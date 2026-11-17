@@ -27,7 +27,7 @@ Da PowerShell nella radice del repository, con gli output configurati come in [O
 | Vulnerabilità | `dotnet package list --project OnlyWorkspace.sln --vulnerable --include-transitive --format json` | Produce il rapporto JSON; il comando può uscire 0 anche con vulnerabilità. Il gate deve verificare separatamente il contenuto `"vulnerabilities"` |
 | Manuali | `tests\scripts\OllamaLive.Tests.ps1` con `pwsh`; `tests\scripts\WebViewBoundary.Smoke.ps1`, `tests\scripts\WebViewRecovery.Smoke.ps1` e `tests\scripts\WebViewFocus.Smoke.ps1` con Windows PowerShell 5.1 `-STA` | Ollama reale su loopback; confine WebView2, recupero crash e focus nativo/DOM con riquadri isolati; focus anche con PowerShell x86 |
 
-Gate prima di un commit: test, build e script con codice 0. La [CI](../../.github/workflows/ci.yml) esegue build, test net48 e net10, smoke x64/x86, script e controllo vulnerabilità; GitHub Actions è disattivato sul repository, quindi il file non gira finché non viene riattivato e i comandi si eseguono in locale. Per i soli documenti bastano link, formattazione e diff.
+Gate prima di un commit: test, build e script con codice 0. La [CI](../../.github/workflows/ci.yml) esegue build, test net48 e net10, smoke x64/x86, script e controllo vulnerabilità; GitHub Actions è stato riattivato il 17/11/2026 (solo azioni di GitHub), ma il workflow non ha ancora completato un'esecuzione su GitHub: i comandi si eseguono in locale. Per i soli documenti bastano link, formattazione e diff.
 
 ## Archivio e prove dei candidati precedenti
 
