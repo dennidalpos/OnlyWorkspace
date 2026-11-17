@@ -62,7 +62,7 @@ dotnet test tests/OnlyWorkspace.Tests -c Release --no-build -f net48 --nologo
 dotnet test tests/OnlyWorkspace.Tests -c Release --no-build -f net10.0-windows --nologo
 ```
 
-Run the two test runtimes in sequence. For managed workspaces, first configure the existing isolated runtime with ONLYWORKSPACE_RUNTIME_ROOT as described in the [developer guide](docs/developer-guide.md#build-and-isolated-outputs). Building does not install the add-in. The setup needs NSIS 3.13, `signtool.exe`, the signing certificate and the PFX password in the environment: see the [packaging procedure](docs/developer-guide.md#packaging-dependencies-and-ui-vocabulary). The repository contains a CI workflow ([ci.yml](.github/workflows/ci.yml)), but GitHub Actions are disabled: build and test locally. Gates and smoke tests: [verification and qualification](docs/tecnico/verifica.md).
+Run the two test runtimes in sequence. For managed workspaces, first configure the existing isolated runtime with ONLYWORKSPACE_RUNTIME_ROOT as described in the [developer guide](docs/developer-guide.md#build-and-isolated-outputs). Building does not install the add-in. The setup needs NSIS 3.13, `signtool.exe`, the signing certificate and the PFX password in the environment: see the [packaging procedure](docs/developer-guide.md#packaging-dependencies-and-ui-vocabulary). The repository contains a CI workflow ([ci.yml](.github/workflows/ci.yml)), but it has not yet completed a run on GitHub (Actions were re-enabled on 17 November 2026, restricted to GitHub-owned actions): build and test locally. Gates and smoke tests: [verification and qualification](docs/tecnico/verifica.md).
 
 ## Documentation
 
