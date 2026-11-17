@@ -185,7 +185,9 @@ function Call-Static([string]$name, [object[]]$arguments) {
     return ,$type.GetMethod($name, [Reflection.BindingFlags]'NonPublic,Static').Invoke($null, $arguments)
 }
 function Wait-PaneTask($task) {
-    $until = [DateTime]::UtcNow.AddSeconds(30)
+    # #272: attachment extraction runs in a low-priority helper process capped at 60 s (AnalysisExtractorTimeout).
+    # Under a parallel build the helper is starved, so the wait must outlast the product timeout, not undercut it.
+    $until = [DateTime]::UtcNow.AddSeconds(90)
     while (!$task.IsCompleted) {
         if ([DateTime]::UtcNow -gt $until) { throw "Pane task timeout (waiting at line $((Get-PSCallStack)[1].ScriptLineNumber))" }
         [Windows.Forms.Application]::DoEvents()
