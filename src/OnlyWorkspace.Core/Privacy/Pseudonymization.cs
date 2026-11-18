@@ -90,6 +90,9 @@ public sealed class PseudonymizationCatalog
     public string NamePattern { get; set; } = string.Empty;
     public List<string> NameOpeners { get; set; } = new();
     public List<PrivacyPattern> Patterns { get; set; } = new();
+    /// <summary>Labels of a future local recognizer mapped to catalog categories (#248); no strategy reads them yet.</summary>
+    public Dictionary<string, string> NerLabels { get; set; } = new();
+    public string? CategoryOfNerLabel(string label) => NerLabels.TryGetValue(label ?? string.Empty, out var category) ? category : null;
     internal static bool ValidCategory(string value) => !string.IsNullOrEmpty(value) && value.Length <= 16 &&
         System.Text.RegularExpressions.Regex.IsMatch(value, @"\A[A-Z][A-Z0-9]+\z", RegexOptions.CultureInvariant, TimeSpan.FromSeconds(2));
     public static PseudonymizationCatalog Load()
@@ -107,6 +110,7 @@ public sealed class PseudonymizationCatalog
         if (string.IsNullOrWhiteSpace(Revision) || string.IsNullOrWhiteSpace(NamePattern) || Patterns.Count == 0 ||
             Patterns.Select(p => p.Id).Distinct(StringComparer.Ordinal).Count() != Patterns.Count)
             throw new InvalidDataException("Invalid privacy catalog.");
+        if (NerLabels.Any(kv => string.IsNullOrWhiteSpace(kv.Key) || !ValidCategory(kv.Value))) throw new InvalidDataException("Invalid privacy label map.");
         var names = Regex(NamePattern);
         if (!names.GetGroupNames().Contains("name") || !names.GetGroupNames().Contains("email")) throw new InvalidDataException("Invalid privacy name pattern.");
         foreach (var p in Patterns)

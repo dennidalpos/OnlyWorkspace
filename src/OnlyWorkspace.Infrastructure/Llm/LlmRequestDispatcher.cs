@@ -25,26 +25,28 @@ public sealed class LlmRequestDispatcher : ILlmClient, IDisposable
     private readonly Func<Pseudonymizer, IEnumerable<ChatMessage>, IReadOnlyList<ChatMessage>>? _maskMessages;
     private readonly Func<CancellationToken, Task<IReadOnlyList<PrivacyEntity>>>? _entities;
     private readonly IPseudonymizationAuditStore _audit;
+    private readonly Func<MaskPreview, CancellationToken, Task<MaskPreviewDecision>>? _preview;
 
     /// <param name="status">Receives the start and outcome of each request to the model (the pane's IA indicator).</param>
     public LlmRequestDispatcher(ILlmClient client, LlmProfileConfig profile, Action? validatePolicy = null, ModelServiceStatus? status = null,
         Action? requestStarting = null, Func<CancellationToken, Task<IReadOnlyList<PrivacyEntity>>>? entities = null,
-        IPseudonymizationAuditStore? audit = null)
-        : this(client, profile, validatePolicy, status, requestStarting, null, entities, audit)
+        IPseudonymizationAuditStore? audit = null, Func<MaskPreview, CancellationToken, Task<MaskPreviewDecision>>? preview = null)
+        : this(client, profile, validatePolicy, status, requestStarting, null, entities, audit, preview)
     {
     }
 
     // A deterministic masking refusal can be exercised without relying on runtime-specific regex optimizations.
     internal LlmRequestDispatcher(ILlmClient client, LlmProfileConfig profile, Action? validatePolicy, ModelServiceStatus? status,
         Action? requestStarting, Func<Pseudonymizer, IEnumerable<ChatMessage>, IReadOnlyList<ChatMessage>>? maskMessages,
-        Func<CancellationToken, Task<IReadOnlyList<PrivacyEntity>>>? entities = null, IPseudonymizationAuditStore? audit = null)
+        Func<CancellationToken, Task<IReadOnlyList<PrivacyEntity>>>? entities = null, IPseudonymizationAuditStore? audit = null,
+        Func<MaskPreview, CancellationToken, Task<MaskPreviewDecision>>? preview = null)
     {
         _client = client;
         _profile = profile;
         _validatePolicy = validatePolicy;
         _status = status;
         _requestStarting = requestStarting;
-        _maskMessages = maskMessages; _entities = entities; _audit = audit ?? new PseudonymizationAuditStore();
+        _maskMessages = maskMessages; _entities = entities; _audit = audit ?? new PseudonymizationAuditStore(); _preview = preview;
     }
 
     private bool Pseudonymize => ExposurePolicy.Of(_profile).Pseudonymize;
@@ -79,7 +81,7 @@ public sealed class LlmRequestDispatcher : ILlmClient, IDisposable
             catch (Exception ex)
             {
                 Record(mask, ex is OperationCanceledException ? "cancelled" : "failed");
-                request?.Failed(ex, cancellationToken);
+                FailRequest(request, ex, cancellationToken);
                 throw;
             }
             while (true)
@@ -91,7 +93,7 @@ public sealed class LlmRequestDispatcher : ILlmClient, IDisposable
                 catch (Exception ex)
                 {
                     Record(mask, ex is OperationCanceledException ? "cancelled" : "failed");
-                    request?.Failed(ex, cancellationToken);
+                    FailRequest(request, ex, cancellationToken);
                     throw;
                 }
                 cancellationToken.ThrowIfCancellationRequested();
@@ -134,7 +136,7 @@ public sealed class LlmRequestDispatcher : ILlmClient, IDisposable
         catch (Exception ex)
         {
             Record(mask, ex is OperationCanceledException ? "cancelled" : "failed");
-            request?.Failed(ex, cancellationToken);
+            FailRequest(request, ex, cancellationToken);
             throw;
         }
         finally { request?.Abandoned(); }
@@ -173,6 +175,15 @@ public sealed class LlmRequestDispatcher : ILlmClient, IDisposable
         IReadOnlyList<ChatMessage> outgoing = schema == null ? masked : new List<ChatMessage>(System.Linq.Enumerable.Take(masked, prepared.Count));
         if (_profile.IsExternal)
         {
+            // #249: attachment text going to an Extended profile is shown first, masks included, and waits for the user.
+            // Nothing has been sent at this point; declining ends the request with zero HTTP calls.
+            if (_preview != null && _profile.Exposure == ExposureLevel.Extended && !CloudRequestGuard.HasProof(prepared) && Pseudonymizer.CarriesAttachmentText(outgoing))
+            {
+                var decision = await _preview(mask.BuildPreview(outgoing), ct) ?? MaskPreviewDecision.Cancel();
+                ct.ThrowIfCancellationRequested();
+                if (!decision.Confirmed) throw new MaskPreviewCancelledException();
+                outgoing = mask.ApplyManualEdits(outgoing, decision.Unmask, decision.AddValues);
+            }
             if (CloudRequestGuard.HasProof(prepared))
             {
                 // Typed facts: exactly the approved immutable text keeps its proof; masking must not change it.
@@ -195,6 +206,12 @@ public sealed class LlmRequestDispatcher : ILlmClient, IDisposable
         await Task.Run(() => Record(mask, "dispatching"), ct);
         ct.ThrowIfCancellationRequested(); _validatePolicy?.Invoke();
         return outgoing;
+    }
+
+    private static void FailRequest(ModelServiceStatus.Request? request, Exception ex, CancellationToken token)
+    {
+        // Declining the preview is the user's choice, not a model failure.
+        if (ex is MaskPreviewCancelledException) request?.Abandoned(); else request?.Failed(ex, token);
     }
 
     private void Record(Pseudonymizer? mask, string outcome)

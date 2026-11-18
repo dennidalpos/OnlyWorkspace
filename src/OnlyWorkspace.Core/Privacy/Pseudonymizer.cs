@@ -11,7 +11,7 @@ using OnlyWorkspace.Core.Models;
 namespace OnlyWorkspace.Core.Privacy;
 
 /// <summary>One reversible map per request. The map never enters the audit record.</summary>
-public sealed class Pseudonymizer
+public sealed partial class Pseudonymizer
 {
     private static readonly Regex Placeholder = new(@"\[[A-Z][A-Z0-9]{1,15}_\d+\]", RegexOptions.CultureInvariant, TimeSpan.FromSeconds(2));
     private static readonly Regex ProtectedToken = new(@"\[[A-Z][A-Z0-9_]*\]", RegexOptions.CultureInvariant, TimeSpan.FromSeconds(2));

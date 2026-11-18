@@ -21,13 +21,19 @@ public sealed class PseudonymizationPipelineTests
     [InlineData("anna@example.invalid", "EMAIL")]
     [InlineData("+39 333 1234567", "TEL")]
     [InlineData("Pratica AB-2026/19", "PRATICA")]
+    [InlineData("targa AB123CD", "TARGA")]
+    [InlineData("Carta d'identità n. CA12345AB", "DOCUMENTO")]
+    [InlineData("foglio 12, particella 345, sub 6", "CATASTO")]
+    [InlineData("atto notarile n. 1234/567", "ATTO")]
+    [InlineData("età 45", "ETA")]
+    [InlineData("Mario ha 52 anni", "ETA")]
     public void CategoriesAreVersionedAndRoundTrip(string input, string category)
     {
         var mask = new Pseudonymizer();
         string outgoing = Assert.Single(mask.Mask(new[] { ChatMessage.User(input) })).Content;
         Assert.Contains("[" + category + "_1]", outgoing);
         Assert.Equal(input, mask.Restore(outgoing));
-        Assert.Equal(1, mask.Audit.Counts[category]); Assert.Equal("5", mask.Audit.Revisions["catalog"]);
+        Assert.Equal(1, mask.Audit.Counts[category]); Assert.Equal("6", mask.Audit.Revisions["catalog"]);
         string audit = JsonSerializer.Serialize(mask.Audit); Assert.DoesNotContain(input, audit);
     }
 
@@ -400,5 +406,29 @@ public sealed class PseudonymizationPipelineTests
             Assert.Contains("numero della prova", sent);
         }
         finally { listener.Stop(); }
+    }
+
+    [Theory]
+    [InlineData("FULLNAME", "PERSONA")]
+    [InlineData("ORG", "AZIENDA")]
+    [InlineData("CITY", "INDIRIZZO")]
+    [InlineData("LICENSEPLATE", "TARGA")]
+    [InlineData("ID_DOC", "DOCUMENTO")]
+    [InlineData("DOCID", "ATTO")]
+    [InlineData("AGE", "ETA")]
+    public void NerLabelsMapToCatalogCategories(string label, string category) =>
+        Assert.Equal(category, PseudonymizationCatalog.Load().CategoryOfNerLabel(label));
+
+    [Theory]
+    [InlineData("La targa è stata sostituita.")]
+    [InlineData("Codice articolo AB123CD a magazzino.")]
+    [InlineData("Il foglio 12 è in archivio.")]
+    [InlineData("Il rapporto 2026/11 è in bozza.")]
+    [InlineData("Ha 16 GB di memoria.")]
+    [InlineData("Garanzia estesa per tutti.")]
+    public void NewCategoriesLeaveLookalikesAlone(string input)
+    {
+        var mask = new Pseudonymizer();
+        Assert.Equal(input, mask.Mask(new[] { ChatMessage.User(input) })[0].Content);
     }
 }

@@ -21,7 +21,7 @@ internal static class PseudonymizationBench
         public int Missed => Values - Masked;
     }
 
-    internal static readonly string[] Categories = { "PERSONA", "AZIENDA", "INDIRIZZO", "EMAIL", "TEL", "IBAN", "CF", "PIVA", "IMPORTO", "DATA", "PRATICA" };
+    internal static readonly string[] Categories = { "PERSONA", "AZIENDA", "INDIRIZZO", "EMAIL", "TEL", "IBAN", "CF", "PIVA", "IMPORTO", "DATA", "PRATICA", "TARGA", "DOCUMENTO", "CATASTO", "ATTO", "ETA" };
 
     // xorshift: the same corpus on every runtime and every run.
     private sealed class Rng
@@ -133,6 +133,17 @@ internal static class PseudonymizationBench
         }
         string[] files = { "2026-0142", "AB/2026/17", "CC-2026-088", "77/A-2026" };
         for (int i = 0; i < 10; i++) items.Add(I(i % 2 == 0 ? "Riferimento pratica {0}." : "Protocollo {0} in attesa.", ("PRATICA", files[i % files.Length])));
+        string[] plates = { "AB123CD", "EF456GH", "LM789NP", "RS012TV" };
+        for (int i = 0; i < 10; i++) items.Add(I(i % 2 == 0 ? "L'auto con targa {0} è in sosta." : "Veicolo targato {0} registrato.", ("TARGA", plates[i % plates.Length])));
+        string[] documents = { "CA00000AA", "AX0000000", "00000AB12".Substring(0, 7).Replace("00000AB", "0000000"), "YA1234567" };
+        for (int i = 0; i < 10; i++) items.Add(I(i % 2 == 0 ? "Carta d'identità n. {0} scaduta." : "Passaporto {0} allegato.", ("DOCUMENTO", documents[i % documents.Length])));
+        for (int i = 0; i < 10; i++)
+        {
+            string deed = "foglio " + (1 + r.Next(99)) + ", particella " + (1 + r.Next(900)) + (i % 2 == 0 ? ", sub " + (1 + r.Next(20)) : string.Empty);
+            items.Add(I("Immobile censito al {0}.", ("CATASTO", deed)));
+        }
+        for (int i = 0; i < 10; i++) items.Add(I(i % 2 == 0 ? "Come da atto notarile n. {0}." : "Repertorio {0} del notaio.", ("ATTO", (1000 + r.Next(9000)) + "/" + (100 + r.Next(900)))));
+        for (int i = 0; i < 10; i++) items.Add(I(i % 2 == 0 ? "Il paziente ha {0} anni e abita a Roma." : "Età {0}, residente in sede.", ("ETA", (18 + r.Next(70)).ToString(CultureInfo.InvariantCulture))));
         // Decoys: text with no personal data that looks like some.
         string[] decoys =
         {

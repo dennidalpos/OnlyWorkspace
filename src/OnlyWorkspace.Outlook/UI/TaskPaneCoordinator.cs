@@ -420,6 +420,7 @@ public partial class TaskPaneCoordinator : IDisposable
             case "get_action_item_states": SaveActionItems(message); break;
             case "chat": StartChat(message); break;
             case "cancel": StopActiveTask(); break;
+            case "mask_preview_decision": ResolveMaskPreview(message); break;
             case "stop_other":
                 if (message.TryGetProperty("id", out var otherJob) && otherJob.TryGetInt32(out var otherId)) PaneJobs.Stop(otherId);
                 break;
@@ -2163,13 +2164,14 @@ public partial class TaskPaneCoordinator : IDisposable
             if (turn == _turn) DocumentsDispatched();
             if (profile.IsExternal) PostStream(turn, new { type = "cloud_used" });
         }, null),
-            entities: ct => ReadPrivacyEntitiesOnUiAsync(dispatchUi, ct), audit: _privacyAudit);
+            entities: ct => ReadPrivacyEntitiesOnUiAsync(dispatchUi, ct), audit: _privacyAudit, preview: MaskPreviewHandler(dispatchUi));
     }
 
     public void Dispose()
     {
         if (_isDisposed) return;
         _isDisposed = true;
+        DeclinePendingMaskPreview();
 
         if (_replay.Running)
             OnlyWorkspaceLog.Logger.Information("Pane work cancelled with its Outlook window: {Action}", _replay.Action);

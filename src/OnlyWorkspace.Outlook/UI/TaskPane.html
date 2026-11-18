@@ -766,6 +766,27 @@
   }
 
   .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  /* ---------- Mask preview before attachment text leaves (#249) ---------- */
+  .mask-preview {
+    position: fixed; z-index: 60; inset: 0;
+    display: flex; flex-direction: column;
+    background: var(--bg);
+    animation: rise 0.15s ease-out;
+  }
+  .mask-preview h2 { font-size: var(--text-size-14); font-weight: 600; }
+  .mask-preview h2:focus { outline: none; }
+  .mask-preview-head { flex: none; padding: 8px 12px; background: var(--surface); border-bottom: 1px solid var(--border); }
+  .mask-preview-body { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+  .mask-preview-foot { flex: none; display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; padding: 8px 12px; background: var(--surface); border-top: 1px solid var(--border); }
+  .mask-text { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 40vh; overflow-y: auto; padding: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); font-size: var(--text-size-12); }
+  .mask-chip { background: var(--accent-soft); color: var(--accent); border-radius: 3px; padding: 0 2px; font-weight: 600; }
+  .mask-rows { display: flex; flex-direction: column; gap: 4px; }
+  .mask-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: var(--text-size-12); }
+  .mask-row .mask-original { overflow-wrap: anywhere; color: var(--text-2); }
+  .mask-add { display: flex; flex-wrap: wrap; gap: 6px; }
+  .mask-add input { flex: 1 1 140px; min-width: 0; min-height: 30px; padding: 2px 8px; border: 1px solid var(--border-input); border-radius: var(--radius); background: var(--surface); color: var(--text); }
+  @media (forced-colors: active) { .mask-chip { forced-color-adjust: none; border: 1px solid Highlight; color: CanvasText; background: Canvas; } }
 </style>
 </head>
 <body data-page="chat">
@@ -3507,9 +3528,119 @@
     updateActions();
   }
 
+  // #249: attachment text going to an Esteso profile is shown masked first; nothing is sent until the user confirms.
+  function closeMaskPreview() {
+    var old = $('maskPreview');
+    if (old) old.remove();
+  }
+  function showMaskPreview(data) {
+    closeMaskPreview();
+    var unmask = {}, added = [], decided = false;
+    var root = el('div', 'mask-preview');
+    root.id = 'maskPreview';
+    root.setAttribute('role', 'dialog');
+    root.setAttribute('aria-modal', 'true');
+    root.setAttribute('aria-labelledby', 'maskPreviewTitle');
+    var head = el('div', 'mask-preview-head');
+    var title = el('h2', null, 'Anteprima del mascheramento');
+    title.id = 'maskPreviewTitle';
+    title.tabIndex = -1;
+    head.appendChild(title);
+    var body = el('div', 'mask-preview-body');
+    body.appendChild(el('p', null, 'Il testo degli allegati sta per uscire verso un servizio cloud. Le parti evidenziate tra parentesi quadre sono mascherate e tornano ai valori originali solo su questo PC. Controlla, correggi se serve, poi invia o annulla: finché non confermi non viene inviato nulla.'));
+    var text = el('div', 'mask-text');
+    text.tabIndex = 0;
+    text.setAttribute('role', 'region');
+    text.setAttribute('aria-label', 'Testo mascherato degli allegati');
+    var placeholderPattern = /\[[A-Z][A-Z0-9]{1,15}_\d+\]/g;
+    (data.texts || []).forEach(function (t, index) {
+      if (index > 0) text.appendChild(document.createTextNode('\n\n'));
+      var last = 0, m;
+      placeholderPattern.lastIndex = 0;
+      while ((m = placeholderPattern.exec(t)) !== null) {
+        text.appendChild(document.createTextNode(t.slice(last, m.index)));
+        text.appendChild(el('span', 'mask-chip', m[0]));
+        last = m.index + m[0].length;
+      }
+      text.appendChild(document.createTextNode(t.slice(last)));
+    });
+    body.appendChild(text);
+    var rows = el('div', 'mask-rows');
+    (data.masks || []).forEach(function (mask) {
+      var row = el('label', 'mask-row');
+      var box = document.createElement('input');
+      box.type = 'checkbox';
+      box.addEventListener('change', function () { if (box.checked) unmask[mask.placeholder] = true; else delete unmask[mask.placeholder]; });
+      row.appendChild(box);
+      row.appendChild(el('span', 'mask-chip', mask.placeholder));
+      row.appendChild(el('span', 'mask-original', 'Non mascherare: ' + mask.original));
+      rows.appendChild(row);
+    });
+    if (!(data.masks || []).length) rows.appendChild(el('p', null, 'Nessun valore è stato mascherato in questo testo.'));
+    body.appendChild(rows);
+    var addRow = el('div', 'mask-add');
+    var input = document.createElement('input');
+    input.type = 'text';
+    input.maxLength = 200;
+    input.setAttribute('aria-label', 'Testo da mascherare');
+    input.placeholder = 'Testo da mascherare';
+    var addList = el('div', 'mask-rows');
+    function addValue() {
+      var v = input.value.trim();
+      if (v.length < 2 || added.indexOf(v) >= 0) return;
+      added.push(v);
+      var row = el('div', 'mask-row');
+      row.appendChild(el('span', 'mask-original', 'Da mascherare: ' + v));
+      var rm = el('button', 'btn btn-subtle btn-sm', 'Rimuovi');
+      rm.type = 'button';
+      rm.addEventListener('click', function () { added.splice(added.indexOf(v), 1); row.remove(); });
+      row.appendChild(rm);
+      addList.appendChild(row);
+      input.value = '';
+    }
+    var add = el('button', 'btn btn-sm', 'Aggiungi maschera');
+    add.type = 'button';
+    add.addEventListener('click', addValue);
+    input.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); addValue(); } });
+    addRow.appendChild(input);
+    addRow.appendChild(add);
+    body.appendChild(addRow);
+    body.appendChild(addList);
+    var foot = el('div', 'mask-preview-foot');
+    function decide(confirmed) {
+      if (decided) return;
+      decided = true;
+      post({ type: 'mask_preview_decision', id: data.id, confirmed: confirmed, unmask: confirmed ? Object.keys(unmask) : [], add: confirmed ? added.slice() : [] });
+      closeMaskPreview();
+    }
+    var cancel = el('button', 'btn', 'Annulla');
+    cancel.type = 'button';
+    cancel.addEventListener('click', function () { decide(false); });
+    var send = el('button', 'btn btn-primary', 'Invia');
+    send.type = 'button';
+    send.addEventListener('click', function () { decide(true); });
+    foot.appendChild(cancel);
+    foot.appendChild(send);
+    root.addEventListener('keydown', function (e) { if (e.key === 'Escape') { e.preventDefault(); decide(false); } });
+    root.appendChild(head);
+    root.appendChild(body);
+    root.appendChild(foot);
+    document.body.appendChild(root);
+    announce('Anteprima del mascheramento: controlla il testo e scegli Invia o Annulla.');
+    title.focus();
+  }
+
   function onHostMessage(data) {
     if (!data || !data.type) return;
     switch (data.type) {
+      case 'mask_preview':
+        showMaskPreview(data);
+        break;
+
+      case 'mask_preview_close':
+        closeMaskPreview();
+        break;
+
       case 'hide_email_context':
         hideEmailContext();
         break;
