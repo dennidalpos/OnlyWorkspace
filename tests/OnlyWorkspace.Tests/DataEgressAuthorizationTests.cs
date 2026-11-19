@@ -26,6 +26,34 @@ public sealed class DataEgressAuthorizationTests
     private static DataEgressConsent Accept(WorkspaceConfig config, Func<string, string?>? resolver = null) =>
         DataEgress.Accept(config, "test", "synthetic", DateTime.UtcNow, resolver ?? Secret, TestEgress.ConfirmedRegions(config));
 
+    [Theory]
+    [InlineData(ExposureLevel.Minimal)]
+    [InlineData(ExposureLevel.Standard)]
+    [InlineData(ExposureLevel.Extended)]
+    public void NoticeNineGrantWithCurrentCatalogRequiresRenewal(ExposureLevel exposure)
+    {
+        var profile = Profile();
+        profile.Exposure = exposure;
+        var config = Config(profile);
+        var oldConsent = Accept(config);
+        string currentPolicyKey = oldConsent.Grants[0].PolicyKey;
+        oldConsent.NoticeVersion = 9;
+        oldConsent.NoticeHash = "5b41c0f87553dc88d58b2e1b7e472ca0f5cb6ea315132d0b12f492da0de9ccba";
+        oldConsent.NoticeText = string.Empty;
+        config.DataEgress.History.Clear();
+
+        DataEgress.BindProfiles(config, Secret);
+        Assert.False(DataEgress.Current(oldConsent));
+        Assert.False(DataEgress.AllowsModel(config, profile, Secret));
+        Assert.Empty(profile.EgressAuthorizationKey);
+
+        var renewed = Accept(config);
+        Assert.True(DataEgress.Current(renewed));
+        Assert.True(DataEgress.AllowsModel(config, profile, Secret));
+        Assert.Equal(currentPolicyKey, renewed.Grants[0].PolicyKey);
+        Assert.Contains(config.DataEgress.History, entry => entry.Authorization?.NoticeVersion == 9);
+    }
+
     [Fact]
     public void CatalogTwoGrantRequiresRenewalAndItsConversationCannotBeReused()
     {

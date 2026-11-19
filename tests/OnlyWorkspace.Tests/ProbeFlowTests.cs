@@ -61,10 +61,33 @@ public sealed class ProbeFlowTests
         return Task.CompletedTask;
     };
 
-    /// <summary>Progress&lt;T&gt; posts to the thread pool without a synchronization context: let the callbacks land.</summary>
-    private static async Task SettleAsync()
+    private sealed class ProbeTestContext : SynchronizationContext
     {
-        for (int i = 0; i < 20; i++) await Task.Delay(10);
+        public Queue<Action> Callbacks { get; } = new();
+
+        public override void Post(SendOrPostCallback callback, object? state) =>
+            Callbacks.Enqueue(() => callback(state));
+    }
+
+    private static async Task RunAndDrainProgressAsync(ProbeFlow flow, LlmProfileConfig profile)
+    {
+        var previous = SynchronizationContext.Current;
+        var context = new ProbeTestContext();
+        Task run;
+        // The scripted probes finish synchronously. Drain posted callbacks in UI order after completion.
+        try
+        {
+            SynchronizationContext.SetSynchronizationContext(context);
+            run = flow.RunAsync(profile);
+        }
+        finally
+        {
+            SynchronizationContext.SetSynchronizationContext(previous);
+        }
+
+        Assert.True(run.IsCompleted);
+        await run;
+        foreach (var callback in context.Callbacks) callback();
     }
 
     [Fact]
@@ -106,8 +129,7 @@ public sealed class ProbeFlowTests
         var flow = new ProbeFlow(host, (_, _) => { var c = new FakeClient(); disposed.Add(c); return c; },
             Script(Result(ProbeKind.Text), Result(ProbeKind.Json), Result(ProbeKind.Reasoning), Result(ProbeKind.Web, ProbeOutcome.Unsupported)));
 
-        await flow.RunAsync(Profile());
-        await SettleAsync();
+        await RunAndDrainProgressAsync(flow, Profile());
 
         Assert.Equal(4, host.Recorded.Count);
         Assert.Equal(new[] { ProbeOutcome.Unsupported }, host.WebShown);
@@ -129,8 +151,7 @@ public sealed class ProbeFlowTests
             return Task.CompletedTask;
         });
 
-        await flow.RunAsync(Profile());
-        await SettleAsync();
+        await RunAndDrainProgressAsync(flow, Profile());
 
         Assert.Empty(host.Recorded);
         Assert.DoesNotContain(host.Status, s => s.Text.StartsWith("Diagnosi completata", StringComparison.Ordinal));
@@ -158,8 +179,7 @@ public sealed class ProbeFlowTests
             throw new OperationCanceledException();
         });
 
-        await flow.RunAsync(Profile());
-        await SettleAsync();
+        await RunAndDrainProgressAsync(flow, Profile());
 
         Assert.Single(host.Recorded);
         var last = host.Status[^1];

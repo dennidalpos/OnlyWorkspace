@@ -109,14 +109,18 @@ public sealed class ServiceRegionTests
     }
 
     [Fact]
-    public void Notice_IsVersionEightAndSaysSensitiveDataAreNotAnonymized()
+    public void Notice_IsVersionTenAndExplainsMaskingLimitsAndAttachmentPreview()
     {
-        Assert.Equal(9, DataEgressNotice.Version);
+        Assert.Equal(10, DataEgressNotice.Version);
         Assert.Contains("L'autorizzazione vale per servizio", DataEgressNotice.Text);
         Assert.Contains("livello Esteso la ricerca web", DataEgressNotice.Text);
         Assert.Contains("viene inviato al servizio", DataEgressNotice.Text);
         Assert.Contains("non è una protezione al 100%", DataEgressNotice.Text);
         Assert.Contains("sul PC con regole meccaniche", DataEgressNotice.Text);
         Assert.Contains("UE, non UE o non specificata", DataEgressNotice.Text);
+        Assert.Contains("targhe, numeri di documenti e atti, riferimenti catastali ed età", DataEgressNotice.Text);
+        Assert.Contains("aggiungere o rimuovere maschere, confermare o annullare l'invio", DataEgressNotice.Text);
+        Assert.Contains("maschere rimosse vengono inviati in chiaro", DataEgressNotice.Text);
+        Assert.Contains("la richiesta al modello non viene inviata", DataEgressNotice.Text);
     }
 }
