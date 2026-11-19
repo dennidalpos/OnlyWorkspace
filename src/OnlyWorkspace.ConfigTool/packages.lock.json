@@ -149,7 +149,7 @@
         "dependencies": {
           "Microsoft.Bcl.AsyncInterfaces": "[11.0.0, )",
           "Microsoft.Data.Sqlite.Core": "[10.0.15, )",
-          "OnlyWorkspace.Core": "[1.0.0, )",
+          "OnlyWorkspace.Core": "[1.0.1, )",
           "SQLite3MC.PCLRaw.bundle": "[2.7.0, )",
           "SQLite3MC.PCLRaw.lib": "[2.7.0, )",
           "Serilog": "[4.4.0, )",
@@ -340,7 +340,7 @@
         "type": "Project",
         "dependencies": {
           "Microsoft.Data.Sqlite.Core": "[10.0.15, )",
-          "OnlyWorkspace.Core": "[1.0.0, )",
+          "OnlyWorkspace.Core": "[1.0.1, )",
           "SQLite3MC.PCLRaw.bundle": "[2.7.0, )",
           "Serilog": "[4.4.0, )",
           "Serilog.Sinks.File": "[7.0.0, )"
