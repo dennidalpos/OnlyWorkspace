@@ -562,7 +562,8 @@ public sealed class ConfigToolUxTests
             using var form = Open(directory, new WorkspaceConfig { DefaultProfile = "local", Profiles = new() { Local("local") } });
             Call(form, "SetLocked", true);
 
-            Assert.True(Field<Button>(form, "_btnEgressExport").Enabled);
+            var export = Assert.Single(Descendants(form).OfType<Button>(), button => button.Text == "Esporta PDF…");
+            Assert.True(export.Enabled);
             Assert.True(Field<CheckBox>(form, "_chkAutostart").Enabled);
             Assert.True(Field<Button>(form, "_btnOpenDataFolder").Enabled);
             Assert.False(Field<Button>(form, "_btnSave").Enabled);

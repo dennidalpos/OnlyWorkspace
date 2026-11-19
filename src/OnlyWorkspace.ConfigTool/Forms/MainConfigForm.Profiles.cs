@@ -769,7 +769,7 @@ public sealed partial class MainConfigForm
         }
         Control? field = IssueField(issue.Field);
         Control? page = field != null ? _pages.FirstOrDefault(p => p.Contains(field))
-            : issue.Field == ValidationField.Consent ? _privacyPage
+            : issue.Field == ValidationField.Consent ? _privacyPage.View
             : issue.ProfileId != null ? _pages.FirstOrDefault(p => p.Contains(_lstProfiles)) : null;
         if (page == null) return;
         ShowPage(_pages.IndexOf(page));

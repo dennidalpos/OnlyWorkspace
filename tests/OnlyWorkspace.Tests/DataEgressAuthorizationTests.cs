@@ -46,6 +46,30 @@ public sealed class DataEgressAuthorizationTests
         Assert.True(DataEgress.AllowsModel(config, profile, Secret));
     }
 
+    // Policy keys generated for the synthetic profile by the catalog 5 build at 2b22fc2.
+    [Theory]
+    [InlineData(ExposureLevel.Standard, "d/q5cWGkf3agFU5SR7lyH910fqBbkZMNuzaQ4IqSr6o=", "RrTa4JMSwXL0Coca9yRK4gdM7Q//9T29vzMEGHdL6F8=")]
+    [InlineData(ExposureLevel.Extended, "v+N7HyRIsmQCduybG7FVf8pCf+rL3E96sJnz0xI+kDk=", "ZvDkzXhAXT7opYRc41tlNtboagAc050KKd1qQa5YM1A=")]
+    public void CatalogFiveGrantRequiresRenewalAndItsConversationCannotBeReused(
+        ExposureLevel exposure, string oldGrantPolicyKey, string oldConversationPolicyKey)
+    {
+        var profile = Profile();
+        profile.Exposure = exposure;
+        var config = Config(profile);
+        Accept(config).Grants[0].PolicyKey = oldGrantPolicyKey;
+        var oldConversation = new ConversationHistory { ProfileId = profile.Id, PolicyKey = oldConversationPolicyKey };
+
+        DataEgress.BindProfiles(config, Secret);
+        Assert.False(DataEgress.AllowsModel(config, profile, Secret));
+        Assert.Empty(profile.EgressAuthorizationKey);
+        Assert.False(ConversationPolicy.Matches(oldConversation, profile));
+
+        Accept(config);
+        Assert.True(DataEgress.AllowsModel(config, profile, Secret));
+        Assert.NotEmpty(profile.EgressAuthorizationKey);
+        Assert.False(ConversationPolicy.Matches(oldConversation, profile));
+    }
+
     [Fact]
     public void AProfileOfTheSameServiceWithTheSamePermissionsIsCovered_ADifferentLevelOrKeyIsNot()
     {

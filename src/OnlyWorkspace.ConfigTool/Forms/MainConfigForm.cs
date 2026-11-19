@@ -8,8 +8,6 @@ using System.Linq;
 using System.Text.Json;
 using System.Windows.Forms;
 using System.Threading.Tasks;
-using Microsoft.Web.WebView2.Core;
-using OnlyWorkspace.Infrastructure.Logging;
 using OnlyWorkspace.ConfigTool.Services;
 using OnlyWorkspace.ConfigTool.Tray;
 using OnlyWorkspace.Core;
@@ -19,9 +17,7 @@ using OnlyWorkspace.Core.Interfaces;
 using OnlyWorkspace.Core.Privacy;
 using OnlyWorkspace.Core.Validation;
 using OnlyWorkspace.Infrastructure.Configuration;
-using OnlyWorkspace.Infrastructure.Llm;
 using OnlyWorkspace.Infrastructure.Security;
-using OnlyWorkspace.Infrastructure.Storage;
 
 namespace OnlyWorkspace.ConfigTool.Forms;
 
@@ -139,7 +135,6 @@ public sealed partial class MainConfigForm : Form
     private CheckBox _chkAutostart = null!;
     private Label _lblAddinState = null!;
     private Button _btnRepairAddin = null!;
-    private Button _btnRefreshStorage = null!;
     private Button _btnOpenDataFolder = null!;
 
     private TextBox _txtLog = null!;
@@ -284,7 +279,8 @@ public sealed partial class MainConfigForm : Form
                 "Archivio locale cifrato della posta e, per il tuo utente, quali cassette archiviare.");
             AddPage(nav, "Manutenzione e backup", "\uE74E", BuildBackupPage(),
                 "Copia e ripristino di configurazione e chiavi, cartella dei dati e registro delle operazioni di questa sessione.");
-            AddPage(nav, "Privacy e dati", "\uE72E", _privacyPage = BuildPrivacyPage(),
+            _privacyPage = new PrivacyPage(this);
+            AddPage(nav, "Privacy e dati", "\uE72E", _privacyPage.View,
                 "Informativa sull'uscita dei dati, spazio occupato dai file dell'app, chiavi di registro e server che ricevono dati.");
             AddPage(nav, "Informazioni", "\uE897", BuildAboutPage(),
                 "Versione, autore, licenza e componenti di terze parti con le loro licenze.");
@@ -296,7 +292,7 @@ public sealed partial class MainConfigForm : Form
     }
 
     private readonly List<string> _pageDescriptions = new();
-    private Control _privacyPage = null!;
+    private PrivacyPage _privacyPage = null!;
     private int _shownPage;
 
     /// <summary>A window shown again from the tray opens like a new one: page at its top, keyboard on the navigation.</summary>
@@ -381,12 +377,7 @@ public sealed partial class MainConfigForm : Form
                     foreach (var nested in Containers(child)) yield return nested;
         }
         _lblPageTitle.Text = _navButtons[index].Text;
-        if (page == _privacyPage)
-        {
-            RefreshDestinations();
-            RefreshEgress();
-            _ = RefreshStorageAsync();
-        }
+        if (page == _privacyPage.View) _privacyPage.Refresh();
         Tip(_lblPageTitle, _pageDescriptions[index]);
     }
 
@@ -690,11 +681,6 @@ public sealed partial class MainConfigForm : Form
         return layout;
     }
 
-    private SelectableLabel _lblDestinations = null!;
-    private SelectableLabel _lblEgress = null!;
-    private Button _btnEgressAccept = null!;
-    private Button _btnEgressRevoke = null!;
-    private Button _btnEgressExport = null!;
 
     private static string WindowsUser => Environment.UserDomainName + "\\" + Environment.UserName;
 
@@ -725,208 +711,8 @@ public sealed partial class MainConfigForm : Form
         public Task<bool> SaveAsync() => _f.SaveActiveConfiguration();
         public void MarkDirty() => _f.MarkDirty();
         public void RestoreDirty(bool dirty) { _f._isDirty = dirty; _f.UpdateTitle(); }
-        public void RefreshStatus() => _f.RefreshEgress();
+        public void RefreshStatus() => _f._privacyPage.RefreshEgress();
         public void LogActivity(string message) => _f.LogActivity(message);
-    }
-
-    /// <summary>The saved configuration (what is in force) as a printable PDF; edits not yet saved are not in it.</summary>
-    private async Task ExportDataEgressAsync()
-    {
-        if (!ConfirmSavedFilesOnly("Il PDF")) return;
-        using var dialog = new SaveFileDialog
-        {
-            Title = "Esporta l'informativa sull'uscita dei dati",
-            Filter = "Documento PDF (*.pdf)|*.pdf",
-            DefaultExt = "pdf",
-            AddExtension = true,
-            FileName = $"OnlyWorkspace-informativa-{Environment.MachineName}-{DateTime.Now:yyyyMMdd}.pdf"
-        };
-        if (dialog.ShowDialog(this) != DialogResult.OK) return;
-        _btnEgressExport.Enabled = false;
-        try
-        {
-            var savedService = new FileConfigurationService(_configDir);
-            var saved = await Task.Run(() => savedService.LoadConfiguration());
-            var workstation = new DataEgressWorkstation
-            {
-                Machine = Environment.MachineName,
-                ExportedBy = WindowsUser,
-                ProductVersion = ProductInfo.Version,
-                Windows = $"{WorkstationInfo.WindowsProductName()} {WorkstationInfo.WindowsDisplayVersion()} ({Environment.OSVersion.Version})".Trim(),
-                Outlook = $"{WorkstationInfo.OutlookVersion()} {WorkstationInfo.OutlookBitness()}",
-                WebView2 = WorkstationInfo.WebView2Version(),
-                ConfigPath = Path.Combine(_configDir, "config.json"),
-                GeneratedUtc = DateTime.UtcNow
-            };
-            var privacyAudit = await Task.Run(() => new OnlyWorkspace.Infrastructure.Security.PseudonymizationAuditStore().Read());
-            string html = DataEgressReport.RenderHtml(saved, workstation, privacyAudit, savedService.ResolveSecret);
-            var consent = saved.DataEgress?.Consent;
-            string footer = consent == null ? "Informativa non accettata" : $"Informativa v{consent.NoticeVersion} · SHA-256 {consent.NoticeHash}";
-            await DataEgressPdfExporter.ExportAsync(this, html, dialog.FileName, footer);
-            LogActivity("Informativa esportata in PDF: " + dialog.FileName);
-            SetStatus("Informativa esportata: " + dialog.FileName, Tone.Success);
-        }
-        catch (Exception ex) when (ex is WebView2RuntimeNotFoundException or InvalidOperationException or IOException or UnauthorizedAccessException or System.Runtime.InteropServices.COMException)
-        {
-            LogActivity("Esportazione informativa non riuscita: " + ex);
-            SetStatus("Esportazione non riuscita: " + ErrorText.For(ex), Tone.Danger);
-            CopyableMessageBox.Show(this, "Esportazione non riuscita: " + ErrorText.For(ex) +
-                (ex is WebView2RuntimeNotFoundException ? "\n\nServe il runtime Microsoft Edge WebView2, lo stesso richiesto dal riquadro di Outlook." : ""),
-                "Uscita dei dati", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-        }
-        finally
-        {
-            _btnEgressExport.Enabled = true;
-        }
-    }
-
-    private void RefreshEgress()
-    {
-        var status = EgressStatus.Build(_config, _vault.GetSecret);
-        _lblEgress.Text = status.Text;
-        Theme.SetTone(_lblEgress, status.Tone);
-        if (_isLocked) _lockedControls[_btnEgressAccept] = status.CanAccept;
-        else _btnEgressAccept.Enabled = status.CanAccept;
-        if (_isLocked) _lockedControls[_btnEgressRevoke] = status.CanRevoke;
-        else _btnEgressRevoke.Enabled = status.CanRevoke;
-    }
-    private TableLayoutPanel _storageGrid = null!;
-    private SelectableLabel _lblStorageTotal = null!;
-    private System.Threading.CancellationTokenSource? _storageMeasure;
-
-    /// <summary>Measures the generated files away from the UI thread; a newer request or closing the window drops an older one.</summary>
-    private async System.Threading.Tasks.Task RefreshStorageAsync()
-    {
-        _storageMeasure?.Cancel();
-        var measure = System.Threading.CancellationTokenSource.CreateLinkedTokenSource(_archiveLifetime.Token);
-        _storageMeasure = measure;
-        _lblStorageTotal.Text = "Calcolo dello spazio occupato…";
-        // The rows are controls: built on the UI thread even when the await resumes elsewhere.
-        void OnUi(Action action)
-        {
-            if (measure.IsCancellationRequested || IsDisposed) return;
-            if (InvokeRequired) BeginInvoke(action); else action();
-        }
-        try
-        {
-            var report = await System.Threading.Tasks.Task.Run(() => AppStorageUsage.Measure(measure.Token, _configDir), measure.Token);
-            OnUi(() => FillStorage(report));
-        }
-        catch (Exception ex)
-        {
-            // Called from async void handlers: nothing may escape.
-            OnlyWorkspace.Infrastructure.Logging.OnlyWorkspaceLog.Logger.Warning(ex, "Storage measurement failed");
-            try { OnUi(() => _lblStorageTotal.Text = "Spazio non calcolato: " + ErrorText.For(ex)); }
-            catch (InvalidOperationException) { }
-        }
-    }
-
-    // Rows last shown: measured again at every visit of Privacy e dati, rebuilt only when a value changed.
-    private string? _storageShown;
-
-    private void FillStorage(StorageReport report)
-    {
-        string shown = StorageText.Signature(report);
-        if (shown == _storageShown && _storageGrid.Controls.Count > 0)
-        {
-            SetStorageTotal(report);
-            return;
-        }
-        _storageShown = shown;
-        _storageGrid.SuspendLayout();
-        try
-        {
-            foreach (Control old in _storageGrid.Controls.Cast<Control>().ToList()) old.Dispose();
-            _storageGrid.Controls.Clear();
-            _storageGrid.RowStyles.Clear();
-            _storageGrid.RowCount = 0;
-            void Row(Control name, Control size, Control path)
-            {
-                int row = _storageGrid.RowCount++;
-                _storageGrid.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-                _storageGrid.Controls.Add(name, 0, row);
-                _storageGrid.Controls.Add(size, 1, row);
-                _storageGrid.Controls.Add(path, 2, row);
-            }
-            SelectableLabel Cell(string text, int left = 12, bool bold = false)
-            {
-                var label = new SelectableLabel { Text = text, AutoSize = true, MaximumSize = new Size(Ui.Px(_storageGrid, left == 0 ? Metrics.StorageLabelNarrow : Metrics.StorageLabelWide), 0), Margin = new Padding(Ui.Px(_storageGrid, left), Ui.Px(_storageGrid, 4), Ui.Px(_storageGrid, 3), Ui.Px(_storageGrid, 4)) };
-                return bold ? Ui.SetFont(label, 9F, FontStyle.Bold) : label;
-            }
-            Row(Cell("Voce", 0, bold: true), Cell("Spazio", bold: true), Cell("Percorso", bold: true));
-            foreach (var item in report.Items)
-            {
-                string size = StorageText.Size(item);
-                var name = Cell(item.Name, 0);
-                var sizeCell = Cell(size);
-                var path = Cell(item.Path);
-                Tip(name, item.Note);
-                Tip(sizeCell, StorageText.SizeTip(item));
-                Tip(path, "Cartella o file su questo PC. Si può selezionare e copiare.");
-                Row(name, sizeCell, path);
-            }
-        }
-        finally
-        {
-            _storageGrid.ResumeLayout();
-        }
-        Theme.Apply(_storageGrid);
-        SetStorageTotal(report);
-    }
-
-    private void SetStorageTotal(StorageReport report) => _lblStorageTotal.Text = StorageText.Total(report, DateTime.Now);
-
-
-    /// <summary>One place that says what the app writes on the PC and which servers receive data.</summary>
-    private Control BuildPrivacyPage()
-    {
-        var page = ScrollPage(out var stack);
-        var egress = AddGroup(stack, "Uscita dei dati da Outlook");
-        _lblEgress = AddWide(egress, new SelectableLabel { AutoSize = true, MaximumSize = new Size(Metrics.TextWidthPage, 0), Margin = new Padding(3, 3, 3, 6) },
-            "Se e da chi è stata accettata l'informativa che autorizza l'invio di dati di Outlook a servizi esterni. Senza, i profili cloud e la ricerca web esterna sono bloccati per tutti gli utenti di questo PC.");
-        _btnEgressAccept = SecondaryButton("Leggi e autorizza…");
-        _btnEgressAccept.Click += async (s, e) => await EgressFlow.AcceptAndSaveAsync();
-        _btnEgressRevoke = SecondaryButton("Revoca");
-        _btnEgressRevoke.Click += async (s, e) => await EgressFlow.RevokeAsync();
-        _btnEgressExport = SecondaryButton("Esporta PDF…");
-        _btnEgressExport.Click += async (s, e) => await ExportDataEgressAsync();
-        AddRow(egress, "", Inline(_btnEgressAccept, _btnEgressRevoke, _btnEgressExport), "Accettazione, revoca ed esportazione dell'informativa sull'uscita dei dati.");
-        Tip(_btnEgressExport, "Salva un PDF A4 con postazione, profili IA, livelli e server autorizzati, dichiarazioni, responsabile che ha abilitato l'uscita dei dati, storico e testo accettato. Funziona anche in sola lettura.");
-        Tip(_btnEgressAccept, "Apre riepilogo dei profili, informativa e dichiarazioni del responsabile. Accetta e salva lega l'autorizzazione a destinazioni, livello, permessi e chiavi; un cambiamento richiede rinnovo. Il normale Salva mantiene bloccati gli invii senza consenso.");
-        Tip(_btnEgressRevoke, "Ritira l'autorizzazione e salva: da quel momento nessun dato di Outlook esce verso servizi esterni. La revoca resta nello storico.");
-
-        var files = AddGroup(stack, "File sul PC e spazio occupato");
-        _storageGrid = AddWide(files, new TableLayoutPanel { AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, ColumnCount = 3, Margin = Padding.Empty },
-            "File creati da OnlyWorkspace per il tuo utente Windows e, in fondo, quelli comuni a tutti gli utenti. Passa sul nome di una voce per sapere cosa contiene.");
-        foreach (var width in new[] { SizeType.AutoSize, SizeType.AutoSize, SizeType.Percent }) _storageGrid.ColumnStyles.Add(new ColumnStyle(width, 100F));
-        _lblStorageTotal = AddWide(files, new SelectableLabel { AutoSize = true, MaximumSize = new Size(Metrics.TextWidthPage, 0), Margin = new Padding(3, 8, 3, 3) },
-            "Somma delle voci sopra e spazio ancora libero sul disco dell'archivio. Sotto 5 GB liberi l'archivio avvisa, sotto 1 GB smette di acquisire email.");
-        _btnRefreshStorage = AddRow(files, "", SecondaryButton("Aggiorna"),
-            "Ricalcola lo spazio occupato. Legge solo le dimensioni dei file: non apre l'archivio e non cancella nulla.");
-        _btnRefreshStorage.Click += async (s, e) => await RefreshStorageAsync();
-        AddWide(files, new SelectableLabel
-        {
-            Text = "File su richiesta, non contati: CSV estratti (Download), ZIP di diagnostica o di backup (Desktop o cartella scelta).",
-            AutoSize = true,
-            MaximumSize = new Size(Metrics.TextWidthPage, 0),
-            Margin = new Padding(3, 6, 3, 3)
-        }, "File che crei tu con un comando: restano dove li hai salvati finché non li elimini.");
-
-        var registry = AddGroup(stack, "Registro di Windows e sistema");
-        AddWide(registry, new SelectableLabel
-        {
-            Text = "• Add-in: HKLM e HKCU Software\\Microsoft\\Office\\Outlook\\Addins\\OnlyWorkspace.Addin (caricamento in Outlook).\r\n" +
-                   "• Avvio con Windows: HKCU Software\\Microsoft\\Windows\\CurrentVersion\\Run, voce OnlyWorkspaceTray.\r\n" +
-                   "• Ripara add-in: HKCU Software\\Microsoft\\Office\\16.0\\Outlook\\Resiliency.\r\n" +
-                   "• Setup: certificato OnlyApps negli archivi Root e TrustedPublisher del computer; facoltativamente le policy che nascondono «Prova il nuovo Outlook».",
-            AutoSize = true,
-            MaximumSize = new Size(Metrics.TextWidthPage, 0)
-        }, "Impostazioni di Windows scritte da installazione, procedura guidata e «Ripara add-in».");
-
-        var network = AddGroup(stack, "Server che ricevono dati");
-        _lblDestinations = AddWide(network, new SelectableLabel { AutoSize = true, MaximumSize = new Size(Metrics.TextWidthPage, 0) },
-            "A chi arrivano i dati con la configurazione attuale, ricavato dai profili; si aggiorna aprendo questa pagina.");
-        return page;
     }
 
     /// <summary>Author, version, license and the third-party components with their licenses («?» of the ConfigTool).</summary>
@@ -1020,19 +806,6 @@ public sealed partial class MainConfigForm : Form
             catch (Exception ex) { LogActivity("Apertura collegamento non riuscita: " + ex); SetStatus("Impossibile aprire il collegamento: " + ErrorText.For(ex), Tone.Danger); }
         };
         return link;
-    }
-
-    private void RefreshDestinations()
-    {
-        var lines = _config.Profiles.Select(p =>
-        {
-            var host = Uri.TryCreate(p.BaseUrl, UriKind.Absolute, out var u) ? u.Host : p.BaseUrl;
-            var web = p.WebSearchEnabled ? "; ricerca web: " + string.Join(", ", WebSearchService.Destinations(p)) : string.Empty;
-            var kind = p.IsExternal ? "cloud" + (p.SendsAttachmentText ? ", fatti allegati consentiti" : ", fatti allegati esclusi") : "locale";
-            return $"• {(string.IsNullOrWhiteSpace(p.DisplayName) ? p.Id : p.DisplayName)}: {host} ({kind}){web}.";
-        }).ToList();
-        lines.Add("• Le email vanno a un modello solo per un'azione avviata dall'utente; la posta viene letta solo dalle cassette aperte in Outlook.");
-        _lblDestinations.Text = string.Join("\r\n", lines);
     }
 
     private static Card ActionCard(string title, string note, Button action)
@@ -1301,7 +1074,7 @@ public sealed partial class MainConfigForm : Form
         PrepareProfileSecrets();
 
         if (!await SaveValidated()) return false;
-        RefreshEgress();
+        _privacyPage.RefreshEgress();
         var blocked = DataEgress.Missing(_config, _vault.GetSecret);
         if (blocked.Count > 0)
             SetStatus(SaveMessages.BlockedUntilNotice(blocked), Tone.Warning);
@@ -1482,7 +1255,7 @@ public sealed partial class MainConfigForm : Form
         if (root is NavButton || root == _lstProfiles) return;
         // Read-only actions and per-user settings: the PDF export of the notice, the user's own autostart and add-in repair
         // (HKCU), storage figures and the data folder write nothing the password protects.
-        if (root == _btnEgressExport || root == _chkAutostart || root == _btnRepairAddin || root == _btnRefreshStorage || root == _btnOpenDataFolder) return;
+        if (_privacyPage.AllowsReadOnlyAction(root) || root == _chkAutostart || root == _btnRepairAddin || root == _btnOpenDataFolder) return;
         if (root is TextBoxBase || root is ButtonBase || root is ComboBox || root is ListBox || root is NumericUpDown)
         {
             if (!_lockedControls.ContainsKey(root)) _lockedControls[root] = root.Enabled;

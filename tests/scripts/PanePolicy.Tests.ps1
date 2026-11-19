@@ -155,12 +155,12 @@ function Set-Field([string]$name, $value) {
     if ($null -ne $value -and $value -is [psobject]) { $value = $value.PSObject.BaseObject }
     $type.GetField($name, $flags).SetValue($script:coordinator, $value)
 }
-function Call([string]$name, [object[]]$arguments) {
+function Call([string]$name, [object[]]$arguments, $target = $script:coordinator) {
     for ($i = 0; $i -lt $arguments.Count; $i++) {
         if ($null -ne $arguments[$i]) { $arguments[$i] = $arguments[$i].PSObject.BaseObject }
     }
     # Overloads (AddWebEvidenceAsync with a turn or a search already started): the one the arguments fit.
-    $method = $type.GetMethods(($flags -bor [Reflection.BindingFlags]::Public)) | Where-Object {
+    $method = $target.GetType().GetMethods(($flags -bor [Reflection.BindingFlags]::Public)) | Where-Object {
         $parameters = $_.GetParameters()
         $fits = $_.Name -eq $name -and $parameters.Count -eq $arguments.Count
         for ($i = 0; $fits -and $i -lt $arguments.Count; $i++) {
@@ -174,7 +174,7 @@ function Call([string]$name, [object[]]$arguments) {
     $callerContext = [Threading.SynchronizationContext]::Current
     try {
         [Threading.SynchronizationContext]::SetSynchronizationContext((New-Object Windows.Forms.WindowsFormsSynchronizationContext))
-        $result = $method.Invoke($script:coordinator, $arguments)
+        $result = $method.Invoke($target, $arguments)
     } finally { [Threading.SynchronizationContext]::SetSynchronizationContext($callerContext) }
     if ($null -ne $result) { return ,$result }
 }
@@ -191,6 +191,14 @@ function Wait-PaneTask($task) {
     while (!$task.IsCompleted) {
         if ([DateTime]::UtcNow -gt $until) { throw "Pane task timeout (waiting at line $((Get-PSCallStack)[1].ScriptLineNumber))" }
         [Windows.Forms.Application]::DoEvents()
+        # Cloud fixtures use synthetic values. Reply to each preview without requesting any unmasking.
+        foreach ($raw in @($pending | Where-Object { $_ -like '*"type":"mask_preview"*' })) {
+            $preview = $raw | ConvertFrom-Json
+            if (!$previewReplies.Add($preview.id)) { continue }
+            $decision = [System.Text.Json.JsonDocument]::Parse((@{id=$preview.id;confirmed=$true} | ConvertTo-Json -Compress))
+            try { $null = Call 'ResolveMaskPreview' @($decision.RootElement) }
+            finally { $decision.Dispose() }
+        }
         Start-Sleep -Milliseconds 10
     }
     return ,$task.GetAwaiter().GetResult()
@@ -219,6 +227,7 @@ try {
     Set-Field '_configService' $service
     Set-Field '_contextBuilder' (New-Object OnlyWorkspace.Core.Context.ContextBuilder)
     Set-Field '_operations' ([Activator]::CreateInstance($type.Assembly.GetType('OnlyWorkspace.Outlook.UI.PaneOperations'), $true))
+    Set-Field '_previewLock' (New-Object object)
     Set-Field '_actionItemSaves' ([Activator]::CreateInstance($type.Assembly.GetType('OnlyWorkspace.Outlook.UI.ActionItemSaves'), $true))
     Set-Field '_replay' ([Activator]::CreateInstance($type.Assembly.GetType('OnlyWorkspace.Outlook.UI.PaneJobReplay'), $true))
     Set-Field '_mailSourcesForTurn' (New-Object 'Collections.Generic.List[OnlyWorkspace.Core.Models.HistoryContextReference]')
@@ -234,6 +243,7 @@ try {
     $storage = New-Object OnlyWorkspace.Infrastructure.Security.DpapiHistoryStorageService((Join-Path $scratch 'history'))
     Set-Field '_historyStorage' $storage
     $pending = $control.GetType().GetField('_pendingMessages', $flags).GetValue($control)
+    $previewReplies = New-Object 'System.Collections.Generic.HashSet[string]'
 
     # Document identity is the physical mail and source ordinal, never the filename alone.
     $documentFixtures = New-Object 'Collections.Generic.List[OnlyWorkspace.Core.Agents.DocumentOutcome]'
@@ -469,6 +479,7 @@ try {
     $fixtureCategories = New-Object 'Collections.Generic.List[string]'
     $fixtureEmails = [OnlyWorkspace.Core.Context.BriefingContext]::Email(1, $fixtureUnread[0], 'Scadenza pagamento: 15/11/2026', '', $true)
     $fixtureJson = '{"message":{"content":"{\"summary\":\"TRIAGESUMMARY\",\"emails\":[{\"id\":1,\"priority\":\"media\",\"category\":\"\",\"reason\":\"Scadenza locale\"}]}"},"done":true,"done_reason":"stop"}'
+    $briefingPresenter = [Activator]::CreateInstance($type.GetNestedType('BriefingPresenter', [Reflection.BindingFlags]::NonPublic), @($script:coordinator))
     foreach ($mode in @('Minimal','Standard','Extended','Local')) {
         $capture = New-Object BriefingCaptureServer
         $followClient = $null
@@ -505,14 +516,14 @@ try {
                 # Minimo sends typed facts only, so the Briefing is refused; Standard and Extended send masked text.
                 if ($mode -eq 'Minimal') {
                     $refused = $false
-                    try { [void](Wait-PaneTask (Call 'CompleteBriefingAsync' @($briefingProfile,$fixtureAgenda,$localDisplay,$fixtureEmails,$briefingUnread,$fixtureCategories,$turn,[Diagnostics.Stopwatch]::StartNew(),$cts.Token))) }
+                    try { [void](Wait-PaneTask (Call 'CompleteAsync' @($briefingProfile,$fixtureAgenda,$localDisplay,$fixtureEmails,$briefingUnread,$fixtureCategories,$turn,[Diagnostics.Stopwatch]::StartNew(),$cts.Token) $briefingPresenter)) }
                     catch { $refused = $_.Exception.ToString().Contains('DataEgressBlockedException') }
                     $newMessages = @($pending | Select-Object -Skip $before | ForEach-Object { $_ | ConvertFrom-Json })
                     Assert-Pass (($refused -or !!($newMessages | Where-Object type -eq 'stream_error')) -and !$capture.Pending -and !($newMessages | Where-Object type -eq 'cloud_used')) "Briefing $mode leaked unverifiable text"
                     continue
                 }
                 $capturedRequest = $capture.ServeAsync($fixtureJson)
-                $task = Call 'CompleteBriefingAsync' @($briefingProfile,$fixtureAgenda,$localDisplay,$fixtureEmails,$briefingUnread,$fixtureCategories,$turn,[Diagnostics.Stopwatch]::StartNew(),$cts.Token)
+                $task = Call 'CompleteAsync' @($briefingProfile,$fixtureAgenda,$localDisplay,$fixtureEmails,$briefingUnread,$fixtureCategories,$turn,[Diagnostics.Stopwatch]::StartNew(),$cts.Token) $briefingPresenter
                 [void](Wait-PaneTask $task)
                 $payload = Wait-PaneTask $capturedRequest
                 if ($EvidenceDirectory) { [IO.File]::WriteAllText((Join-Path $EvidenceDirectory "briefing-$mode.json"),$payload) }
