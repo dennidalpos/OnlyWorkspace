@@ -34,3 +34,8 @@ TestResults/
 ## Local tooling (workstation-specific)
 .secondbrain/
 .playwright-cli/
+
+## Local NER bench (models are downloaded, never committed)
+tools/NerBench/models/
+tools/NerBench/.venv/
+tools/NerBench/results/*.tmp

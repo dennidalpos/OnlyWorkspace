@@ -1,0 +1,98 @@
+[
+  {
+    "Id": "p01",
+    "Text": "Da: Mario Bianchi <mario.bianchi@esempio.example>\nOggetto: Preventivo cantiere\n\nGentile Laura Verdi, in allegato il preventivo della Edilsud S.r.l. per il cantiere di via Roma."
+  },
+  {
+    "Id": "p02",
+    "Text": "Buongiorno, sono Giulia Ferrari della Tecnoservice SpA. Ci sentiamo domani con Paolo Neri per chiudere l'ordine."
+  },
+  {
+    "Id": "p03",
+    "Text": "Il contratto con Aurora Costruzioni è stato firmato dal dott. Luca Moretti il 12 marzo."
+  },
+  {
+    "Id": "p04",
+    "Text": "Cordiali saluti,\nFrancesca Romano\nResponsabile acquisti\nGruppo Alfa Logistica\nTel. 02 1234567"
+  },
+  {
+    "Id": "p05",
+    "Text": "L'ing. Andrea Colombo ha confermato che la Meccanica Brianza consegnerà i pezzi entro venerdì."
+  },
+  {
+    "Id": "p06",
+    "Text": "Ho parlato con Chiara De Luca dello Studio Associato Conti & Galli: la pratica è pronta per la firma."
+  },
+  {
+    "Id": "p07",
+    "Text": "ho sentito sara conti della ditta rossi impianti e conferma la visita di martedì."
+  },
+  {
+    "Id": "p08",
+    "Text": "Spett.le Cantina Valdelsa, alla c.a. di Roberto Esposito, trasmettiamo l'ordine di fornitura n. 4471."
+  },
+  {
+    "Id": "p09",
+    "Text": "Elena Gallo e Marco Fontana partecipano al corso organizzato da AreaJob nel mese di luglio."
+  },
+  {
+    "Id": "p10",
+    "Text": "Fattura n. 2026/118 intestata a Pellegrini Forniture S.n.c., referente Davide Pellegrini."
+  },
+  {
+    "Id": "p11",
+    "Text": "Hi John Smith, please find the contract with Northwind Traders attached. Best regards, Emily Clark."
+  },
+  {
+    "Id": "p12",
+    "Text": "Riunione con Silvia Marchetti, Antonio Greco e Federica Bruno presso Officine Meridionali giovedì alle 15."
+  },
+  {
+    "Id": "p13",
+    "Text": "Il signor Giuseppe Rizzi ha richiesto un rimborso alla Banca Popolare del Lago per un bonifico errato."
+  },
+  {
+    "Id": "p14",
+    "Text": "Inoltrato da Matteo Villa\nA: Alessia Sala\nOggetto: Rinnovo licenze Microsoft\n\nBuongiorno, vi giro la richiesta del fornitore."
+  },
+  {
+    "Id": "p15",
+    "Text": "La Fondazione Il Girasole ringrazia Anna Maria Longo per la generosa donazione ricevuta."
+  },
+  {
+    "Id": "p16",
+    "Text": "Attestato di frequenza rilasciato da Formazione Nord S.r.l. a Stefano Barbieri per il corso di sicurezza sul lavoro."
+  },
+  {
+    "Id": "n01",
+    "Text": "Buongiorno, confermo la riunione di lunedì alle 10. Porterò il materiale per la presentazione del progetto Aurora."
+  },
+  {
+    "Id": "n02",
+    "Text": "Il corso di sicurezza sul lavoro si svolgerà a gennaio e durerà 8 ore. Iscrizioni entro fine mese."
+  },
+  {
+    "Id": "n03",
+    "Text": "Promemoria: scadenza del pagamento il 30 novembre, importo 1.250,00 euro. Grazie."
+  },
+  {
+    "Id": "n04",
+    "Text": "Ordine ricevuto. La consegna avverrà in 3-5 giorni lavorativi. Per assistenza risponda a questa email."
+  },
+  {
+    "Id": "n05",
+    "Text": "Ho aggiornato il foglio di calcolo con i dati di ottobre e il grafico delle vendite per trimestre."
+  },
+  {
+    "Id": "n06",
+    "Text": "Vi informiamo che l'ufficio resterà chiuso a Pasqua e il giorno di Natale."
+  },
+  {
+    "Id": "n07",
+    "Text": "Allego il verbale dell'assemblea condominiale. Si discute di ascensore, tetto e giardino."
+  },
+  {
+    "Id": "n08",
+    "Text": "La nuova versione del software corregge alcuni errori e migliora le prestazioni generali."
+  }
+]

@@ -1,0 +1,7 @@
+<Project>
+  <!-- Standalone local bench: stops the repository-wide props (central packages, lock files, artifacts path) from applying. -->
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+    <RestorePackagesWithLockFile>false</RestorePackagesWithLockFile>
+  </PropertyGroup>
+</Project>
