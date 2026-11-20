@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text;
 using OnlyWorkspace.Core.Models;
 using OnlyWorkspace.Core.Privacy;
@@ -24,7 +26,13 @@ public static class BriefingContext
     public static string AgendaForModel(LlmProfileConfig profile, string agenda) =>
         ExposurePolicy.Of(profile).WholeEmails ? agenda : "Agenda non inclusa: disponibile solo sul PC dell'utente.";
 
+    public static DateTime? ReceivedDate(EmailSearchResult email) =>
+        email.ReceivedTime == default || email.ReceivedTime.Year >= 4501 ? null : email.ReceivedTime;
+
+    public static string? ReceivedLabel(EmailSearchResult email) =>
+        ReceivedDate(email)?.ToString("dd/MM/yyyy HH:mm", CultureInfo.InvariantCulture);
+
     public static string Email(int index, EmailSearchResult email, string body, string attachments, bool facts = false) =>
-        $"[{index}] Da: {email.SenderName} <{email.SenderEmail}> | Oggetto: {email.Subject} | Ricevuta: {email.ReceivedTime:dd/MM/yyyy HH:mm}\n" +
+        $"[{index}] Da: {email.SenderName} <{email.SenderEmail}> | Oggetto: {email.Subject} | Ricevuta: {ReceivedLabel(email) ?? "data non disponibile"}\n" +
         (facts ? "<fatti_locali>\n" : "<originale>\n") + body + attachments + (facts ? "\n</fatti_locali>\n" : "\n</originale>\n");
 }

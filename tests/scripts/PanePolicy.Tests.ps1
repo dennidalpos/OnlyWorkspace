@@ -28,10 +28,19 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Net.Http
 Add-Type -ReferencedAssemblies System.Net.Http, System.Core -TypeDefinition @'
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+public sealed class BriefingBatchFixture {
+    public readonly Dictionary<int, string> Emails = new Dictionary<int, string>();
+    public Func<int, int, Task<Dictionary<int, string>>> Reader {
+        get { return (start, count) => Task.FromResult(Emails.Where(e => e.Key >= start && e.Key < start + count)
+            .ToDictionary(e => e.Key, e => e.Value)); }
+    }
+}
 public sealed class CompletionSequenceHandler : HttpMessageHandler {
     public string[] Responses;
     public int Requests;
@@ -51,6 +60,11 @@ public sealed class BriefingCaptureServer : IDisposable {
         listener = new System.Net.Sockets.TcpListener(IPAddress.Loopback, 0);
         listener.Start();
         Address = "http://127.0.0.1:" + ((IPEndPoint)listener.LocalEndpoint).Port;
+    }
+    public async Task<string[]> ServeSequenceAsync(string[] responses) {
+        var captured = new List<string>();
+        foreach (var response in responses) captured.Add(await ServeAsync(response).ConfigureAwait(false));
+        return captured.ToArray();
     }
     public async Task<string> ServeAsync(string json) {
         using (var socket = await listener.AcceptTcpClientAsync().ConfigureAwait(false))
@@ -513,19 +527,40 @@ try {
                 $localDisplay = New-Object Text.StringBuilder
                 [void]$localDisplay.Append("**Agenda**`n" + $fixtureAgenda + "`nLOCALNOTICEPRIVATE`n")
                 $before = @($pending).Count
-                # Minimo sends typed facts only, so the Briefing is refused; Standard and Extended send masked text.
+                $batch = New-Object BriefingBatchFixture
+                $batch.Emails.Add(0,$fixtureEmails)
+                # Minimo shows the local list without contacting the model.
                 if ($mode -eq 'Minimal') {
-                    $refused = $false
-                    try { [void](Wait-PaneTask (Call 'CompleteAsync' @($briefingProfile,$fixtureAgenda,$localDisplay,$fixtureEmails,$briefingUnread,$fixtureCategories,$turn,[Diagnostics.Stopwatch]::StartNew(),$cts.Token) $briefingPresenter)) }
-                    catch { $refused = $_.Exception.ToString().Contains('DataEgressBlockedException') }
+                    [void](Wait-PaneTask (Call 'CompleteAsync' @($briefingProfile,$fixtureAgenda,$localDisplay,$batch.Reader,$briefingUnread,$fixtureCategories,$turn,[Diagnostics.Stopwatch]::StartNew(),$cts.Token) $briefingPresenter))
                     $newMessages = @($pending | Select-Object -Skip $before | ForEach-Object { $_ | ConvertFrom-Json })
-                    Assert-Pass (($refused -or !!($newMessages | Where-Object type -eq 'stream_error')) -and !$capture.Pending -and !($newMessages | Where-Object type -eq 'cloud_used')) "Briefing $mode leaked unverifiable text"
+                    Assert-Pass (!$capture.Pending -and !($newMessages | Where-Object type -eq 'cloud_used')) "Briefing $mode leaked unverifiable text"
+                    Assert-Pass (($newMessages | Where-Object type -eq 'stream_chunk').chunk.Contains('LOCALUNREADPRIVATE')) 'Minimal briefing omitted the local list'
+                    $saved = Wait-PaneTask ($storage.LoadConversationAsync($briefingConversation.Id))
+                    Assert-Pass (!$saved.Messages[1].ModelContent.Contains('LOCALUNREADPRIVATE')) 'Minimal history reused locally listed email metadata'
                     continue
                 }
-                $capturedRequest = $capture.ServeAsync($fixtureJson)
-                $task = Call 'CompleteAsync' @($briefingProfile,$fixtureAgenda,$localDisplay,$fixtureEmails,$briefingUnread,$fixtureCategories,$turn,[Diagnostics.Stopwatch]::StartNew(),$cts.Token) $briefingPresenter
+                if ($mode -eq 'Local') {
+                    for ($i = 2; $i -le 26; $i++) {
+                        $email = New-Object OnlyWorkspace.Core.Models.EmailSearchResult -Property @{Subject="FixtureUnread$i";ReceivedTime=[DateTime]::Today.AddMinutes(-$i)}
+                        $briefingUnread.Add($email)
+                        $batch.Emails.Add($i - 1,[OnlyWorkspace.Core.Context.BriefingContext]::Email($i,$email,"Corpo sintetico numero $i",'',$false))
+                    }
+                    function BriefingResponse([int[]]$ids) {
+                        $entries = @($ids | ForEach-Object { @{id=$_;priority='media';category='';reason="Motivo sintetico $_"} })
+                        $content = @{summary='TRIAGESUMMARY'; emails=$entries} | ConvertTo-Json -Depth 4 -Compress
+                        return (@{message=@{content=$content};done=$true;done_reason='stop'} | ConvertTo-Json -Depth 4 -Compress)
+                    }
+                    $capturedRequest = $capture.ServeSequenceAsync(@((BriefingResponse (1..12)),(BriefingResponse (13..23)),(BriefingResponse @(24)),(BriefingResponse @(25,26))))
+                } else {
+                    $capturedRequest = $capture.ServeAsync($fixtureJson)
+                }
+                $task = Call 'CompleteAsync' @($briefingProfile,$fixtureAgenda,$localDisplay,$batch.Reader,$briefingUnread,$fixtureCategories,$turn,[Diagnostics.Stopwatch]::StartNew(),$cts.Token) $briefingPresenter
                 [void](Wait-PaneTask $task)
                 $payload = Wait-PaneTask $capturedRequest
+                if ($mode -eq 'Local') {
+                    Assert-Pass ($payload.Count -eq 4 -and $payload[2].Contains('FixtureUnread24') -and !$payload[2].Contains('FixtureUnread23') -and $payload[3].Contains('FixtureUnread26')) 'Briefing lost an omitted email or stopped at 25'
+                    $payload = $payload -join [Environment]::NewLine
+                }
                 if ($EvidenceDirectory) { [IO.File]::WriteAllText((Join-Path $EvidenceDirectory "briefing-$mode.json"),$payload) }
                 $includesAgenda = $mode -ne 'Minimal'
                 Assert-Pass ($payload.Contains('CALENDARSENTINELPRIVATE') -eq $includesAgenda) "Briefing $mode agenda payload violated policy"
@@ -537,6 +572,9 @@ try {
                 Assert-Pass ($mode -eq 'Local' -or !$payload.Contains('fixture@example.invalid')) "Briefing $mode sent an unmasked address"
                 $shown = @($pending | Select-Object -Skip $before | ForEach-Object {$_ | ConvertFrom-Json} | Where-Object type -eq 'stream_chunk')
                 Assert-Pass ($shown.Count -eq 1 -and $shown[0].chunk.Contains('CALENDARSENTINELPRIVATE') -and $shown[0].chunk.Contains('TRIAGESUMMARY')) "Briefing $mode lost local agenda or triage on screen: $($shown | ConvertTo-Json -Depth 5 -Compress)"
+                if ($mode -eq 'Local') {
+                    Assert-Pass ($shown[0].chunk.Contains('Email non lette (26)') -and $shown[0].chunk.Contains('Motivo sintetico 24') -and $shown[0].chunk.Contains('Motivo sintetico 26')) 'Briefing omitted triage from later responses'
+                }
                 $saved = Wait-PaneTask ($storage.LoadConversationAsync($briefingConversation.Id))
                 Assert-Pass ($saved.Messages[1].Content.Contains('CALENDARSENTINELPRIVATE')) "Briefing $mode history lost the local agenda"
                 if ($mode -eq 'Minimal') {

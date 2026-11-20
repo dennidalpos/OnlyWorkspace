@@ -33,7 +33,7 @@ public sealed class PseudonymizationPipelineTests
         string outgoing = Assert.Single(mask.Mask(new[] { ChatMessage.User(input) })).Content;
         Assert.Contains("[" + category + "_1]", outgoing);
         Assert.Equal(input, mask.Restore(outgoing));
-        Assert.Equal(1, mask.Audit.Counts[category]); Assert.Equal("6", mask.Audit.Revisions["catalog"]);
+        Assert.Equal(1, mask.Audit.Counts[category]); Assert.Equal("7", mask.Audit.Revisions["catalog"]);
         string audit = JsonSerializer.Serialize(mask.Audit); Assert.DoesNotContain(input, audit);
     }
 

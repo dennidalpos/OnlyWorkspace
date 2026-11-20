@@ -29,15 +29,15 @@ public sealed class BriefingReportTests
     private static object? Get(object source, string name) => source.GetType().GetProperty(name)!.GetValue(source);
 
     [Fact]
-    public void Triaged_OrdersByPriorityThenByListPosition()
+    public void Triaged_KeepsDateOrderAcrossPriorities()
     {
         var briefing = Result("", Entry(2, "bassa"), Entry(1, "media"), Entry(0, "alta"), Entry(3, "alta"));
 
-        Assert.Equal(new[] { 0, 3, 1, 2 }, BriefingReport.Triaged(briefing).Select(t => t.Index));
+        Assert.Equal(new[] { 0, 1, 2, 3 }, BriefingReport.Triaged(briefing).Select(t => t.Index));
     }
 
     [Fact]
-    public void AppendUnread_ListsTriagedFirstWithPriorityAndReason_ThenTheRestPlainly()
+    public void AppendUnread_ListsAllMailInDateOrderWithAnyAvailableTriage()
     {
         var briefing = Result("Giornata tranquilla.", Entry(1, "alta", reason: "scade oggi"), Entry(0, "media"));
         var triaged = BriefingReport.Triaged(briefing);
@@ -48,7 +48,32 @@ public sealed class BriefingReportTests
         string text = md.ToString().Replace("\r\n", "\n");
         Assert.StartsWith("Agenda\n**In sintesi**\n\nGiornata tranquilla.\n", text, StringComparison.Ordinal);
         Assert.Contains("**Email non lette (3)**\n", text, StringComparison.Ordinal);
-        Assert.Contains("- **Alta** — Ferie (Beta): scade oggi\n- **Media** — Fattura (Alfa)\n- Newsletter (Gamma)\n", text, StringComparison.Ordinal);
+        Assert.Contains("- **Media** — Fattura (Alfa)\n- **Alta** — Ferie (Beta): scade oggi\n- Newsletter (Gamma)\n", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ReceivedDate_PlacesUndatedMailLast_WithStableOrderForTies()
+    {
+        var unread = Unread();
+        unread[1].ReceivedTime = new DateTime(2026, 11, 20, 8, 30, 0);
+        unread[2].ReceivedTime = unread[1].ReceivedTime;
+        unread.Add(new EmailSearchResult { EntryId = "newest", ReceivedTime = unread[1].ReceivedTime.AddMinutes(1) });
+        unread.Add(new EmailSearchResult { EntryId = "outlook-missing", ReceivedTime = new DateTime(4501, 1, 1) });
+        var sorted = BriefingReport.ByReceivedDate(unread).ToList();
+        Assert.Equal(new[] { "newest", "e1", "e2", "e0", "outlook-missing" }, sorted.Select(e => e.EntryId));
+        var report = new StringBuilder();
+        BriefingReport.AppendUnread(report, new BriefingResult(), Array.Empty<TriageEntry>(), sorted, null);
+        Assert.Contains("20/11/2026 08:30 · Ferie", report.ToString());
+        Assert.DoesNotContain("4501", report.ToString());
+    }
+
+    [Fact]
+    public void AcceptBatch_RejectsIdsFromOtherGroupsAndKeepsGlobalPositions()
+    {
+        var overall = Result("", Entry(1, "alta"));
+        var group = Result("", Entry(1, "bassa"), Entry(26, "media"), Entry(31, "alta"));
+        Assert.Equal(26, Assert.Single(BriefingReport.AcceptBatch(overall, group, new[] { 25, 26 })));
+        Assert.Equal(new[] { 1, 26 }, overall.Emails.Select(e => e.Index));
     }
 
     [Fact]

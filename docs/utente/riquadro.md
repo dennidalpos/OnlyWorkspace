@@ -83,7 +83,7 @@ Fuori dalla composizione una richiesta di scrittura in chat («scrivi un'email a
 
 ## Briefing
 
-Agenda di oggi e fino alle ultime 25 email non lette della Posta in arrivo dell'account predefinito. Il modello propone riepilogo, priorità e categorie dalle email originali ripulite oppure, a livello Minimo, dai soli fatti estratti in locale. Ogni categoria si applica solo con un clic. Al livello Minimo l'agenda resta visibile sul PC e nello Storico: soggetti, luoghi e orari degli appuntamenti non entrano nel prompt né nel contesto delle domande successive. Con un profilo Standard o locale l'agenda resta inclusa nel contesto.
+Il Briefing mostra l'agenda di oggi e tutte le email non lette nella Posta in arrivo delle caselle autorizzate per l'archivio. Le email sono ordinate dalla più recente, con quelle senza data in fondo. Con un profilo locale, Standard o Esteso il modello analizza le email in gruppi e propone priorità e categorie. Ogni categoria si applica solo con un clic. Al livello Minimo l'agenda e l'elenco della posta restano sul PC e nello Storico. Le email per cui manca il triage compaiono comunque nell'elenco.
 
 Il risultato dichiara il perimetro e gli allegati non letti. Se il prompt completo non entra nel contesto locale, l'azione si ferma senza tagliare testi o togliere email dall'insieme selezionato.
 

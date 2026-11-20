@@ -3,23 +3,35 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using OnlyWorkspace.Core.Agents;
+using OnlyWorkspace.Core.Context;
 using OnlyWorkspace.Core.Models;
+using OnlyWorkspace.Core.Security;
 
 namespace OnlyWorkspace.Outlook.UI;
 
 /// <summary>
-/// The unread-email part of «Briefing di oggi» (#177): the summary and the list by priority, the category buttons, and what a
+/// The unread-email part of «Briefing di oggi»: the summary, the list by date, the category buttons, and what a
 /// restricted profile may reuse of it. No Outlook, no model: the coordinator reads and asks, this only words and shapes it.
 /// </summary>
 internal static class BriefingReport
 {
-    /// <summary>Emails of the model's triage, most urgent first, then in the order they were listed.</summary>
+    public static IOrderedEnumerable<EmailSearchResult> ByReceivedDate(IEnumerable<EmailSearchResult> unread) =>
+        unread.OrderByDescending(BriefingContext.ReceivedDate);
+
+    /// <summary>Orders triage entries by their position in the date-sorted unread list.</summary>
     public static List<TriageEntry> Triaged(BriefingResult briefing) =>
-        briefing.Emails.OrderBy(t => t.PriorityRank).ThenBy(t => t.Index).ToList();
+        briefing.Emails.OrderBy(t => t.Index).ToList();
+
+    public static HashSet<int> AcceptBatch(BriefingResult briefing, BriefingResult batch, IEnumerable<int> requested)
+    {
+        var allowed = new HashSet<int>(requested);
+        var accepted = batch.Emails.Where(t => allowed.Contains(t.Index)).ToList();
+        briefing.Emails.AddRange(accepted);
+        return new HashSet<int>(accepted.Select(t => t.Index));
+    }
 
     /// <summary>
-    /// Appends the summary and the unread list to the agenda text already in <paramref name="md"/>: triaged emails with their
-    /// priority and reason, then those the model left out, plainly. <paramref name="triageFailure"/> says why there is no triage.
+    /// Appends the summary and all unread emails in received-date order, with triage when available.
     /// </summary>
     public static void AppendUnread(StringBuilder md, BriefingResult briefing, IReadOnlyList<TriageEntry> triaged,
         IReadOnlyList<EmailSearchResult> unread, string? triageFailure)
@@ -28,16 +40,17 @@ internal static class BriefingReport
         md.AppendLine().Append("**Email non lette (").Append(unread.Count).AppendLine(")**").AppendLine();
         if (triageFailure != null) md.AppendLine(triageFailure).AppendLine();
 
-        foreach (var t in triaged)
+        var byIndex = triaged.ToDictionary(t => t.Index);
+        for (int i = 0; i < unread.Count; i++)
         {
-            var e = unread[t.Index];
-            md.Append("- **").Append(char.ToUpperInvariant(t.Priority[0]) + t.Priority.Substring(1)).Append("** — ").Append(e.Subject).Append(" (").Append(e.SenderName).Append(')');
-            if (t.Reason.Length > 0) md.Append(": ").Append(t.Reason);
+            var e = unread[i];
+            md.Append("- ");
+            if (BriefingContext.ReceivedLabel(e) is { } received) md.Append(received).Append(" · ");
+            if (byIndex.TryGetValue(i, out var t))
+                md.Append("**").Append(char.ToUpperInvariant(t.Priority[0]) + t.Priority.Substring(1)).Append("** — ");
+            md.Append(SecurityContentAnalysis.MarkdownText(e.Subject)).Append(" (").Append(SecurityContentAnalysis.MarkdownText(e.SenderName)).Append(')');
+            if (t?.Reason.Length > 0) md.Append(": ").Append(t.Reason);
             md.AppendLine();
-        }
-        foreach (var i in Enumerable.Range(0, unread.Count).Where(i => triaged.All(t => t.Index != i)))
-        {
-            md.Append("- ").Append(unread[i].Subject).Append(" (").Append(unread[i].SenderName).AppendLine(")");
         }
     }
 
@@ -47,7 +60,7 @@ internal static class BriefingReport
         {
             kind = "triage",
             title = unread[t.Index].Subject,
-            when = $"Priorità {t.Priority} · {unread[t.Index].SenderName}",
+            when = (BriefingContext.ReceivedLabel(unread[t.Index]) is { } received ? received + " · " : "") + $"Priorità {t.Priority} · {unread[t.Index].SenderName}",
             buttonLabel = $"Applica categoria «{t.Category}»",
             buttonTip = "Aggiunge la categoria all'email in Outlook",
             once = true,

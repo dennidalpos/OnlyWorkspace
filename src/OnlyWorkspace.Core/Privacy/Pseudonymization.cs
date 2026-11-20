@@ -120,7 +120,8 @@ public sealed class PseudonymizationCatalog
     }
     internal static Regex Regex(string pattern) => new(pattern, RegexOptions.CultureInvariant, TimeSpan.FromSeconds(2));
     public IReadOnlyList<IPseudonymizationStrategy> Strategies() => Patterns.Select(p =>
-        (IPseudonymizationStrategy)new PatternStrategy(p, Revision)).Concat(new[] { new EntityStrategy(Revision) }).ToArray();
+        (IPseudonymizationStrategy)new PatternStrategy(p, Revision))
+        .Concat(new IPseudonymizationStrategy[] { new EntityStrategy(Revision), new FormFieldStrategy(Revision) }).ToArray();
 
     private sealed class PatternStrategy : IPseudonymizationStrategy
     {

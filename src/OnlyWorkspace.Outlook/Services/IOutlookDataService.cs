@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using OnlyWorkspace.Core.Agents;
+using OnlyWorkspace.Core.Archive;
 using OnlyWorkspace.Core.Models;
 using OnlyWorkspace.Core.Privacy;
 using OnlyWorkspace.Core.Security;
@@ -41,7 +42,7 @@ public interface IOutlookDataService : IArchiveMailSource
     EmailSecurityData? GetEmailSecurityData(object? contextWindow, string? entryId = null, string? storeId = null);
     Task<AttachmentCopies?> CopyAttachmentsAsync(string entryId, string? storeId, Func<AttachmentFacts, bool> shouldSave, CancellationToken ct = default);
     Task<AttachmentCopies?> CopyDraftAttachmentsAsync(object? contextWindow, Func<AttachmentFacts, bool> shouldSave, CancellationToken ct = default);
-    IReadOnlyList<EmailSearchResult> GetUnreadInbox(int max);
+    IMailHeaderScan BeginUnreadInboxScan(StoreScope scope);
     IReadOnlyList<string> GetCategoryNames();
     void ApplyCategory(string entryId, string? storeId, string category);
     IReadOnlyList<AppointmentInfo> GetAppointments(CalendarQuery query);

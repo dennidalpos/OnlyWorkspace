@@ -55,8 +55,30 @@ internal static partial class ContentReader
 
     private static int LettersAndDigits(IEnumerable<string> lines) => lines.Sum(line => line.Count(char.IsLetterOrDigit));
 
-    private static List<string> Recognize(OcrEngine engine, SoftwareBitmap bitmap) =>
-        Await(engine.RecognizeAsync(bitmap)).Lines.Select(line => Cents.Replace(line.Text, "00")).Where(line => !string.IsNullOrWhiteSpace(line)).ToList();
+    private static List<string> Recognize(OcrEngine engine, SoftwareBitmap bitmap, bool preserveLayout)
+    {
+        var result = Await(engine.RecognizeAsync(bitmap));
+        if (!preserveLayout)
+            return result.Lines.Select(line => Cents.Replace(line.Text, "00")).Where(line => !string.IsNullOrWhiteSpace(line)).ToList();
+
+        var words = result.Lines.SelectMany(line => line.Words).Where(w => !string.IsNullOrWhiteSpace(w.Text))
+            .OrderBy(w => w.BoundingRect.Bottom).ToList();
+        var rows = new List<string>();
+        if (words.Count == 0) return rows;
+        double charWidth = Math.Max(1, Median(words.Select(w => w.BoundingRect.Width / w.Text.Length)));
+        double tolerance = Math.Max(1, Median(words.Select(w => w.BoundingRect.Height)) * 0.5);
+        double left = words.Min(w => w.BoundingRect.Left);
+        for (int start = 0; start < words.Count;)
+        {
+            int end = start + 1;
+            while (end < words.Count && words[end].BoundingRect.Bottom - words[start].BoundingRect.Bottom <= tolerance) end++;
+            var row = words.GetRange(start, end - start).OrderBy(w => w.BoundingRect.Left)
+                .Select(w => (w.Text, w.BoundingRect.Left, w.BoundingRect.Right));
+            rows.Add(Cents.Replace(RenderLine(row, left, charWidth), "00"));
+            start = end;
+        }
+        return rows;
+    }
 
     // Retry passes (rotation, contrast, enlargement) run only on a page whose first reading looks like noise, and
     // each document has a budget so a long scan cannot multiply its OCR time.
@@ -176,14 +198,14 @@ internal static partial class ContentReader
     /// then a 2x enlargement of small sources with and without stretch) and the reading with the most plausible
     /// characters wins. <paramref name="load"/> returns the page at the given scale relative to the base size.
     /// </summary>
-    private static List<string> RecognizeBest(OcrEngine engine, Func<double, SoftwareBitmap> load)
+    private static List<string> RecognizeBest(OcrEngine engine, Func<double, SoftwareBitmap> load, bool preserveLayout = false)
     {
         List<string> best;
         byte[] data; int width, height;
         bool small, good;
         using (var first = load(1.0))
         {
-            best = Recognize(engine, first);
+            best = Recognize(engine, first, preserveLayout);
             width = first.PixelWidth; height = first.PixelHeight;
             small = Math.Max(width, height) < SmallSourceSide;
             good = IsGood(best);
@@ -202,7 +224,7 @@ internal static partial class ContentReader
             foreach (var candidate in new[] { pixels, Stretch(pixels) })
             {
                 using var bitmap = FromBytes(candidate, enlarged.PixelWidth, enlarged.PixelHeight);
-                var lines = Recognize(engine, bitmap);
+                var lines = Recognize(engine, bitmap, preserveLayout);
                 int score = PlausibleChars(lines);
                 if (score > bestScore) { best = lines; bestScore = score; }
             }
@@ -215,7 +237,7 @@ internal static partial class ContentReader
             _retryBudget--;
             if (Math.Max(w, h) > OcrEngine.MaxImageDimension) return false;
             using var bitmap = FromBytes(pixels, w, h);
-            var lines = Recognize(engine, bitmap);
+            var lines = Recognize(engine, bitmap, preserveLayout);
             int score = PlausibleChars(lines);
             if (score > bestScore || (score == bestScore && LettersAndDigits(lines) > LettersAndDigits(best))) { best = lines; bestScore = score; }
             return IsGood(best);
@@ -310,7 +332,7 @@ internal static partial class ContentReader
                     .AsTask().GetAwaiter().GetResult();
                 var decoder = Await(BitmapDecoder.CreateAsync(stream));
                 return Await(decoder.GetSoftwareBitmapAsync(BitmapPixelFormat.Bgra8, BitmapAlphaMode.Premultiplied));
-            });
+            }, preserveLayout: true);
             if (LettersAndDigits(lines) < MinCharsPerTextPage) return "scanned";
             recognized[number] = lines;
         }

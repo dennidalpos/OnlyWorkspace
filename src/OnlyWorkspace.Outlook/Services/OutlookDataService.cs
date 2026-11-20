@@ -192,65 +192,6 @@ public sealed partial class OutlookDataService
         return null;
     }
 
-    /// <summary>Most recent unread email headers of the default Inbox; Briefing reopens their whole originals.</summary>
-    public IReadOnlyList<EmailSearchResult> GetUnreadInbox(int max)
-    {
-        EnsureUiThread();
-        var result = new List<EmailSearchResult>();
-        MSOutlook.NameSpace? session = null;
-        MSOutlook.MAPIFolder? inbox = null;
-        MSOutlook.Table? table = null;
-        try
-        {
-            session = _application.Session;
-            inbox = session.GetDefaultFolder(MSOutlook.OlDefaultFolders.olFolderInbox);
-            string storeId = inbox.StoreID ?? string.Empty;
-            // Table rows, not Items.Restrict + Sort + index: on a large inbox that froze Outlook for minutes.
-            table = inbox.GetTable("[UnRead] = True", MSOutlook.OlTableContents.olUserItems);
-            table.Sort("[ReceivedTime]", true);
-
-            // The result count is bounded; non-mail rows do not consume the limit.
-            for (int scanned = 0; result.Count < max && !table.EndOfTable; scanned++)
-            {
-                MSOutlook.Row? row = null;
-                object? obj = null;
-                try
-                {
-                    row = table.GetNextRow();
-                    if (row["EntryID"] is not string entryId) continue;
-                    obj = session.GetItemFromID(entryId, storeId);
-                    if (obj is not MSOutlook.MailItem mail) continue;
-                    result.Add(new EmailSearchResult
-                    {
-                        Subject = mail.Subject ?? string.Empty,
-                        SenderName = mail.SenderName ?? string.Empty,
-                        SenderEmail = mail.SenderEmailAddress ?? string.Empty,
-                        ReceivedTime = mail.ReceivedTime,
-                        EntryId = entryId,
-                        StoreId = storeId,
-                        FolderName = inbox.Name ?? string.Empty
-                    });
-                }
-                catch (Exception ex)
-                {
-                    OnlyWorkspaceLog.Logger.Debug(ex, "Failed to read unread row {Index}", scanned);
-                }
-                finally
-                {
-                    ComObjects.Release(obj);
-                    ComObjects.Release(row);
-                }
-            }
-        }
-        finally
-        {
-            ComObjects.Release(table);
-            ComObjects.Release(inbox);
-            ComObjects.Release(session);
-        }
-        return result;
-    }
-
     /// <summary>Names from the profile's master category list.</summary>
     public IReadOnlyList<string> GetCategoryNames()
     {
@@ -616,7 +557,10 @@ public sealed partial class OutlookDataService
     private IReadOnlyList<MailFolderRef> DefaultFoldersOfAllStores(params MSOutlook.OlDefaultFolders[] kinds) => StoreFolders(null, root: false, kinds);
 
     /// <summary>Default folders (or the root) of the open stores, limited to <paramref name="storeIds"/> when given.</summary>
-    private IReadOnlyList<MailFolderRef> StoreFolders(ICollection<string>? storeIds, bool root, params MSOutlook.OlDefaultFolders[] kinds)
+    private IReadOnlyList<MailFolderRef> StoreFolders(ICollection<string>? storeIds, bool root, params MSOutlook.OlDefaultFolders[] kinds) =>
+        StoreFolders(storeIds, root, kinds, null);
+
+    private IReadOnlyList<MailFolderRef> StoreFolders(ICollection<string>? storeIds, bool root, MSOutlook.OlDefaultFolders[] kinds, Action? folderFailed)
     {
         EnsureUiThread();
         var result = new List<MailFolderRef>();
@@ -657,7 +601,12 @@ public sealed partial class OutlookDataService
                             folder = store.GetDefaultFolder(kind);
                             result.Add(FolderRefOf(folder));
                         }
-                        catch { } // store without that folder (archive, public folders)
+                        catch (COMException ex) when (ex.ErrorCode == unchecked((int)0x8004010F)) { } // Store without that folder.
+                        catch (Exception ex)
+                        {
+                            folderFailed?.Invoke();
+                            OnlyWorkspaceLog.Logger.Debug(ex, "Failed to read a default mail folder");
+                        }
                         finally
                         {
                             ComObjects.Release(folder);
@@ -666,6 +615,7 @@ public sealed partial class OutlookDataService
                 }
                 catch (Exception ex)
                 {
+                    folderFailed?.Invoke();
                     OnlyWorkspaceLog.Logger.Debug(ex, "Failed to read default folders of store at index {Index}", s);
                 }
                 finally

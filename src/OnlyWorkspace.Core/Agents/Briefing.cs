@@ -7,7 +7,7 @@ namespace OnlyWorkspace.Core.Agents;
 
 public sealed class TriageEntry
 {
-    /// <summary>0-based index into the email list sent to the model.</summary>
+    /// <summary>0-based index into the complete unread list, stable across model requests.</summary>
     public int Index { get; set; }
     /// <summary>alta, media or bassa.</summary>
     public string Priority { get; set; } = "media";

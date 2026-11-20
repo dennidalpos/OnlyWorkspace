@@ -1,5 +1,7 @@
 using System.Globalization;
 using System.Text;
+using OnlyWorkspace.Core.Models;
+using OnlyWorkspace.Core.Privacy;
 using OnlyWorkspace.Core.Security;
 
 namespace OnlyWorkspace.Tests;
@@ -7,6 +9,30 @@ namespace OnlyWorkspace.Tests;
 /// <summary>PDF text by page position, through the real helper process (copied to "extractor" next to the tests).</summary>
 public class PdfLayoutExtractionTests
 {
+    [Fact]
+    public async Task PersonalFields_MaskSeparateColumnsAndSplitDateFromTheExtractedPdf()
+    {
+        var pdf = new MiniPdf()
+            .Text(52, 700, "Cognome").Text(220, 700, "Nome").Text(380, 700, "Data di nascita")
+            .Text(52, 686, "11").Text(220, 686, "12").Text(380, 686, "13")
+            .Text(52, 672, "DE VARIS").Text(220, 672, "OFELIA")
+            .Text(380, 672, "08").Text(420, 672, "03").Text(460, 672, "1987")
+            .Text(52, 630, "Riferimento del modulo sintetico");
+
+        var result = await ExtractAsync(pdf);
+        Assert.Null(result.Problem);
+        var mask = new Pseudonymizer(maskDates: true);
+        var masked = Assert.Single(mask.Mask(new[] { ChatMessage.User(result.Text) })).Content;
+        Assert.Equal(2, mask.Audit.Counts["PERSONA"]);
+        Assert.Equal(1, mask.Audit.Counts["DATA"]);
+        Assert.DoesNotContain("DE VARIS", masked);
+        Assert.DoesNotContain("OFELIA", masked);
+        Assert.DoesNotContain("1987", masked);
+        Assert.Contains("Cognome", masked);
+        Assert.Contains("Riferimento del modulo sintetico", masked);
+        Assert.Equal(result.Text, mask.Restore(masked));
+    }
+
     [Fact]
     public async Task Form_ValuesArePairedWithBoxAndLabel()
     {

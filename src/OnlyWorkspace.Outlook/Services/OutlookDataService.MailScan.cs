@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using OnlyWorkspace.Core.Agents;
+using OnlyWorkspace.Core.Archive;
 using OnlyWorkspace.Core.Models;
 using OnlyWorkspace.Core.Utils;
 using OnlyWorkspace.Infrastructure.Logging;
@@ -20,6 +21,7 @@ public sealed partial class OutlookDataService
         private readonly HashSet<string> _skipped = new(StringComparer.OrdinalIgnoreCase);
         private readonly HashSet<string> _seenMail = new(StringComparer.OrdinalIgnoreCase);
         private readonly string _dasl;
+        private readonly bool _unreadOnly;
         private readonly EmailRowFilter? _rows;
         private MSOutlook.NameSpace? _session;
         private MSOutlook.MAPIFolder? _folder;
@@ -28,15 +30,20 @@ public sealed partial class OutlookDataService
         private int _depth;
         private string _storeId = string.Empty;
         private string _folderName = string.Empty;
+        private bool _hasReceivedTime;
         private bool _hasMessageId;
         private bool _hasSmtp;
         private bool _hasTo;
         private bool _disposed;
+        private bool _folderIncomplete;
 
-        internal MailHeaderScan(OutlookDataService owner, IReadOnlyList<MailFolderRef> folders, bool subfolders, EmailSearchQuery query)
+        internal MailHeaderScan(OutlookDataService owner, IReadOnlyList<MailFolderRef> folders, bool subfolders, EmailSearchQuery query,
+            bool unreadOnly = false, int foldersFailed = 0)
         {
             _owner = owner;
-            _dasl = DaslQueryBuilder.BuildEmailSearchFilter(query);
+            _unreadOnly = unreadOnly;
+            FoldersFailed = foldersFailed;
+            _dasl = unreadOnly ? "[UnRead] = True" : DaslQueryBuilder.BuildEmailSearchFilter(query);
             _rows = EmailRowFilter.From(query);
             if (subfolders)
                 foreach (var item in owner.DefaultFoldersOfAllStores(MSOutlook.OlDefaultFolders.olFolderDeletedItems,
@@ -64,12 +71,14 @@ public sealed partial class OutlookDataService
             while (remaining > 0)
             {
                 if (_table == null && !OpenNextFolder()) break;
-                if (_table!.EndOfTable) { CloseFolder(); continue; }
-                remaining--;
-                RowsScanned++;
+                bool readingRow = false;
                 MSOutlook.Row? row = null;
                 try
                 {
+                    if (_table!.EndOfTable) { CloseFolder(); continue; }
+                    readingRow = true;
+                    remaining--;
+                    RowsScanned++;
                     row = _table.GetNextRow();
                     consecutiveReadFailures = 0;
                     if (row["EntryID"] is not string entryId) continue;
@@ -81,8 +90,8 @@ public sealed partial class OutlookDataService
                         !_rows.Matches(subject, _hasTo ? (row["To"] as string) + "; " + (row["CC"] as string) : null,
                             senderName, senderEmail, _hasSmtp ? row[DaslQueryBuilder.PropSenderSmtpAddress] as string : null)) continue;
                     string messageId = _hasMessageId ? row[DaslQueryBuilder.PropInternetMessageId] as string ?? string.Empty : string.Empty;
-                    var received = row["ReceivedTime"] is DateTime date ? date : default;
-                    string key = messageId.Length > 0 ? "MID:" + messageId.Trim() : "ENTRY:" + _storeId + "\n" + entryId;
+                    var received = _hasReceivedTime && row["ReceivedTime"] is DateTime date ? date : default;
+                    string key = !_unreadOnly && messageId.Length > 0 ? "MID:" + messageId.Trim() : "ENTRY:" + _storeId + "\n" + entryId;
                     if (!_seenMail.Add(key)) continue;
                     found.Add(new EmailSearchResult
                     {
@@ -99,9 +108,14 @@ public sealed partial class OutlookDataService
                 catch (Exception ex)
                 {
                     OnlyWorkspaceLog.Logger.Debug(ex, "Failed to read a mail search row");
-                    if (row == null && ++consecutiveReadFailures >= 3)
+                    if (_unreadOnly || !readingRow)
                     {
-                        FoldersFailed++;
+                        if (!_folderIncomplete) FoldersFailed++;
+                        _folderIncomplete = true;
+                    }
+                    if (!readingRow || (row == null && ++consecutiveReadFailures >= 3))
+                    {
+                        if (!_folderIncomplete) FoldersFailed++;
                         CloseFolder();
                         consecutiveReadFailures = 0;
                     }
@@ -122,6 +136,7 @@ public sealed partial class OutlookDataService
                 if (_skipped.Contains(reference.EntryId) || !_visited.Add(reference.StoreId + "\n" + reference.EntryId)) continue;
                 try
                 {
+                    _folderIncomplete = false;
                     _folder = _session!.GetFolderFromID(reference.EntryId, string.IsNullOrEmpty(reference.StoreId) ? Type.Missing : reference.StoreId);
                     _depth = depth;
                     if (_folder.DefaultItemType != MSOutlook.OlItemType.olMailItem) { CloseFolder(); continue; }
@@ -129,12 +144,19 @@ public sealed partial class OutlookDataService
                     _folderName = _folder.Name ?? string.Empty;
                     _table = _folder.GetTable(_dasl.Length > 0 ? _dasl : Type.Missing, MSOutlook.OlTableContents.olUserItems);
                     _columns = _table.Columns;
-                    foreach (var name in new[] { "SenderName", "SenderEmailAddress", "ReceivedTime" })
+                    foreach (var name in new[] { "SenderName", "SenderEmailAddress" })
                         ComObjects.Release(_columns.Add(name));
+                    if (_unreadOnly)
+                        _hasReceivedTime = TryColumn("ReceivedTime");
+                    else
+                    {
+                        ComObjects.Release(_columns.Add("ReceivedTime"));
+                        _hasReceivedTime = true;
+                    }
                     _hasMessageId = TryColumn(DaslQueryBuilder.PropInternetMessageId);
                     _hasSmtp = _rows != null && TryColumn(DaslQueryBuilder.PropSenderSmtpAddress);
                     _hasTo = _rows?.NeedsRecipients == true && TryColumn("To") && TryColumn("CC");
-                    _table.Sort("[ReceivedTime]", true);
+                    if (!_unreadOnly) _table.Sort("[ReceivedTime]", true);
                     return true;
                 }
                 catch (Exception ex)
@@ -207,6 +229,15 @@ public sealed partial class OutlookDataService
 
     public IReadOnlyList<MailFolderRef> GetChatSearchFolders() =>
         DefaultFoldersOfAllStores(MSOutlook.OlDefaultFolders.olFolderInbox, MSOutlook.OlDefaultFolders.olFolderSentMail);
+
+    public IMailHeaderScan BeginUnreadInboxScan(StoreScope scope)
+    {
+        EnsureUiThread();
+        int failed = 0;
+        var folders = scope.IsNone ? Array.Empty<MailFolderRef>() : StoreFolders(scope.IsAll ? null : scope.StoreIds,
+            root: false, new[] { MSOutlook.OlDefaultFolders.olFolderInbox }, () => failed++);
+        return new MailHeaderScan(this, folders, false, new EmailSearchQuery(), unreadOnly: true, foldersFailed: failed);
+    }
 
     public sealed class UnansweredSentScan : IUnansweredSentScan
     {

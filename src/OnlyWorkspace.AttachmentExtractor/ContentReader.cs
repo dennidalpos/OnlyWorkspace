@@ -245,7 +245,7 @@ internal static partial class ContentReader
         var lines = new List<string>();
         for (int i = 0; i < rows.Count; i++)
         {
-            lines.Add(RenderLine(rows[i], left, charWidth));
+            lines.Add(RenderLine(rows[i].Select(w => (w.Text, w.BoundingBox.Left, w.BoundingBox.Right)), left, charWidth));
             var pairs = PairValuesWithLabels(rows, i, charWidth);
             if (pairs != null) lines.Add("    → " + pairs);
         }
@@ -336,17 +336,17 @@ internal static partial class ContentReader
     /// Words of one line at their column (monospace grid of the page's usual character width), at least one space
     /// apart. The words of a phrase get one space: the font is proportional and the grid would spread them unevenly.
     /// </summary>
-    private static string RenderLine(List<Word> words, double left, double charWidth)
+    private static string RenderLine(IEnumerable<(string Text, double Left, double Right)> words, double left, double charWidth)
     {
         var sb = new StringBuilder();
-        Word? previous = null;
+        double previousRight = double.NegativeInfinity;
         foreach (var word in words)
         {
-            int column = (int)Math.Round((word.BoundingBox.Left - left) / charWidth);
-            bool samePhrase = previous != null && word.BoundingBox.Left - previous.BoundingBox.Right <= MaxWordGap * charWidth;
+            int column = (int)Math.Round((word.Left - left) / charWidth);
+            bool samePhrase = word.Left - previousRight <= MaxWordGap * charWidth;
             int pad = sb.Length == 0 ? column : samePhrase ? 1 : Math.Max(1, column - sb.Length);
             sb.Append(' ', Math.Max(0, Math.Min(pad, MaxLinePadding))).Append(word.Text);
-            previous = word;
+            previousRight = word.Right;
         }
         return sb.ToString();
     }
