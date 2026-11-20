@@ -39,7 +39,7 @@ Se cambi destinazione o permessi dei dati, il prossimo messaggio apre automatica
 
 ## Ricerca web
 
-L'amministratore la abilita per profilo e sceglie le azioni: Chat, Sintesi, Risposte, Follow-up, Verifica sicurezza, Attività e scadenze, Estrai dati, Briefing, Analisi della posta (predefinite: Chat, Follow-up, Verifica sicurezza, Briefing).
+L'amministratore la abilita per profilo e sceglie le azioni: Chat, Risposte, Follow-up, Verifica sicurezza, Attività e scadenze, Estrai dati, Briefing, Analisi della posta (predefinite: Chat, Follow-up, Verifica sicurezza, Briefing).
 
 Le ricerche web con dati non verificabili sono bloccate, inclusi domini ricavati dalla posta e query generate da Ollama. Le verifiche di capacità del ConfigTool usano solo input sintetici fissi; la presenza di una capacità non autorizza l’invio di contenuti.
 

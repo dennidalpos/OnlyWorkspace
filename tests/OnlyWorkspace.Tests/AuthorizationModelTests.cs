@@ -36,7 +36,9 @@ public sealed class AuthorizationModelTests
     public void EveryPaneActionHasAKnownWebSearchId()
     {
         var ids = WebSearchAction.All.Select(a => a.Key).ToHashSet();
-        foreach (var type in new[] { "chat", "summary", "reply", "custom_reply", "refine_reply", "email_followup", "followup_draft",
+        Assert.Null(WebSearchAction.Of("summary"));
+        Assert.DoesNotContain("summary", ids);
+        foreach (var type in new[] { "chat", "reply", "custom_reply", "refine_reply", "email_followup", "followup_draft",
                      "security", "action_items", "extract_data", "briefing", "mail_analysis", "analysis_question" })
             Assert.Contains(WebSearchAction.Of(type)!, ids);
     }

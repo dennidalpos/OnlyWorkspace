@@ -580,8 +580,10 @@ public partial class TaskPaneCoordinator : IDisposable
         };
     }
 
-    // Ribbon entry points: the pane message handler sets the Web Search action, the ribbon bypassed it (17/10/2026).
-    public Task ExecuteSummaryAsync() => WithWebAction("summary", () => ExecuteSummaryAsync(null));
+    // Sintesi never searches the web (decision 20/11/2026, #287).
+    public Task ExecuteSummaryAsync() => ExecuteSummaryAsync(null);
+
+    // Ribbon entry points below: the pane message handler sets the Web Search action, the ribbon bypassed it (17/10/2026).
 
     private Task ExecuteSummaryAsync(EmailRef? target)
     {

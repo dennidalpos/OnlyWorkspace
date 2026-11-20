@@ -476,7 +476,6 @@ public sealed partial class MainConfigForm : Form
     private static readonly Dictionary<string, string> WebActionTips = new()
     {
         [WebSearchAction.Chat] = "Chat: la risposta può includere notizie e fatti recenti trovati sul web.",
-        [WebSearchAction.Summary] = "Sintesi di un'email: aggiunge informazioni pubbliche su aziende e argomenti citati.",
         [WebSearchAction.Reply] = "Bozze di risposta: la bozza può tenere conto di informazioni pubbliche aggiornate.",
         [WebSearchAction.FollowUp] = "Follow-up: verifica sul web novità utili prima di proporre il sollecito.",
         [WebSearchAction.Security] = "Verifica sicurezza: la ricerca web riceve l'intera richiesta pseudonimizzata, con il testo dell'email (solo a Esteso).",

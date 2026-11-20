@@ -9,7 +9,6 @@ namespace OnlyWorkspace.Core.Models;
 public static class WebSearchAction
 {
     public const string Chat = "chat";
-    public const string Summary = "summary";
     public const string Reply = "reply";
     public const string FollowUp = "followup";
     public const string Security = "security";
@@ -21,7 +20,6 @@ public static class WebSearchAction
     public static IReadOnlyList<KeyValuePair<string, string>> All { get; } = new[]
     {
         new KeyValuePair<string, string>(Chat, "Chat"),
-        new KeyValuePair<string, string>(Summary, "Sintesi"),
         new KeyValuePair<string, string>(Reply, "Risposte"),
         new KeyValuePair<string, string>(FollowUp, "Follow-up"),
         new KeyValuePair<string, string>(Security, "Verifica sicurezza"),
@@ -38,7 +36,6 @@ public static class WebSearchAction
     public static string? Of(string? messageType) => messageType switch
     {
         "chat" => Chat,
-        "summary" => Summary,
         "reply" or "custom_reply" or "refine_reply" => Reply,
         "email_followup" or "followup_draft" => FollowUp,
         "security" => Security,
