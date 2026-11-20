@@ -971,6 +971,10 @@ public sealed class MainConfigFormTests
         });
     }
 
+    /// <summary>Screen and window of a failed layout check: a runner with a small desktop clamps the window below what a scale needs.</summary>
+    private static string LayoutContext(Form form) =>
+        $"screen {Screen.FromControl(form).WorkingArea.Width}x{Screen.FromControl(form).WorkingArea.Height}, window {form.Width}x{form.Height}, font {form.Font.Name} {form.Font.SizeInPoints:0.#}pt";
+
     /// <summary>INT01: «Livello di log» used to run past the card edge with its «?» (Generale, any scale).</summary>
     [Theory]
     [InlineData(1f)]
@@ -1005,7 +1009,7 @@ public sealed class MainConfigFormTests
             foreach (var help in helps)
             {
                 int right = grid.PointToClient(help.PointToScreen(new System.Drawing.Point(help.Width, 0))).X;
-                Assert.True(right <= grid.ClientSize.Width, $"«{help.AccessibleName}» ends at {right}, grid is {grid.ClientSize.Width} wide");
+                Assert.True(right <= grid.ClientSize.Width, $"«{help.AccessibleName}» ends at {right}, grid is {grid.ClientSize.Width} wide (scale {scale}, {LayoutContext(form)})");
             }
         });
     }
@@ -1070,7 +1074,7 @@ public sealed class MainConfigFormTests
             foreach (var value in values)
             {
                 int right = credits.PointToClient(value.PointToScreen(new System.Drawing.Point(value.Width, 0))).X;
-                Assert.True(right <= credits.ClientSize.Width, $"«{value.Text}» ends at {right}, grid is {credits.ClientSize.Width} wide (scale {scale})");
+                Assert.True(right <= credits.ClientSize.Width, $"«{value.Text}» ends at {right}, grid is {credits.ClientSize.Width} wide (scale {scale}, {LayoutContext(form)})");
             }
         });
     }

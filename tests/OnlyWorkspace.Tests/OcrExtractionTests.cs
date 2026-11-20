@@ -73,8 +73,17 @@ public class OcrExtractionTests
         var result = await AttachmentExtractionTests.ExtractAsync("foto.png", Encode(bitmap, ImageFormat.Png));
         if (!OcrAvailable.Value) { Assert.Equal("ocr-unavailable", result.Problem); return; }
         Assert.Null(result.Problem);
-        Assert.Contains("30/11/2026", result.Text);
-        Assert.Contains("1.250,00", result.Text);
+        // The runner's recognizer may read less than a developer PC: its languages and full reading go in the message.
+        Assert.True(result.Text.Contains("30/11/2026") && result.Text.Contains("1.250,00"), $"OCR languages {OcrLanguages()}, reading: {result.Text}");
+    }
+
+    private static string OcrLanguages()
+    {
+        var start = new ProcessStartInfo(AttachmentTextExtractor.FindHelper()!, "--ocr-languages") { RedirectStandardOutput = true, UseShellExecute = false, CreateNoWindow = true };
+        using var process = Process.Start(start)!;
+        string output = process.StandardOutput.ReadToEnd();
+        process.WaitForExit();
+        return output;
     }
 
     [Fact]
