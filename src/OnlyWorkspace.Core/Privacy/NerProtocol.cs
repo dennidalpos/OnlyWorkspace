@@ -71,7 +71,10 @@ public static class NerProtocol
             {
                 using var deadline = CancellationTokenSource.CreateLinkedTokenSource(token);
                 deadline.CancelAfter(Math.Max(1, request.BudgetMs));
-                reply = new Reply { Spans = model.Recognize(request.Text, deadline.Token).ToList() };
+                var spans = model.Recognize(request.Text, deadline.Token).ToList();
+                // A model that returns after its budget ran out (for example by waking on the cancelled token) has not answered in time.
+                deadline.Token.ThrowIfCancellationRequested();
+                reply = new Reply { Spans = spans };
             }
             catch (Exception ex) when (ex is not OutOfMemoryException) { reply = new Reply { Error = ex.GetType().Name }; }
             await WriteFrameAsync(stream, reply, token).ConfigureAwait(false);
