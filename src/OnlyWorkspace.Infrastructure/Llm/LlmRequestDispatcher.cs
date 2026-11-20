@@ -26,12 +26,14 @@ public sealed class LlmRequestDispatcher : ILlmClient, IDisposable
     private readonly Func<CancellationToken, Task<IReadOnlyList<PrivacyEntity>>>? _entities;
     private readonly IPseudonymizationAuditStore _audit;
     private readonly Func<MaskPreview, CancellationToken, Task<MaskPreviewDecision>>? _preview;
+    private readonly INerRecognizer? _recognizer;
 
     /// <param name="status">Receives the start and outcome of each request to the model (the pane's IA indicator).</param>
     public LlmRequestDispatcher(ILlmClient client, LlmProfileConfig profile, Action? validatePolicy = null, ModelServiceStatus? status = null,
         Action? requestStarting = null, Func<CancellationToken, Task<IReadOnlyList<PrivacyEntity>>>? entities = null,
-        IPseudonymizationAuditStore? audit = null, Func<MaskPreview, CancellationToken, Task<MaskPreviewDecision>>? preview = null)
-        : this(client, profile, validatePolicy, status, requestStarting, null, entities, audit, preview)
+        IPseudonymizationAuditStore? audit = null, Func<MaskPreview, CancellationToken, Task<MaskPreviewDecision>>? preview = null,
+        INerRecognizer? recognizer = null)
+        : this(client, profile, validatePolicy, status, requestStarting, null, entities, audit, preview, recognizer)
     {
     }
 
@@ -39,8 +41,9 @@ public sealed class LlmRequestDispatcher : ILlmClient, IDisposable
     internal LlmRequestDispatcher(ILlmClient client, LlmProfileConfig profile, Action? validatePolicy, ModelServiceStatus? status,
         Action? requestStarting, Func<Pseudonymizer, IEnumerable<ChatMessage>, IReadOnlyList<ChatMessage>>? maskMessages,
         Func<CancellationToken, Task<IReadOnlyList<PrivacyEntity>>>? entities = null, IPseudonymizationAuditStore? audit = null,
-        Func<MaskPreview, CancellationToken, Task<MaskPreviewDecision>>? preview = null)
+        Func<MaskPreview, CancellationToken, Task<MaskPreviewDecision>>? preview = null, INerRecognizer? recognizer = null)
     {
+        _recognizer = recognizer;
         _client = client;
         _profile = profile;
         _validatePolicy = validatePolicy;
@@ -152,7 +155,7 @@ public sealed class LlmRequestDispatcher : ILlmClient, IDisposable
         {
             var entities = _entities == null ? Array.Empty<PrivacyEntity>() : await _entities(ct);
             ct.ThrowIfCancellationRequested(); _validatePolicy?.Invoke();
-            return new Pseudonymizer(entities, _profile.IsExternal || _profile.PseudonymizeAmounts, _profile.IsExternal || _profile.PseudonymizeDates);
+            return new Pseudonymizer(entities, _profile.IsExternal || _profile.PseudonymizeAmounts, _profile.IsExternal || _profile.PseudonymizeDates, recognizer: _recognizer);
         }
         catch (OperationCanceledException) { throw; }
         catch (Exception ex) when (ex is not OutOfMemoryException)

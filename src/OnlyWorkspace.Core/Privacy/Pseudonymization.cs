@@ -26,6 +26,8 @@ public sealed class PseudonymizationContext
     private readonly TimeSpan _budget;
     private readonly CancellationToken _token;
     private PrivacyEntityIndex? _index;
+    internal CancellationToken Token => _token;
+    internal TimeSpan Remaining => _budget - _elapsed.Elapsed;
     internal IEnumerable<PseudonymMatch> MatchEntities(string text) => (_index ??= new PrivacyEntityIndex(Entities, Check)).Detect(text, Check);
     public PseudonymizationContext(IEnumerable<PrivacyEntity>? entities = null, bool maskAmounts = false,
         bool maskDates = false, CancellationToken token = default, TimeSpan? budget = null)
@@ -90,7 +92,7 @@ public sealed class PseudonymizationCatalog
     public string NamePattern { get; set; } = string.Empty;
     public List<string> NameOpeners { get; set; } = new();
     public List<PrivacyPattern> Patterns { get; set; } = new();
-    /// <summary>Labels of a future local recognizer mapped to catalog categories (#248); no strategy reads them yet.</summary>
+    /// <summary>Labels of the local recognizer mapped to catalog categories (#248); read by the ner strategy (#247).</summary>
     public Dictionary<string, string> NerLabels { get; set; } = new();
     public string? CategoryOfNerLabel(string label) => NerLabels.TryGetValue(label ?? string.Empty, out var category) ? category : null;
     internal static bool ValidCategory(string value) => !string.IsNullOrEmpty(value) && value.Length <= 16 &&
@@ -119,9 +121,11 @@ public sealed class PseudonymizationCatalog
                 throw new InvalidDataException("Invalid privacy pattern.");
     }
     internal static Regex Regex(string pattern) => new(pattern, RegexOptions.CultureInvariant, TimeSpan.FromSeconds(2));
-    public IReadOnlyList<IPseudonymizationStrategy> Strategies() => Patterns.Select(p =>
+    /// <param name="recognizer">The local model layer (#247); null keeps the rules alone.</param>
+    public IReadOnlyList<IPseudonymizationStrategy> Strategies(INerRecognizer? recognizer = null) => Patterns.Select(p =>
         (IPseudonymizationStrategy)new PatternStrategy(p, Revision))
-        .Concat(new IPseudonymizationStrategy[] { new EntityStrategy(Revision), new FormFieldStrategy(Revision) }).ToArray();
+        .Concat(new IPseudonymizationStrategy[] { new EntityStrategy(Revision), new FormFieldStrategy(Revision) })
+        .Concat(recognizer == null ? Array.Empty<IPseudonymizationStrategy>() : new IPseudonymizationStrategy[] { new NerStrategy(recognizer, this) }).ToArray();
 
     private sealed class PatternStrategy : IPseudonymizationStrategy
     {

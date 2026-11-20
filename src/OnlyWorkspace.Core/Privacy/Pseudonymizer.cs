@@ -33,10 +33,10 @@ public sealed partial class Pseudonymizer
     public PseudonymizationAudit Audit { get; } = new();
 
     public Pseudonymizer(IEnumerable<PrivacyEntity>? entities = null, bool maskAmounts = false, bool maskDates = false,
-        PseudonymizationCatalog? catalog = null, IEnumerable<IPseudonymizationStrategy>? strategies = null, TimeSpan? budget = null)
+        PseudonymizationCatalog? catalog = null, IEnumerable<IPseudonymizationStrategy>? strategies = null, TimeSpan? budget = null, INerRecognizer? recognizer = null)
     {
         _catalog = catalog ?? PseudonymizationCatalog.Load(); _catalog.Validate();
-        _strategies = (strategies ?? _catalog.Strategies()).OrderByDescending(s => s.Priority).ThenBy(s => s.Id, StringComparer.Ordinal).ToArray();
+        _strategies = (strategies ?? _catalog.Strategies(recognizer)).OrderByDescending(s => s.Priority).ThenBy(s => s.Id, StringComparer.Ordinal).ToArray();
         if (_strategies.Count == 0 || _strategies.Any(s => string.IsNullOrWhiteSpace(s.Id) || string.IsNullOrWhiteSpace(s.Revision)) ||
             _strategies.Select(s => s.Id).Distinct(StringComparer.Ordinal).Count() != _strategies.Count)
             throw new DataEgressBlockedException("Strategie di pseudonimizzazione non valide: nessun dato inviato.");

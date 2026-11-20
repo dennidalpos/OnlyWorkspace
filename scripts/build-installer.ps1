@@ -77,6 +77,12 @@ $extractorDest = Join-Path $publishDir "extractor"
 New-Item -ItemType Directory -Path $extractorDest -Force | Out-Null
 Copy-Item -Path "$extractorBin\*" -Destination $extractorDest -Exclude "*.pdb" -Force
 
+# Copia il riconoscitore locale (secondo strato NER, #247) in sottocartella; il modello non è nel pacchetto finché la licenza dei dati non è decisa (#245, #246)
+$recognizerBin = Get-OnlyWorkspaceOutputDirectory -RepositoryRoot $repoRoot -Configuration $Configuration -Project OnlyWorkspace.PiiRecognizer
+$recognizerDest = Join-Path $publishDir "recognizer"
+New-Item -ItemType Directory -Path $recognizerDest -Force | Out-Null
+Copy-Item -Path "$recognizerBin\*" -Destination $recognizerDest -Exclude "*.pdb" -Force
+
 # Copia avvisi licenze di terze parti
 # No-PIA is verified on every distributed managed assembly before removing stale interop DLLs.
 # Read PE metadata without loading .NET Framework assemblies into the packaging process.
@@ -134,7 +140,7 @@ if ($Unsigned) {
 }
 else {
     Write-Host "==> 3. Firma digitale binari in publish..." -ForegroundColor Cyan
-    $binariesToSign = @(Get-ChildItem -Path $publishDir -Include "OnlyWorkspace.*.dll", "OnlyWorkspace.ConfigTool.exe", "OnlyWorkspace.AttachmentExtractor.exe" -Recurse -File | Select-Object -ExpandProperty FullName)
+    $binariesToSign = @(Get-ChildItem -Path $publishDir -Include "OnlyWorkspace.*.dll", "OnlyWorkspace.ConfigTool.exe", "OnlyWorkspace.AttachmentExtractor.exe", "OnlyWorkspace.PiiRecognizer.exe" -Recurse -File | Select-Object -ExpandProperty FullName)
     if ($binariesToSign.Count -eq 0) { throw "Nessun binario OnlyWorkspace da firmare in $publishDir." }
     foreach ($bin in $binariesToSign) {
         & pwsh -ExecutionPolicy Bypass -File "$PSScriptRoot\sign-binaries.ps1" -Files @($bin)

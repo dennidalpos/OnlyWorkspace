@@ -14,7 +14,7 @@ using OnlyWorkspace.Infrastructure.Security;
 namespace OnlyWorkspace.Tests;
 
 /// <summary>Real factory, dispatcher and HTTP on loopback; no provider account or Outlook data.</summary>
-public sealed class MaskedFreeTextTransportTests
+public sealed partial class MaskedFreeTextTransportTests
 {
     private const string Schema = "{\"type\":\"object\",\"properties\":{\"name\":{\"type\":\"string\"}},\"required\":[\"name\"],\"additionalProperties\":false}";
     private const string Text = "Da Anna Bianchi <anna@example.test>: conferma il bonifico di 1234,56 euro e la commissione di EURO 4,50 entro il 15/11/2026 su IT60X0542811101000000123456";
@@ -279,7 +279,7 @@ public sealed class MaskedFreeTextTransportTests
         };
     }
 
-    private sealed class Server : IDisposable
+    internal sealed class Server : IDisposable
     {
         private readonly TcpListener _listener = new(IPAddress.Loopback, 0);
         private readonly CancellationTokenSource _deadline = new(TimeSpan.FromSeconds(15));

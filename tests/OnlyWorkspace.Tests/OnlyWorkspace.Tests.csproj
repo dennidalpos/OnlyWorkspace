@@ -96,6 +96,8 @@
     <Compile Include="..\..\src\OnlyWorkspace.Outlook\UI\BriefingReport.cs" Link="Outlook\BriefingReport.cs" />
     <!-- The extractor runs as its own process; its STA helper is tested here directly: StaThreadTests. -->
     <Compile Include="..\..\src\OnlyWorkspace.AttachmentExtractor\StaThread.cs" Link="Extractor\StaThread.cs" />
+    <!-- The recognizer's pipe (user-only ACL) is exercised in process: NerRecognizerTests. -->
+    <Compile Include="..\..\src\OnlyWorkspace.PiiRecognizer\PiiPipeServer.cs" Link="PiiRecognizer\PiiPipeServer.cs" />
   </ItemGroup>
 
   <ItemGroup>
