@@ -21,13 +21,13 @@ try {
     foreach ($global:packagingscenario in @('build', 'certificate', 'binary', 'binary-signature', 'wrong-signer', 'nsis', 'setup', 'setup-signature', 'success')) {
         & {
             $global:packagingfixture = Join-Path $scratchRoot $global:packagingscenario
-            foreach ($folder in @('scripts', 'certs', 'installer', 'src\OnlyWorkspace.Outlook\bin\Release\net48', 'src\OnlyWorkspace.ConfigTool\bin\Release\net48', 'src\OnlyWorkspace.AttachmentExtractor\bin\Release\net48')) {
+            foreach ($folder in @('scripts', 'certs', 'installer', 'src\OnlyWorkspace.Outlook\bin\Release\net48', 'src\OnlyWorkspace.ConfigTool\bin\Release\net48', 'src\OnlyWorkspace.AttachmentExtractor\bin\Release\net48', 'src\OnlyWorkspace.PiiRecognizer\bin\Release\net48')) {
                 New-Item -ItemType Directory -Path (Join-Path $global:packagingfixture $folder) -Force | Out-Null
             }
             Copy-Item -LiteralPath (Join-Path $repoRoot 'scripts\build-installer.ps1') -Destination (Join-Path $global:packagingfixture 'scripts')
             Copy-Item -LiteralPath (Join-Path $repoRoot 'scripts\build-paths.ps1') -Destination (Join-Path $global:packagingfixture 'scripts')
             [IO.File]::WriteAllText((Join-Path $global:packagingfixture 'Directory.Build.props'), '<Project><PropertyGroup><Version>1.0.0</Version></PropertyGroup></Project>')
-            foreach ($file in @('src\OnlyWorkspace.Outlook\bin\Release\net48\OnlyWorkspace.Outlook.dll', 'src\OnlyWorkspace.Outlook\bin\Release\net48\fixture.pdb', 'src\OnlyWorkspace.ConfigTool\bin\Release\net48\OnlyWorkspace.ConfigTool.exe', 'src\OnlyWorkspace.AttachmentExtractor\bin\Release\net48\OnlyWorkspace.AttachmentExtractor.exe')) {
+            foreach ($file in @('src\OnlyWorkspace.Outlook\bin\Release\net48\OnlyWorkspace.Outlook.dll', 'src\OnlyWorkspace.Outlook\bin\Release\net48\fixture.pdb', 'src\OnlyWorkspace.ConfigTool\bin\Release\net48\OnlyWorkspace.ConfigTool.exe', 'src\OnlyWorkspace.AttachmentExtractor\bin\Release\net48\OnlyWorkspace.AttachmentExtractor.exe', 'src\OnlyWorkspace.PiiRecognizer\bin\Release\net48\OnlyWorkspace.PiiRecognizer.exe')) {
                 if ($file.EndsWith('.pdb')) { [IO.File]::WriteAllText((Join-Path $global:packagingfixture $file), 'fixture') }
                 else { Copy-Item -LiteralPath (Join-Path $coreOutput 'OnlyWorkspace.Core.dll') -Destination (Join-Path $global:packagingfixture $file) }
             }
