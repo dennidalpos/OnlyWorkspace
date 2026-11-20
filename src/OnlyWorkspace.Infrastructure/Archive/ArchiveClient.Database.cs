@@ -43,6 +43,7 @@ public sealed partial class ArchiveClient
         nameof(ArchiveDb.ExpandRelated),
         nameof(ArchiveDb.GetStoreCoverage),
         nameof(ArchiveDb.FindAddresses),
+        nameof(ArchiveDb.FindDomainAddresses),
         nameof(ArchiveDb.GetPrivacyEntities),
         nameof(ArchiveDb.CounterpartyOf),
     };
@@ -149,6 +150,8 @@ public sealed partial class ArchiveClient
     public Task<IReadOnlyList<ArchiveStoreCoverage>> GetStoreCoverageAsync(CancellationToken ct = default) =>
         CallAsync<IReadOnlyList<ArchiveStoreCoverage>>(nameof(ArchiveDb.GetStoreCoverage), Array.Empty<object?>(), ct);
 
+    public Task<IReadOnlyList<long>> FindDomainAddressesAsync(string? label, int max = 500, CancellationToken ct = default) =>
+        CallAsync<IReadOnlyList<long>>(nameof(ArchiveDb.FindDomainAddresses), new object?[] { label, max }, ct);
     public Task<IReadOnlyList<long>> FindAddressesAsync(string? text, int max = 500, CancellationToken ct = default) =>
         CallAsync<IReadOnlyList<long>>(nameof(ArchiveDb.FindAddresses), new object?[] { text, max }, ct);
 

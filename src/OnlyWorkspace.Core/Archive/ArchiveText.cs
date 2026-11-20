@@ -54,6 +54,10 @@ public static class ArchiveText
         return string.Join(" OR ", terms);
     }
 
+    /// <summary>The single-term FTS5 queries inside a <see cref="BuildFtsQuery"/> result (at most 12).</summary>
+    public static List<string> FtsTerms(string fts) =>
+        string.IsNullOrEmpty(fts) ? new List<string>() : new List<string>(fts.Split(new[] { " OR " }, 12, StringSplitOptions.RemoveEmptyEntries));
+
     private static string Stem(string word)
     {
         if (word.Length < 6 || char.IsDigit(word[word.Length - 1])) return word;

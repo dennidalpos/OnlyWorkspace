@@ -405,6 +405,24 @@ public partial class TaskPaneCoordinator
             archiveQuery.AddressIds = ids.ToList();
             archiveQuery.Role = ArchivePartyRole.Sender;
         }
+        else if (hasText)
+        {
+            // A word that is a whole label of a sender's domain («areajob» → areajob.it) names the provider:
+            // filter by that domain instead of looking for the word in every email.
+            var domainIds = new HashSet<long>();
+            var remaining = new List<string>();
+            foreach (var word in query.Keywords!.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries))
+            {
+                var ids = word.Length >= 3 && word.All(char.IsLetterOrDigit) ? await db.FindDomainAddressesAsync(word, ct: ct) : Array.Empty<long>();
+                if (ids.Count > 0) domainIds.UnionWith(ids); else remaining.Add(word);
+            }
+            if (domainIds.Count > 0)
+            {
+                archiveQuery.AddressIds = domainIds.ToList();
+                archiveQuery.Role = ArchivePartyRole.Sender;
+                archiveQuery.Text = remaining.Count > 0 ? string.Join(" ", remaining) : null;
+            }
+        }
 
         var hits = await SearchArchiveAsync(db, archiveQuery, attachments, coverage, ct, latest);
 

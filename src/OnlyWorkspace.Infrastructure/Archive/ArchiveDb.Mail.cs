@@ -798,7 +798,20 @@ public sealed partial class ArchiveDb
             args.Add(("$to", ToUnix(query.ToUtc.Value)));
         }
         AppendFactFilters(sql, args, query);
-        sql.Append(fts.Length > 0 ? "order by m.score, e.id desc " : "order by e.received desc, e.id desc ").Append("limit $n offset $offset");
+        if (fts.Length > 0)
+        {
+            // Emails matching more of the asked words come first; the text rank orders those with the same count.
+            var terms = ArchiveText.FtsTerms(fts);
+            var counts = new List<string>();
+            for (int i = 0; i < terms.Count; i++)
+            {
+                counts.Add($"(e.id in (select rowid from body_fts where body_fts match $term{i}))");
+                args.Add(("$term" + i, terms[i]));
+            }
+            sql.Append("order by ").Append(counts.Count > 0 ? string.Join(" + ", counts) + " desc, " : "").Append("m.score, e.id desc ");
+        }
+        else sql.Append("order by e.received desc, e.id desc ");
+        sql.Append("limit $n offset $offset");
         args.Add(("$n", Math.Max(1, Math.Min(500, query.Max))));
         args.Add(("$offset", Math.Max(0, query.Offset)));
 
@@ -866,6 +879,26 @@ public sealed partial class ArchiveDb
                 "select a.id from addresses a left join counterparties c on c.id=a.cp_id where a.is_me=0 and " +
                 "(a.addr like $p escape '\\' or a.name like $p escape '\\' or c.name like $p escape '\\' or c.key like $p escape '\\') limit $n",
                 null, ("$p", LikePattern(text)), ("$n", Math.Max(1, max)));
+            using var r = cmd.ExecuteReader();
+            while (r.Read()) result.Add(r.GetInt64(0));
+            return result;
+        }
+    }
+
+    /// <summary>
+    /// Addresses whose domain has <paramref name="label"/> as a whole label (areajob → info@areajob.it, a@mail.areajob.com).
+    /// Own addresses are left out; a label with anything but letters and digits matches nothing.
+    /// </summary>
+    public IReadOnlyList<long> FindDomainAddresses(string? label, int max = 500)
+    {
+        var l = (label ?? string.Empty).Trim().ToLowerInvariant();
+        if (l.Length < 3 || !l.All(char.IsLetterOrDigit)) return Array.Empty<long>();
+        lock (_gate)
+        {
+            var result = new List<long>();
+            using var cmd = Command(
+                "select id from addresses where is_me=0 and (lower(addr) like $a or lower(addr) like $b) limit $n",
+                null, ("$a", "%@" + l + ".%"), ("$b", "%@%." + l + ".%"), ("$n", Math.Max(1, max)));
             using var r = cmd.ExecuteReader();
             while (r.Read()) result.Add(r.GetInt64(0));
             return result;

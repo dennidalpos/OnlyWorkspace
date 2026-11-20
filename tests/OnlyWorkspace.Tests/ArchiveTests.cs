@@ -209,6 +209,37 @@ public class ArchiveDbTests : IDisposable
     }
 
     [Fact]
+    public void Search_RanksByHowManyAskedWordsMatch_AndFindDomainAddressesMatchesWholeLabels()
+    {
+        var day = new DateTime(2020, 6, 1, 8, 0, 0, DateTimeKind.Utc);
+        using var db = ArchiveDb.Open(_dir, "p");
+        var inbox = db.GetOrAddFolder("s", "inbox", "Inbox");
+        db.AddHeaders(inbox, new[]
+        {
+            Header("e1", "Newsletter", "news@altri.it", day, "<m1>"),
+            Header("e2", "Attestato", "info@areajob.it", day.AddDays(1), "<m2>"),
+            Header("e3", "Promo", "a@mail.areajob.com", day.AddDays(2), "<m3>"),
+            Header("e4", "Altro", "x@notareajob.it", day.AddDays(3), "<m4>")
+        }, folderDone: true);
+        var texts = new Dictionary<string, string>
+        {
+            ["e1"] = "corso di sicurezza completato in estate",
+            ["e2"] = "corso sicurezza",
+            ["e3"] = "corso",
+            ["e4"] = "nulla"
+        };
+        foreach (var p in db.NextPendingBodies(10)) db.SaveBody(p.Id, new ArchiveBody { Text = texts[p.EntryId] });
+
+        var ranked = db.Search(new ArchiveQuery { Text = "corso sicurezza estate" }).Select(h => h.EntryId).ToList();
+        Assert.Equal(new[] { "e1", "e2", "e3" }, ranked);
+
+        var domain = db.FindDomainAddresses("areajob");
+        Assert.Equal(2, domain.Count);
+        Assert.Equal(new[] { "e3", "e2" }, db.Search(new ArchiveQuery { AddressIds = domain, Role = ArchivePartyRole.Sender }).Select(h => h.EntryId));
+        Assert.Empty(db.FindDomainAddresses("area"));
+    }
+
+    [Fact]
     public void FindAddresses_CoversAPersonOrAWholeCompany_AndTheRoleNarrowsTheSearch()
     {
         var day = new DateTime(2020, 6, 1, 8, 0, 0, DateTimeKind.Utc);
