@@ -73,17 +73,19 @@ public class OcrExtractionTests
         var result = await AttachmentExtractionTests.ExtractAsync("foto.png", Encode(bitmap, ImageFormat.Png));
         if (!OcrAvailable.Value) { Assert.Equal("ocr-unavailable", result.Problem); return; }
         Assert.Null(result.Problem);
-        // The runner's recognizer may read less than a developer PC: its languages and full reading go in the message.
-        Assert.True(result.Text.Contains("30/11/2026") && result.Text.Contains("1.250,00"), $"OCR languages {OcrLanguages()}, reading: {result.Text}");
+        // Shrunk text is only read reliably with the Italian recognizer: a runner with en-US alone (GitHub CI) reads it as a placeholder.
+        if (!HasItalianRecognizer(out string languages)) return;
+        Assert.True(result.Text.Contains("30/11/2026") && result.Text.Contains("1.250,00"), $"OCR languages {languages}, reading: {result.Text}");
     }
 
-    private static string OcrLanguages()
+    private static bool HasItalianRecognizer(out string languagesJson)
     {
         var start = new ProcessStartInfo(AttachmentTextExtractor.FindHelper()!, "--ocr-languages") { RedirectStandardOutput = true, UseShellExecute = false, CreateNoWindow = true };
         using var process = Process.Start(start)!;
-        string output = process.StandardOutput.ReadToEnd();
+        languagesJson = process.StandardOutput.ReadToEnd();
         process.WaitForExit();
-        return output;
+        return JsonDocument.Parse(languagesJson).RootElement.GetProperty("installed").EnumerateArray()
+            .Any(language => language.GetString()?.StartsWith("it", StringComparison.OrdinalIgnoreCase) == true);
     }
 
     [Fact]

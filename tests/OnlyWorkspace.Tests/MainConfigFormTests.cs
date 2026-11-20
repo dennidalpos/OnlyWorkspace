@@ -871,6 +871,7 @@ public sealed class MainConfigFormTests
             };
             form.Show();
             Application.DoEvents();
+            int widthBefore = form.Width;
             if (scale > 1f)
             {
                 // Stand-in for a monitor at this scale: the form font and the design-pixel sizes grow together.
@@ -878,6 +879,7 @@ public sealed class MainConfigFormTests
                 form.Scale(new System.Drawing.SizeF(scale, scale));
                 Application.DoEvents();
             }
+            if (WindowClampedByScreen(form, widthBefore, scale)) return;
             var provider = Field<ComboBox>(form, "_cmbProvider");
             Control cell = provider;
             while (cell.Parent is not TableLayoutPanel && cell.Parent != null) cell = cell.Parent;
@@ -971,6 +973,9 @@ public sealed class MainConfigFormTests
         });
     }
 
+    /// <summary>A desktop smaller than the scaled window (GitHub runner, 1024x720) clamps it, so a scale check on it proves nothing.</summary>
+    private static bool WindowClampedByScreen(Form form, int widthBefore, float scale) => scale > 1f && form.Width < widthBefore * scale * 0.9;
+
     /// <summary>Screen and window of a failed layout check: a runner with a small desktop clamps the window below what a scale needs.</summary>
     private static string LayoutContext(Form form) =>
         $"screen {Screen.FromControl(form).WorkingArea.Width}x{Screen.FromControl(form).WorkingArea.Height}, window {form.Width}x{form.Height}, font {form.Font.Name} {form.Font.SizeInPoints:0.#}pt";
@@ -993,6 +998,7 @@ public sealed class MainConfigFormTests
             };
             form.Show();
             Application.DoEvents();
+            int widthBefore = form.Width;
             if (scale > 1f)
             {
                 form.Font = new System.Drawing.Font(form.Font.FontFamily, form.Font.SizeInPoints * scale);
@@ -1000,6 +1006,7 @@ public sealed class MainConfigFormTests
             }
             typeof(MainConfigForm).GetMethod("ShowPage", Flags)!.Invoke(form, new object[] { 1 });
             Application.DoEvents();
+            if (WindowClampedByScreen(form, widthBefore, scale)) return;
             Control cell = Field<ComboBox>(form, "_cmbLogLevel");
             while (cell.Parent is not TableLayoutPanel && cell.Parent != null) cell = cell.Parent;
             var grid = (TableLayoutPanel)cell.Parent!;
@@ -1059,6 +1066,7 @@ public sealed class MainConfigFormTests
             };
             form.Show();
             Application.DoEvents();
+            int widthBefore = form.Width;
             if (scale > 1f)
             {
                 form.Font = new System.Drawing.Font(form.Font.FontFamily, form.Font.SizeInPoints * scale);
@@ -1068,6 +1076,7 @@ public sealed class MainConfigFormTests
             var pages = Field<List<Control>>(form, "_pages");
             typeof(MainConfigForm).GetMethod("ShowPage", Flags)!.Invoke(form, new object[] { pages.Count - 1 });
             Application.DoEvents();
+            if (WindowClampedByScreen(form, widthBefore, scale)) return;
             var credits = Descendants(pages[pages.Count - 1]).OfType<TableLayoutPanel>().Where(g => g.ColumnCount == 4).Last();
             var values = Descendants(credits).OfType<Label>().Where(l => credits.GetColumn(l.Parent == credits ? l : l.Parent!) > 0 && l.Visible).ToList();
             Assert.Contains(values, l => l.Text.Contains("LICENSE.txt"));
