@@ -857,8 +857,6 @@ public sealed partial class MainConfigForm : Form
         }
 
         string secretsFile = Path.Combine(AppPaths.SecretsDirectoryFor(_configDir), "secrets.bin");
-        if (AppPaths.IsStandardConfigDirectory(_configDir) && File.Exists(AppPaths.LegacySecretsFile))
-            LogActivity("[AVVISO] " + AppPaths.LegacySecretsFile + " è il vault di una versione precedente: non viene più letto ed è leggibile da tutti gli utenti del PC. Reinserisci le chiavi API e fai eliminare il file a un amministratore.");
         if (File.Exists(secretsFile))
         {
             try

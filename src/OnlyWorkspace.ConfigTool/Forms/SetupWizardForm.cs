@@ -89,7 +89,6 @@ public sealed class SetupWizardForm : Form
                 "Imposta per tutti gli utenti del PC il modello IA e l'autorizzazione dell'archivio (%ProgramData%\\OnlyWorkspace\\config.json e secrets.bin, chiavi cifrate; il salvataggio può chiedere l'autorizzazione di amministratore) e, per l'utente corrente, avvio automatico e caricamento dell'add-in. Ogni scelta si cambia poi nella Configurazione.")));
 
         _cmbProvider.Items.AddRange(ProviderCatalog.All.Cast<object>().ToArray());
-        if (ProviderCatalog.IsLegacy(Profile.Type)) _cmbProvider.Items.Add(ProviderCatalog.Get(Profile.Type));
         _cmbProvider.SelectedItem = ProviderCatalog.Get(Profile.Type);
         _cmbProvider.SelectedIndexChanged += (_, _) => { _connectionCheck?.Cancel(); OnProviderChanged(); };
         foreach (var field in new Control[] { _txtEndpoint, _txtModel, _txtKey })
@@ -288,8 +287,6 @@ public sealed class SetupWizardForm : Form
         var caps = Caps;
         if (!keepValues)
         {
-            foreach (var legacy in _cmbProvider.Items.Cast<ProviderCapabilities>().Where(p => ProviderCatalog.IsLegacy(p.Type)).ToArray())
-                _cmbProvider.Items.Remove(legacy);
             _cmbPreset.SelectedItem = PresetNone;
             _txtEndpoint.Text = caps.DefaultBaseUrl;
             _txtModel.Text = caps.DefaultModel;

@@ -468,9 +468,8 @@ SectionEnd
     function Assert-ProgramOperation([string]$Helper, [string]$Operation, [string]$Destination, [int]$Expected) {
         $log = Join-Path $checksFixture ('program-' + [guid]::NewGuid().ToString('N') + '.log')
         $arguments = "-NoProfile -NonInteractive -ExecutionPolicy Bypass -File `"$Helper`" -Operation $Operation -Destination `"$Destination\.`""
-        $runner = if ($Operation -eq 'RetireLegacy' -and [Environment]::Is64BitOperatingSystem) {
-            Join-Path $env:WINDIR 'SysWOW64\WindowsPowerShell\v1.0\powershell.exe'
-        } else { $windowsPowerShell }
+        $runner = $windowsPowerShell
+
         $process = Start-Process -FilePath $runner -ArgumentList $arguments -WorkingDirectory $checksFixture -RedirectStandardError $log -WindowStyle Hidden -PassThru
         if (!$process.WaitForExit(30000)) { $process.Kill(); throw "Program operation '$Operation' timed out." }
         if ($process.ExitCode -ne $Expected) {
@@ -481,9 +480,7 @@ SectionEnd
         [void][IO.Directory]::CreateDirectory($oldRoot)
         [IO.File]::WriteAllText((Join-Path $oldRoot $outlookDll), 'legacy')
         $oldUninstaller = Join-Path $oldRoot 'Uninstall.exe'
-        $disabled = "$oldUninstaller.disabled"
         [IO.File]::Copy($uninstaller, $oldUninstaller)
-        $oldHash = (Get-FileHash -LiteralPath $oldUninstaller).Hash
         $null = New-Item -Path $registryFixture
         $null = New-ItemProperty -LiteralPath $registryFixture -Name InstallLocation -Value $oldRoot
         $null = New-ItemProperty -LiteralPath $registryFixture -Name UninstallString -Value ('"' + $oldUninstaller + '"')
@@ -496,53 +493,15 @@ SectionEnd
         if (Test-Path -LiteralPath $programRoot) { throw 'Failed first installation left its new program directory.' }
         Assert-ProgramOperation $first Deploy $programRoot 0
         if ([IO.File]::ReadAllText((Join-Path $oldRoot $outlookDll)) -cne 'legacy') { throw 'Transition changed the old installation.' }
-        Assert-ProgramOperation $first RetireLegacy $programRoot 3
         $registeredProgramRoot = $programRoot + '\'
         Set-ItemProperty -LiteralPath $registryFixture -Name InstallLocation -Value $registeredProgramRoot
         Set-ItemProperty -LiteralPath $registryFixture -Name UninstallString -Value ('"' + $programUninstaller + '"')
-
-        function New-LegacyRetirementStage([string]$Name, [switch]$TrustedFixture) {
-            $stage = New-ProgramStage $Name @{}
-            $stagePayload = Join-Path (Split-Path -LiteralPath $stage) 'payload'
-            [void][IO.Directory]::CreateDirectory($stagePayload)
-            [IO.File]::WriteAllBytes((Join-Path $stagePayload 'OnlyApps.cer'), $certificate.RawData)
-            if ($TrustedFixture) {
-                # Use a signature double only. The PE metadata, locked handle and Win32 rename are real.
-                $trusted = $programSource.Replace('Microsoft.PowerShell.Security\Get-AuthenticodeSignature -LiteralPath $snapshot',
-                    "[pscustomobject]@{ Status='Valid'; SignerCertificate=@{ Thumbprint='$($certificate.Thumbprint)' } }")
-                [IO.File]::WriteAllText($stage, $trusted)
-            }
-            $stage
-        }
-
-        $unsigned = New-LegacyRetirementStage 'retire unsigned'
-        Assert-ProgramOperation $unsigned RetireLegacy $programRoot 3
-        if ((Get-FileHash -LiteralPath $oldUninstaller).Hash -ne $oldHash) { throw 'Unsigned legacy file was changed.' }
-        $retire = New-LegacyRetirementStage 'retire locked' -TrustedFixture
-        $heldLegacy = [IO.File]::Open($oldUninstaller, 'Open', 'Read', 'Read')
-        try { Assert-ProgramOperation $retire RetireLegacy $programRoot 3 } finally { $heldLegacy.Dispose() }
-
-        [IO.File]::WriteAllText($disabled, 'foreign collision')
-        $retire = New-LegacyRetirementStage 'retire collision' -TrustedFixture
-        Assert-ProgramOperation $retire RetireLegacy $programRoot 3
-        if ([IO.File]::ReadAllText($disabled) -cne 'foreign collision' -or
-            (Get-FileHash -LiteralPath $oldUninstaller).Hash -ne $oldHash) { throw 'Legacy retirement overwrote a file.' }
-        [IO.File]::Move($disabled, (Join-Path $oldRoot 'foreign-copy.txt'))
-
-        $retry = New-ProgramStage 'stage retry' @{ $outlookDll='first'; $retired='old'; 'Uninstall.exe'='first uninstaller' }
-        Assert-ProgramOperation $retry Deploy $programRoot 0
-        $retire = New-LegacyRetirementStage 'retire verified' -TrustedFixture
-        Assert-ProgramOperation $retire RetireLegacy $programRoot 0
-        Assert-ProgramOperation $retire RetireLegacy $programRoot 0
         $currentRegistry = Get-ItemProperty -LiteralPath $registryFixture
-        if ((Test-Path -LiteralPath $oldUninstaller) -or (Get-FileHash -LiteralPath $disabled).Hash -ne $oldHash -or
-            [IO.File]::ReadAllText((Join-Path $oldRoot $outlookDll)) -cne 'legacy' -or
-            [IO.File]::ReadAllText($programUninstaller) -cne 'first uninstaller' -or
-            $currentRegistry.InstallLocation -cne $registeredProgramRoot -or $currentRegistry.UninstallString -cne ('"' + $programUninstaller + '"') -or
-            ($currentRegistry.ProgramInventory | ConvertFrom-Json).legacyUninstaller) {
-            throw 'Retirement changed files or registrations outside the verified legacy executable.'
+        if ((Test-Path -LiteralPath $oldUninstaller) -eq $false -or [IO.File]::ReadAllText((Join-Path $oldRoot $outlookDll)) -cne 'legacy' -or
+            ($currentRegistry.ProgramInventory | ConvertFrom-Json).PSObject.Properties.Name -contains 'legacyUninstaller') {
+            throw 'A transition from an older installation changed it or recorded a legacy uninstaller.'
         }
-        Write-Output 'PASS legacy uninstaller: signature check, locked file, no overwrite, rename and idempotent retry'
+        Write-Output 'PASS older installation: left untouched by the first deploy, no legacy uninstaller recorded'
 
         $foreignPath = Join-Path $programRoot $foreignFile
         [IO.File]::WriteAllText($foreignPath, 'keep')

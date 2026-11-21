@@ -9,7 +9,7 @@ public static class ProviderCompatibility
     private static readonly HashSet<string> Local = new(StringComparer.OrdinalIgnoreCase)
         { "lmstudio", "llamacpp", "vllm", "localai", "jan" };
     private static readonly HashSet<string> Cloud = new(StringComparer.OrdinalIgnoreCase)
-        { "mistral", "xai", "deepseek", "openrouter", "groq", "together", "fireworks" };
+        { "mistral", "xai", "deepseek", "openrouter", "groq", "together", "fireworks", "azure-openai", "perplexity", "ollama-cloud" };
 
     public static bool IsRetired(string? type) => type != null && (Local.Contains(type.Trim()) || Cloud.Contains(type.Trim()));
 

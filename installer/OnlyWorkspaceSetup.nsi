@@ -353,14 +353,6 @@ Section "Nascondi nuovo Outlook" SecBlockNewOutlook
     ${EndIf}
 SectionEnd
 
-Section "-Ritiro disinstallatore precedente"
-    !insertmacro RunProgramFiles RetireLegacy
-    ${If} $0 != 0
-        MessageBox MB_OK|MB_ICONEXCLAMATION "La nuova installazione e' registrata. Il disinstallatore precedente e' ancora da verificare o rinominare. Usare la voce corrente in App e Funzionalita' e consultare il log del setup." /SD IDOK
-        SetErrorLevel 3
-    ${EndIf}
-SectionEnd
-
 !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
     !insertmacro MUI_DESCRIPTION_TEXT ${SecOnlyWorkspace} "Add-in per Outlook classico, strumento di configurazione, certificato OnlyApps e configurazione condivisa in ProgramData."
     !insertmacro MUI_DESCRIPTION_TEXT ${SecBlockNewOutlook} "Imposta le policy di Office che nascondono l'interruttore 'Prova il nuovo Outlook': l'add-in funziona solo nell'Outlook classico. La disinstallazione toglie solo i valori creati dal setup."

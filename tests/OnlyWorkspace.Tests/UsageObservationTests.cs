@@ -15,7 +15,7 @@ public sealed class UsageObservationTests
 {
     public static IEnumerable<object[]> InvalidUsage()
     {
-        foreach (string provider in new[] { "openai-json", "openai-sse", "ollama", "ollama-cloud" })
+        foreach (string provider in new[] { "openai-json", "openai-sse", "ollama" })
             foreach (string pair in new[] { "", "\"INPUT\":10", "\"OUTPUT\":7", "\"INPUT\":10,\"OUTPUT\":-1", "\"INPUT\":null,\"OUTPUT\":7", "\"INPUT\":\"10\",\"OUTPUT\":7", "\"INPUT\":2147483648,\"OUTPUT\":7", "\"INPUT\":1.5,\"OUTPUT\":7" })
                 yield return new object[] { provider, pair };
     }

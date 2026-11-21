@@ -116,7 +116,7 @@ public static class ProviderCatalog
     private static readonly string[] Bearer = { "bearer" };
     private static readonly string[] Key = { "apiKey" };
 
-    // Selectable presets. Legacy protocols below are available only to existing profiles.
+    // Selectable presets. Retired types are converted to OpenAI-compatible by ProviderCompatibility.
     public static IReadOnlyList<ProviderCapabilities> All { get; } = new[]
     {
         new ProviderCapabilities(Ollama, "Ollama", ApiFamily.Ollama, "http://127.0.0.1:11434", false, None,
@@ -136,18 +136,6 @@ public static class ProviderCatalog
         new ProviderCapabilities(OpenAICompatible, "Compatibile OpenAI", ApiFamily.OpenAI, "", false, None,
             "https://developers.openai.com/api/reference")
     };
-
-    private static readonly ProviderCapabilities[] Legacy =
-    {
-        new ProviderCapabilities("azure-openai", "Azure OpenAI (profilo esistente)", ApiFamily.OpenAI, "https://risorsa.openai.azure.com/openai/v1", true,
-            new[] { "apiKey", "bearer" }, "https://learn.microsoft.com/en-us/azure/foundry/openai/api-version-lifecycle", apiKeyHeader: "api-key"),
-        new ProviderCapabilities("perplexity", "Perplexity Sonar (profilo esistente)", ApiFamily.OpenAI, "https://api.perplexity.ai", true, Bearer,
-            "https://docs.perplexity.ai/guides/chat-completions-guide", model: "sonar", chatPath: "sonar"),
-        new ProviderCapabilities("ollama-cloud", "Ollama Cloud (profilo esistente)", ApiFamily.Ollama, "https://ollama.com", true, Bearer,
-            "https://docs.ollama.com/api", capabilities: CapabilitySource.Ollama, webSearch: WebSearchMode.OllamaCom, thinkToggle: true)
-    };
-
-    public static bool IsLegacy(string? type) => Legacy.Any(p => string.Equals(p.Type, type?.Trim(), StringComparison.OrdinalIgnoreCase));
 
     /// <summary>Context presets for connectors with a fixed client-side window (Ollama num_ctx).</summary>
     public static IReadOnlyList<ContextPreset> Presets { get; } = BuildPresets();
@@ -186,12 +174,12 @@ public static class ProviderCatalog
         return profile.ContextBudgetTokens;
     }
 
-    public static bool IsKnown(string? type) => All.Any(p => string.Equals(p.Type, type?.Trim(), StringComparison.OrdinalIgnoreCase)) || IsLegacy(type);
+    public static bool IsKnown(string? type) => All.Any(p => string.Equals(p.Type, type?.Trim(), StringComparison.OrdinalIgnoreCase));
 
     /// <summary>Unknown types fall back to Ollama (validator rejects them anyway).</summary>
     public static ProviderCapabilities Get(string? type)
     {
-        foreach (var p in All.Concat(Legacy))
+        foreach (var p in All)
         {
             if (string.Equals(p.Type, type?.Trim(), StringComparison.OrdinalIgnoreCase)) return p;
         }

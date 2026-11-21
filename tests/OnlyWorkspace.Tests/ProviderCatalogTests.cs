@@ -54,20 +54,6 @@ public class ProviderCatalogTests
         Assert.Throws<NotSupportedException>(() => LlmClientFactory.CreateClient(new LlmProfileConfig { Type = "unknown", BaseUrl = "https://example.com" }));
     }
 
-    [Fact]
-    public async Task OllamaCloud_RetainsOllamaProtocolAndBearer()
-    {
-        HttpRequestMessage? sent = null;
-        using var http = new HttpClient(new Handler(req => { sent = req; return "{\"message\":{\"content\":\"ok\"},\"done\":true}\n"; }))
-        { BaseAddress = new Uri("https://ollama.com/") };
-        var profile = new LlmProfileConfig { Type = "ollama-cloud", BaseUrl = "https://ollama.com", Model = "synthetic", AuthType = "bearer" };
-        using var client = LlmClientFactory.CreateClient(profile, "synthetic-key", http) as OllamaClient;
-        Assert.NotNull(client);
-        await foreach (var _ in client!.StreamChatAsync(OnlyWorkspace.Core.Privacy.CloudRequestGuard.Probe(false))) { }
-        Assert.Equal("/api/chat", sent!.RequestUri!.AbsolutePath);
-        Assert.Equal("synthetic-key", sent.Headers.Authorization!.Parameter);
-    }
-
     [Theory]
     [InlineData("none")]
     [InlineData("bearer")]
@@ -85,35 +71,6 @@ public class ProviderCatalogTests
     }
 
     [Fact]
-    public async Task Azure_SendsApiKeyHeaderInsteadOfBearer()
-    {
-        HttpRequestMessage? sent = null;
-        var http = new HttpClient(new Handler(req => { sent = req; return "data: {\"choices\":[{\"delta\":{\"content\":\"ok\"},\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n"; }))
-        { BaseAddress = new Uri("https://risorsa.openai.azure.com/openai/v1/") };
-        var profile = new LlmProfileConfig { Type = "azure-openai", AuthType = "apiKey", BaseUrl = "https://risorsa.openai.azure.com/openai/v1", Model = "deploy" };
-        using var client = new OpenAIClient(profile, "azure-key", http);
-
-        await foreach (var _ in client.StreamProtocolAsync(new[] { ChatMessage.User("ciao") })) { }
-
-        Assert.Equal("/openai/v1/chat/completions", sent!.RequestUri!.AbsolutePath);
-        Assert.Null(http.DefaultRequestHeaders.Authorization);
-        Assert.Equal("azure-key", http.DefaultRequestHeaders.GetValues("api-key").Single());
-    }
-
-    [Fact]
-    public async Task Perplexity_UsesSonarPath()
-    {
-        HttpRequestMessage? sent = null;
-        var http = new HttpClient(new Handler(req => { sent = req; return "data: {\"choices\":[{\"delta\":{\"content\":\"ok\"},\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n"; }))
-        { BaseAddress = new Uri("https://api.perplexity.ai/") };
-        using var client = new OpenAIClient(new LlmProfileConfig { Type = "perplexity", BaseUrl = "https://api.perplexity.ai", Model = "sonar" }, "key", http);
-
-        await foreach (var _ in client.StreamProtocolAsync(new[] { ChatMessage.User("ciao") })) { }
-
-        Assert.Equal("/v1/sonar", sent!.RequestUri!.AbsolutePath);
-    }
-
-    [Fact]
     public void Presets_HaveUniformLabelsAndFitTheModel()
     {
         var sixteen = ProviderCatalog.Presets.Single(p => p.ContextWindow == 16384);
@@ -128,6 +85,5 @@ public class ProviderCatalogTests
     public void OnlyLocalOllamaUsesClientContext()
     {
         Assert.Equal(new[] { "ollama" }, ProviderCatalog.All.Where(p => p.SupportsNumCtx).Select(p => p.Type));
-        Assert.Equal(0, ProviderCatalog.PromptBudget(new LlmProfileConfig { Type = "ollama-cloud", NumCtx = 8192 }));
     }
 }

@@ -209,7 +209,6 @@ public sealed partial class MainConfigForm
             _txtDisplayName.Text = p.DisplayName;
             _cmbProvider.Items.Clear();
             _cmbProvider.Items.AddRange(ProviderCatalog.All.Cast<object>().ToArray());
-            if (ProviderCatalog.IsLegacy(p.Type)) _cmbProvider.Items.Add(caps);
             _cmbProvider.SelectedItem = caps;
             _txtEndpoint.Text = p.BaseUrl;
             _txtModel.Text = p.Model;
@@ -301,8 +300,6 @@ public sealed partial class MainConfigForm
                 _txtModel.Text = caps.DefaultModel;
             }
 
-            foreach (var legacy in _cmbProvider.Items.Cast<ProviderCapabilities>().Where(p => ProviderCatalog.IsLegacy(p.Type)).ToArray())
-                _cmbProvider.Items.Remove(legacy);
             var auth = _cmbAuthType.SelectedItem as string;
             FillProviderLists(caps);
             _cmbAuthType.SelectedItem = auth != null && caps.AuthTypes.Contains(auth) ? auth : caps.AuthTypes[0];

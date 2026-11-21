@@ -22,18 +22,6 @@ public sealed class ProviderTextClaimsTests
     }
 
     [Fact]
-    public void LegacyProviders_AreOutsideThePresets_AndKeepTheirOwnProtocol()
-    {
-        // «I precedenti restano nei loro profili», docs/admin/provider-ia.md.
-        foreach (var type in new[] { "azure-openai", "perplexity", "ollama-cloud" })
-        {
-            Assert.True(ProviderCatalog.IsLegacy(type));
-            Assert.DoesNotContain(ProviderCatalog.All, p => p.Type == type);
-            Assert.True(ProviderCatalog.Get(type).IsExternal);
-        }
-    }
-
-    [Fact]
     public void ThinkingToggle_IsOllamaAndQwen_NumCtxAndKeepAliveOnlyLocalOllama()
     {
         // «Disattiva il ragionamento nei modelli supportati (Ollama, Qwen)», «Solo Ollama» on NumCtx, keep alive and budget.

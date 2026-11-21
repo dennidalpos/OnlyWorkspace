@@ -1,6 +1,6 @@
 #requires -Version 5.1
 param(
-    [Parameter(Mandatory)][ValidateSet('Check', 'Deploy', 'RetireLegacy', 'CheckUninstall', 'Uninstall')][string]$Operation,
+    [Parameter(Mandatory)][ValidateSet('Check', 'Deploy', 'CheckUninstall', 'Uninstall')][string]$Operation,
     [Parameter(Mandatory)][string]$Destination
 )
 
@@ -93,46 +93,6 @@ function Copy-NewProgramFile([string]$Source, [string]$Target, [Collections.Gene
     } finally { $inputStream.Dispose() }
 }
 
-function Rename-LegacyUninstaller($Legacy, [string]$CurrentRoot) {
-    if ($Legacy.root -notmatch '^[a-zA-Z]:\\[^\\]' -or
-        [IO.Path]::GetFullPath($Legacy.root) -ine $Legacy.root -or $Legacy.root -ieq $CurrentRoot) {
-        throw 'Percorso del disinstallatore precedente non valido.'
-    }
-    $source = Join-Path $Legacy.root 'Uninstall.exe'
-    if (!(Test-ProgramFile $source)) { return }
-    if ($Legacy.command -ine ('"' + $source + '"')) {
-        throw "Il comando registrato non identifica il disinstallatore precedente: $source"
-    }
-
-    # Request GENERIC_READ and DELETE without sharing either writes or deletes. Verify bytes
-    # from this handle and rename that same entry. Never run or overwrite an executable.
-    $handle = [OnlyWorkspace.SetupDirectory]::CreateFile($source, [uint32]2147549184, 1, [IntPtr]::Zero, 3, 0x00200000, [IntPtr]::Zero)
-    try {
-        if ($handle.IsInvalid) {
-            $errorCode = [Runtime.InteropServices.Marshal]::GetLastWin32Error()
-            throw "Impossibile aprire il disinstallatore precedente (Win32 $errorCode): $source"
-        }
-        $snapshot = Join-Path $PSScriptRoot 'legacy-signature-check.exe'
-        $inputStream = [IO.FileStream]::new($handle, [IO.FileAccess]::Read)
-        try {
-            $outputStream = [IO.File]::Open($snapshot, [IO.FileMode]::CreateNew, [IO.FileAccess]::Write, [IO.FileShare]::None)
-            try { $inputStream.CopyTo($outputStream) } finally { $outputStream.Dispose() }
-            $expected = [Security.Cryptography.X509Certificates.X509Certificate2]::new((Join-Path $payloadRoot 'OnlyApps.cer'))
-            try {
-                Import-Module (Join-Path $PSHOME 'Modules\Microsoft.PowerShell.Security\Microsoft.PowerShell.Security.psd1')
-                $signature = Microsoft.PowerShell.Security\Get-AuthenticodeSignature -LiteralPath $snapshot
-                $version = [Diagnostics.FileVersionInfo]::GetVersionInfo($snapshot)
-                if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Thumbprint -ne $expected.Thumbprint -or
-                    $version.ProductName -cne 'OnlyWorkspace' -or $version.CompanyName -cne 'OnlyApps') {
-                    throw "Identita' o firma del disinstallatore precedente non verificata: $source"
-                }
-            } finally { $expected.Dispose() }
-            [OnlyWorkspace.SetupDirectory]::RenameWithoutReplacing($handle, "$source.disabled")
-            Write-Output "Disinstallatore precedente rinominato: $source.disabled"
-        } finally { $inputStream.Dispose() }
-    } finally { $handle.Dispose() }
-}
-
 $baseKey = $null
 $key = $null
 try {
@@ -141,22 +101,7 @@ try {
 public static extern Microsoft.Win32.SafeHandles.SafeFileHandle CreateFile(
     string path, uint access, uint share, System.IntPtr security, uint mode, uint flags, System.IntPtr template);
 
-[System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true)]
-private static extern bool SetFileInformationByHandle(
-    Microsoft.Win32.SafeHandles.SafeFileHandle file, int informationClass, byte[] information, int size);
 
-public static void RenameWithoutReplacing(Microsoft.Win32.SafeHandles.SafeFileHandle file, string destination)
-{
-    // FILE_RENAME_INFO: zero ReplaceIfExists and RootDirectory, then byte length and UTF-16 name.
-    int lengthOffset = 2 * System.IntPtr.Size;
-    int nameOffset = lengthOffset + sizeof(int);
-    byte[] name = System.Text.Encoding.Unicode.GetBytes(destination + "\0");
-    byte[] info = new byte[nameOffset + name.Length];
-    System.Buffer.BlockCopy(System.BitConverter.GetBytes(name.Length - sizeof(char)), 0, info, lengthOffset, sizeof(int));
-    System.Buffer.BlockCopy(name, 0, info, nameOffset, name.Length);
-    if (!SetFileInformationByHandle(file, 3, info, info.Length))
-        throw new System.ComponentModel.Win32Exception(System.Runtime.InteropServices.Marshal.GetLastWin32Error());
-}
 '@
 
     if ($Destination -notmatch '^[a-zA-Z]:\\') { throw 'Scegliere una cartella su un disco locale.' }
@@ -167,7 +112,7 @@ public static void RenameWithoutReplacing(Microsoft.Win32.SafeHandles.SafeFileHa
     $rootExists = Test-ProgramDirectory $root
     $view = if ([Environment]::Is64BitOperatingSystem) { [Microsoft.Win32.RegistryView]::Registry64 } else { [Microsoft.Win32.RegistryView]::Registry32 }
     $baseKey = [Microsoft.Win32.RegistryKey]::OpenBaseKey($registryHive, $view)
-    $key = $baseKey.OpenSubKey($registryPath, $Operation -in @('Deploy', 'RetireLegacy'))
+    $key = $baseKey.OpenSubKey($registryPath, $Operation -eq 'Deploy')
     $inventory = $null
     $registeredRoot = $null
     if ($key) {
@@ -184,19 +129,6 @@ public static void RenameWithoutReplacing(Microsoft.Win32.SafeHandles.SafeFileHa
             [void](Get-ProgramPath $root $relative)
         }
         if (!$previous.Contains('Uninstall.exe')) { throw 'Inventario di OnlyWorkspace incompleto.' }
-    }
-
-    if ($Operation -eq 'RetireLegacy') {
-        if (!$inventory) { throw 'Inventario di OnlyWorkspace assente.' }
-        if ($inventory.legacyUninstaller) {
-            if (!$registeredRoot -or [IO.Path]::GetFullPath($registeredRoot).TrimEnd('\') -ine $root) {
-                throw 'Il nuovo percorso non risulta registrato.'
-            }
-            Rename-LegacyUninstaller $inventory.legacyUninstaller $root
-            $inventory.PSObject.Properties.Remove('legacyUninstaller')
-            $key.SetValue($inventoryValue, (ConvertTo-Json -Compress -Depth 4 -InputObject $inventory), [Microsoft.Win32.RegistryValueKind]::String)
-        }
-        exit 0
     }
 
     if ($Operation -in @('CheckUninstall', 'Uninstall')) {
@@ -240,15 +172,6 @@ public static void RenameWithoutReplacing(Microsoft.Win32.SafeHandles.SafeFileHa
     if ($Operation -eq 'Check') { exit 0 }
 
     $nextInventory = @{version=1; root=$root; files=$files}
-    if ($inventory -and $inventory.legacyUninstaller) {
-        $nextInventory.legacyUninstaller = $inventory.legacyUninstaller
-    } elseif (!$inventory -and $registeredRoot) {
-        $nextInventory.legacyUninstaller = @{
-            root = [IO.Path]::GetFullPath($registeredRoot).TrimEnd('\')
-            command = $key.GetValue('UninstallString')
-        }
-    }
-
     $saved = [Collections.Generic.List[string]]::new()
     $removed = [Collections.Generic.List[string]]::new()
     $created = [Collections.Generic.List[string]]::new()
@@ -300,7 +223,7 @@ public static void RenameWithoutReplacing(Microsoft.Win32.SafeHandles.SafeFileHa
     exit 0
 } catch {
     [Console]::Error.WriteLine($_.Exception.Message)
-    if ($Operation -like '*Uninstall' -or $Operation -eq 'RetireLegacy') { exit 3 }
+    if ($Operation -like '*Uninstall') { exit 3 }
     exit 2
 } finally {
     if ($key) { $key.Dispose() }

@@ -67,7 +67,7 @@ Pane reload follows messages; indexing rereads settings periodically. [Workspace
 
 ## AI profiles and capability checks
 
-Six new-profile presets: Ollama, Gemini, Anthropic, OpenAI, QwenCloud and OpenAI-compatible. Generic requires explicit endpoint/model and none/bearer authentication. Azure OpenAI, Perplexity Sonar and Ollama Cloud stay available only to profiles that already use them; retired types (LM Studio, llama.cpp, vLLM, LocalAI, Jan, Mistral, xAI, DeepSeek, OpenRouter, Groq, Together, Fireworks) are converted to the generic preset in memory and persisted on the next save, import or restore. For the generic preset, **Preset cloud** fills the address of Mistral AI, IONOS, OVHcloud, Scaleway or STACKIT.
+Six new-profile presets: Ollama, Gemini, Anthropic, OpenAI, QwenCloud and OpenAI-compatible. Generic requires explicit endpoint/model and none/bearer authentication. retired types (Azure OpenAI, Perplexity Sonar, Ollama Cloud, LM Studio, llama.cpp, vLLM, LocalAI, Jan, Mistral, xAI, DeepSeek, OpenRouter, Groq, Together, Fireworks) are converted to the generic preset in memory and persisted on the next save, import or restore. For the generic preset, **Preset cloud** fills the address of Mistral AI, IONOS, OVHcloud, Scaleway or STACKIT.
 
 baseUrl/authType/secretRef/model specify endpoint/authentication/vault/model. Remote requires HTTPS; HTTP only loopback. Non-loopback is external even with external:false. Redirects are refused: configure the final URL. allowAttachmentUpload additionally gates attachment text at Extended. Web settings and the separate Ollama web key do not grant arbitrary mail-derived searches.
 

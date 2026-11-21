@@ -123,32 +123,24 @@ public sealed class MainConfigFormTests
     [InlineData("azure-openai")]
     [InlineData("perplexity")]
     [InlineData("ollama-cloud")]
-    public void LegacyProviderAppearsOnlyForItsExistingProfile_AndEditingPreservesTransport(string type)
+    public void RetiredProviderProfile_OpensAsOpenAICompatible_WithTheProviderListUnchanged(string type)
     {
         OnSta(directory =>
         {
-            var legacy = Local("legacy");
-            legacy.Type = type;
-            legacy.BaseUrl = ProviderCatalog.Get(type).DefaultBaseUrl;
-            legacy.AuthType = type == "azure-openai" ? "apiKey" : "bearer";
-            var local = Local("local");
-            Write(directory, new WorkspaceConfig { DefaultProfile = legacy.Id, Profiles = new() { legacy, local } }, new() { [legacy.SecretRef] = "synthetic-token" });
+            var retired = Local("retired");
+            retired.Type = type;
+            retired.BaseUrl = "https://synthetic.example.test/v1";
+            retired.AuthType = "bearer";
+            Write(directory, new WorkspaceConfig { DefaultProfile = retired.Id, Profiles = new() { retired } }, new() { [retired.SecretRef] = "synthetic-token" });
             using var form = new MainConfigForm(directory, null, directory);
             var providers = Field<ComboBox>(form, "_cmbProvider");
-            Assert.Equal(7, providers.Items.Count);
-            Assert.Equal(type, ((ProviderCapabilities)providers.SelectedItem!).Type);
+            Assert.Equal(6, providers.Items.Count);
+            Assert.Equal(ProviderCatalog.OpenAICompatible, ((ProviderCapabilities)providers.SelectedItem!).Type);
             Call(form, "UpdateSelectedProfileFromUi");
             var edited = Field<WorkspaceConfig>(form, "_config").Profiles[0];
-            Assert.Equal(type, edited.Type);
-            Assert.Equal(legacy.BaseUrl, edited.BaseUrl);
-            Assert.Equal(legacy.AuthType, edited.AuthType);
-            Field<ListBox>(form, "_lstProfiles").SelectedIndex = 1;
-            Assert.Equal(6, providers.Items.Count);
-            Assert.DoesNotContain(providers.Items.Cast<ProviderCapabilities>(), p => ProviderCatalog.IsLegacy(p.Type));
-            Field<ListBox>(form, "_lstProfiles").SelectedIndex = 0;
-            providers.SelectedItem = ProviderCatalog.Get(ProviderCatalog.OpenAICompatible);
-            Assert.Equal(6, providers.Items.Count);
             Assert.Equal(ProviderCatalog.OpenAICompatible, edited.Type);
+            Assert.Equal(retired.BaseUrl, edited.BaseUrl);
+            Assert.True(edited.External);
         });
     }
 

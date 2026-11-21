@@ -74,8 +74,8 @@
       },
       "SQLite3MC.PCLRaw.provider": {
         "type": "Transitive",
-        "resolved": "2.7.0",
-        "contentHash": "63Toy3/fOOYViwkGVR8DNW3qV8gUivdc4GECQ/aj3nq7kJhJxSiFARx4Y+/lKIuOG0pEXh8Vweb+61ukEbMJNQ==",
+        "resolved": "2.7.1",
+        "contentHash": "LPRdFKVGz4xG4X5ILmTSVeJa6CdNtHYkpj4RRC75CmZRmHnK+/EAbz94PLmO/uF5tfq7fQb5uuVfQxgScpVpvQ==",
         "dependencies": {
           "SQLitePCLRaw.core": "3.0.2"
         }
@@ -162,8 +162,8 @@
           "Microsoft.Bcl.AsyncInterfaces": "[11.0.0, )",
           "Microsoft.Data.Sqlite.Core": "[10.0.15, )",
           "OnlyWorkspace.Core": "[1.0.1, )",
-          "SQLite3MC.PCLRaw.bundle": "[2.7.0, )",
-          "SQLite3MC.PCLRaw.lib": "[2.7.0, )",
+          "SQLite3MC.PCLRaw.bundle": "[2.7.1, )",
+          "SQLite3MC.PCLRaw.lib": "[2.7.1, )",
           "Serilog": "[4.4.0, )",
           "Serilog.Sinks.File": "[7.0.0, )",
           "System.Diagnostics.DiagnosticSource": "[11.0.0, )",
@@ -230,19 +230,19 @@
       },
       "SQLite3MC.PCLRaw.bundle": {
         "type": "CentralTransitive",
-        "requested": "[2.7.0, )",
-        "resolved": "2.7.0",
-        "contentHash": "uYvXudsB2Uoi0Mqy7dyY21ky8+EbjLg+AWUSzBtWhVGHKOqP2nRj8uuJx9K4CMNnRHBOvavi4cCZKdoGHrwktQ==",
+        "requested": "[2.7.1, )",
+        "resolved": "2.7.1",
+        "contentHash": "U2HdC1I4Ow/olKc3eqNTGHNS+rxHD0voa6qpD6Nl54mRkRbyRQHwFEXxbOMMEZek90CIjDaQQwThJ8vd1HqiEg==",
         "dependencies": {
-          "SQLite3MC.PCLRaw.lib": "2.7.0",
-          "SQLite3MC.PCLRaw.provider": "2.7.0"
+          "SQLite3MC.PCLRaw.lib": "2.7.1",
+          "SQLite3MC.PCLRaw.provider": "2.7.1"
         }
       },
       "SQLite3MC.PCLRaw.lib": {
         "type": "CentralTransitive",
-        "requested": "[2.7.0, )",
-        "resolved": "2.7.0",
-        "contentHash": "8ihlCvFVq6svD79hXtisTsf/TZYaiGpmpJpIJYciwQprz3IL+ICSIdTa00Cl+i5QXmUSfRl5Gs8Awdmz7UfG3Q=="
+        "requested": "[2.7.1, )",
+        "resolved": "2.7.1",
+        "contentHash": "2qAVDsPXpkjnyWed+WXpCGhL/0Jryx900B7J7ikGTWWZ5YGFGGig0JHz5N8SAB9/7Al+9hmzUU1ivAQxMIU/3A=="
       },
       "System.Diagnostics.DiagnosticSource": {
         "type": "CentralTransitive",

@@ -90,13 +90,13 @@ public sealed class ProviderCompatibilityTests : IDisposable
     [InlineData("azure-openai")]
     [InlineData("perplexity")]
     [InlineData("ollama-cloud")]
-    public void LegacyProtocolsRemainRecognizedButAreNotNewPresets(string type)
+    public void RetiredProtocolsAreConvertedToOpenAICompatible_AndAreNotPresets(string type)
     {
         var profile = Profile(type);
-        Assert.False(ProviderCompatibility.Normalize(profile));
-        Assert.Equal(type, profile.Type);
-        Assert.True(ProviderCatalog.IsLegacy(type));
-        Assert.True(ProviderCatalog.IsKnown(type));
+        Assert.True(ProviderCompatibility.Normalize(profile));
+        Assert.Equal(ProviderCatalog.OpenAICompatible, profile.Type);
+        Assert.True(profile.External);
+        Assert.False(ProviderCatalog.IsKnown(type));
         Assert.DoesNotContain(ProviderCatalog.All, p => p.Type == type);
     }
 

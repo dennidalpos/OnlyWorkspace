@@ -28,9 +28,6 @@ public static class AppPaths
         catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException) { return false; }
     }
 
-    /// <summary>The LocalMachine vault of earlier builds, readable by every local user and no longer read: the administrator removes it.</summary>
-    public static string LegacySecretsFile => Path.Combine(ConfigDirectory, "secrets.bin");
-
     /// <summary>%APPDATA%\OnlyWorkspace: preferences.json of the user.</summary>
     public static string PreferencesDirectory => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), Folder);
 
