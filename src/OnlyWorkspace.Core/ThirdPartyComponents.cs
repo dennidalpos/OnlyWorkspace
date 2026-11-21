@@ -42,8 +42,8 @@ public static class ThirdPartyComponents
     {
         new ThirdPartyComponent("Microsoft.Web.WebView2", "1.0.4314.35", "Licenza Microsoft (stile BSD, LICENSE.txt del pacchetto)", "https://www.nuget.org/packages/Microsoft.Web.WebView2"),
         new ThirdPartyComponent("Microsoft.Data.Sqlite.Core", "10.0.15", "MIT", "https://www.nuget.org/packages/Microsoft.Data.Sqlite.Core"),
-        new ThirdPartyComponent("SQLite3MC.PCLRaw.bundle", "2.7.0", "MIT", "https://www.nuget.org/packages/SQLite3MC.PCLRaw.bundle"),
-        new ThirdPartyComponent("SQLite3MC.PCLRaw.lib", "2.7.0", "MIT", "https://www.nuget.org/packages/SQLite3MC.PCLRaw.lib"),
+        new ThirdPartyComponent("SQLite3MC.PCLRaw.bundle", "2.7.1", "MIT", "https://www.nuget.org/packages/SQLite3MC.PCLRaw.bundle"),
+        new ThirdPartyComponent("SQLite3MC.PCLRaw.lib", "2.7.1", "MIT", "https://www.nuget.org/packages/SQLite3MC.PCLRaw.lib"),
         new ThirdPartyComponent("SQLitePCLRaw.core", "3.0.2", "Apache-2.0", "https://www.nuget.org/packages/SQLitePCLRaw.core", note: "dipendenza transitiva"),
         new ThirdPartyComponent("Serilog", "4.4.0", "Apache-2.0", "https://www.nuget.org/packages/Serilog"),
         new ThirdPartyComponent("Serilog.Sinks.File", "7.0.0", "Apache-2.0", "https://www.nuget.org/packages/Serilog.Sinks.File"),
@@ -66,7 +66,7 @@ public static class ThirdPartyComponents
         new ThirdPartyComponent("Microsoft.Extensions.DependencyInjection.Abstractions", "10.0.3", "MIT", "https://www.nuget.org/packages/Microsoft.Extensions.DependencyInjection.Abstractions", note: "dipendenza transitiva"),
         new ThirdPartyComponent("Microsoft.Extensions.Logging.Abstractions", "10.0.3", "MIT", "https://www.nuget.org/packages/Microsoft.Extensions.Logging.Abstractions", note: "dipendenza transitiva"),
         new ThirdPartyComponent("Microsoft.Extensions.Primitives", "10.0.3", "MIT", "https://www.nuget.org/packages/Microsoft.Extensions.Primitives", note: "dipendenza transitiva"),
-        new ThirdPartyComponent("SQLite3MC.PCLRaw.provider", "2.7.0", "MIT", "https://www.nuget.org/packages/SQLite3MC.PCLRaw.provider", note: "dipendenza transitiva"),
+        new ThirdPartyComponent("SQLite3MC.PCLRaw.provider", "2.7.1", "MIT", "https://www.nuget.org/packages/SQLite3MC.PCLRaw.provider", note: "dipendenza transitiva"),
         new ThirdPartyComponent("System.Buffers", "4.6.1", "MIT", "https://www.nuget.org/packages/System.Buffers", note: "dipendenza transitiva"),
         new ThirdPartyComponent("System.IO.Pipelines", "11.0.0", "MIT", "https://www.nuget.org/packages/System.IO.Pipelines", note: "dipendenza transitiva"),
         new ThirdPartyComponent("System.Memory", "4.6.3", "MIT", "https://www.nuget.org/packages/System.Memory", note: "dipendenza transitiva"),
@@ -87,6 +87,6 @@ public static class ThirdPartyComponents
         new ThirdPartyComponent("xunit.runner.visualstudio", "4.0.1", "Apache-2.0", "https://www.nuget.org/packages/xunit.runner.visualstudio", distributed: false),
         new ThirdPartyComponent("Xunit.SkippableFact", "1.5.61", "MS-PL", "https://www.nuget.org/packages/Xunit.SkippableFact", distributed: false),
         new ThirdPartyComponent("Microsoft.NET.Test.Sdk", "18.12.0", "MIT", "https://www.nuget.org/packages/Microsoft.NET.Test.Sdk", distributed: false),
-        new ThirdPartyComponent("coverlet.collector", "10.1.0", "MIT", "https://www.nuget.org/packages/coverlet.collector", distributed: false)
+        new ThirdPartyComponent("coverlet.collector", "10.1.1", "MIT", "https://www.nuget.org/packages/coverlet.collector", distributed: false)
     };
 }
