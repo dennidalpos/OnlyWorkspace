@@ -5,6 +5,10 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
+    ignore:
+      # #295: 11.x targets net11; on net10 the cross-process preference writers cannot load it.
+      - dependency-name: "System.Security.Cryptography.ProtectedData"
+        update-types: ["version-update:semver-major"]
     groups:
       dotnet-runtime-packages:
         patterns:
