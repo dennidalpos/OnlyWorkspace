@@ -46,7 +46,9 @@ assert.match(label, /StatusLight\.Paused \? "‖"/, 'OperationalStatusLabel must
 assert.doesNotMatch(label, /"▲"/, 'OperationalStatusLabel still draws ▲');
 // Texts stay short (A202): one line per Guida entry, long details go in docs/utente/riquadro.md. Privacy and egress texts are exempt.
 for (const [, inner] of html.matchAll(/<li>(.*?)<\/li>/g)) {
-  const text = inner.replace(/<[^>]+>/g, '');
+  // Text length only: strip tags until stable so nested fragments cannot survive a single pass.
+  let text = inner;
+  for (let before = ''; before !== text;) { before = text; text = text.replace(/<[^>]*>/g, ''); }
   if (/profilo IA|ricerca web/.test(text)) assert.ok(text.length <= 180, `Guida privacy text too long (${text.length}): ${text}`);
   else assert.ok(text.length <= 165, `Guida entry too long (${text.length}): ${text}`);
 }
