@@ -24,7 +24,7 @@
     <PackageVersion Include="SQLite3MC.PCLRaw.bundle" Version="2.7.1" />
     <PackageVersion Include="SQLite3MC.PCLRaw.lib" Version="2.7.1" />
     <PackageVersion Include="System.Diagnostics.DiagnosticSource" Version="11.0.0" />
-    <PackageVersion Include="System.Security.Cryptography.ProtectedData" Version="10.0.14" />
+    <PackageVersion Include="System.Security.Cryptography.ProtectedData" Version="10.0.15" />
     <PackageVersion Include="System.Text.Json" Version="11.0.0" />
     <PackageVersion Include="System.Threading.Channels" Version="11.0.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />
