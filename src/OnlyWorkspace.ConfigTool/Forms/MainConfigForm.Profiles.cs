@@ -237,6 +237,7 @@ public sealed partial class MainConfigForm
             // The option is the user's choice for a local profile; a cloud profile always masks both and never stores that as the option.
             _chkPseudonymizeAmounts.Checked = p.PseudonymizeAmounts;
             _chkPseudonymizeDates.Checked = p.PseudonymizeDates;
+            _chkLocalRecognition.Checked = p.LocalRecognition;
             _cmbExposure.SelectedItem = _cmbExposure.Items.Cast<ExposureItem>().First(i => i.Level == p.Exposure);
             _cmbRegion.SelectedItem = _cmbRegion.Items.Cast<RegionItem>().First(i => i.Region == p.ServiceRegion);
             ShowExposure();
@@ -428,7 +429,7 @@ public sealed partial class MainConfigForm
         {
             // Another profile shown while locked: unlocking must restore the states of this profile, not of the one locked first.
             foreach (var control in new Control[] { _cmbPreset, _numNumCtx, _numMaxTokens, _numBudget, _txtKeepAlive, _chkDisableThinking,
-                         _cmbAuthType, _txtToken, _chkShowToken, _chkExternal, _cmbExposure, _cmbRegion, _chkAllowAttachments, _chkPseudonymizeAmounts, _chkPseudonymizeDates, _txtWebSearchKey })
+                         _cmbAuthType, _txtToken, _chkShowToken, _chkExternal, _cmbExposure, _cmbRegion, _chkAllowAttachments, _chkPseudonymizeAmounts, _chkPseudonymizeDates, _chkLocalRecognition, _txtWebSearchKey })
                 _lockedControls[control] = control.Enabled;
             foreach (var page in _pages) LockInputs(page);
         }
@@ -539,6 +540,7 @@ public sealed partial class MainConfigForm
             p.ServiceRegion = SelectedRegion;
             p.PseudonymizeAmounts = _chkPseudonymizeAmounts.Checked;
             p.PseudonymizeDates = _chkPseudonymizeDates.Checked;
+            p.LocalRecognition = _chkLocalRecognition.Checked;
             if (_chkWebSearch.Enabled) p.WebSearchEnabled = _chkWebSearch.Checked;
             p.WebSearchActions = _webActions.Controls.Cast<CheckBox>().Where(b => b.Checked).Select(b => (string)b.Tag!).ToList();
             if (previousPolicy != null && previousPolicy != ConversationPolicy.Key(p))

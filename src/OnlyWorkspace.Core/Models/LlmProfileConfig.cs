@@ -63,6 +63,8 @@ public sealed class LlmProfileConfig
     /// <summary>Optional reversible substitutions on local requests; external requests always replace amounts and dates.</summary>
     public bool PseudonymizeAmounts { get; set; }
     public bool PseudonymizeDates { get; set; }
+    /// <summary>Second masking layer (#247): a local model finds names and addresses the rules miss; with no usable model the request is blocked.</summary>
+    public bool LocalRecognition { get; set; }
     /// <summary>External profiles only: attachment text (extracted locally) may be sent to the provider.</summary>
     public bool AllowAttachmentUpload { get; set; } = false;
     /// <summary>Attachment text may reach the model: always for a local profile, else the flag within the exposure level.</summary>

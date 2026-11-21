@@ -86,6 +86,38 @@ public sealed partial class MaskedFreeTextTransportTests
         Assert.All(server.Audit.Read(), audit => Assert.NotEqual("completed", audit.Outcome));
     }
 
+    [Fact]
+    public async Task Ner_MissingModel_BlocksWithTheModelReason()
+    {
+        using var server = new Server("ner-no-model");
+        var profile = Profile(server, "ollama", ExposureLevel.Standard);
+        profile.LocalRecognition = true;
+        string empty = Path.Combine(Path.GetTempPath(), "ner-empty-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(empty);
+        try
+        {
+            using var client = new OnlyWorkspace.Infrastructure.Privacy.PiiRecognizerClient(empty, new NoChannels());
+            using var dispatch = new LlmRequestDispatcher(LlmClientFactory.CreateClient(profile), profile, audit: server.Audit, recognizer: new CachingNerRecognizer(client));
+            var blocked = await Assert.ThrowsAsync<DataEgressBlockedException>(() => dispatch.CompleteStructuredAsync(new[] { ChatMessage.User(NerText) }, Schema, server.Token));
+            Assert.Contains("Modello del riconoscimento locale assente", blocked.Message);
+            Assert.Equal(0, server.Requests);
+        }
+        finally { Directory.Delete(empty, true); }
+    }
+
+    [Fact]
+    public void LocalRecognition_IsOffByDefault_AndSurvivesSerialization()
+    {
+        Assert.False(new LlmProfileConfig().LocalRecognition);
+        var copy = JsonSerializer.Deserialize<LlmProfileConfig>(JsonSerializer.Serialize(new LlmProfileConfig { LocalRecognition = true }))!;
+        Assert.True(copy.LocalRecognition);
+    }
+
+    private sealed class NoChannels : OnlyWorkspace.Infrastructure.Privacy.INerChannelFactory
+    {
+        public OnlyWorkspace.Infrastructure.Privacy.INerChannel Open(PiiModelPackage model, CancellationToken token) => throw new InvalidOperationException();
+    }
+
     internal sealed class LiteralRecognizer : INerRecognizer
     {
         private readonly (string Value, string Label)[] _entities;

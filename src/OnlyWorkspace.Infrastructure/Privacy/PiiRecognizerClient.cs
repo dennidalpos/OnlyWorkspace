@@ -49,6 +49,13 @@ public sealed class PiiRecognizerClient : INerRecognizer, IDisposable
         return helper == null ? null : new PiiRecognizerClient(modelDirectory, new PiiRecognizerProcess(helper, modelDirectory));
     }
 
+    /// <summary>The model folder next to the recognizer: under the install folder, so only an administrator can replace it.</summary>
+    public static string? InstalledModelDirectory()
+    {
+        var helper = FindHelper();
+        return helper == null ? null : Path.Combine(Path.GetDirectoryName(helper)!, "model");
+    }
+
     public static string? FindHelper()
     {
         foreach (var dir in new[] { Path.GetDirectoryName(typeof(PiiRecognizerClient).Assembly.Location), AppDomain.CurrentDomain.BaseDirectory })

@@ -28,12 +28,12 @@ public class OcrExtractionTests
         return JsonDocument.Parse(output).RootElement.GetProperty("used").ValueKind == JsonValueKind.String;
     });
 
-    [Fact]
+    [SkippableFact]
     public async Task Image_TextIsRecognized()
     {
         var result = await AttachmentExtractionTests.ExtractAsync("scansione.png", Png(Line1, Line2, Line3));
         Assert.Equal("image", result.Format);
-        if (!OcrAvailable.Value) { Assert.Equal("ocr-unavailable", result.Problem); Assert.Empty(result.Text); return; }
+        if (!OcrAvailable.Value) { Assert.Equal("ocr-unavailable", result.Problem); Assert.Empty(result.Text); SkipNoOcr(); }
         Assert.Null(result.Problem);
         Assert.StartsWith("[testo riconosciuto con OCR]", result.Text);
         Assert.Contains("FT-2026/77", result.Text);
@@ -42,7 +42,7 @@ public class OcrExtractionTests
         Assert.Contains("1.250,00", result.Text);
     }
 
-    [Theory]
+    [SkippableTheory]
     [InlineData(RotateFlipType.Rotate90FlipNone)]
     [InlineData(RotateFlipType.Rotate180FlipNone)]
     [InlineData(RotateFlipType.Rotate270FlipNone)]
@@ -52,14 +52,14 @@ public class OcrExtractionTests
         var bitmap = Bitmap(Line1, Line2, Line3);
         bitmap.RotateFlip(rotation);
         var result = await AttachmentExtractionTests.ExtractAsync("scansione.png", Encode(bitmap, ImageFormat.Png));
-        if (!OcrAvailable.Value) { Assert.Equal("ocr-unavailable", result.Problem); return; }
+        if (!OcrAvailable.Value) { Assert.Equal("ocr-unavailable", result.Problem); SkipNoOcr(); }
         Assert.Null(result.Problem);
         Assert.Contains("FT-2026/77", result.Text);
         Assert.Contains("30/11/2026", result.Text);
         Assert.Contains("1.250,00", result.Text);
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task SmallScan_IsReadEnlarged()
     {
         // A page shrunk to ~500 px wide (text 7 px high) is read poorly as is and better enlarged.
@@ -71,12 +71,14 @@ public class OcrExtractionTests
             graphics.DrawImage(page, 0, 0, bitmap.Width, bitmap.Height);
         }
         var result = await AttachmentExtractionTests.ExtractAsync("foto.png", Encode(bitmap, ImageFormat.Png));
-        if (!OcrAvailable.Value) { Assert.Equal("ocr-unavailable", result.Problem); return; }
+        if (!OcrAvailable.Value) { Assert.Equal("ocr-unavailable", result.Problem); SkipNoOcr(); }
         Assert.Null(result.Problem);
         // Shrunk text is only read reliably with the Italian recognizer: a runner with en-US alone (GitHub CI) reads it as a placeholder.
-        if (!HasItalianRecognizer(out string languages)) return;
+        Skip.IfNot(HasItalianRecognizer(out string languages), "No Italian OCR recognizer installed: the shrunk text is not read reliably with en-US alone.");
         Assert.True(result.Text.Contains("30/11/2026") && result.Text.Contains("1.250,00"), $"OCR languages {languages}, reading: {result.Text}");
     }
+
+    private static void SkipNoOcr() => throw new SkipException("Windows OCR is not available on this machine: only the ocr-unavailable fallback was verified.");
 
     private static bool HasItalianRecognizer(out string languagesJson)
     {
@@ -96,24 +98,24 @@ public class OcrExtractionTests
         Assert.Empty(result.Text);
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task MultipageTiff_EveryPageIsRead()
     {
         var result = await AttachmentExtractionTests.ExtractAsync("fax.tif", Tiff(Bitmap(Line1), Bitmap(Line2)));
         Assert.Equal("image", result.Format);
-        if (!OcrAvailable.Value) { Assert.Equal("ocr-unavailable", result.Problem); return; }
+        if (!OcrAvailable.Value) { Assert.Equal("ocr-unavailable", result.Problem); SkipNoOcr(); }
         Assert.Null(result.Problem);
         Assert.Contains("--- pagina 2 ---", result.Text);
         Assert.True(result.Text.IndexOf("FT-2026/77", StringComparison.Ordinal) < result.Text.IndexOf("30/11/2026", StringComparison.Ordinal));
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task ScannedAndTextPages_AreReadInPageOrder()
     {
         var pdf = new ScanPdf().TextPage("Prima pagina con il livello testuale del documento di prova.").ScanPage(Jpeg(Line1, Line2));
         var result = await AttachmentExtractionTests.ExtractAsync("documento.pdf", pdf.Build());
         Assert.Equal("pdf", result.Format);
-        if (!OcrAvailable.Value) { Assert.Equal("ocr-unavailable", result.Problem); Assert.Empty(result.Text); return; }
+        if (!OcrAvailable.Value) { Assert.Equal("ocr-unavailable", result.Problem); Assert.Empty(result.Text); SkipNoOcr(); }
         Assert.Null(result.Problem);
         var lines = AttachmentExtractionTests.Lines(result);
         Assert.Equal("Prima pagina con il livello testuale del documento di prova.", lines[0]);

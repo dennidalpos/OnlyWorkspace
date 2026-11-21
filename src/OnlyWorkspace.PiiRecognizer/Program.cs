@@ -24,7 +24,8 @@ internal static class Program
             using var parent = Process.GetProcessById(parentId);
             using var stop = new CancellationTokenSource();
             parent.EnableRaisingEvents = true;
-            parent.Exited += (_, _) => stop.Cancel();
+            // A pipe read does not honour the token on .NET Framework, so the exit is forced rather than awaited.
+            parent.Exited += (_, _) => { stop.Cancel(); Environment.Exit(0); };
             using var pipe = PiiPipeServer.Create(pipeName);
             pipe.WaitForConnectionAsync(stop.Token).Wait(TimeSpan.FromSeconds(10));
             if (!pipe.IsConnected) return 2;

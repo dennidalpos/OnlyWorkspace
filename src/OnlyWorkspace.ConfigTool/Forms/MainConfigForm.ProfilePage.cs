@@ -332,8 +332,11 @@ public sealed partial class MainConfigForm
             "Sostituisce gli importi riconosciuti prima che il testo arrivi al modello e li ripristina nella risposta su questo PC. Nei profili cloud è sempre attiva. Si applica con Salva.");
         _chkPseudonymizeDates = AddWide(net, new ThemedCheckBox { Text = "Sostituisci le date con segnaposto", AutoSize = true },
             "Sostituisce le date riconosciute prima che il testo arrivi al modello e le ripristina nella risposta su questo PC. Nei profili cloud è sempre attiva. Si applica con Salva.");
+        _chkLocalRecognition = AddWide(net, new ThemedCheckBox { Text = "Riconosci nomi e indirizzi con il modello locale", AutoSize = true },
+            "Secondo strato di mascheramento: un modello locale individua persone, aziende e indirizzi che le regole non vedono, prima che il testo arrivi al servizio. Aprendo un'email la analizza in background. Se il modello non è installato o non è verificabile, la richiesta è bloccata e nulla viene inviato. Si applica con Salva.");
         _chkPseudonymizeAmounts.CheckedChanged += (s, e) => OnProfileFieldChanged();
         _chkPseudonymizeDates.CheckedChanged += (s, e) => OnProfileFieldChanged();
+        _chkLocalRecognition.CheckedChanged += (s, e) => OnProfileFieldChanged();
 
         AddSubheading(net, "Ricerca web");
         _lblWebSupport = AddRow(net, "Ricerca web:", new SelectableLabel { AutoSize = true, Text = WebNotChecked, Margin = new Padding(3, 5, 3, 6) },

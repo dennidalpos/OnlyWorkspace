@@ -853,7 +853,7 @@ public sealed class MainConfigFormTests
     public void ConnectionHelpButtons_AreFullyInsideTheirGridAtTheDefaultSize() => AssertConnectionHelpInsideGrid(1f);
 
     /// <summary>#058: the same holds when the window is scaled to 150% and 200%, as on a high-DPI monitor.</summary>
-    [Theory]
+    [SkippableTheory]
     [InlineData(1.5f)]
     [InlineData(2f)]
     public void ConnectionHelpButtons_AreFullyInsideTheirGridAtLargerScales(float scale) => AssertConnectionHelpInsideGrid(scale);
@@ -879,7 +879,7 @@ public sealed class MainConfigFormTests
                 form.Scale(new System.Drawing.SizeF(scale, scale));
                 Application.DoEvents();
             }
-            if (WindowClampedByScreen(form, widthBefore, scale)) return;
+            Skip.If(WindowClampedByScreen(form, widthBefore, scale), $"The screen is too small for the form at scale {scale}: the window was clamped, so the layout was not verified.");
             var provider = Field<ComboBox>(form, "_cmbProvider");
             Control cell = provider;
             while (cell.Parent is not TableLayoutPanel && cell.Parent != null) cell = cell.Parent;
@@ -981,7 +981,7 @@ public sealed class MainConfigFormTests
         $"screen {Screen.FromControl(form).WorkingArea.Width}x{Screen.FromControl(form).WorkingArea.Height}, window {form.Width}x{form.Height}, font {form.Font.Name} {form.Font.SizeInPoints:0.#}pt";
 
     /// <summary>INT01: «Livello di log» used to run past the card edge with its «?» (Generale, any scale).</summary>
-    [Theory]
+    [SkippableTheory]
     [InlineData(1f)]
     [InlineData(1.5f)]
     [InlineData(2f)]
@@ -1006,7 +1006,7 @@ public sealed class MainConfigFormTests
             }
             typeof(MainConfigForm).GetMethod("ShowPage", Flags)!.Invoke(form, new object[] { 1 });
             Application.DoEvents();
-            if (WindowClampedByScreen(form, widthBefore, scale)) return;
+            Skip.If(WindowClampedByScreen(form, widthBefore, scale), $"The screen is too small for the form at scale {scale}: the window was clamped, so the layout was not verified.");
             Control cell = Field<ComboBox>(form, "_cmbLogLevel");
             while (cell.Parent is not TableLayoutPanel && cell.Parent != null) cell = cell.Parent;
             var grid = (TableLayoutPanel)cell.Parent!;
@@ -1049,7 +1049,7 @@ public sealed class MainConfigFormTests
     }
 
     /// <summary>#224: at the default size every credit value ends inside its card, also at 150% and 200%.</summary>
-    [Theory]
+    [SkippableTheory]
     [InlineData(1f)]
     [InlineData(1.5f)]
     [InlineData(2f)]
@@ -1076,7 +1076,7 @@ public sealed class MainConfigFormTests
             var pages = Field<List<Control>>(form, "_pages");
             typeof(MainConfigForm).GetMethod("ShowPage", Flags)!.Invoke(form, new object[] { pages.Count - 1 });
             Application.DoEvents();
-            if (WindowClampedByScreen(form, widthBefore, scale)) return;
+            Skip.If(WindowClampedByScreen(form, widthBefore, scale), $"The screen is too small for the form at scale {scale}: the window was clamped, so the layout was not verified.");
             var credits = Descendants(pages[pages.Count - 1]).OfType<TableLayoutPanel>().Where(g => g.ColumnCount == 4).Last();
             var values = Descendants(credits).OfType<Label>().Where(l => credits.GetColumn(l.Parent == credits ? l : l.Parent!) > 0 && l.Visible).ToList();
             Assert.Contains(values, l => l.Text.Contains("LICENSE.txt"));

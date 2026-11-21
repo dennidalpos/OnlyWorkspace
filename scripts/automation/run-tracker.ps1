@@ -1,13 +1,13 @@
 ﻿# Esegue i task autonomi del tracker OnlyWorkspace, uno per sessione fresca, fino a errore o quota.
 # Uso (dalla radice del repo): pwsh -NoProfile -File scripts\automation\run-tracker.ps1 [-OnlyId '#138'] [-MaxTasks 20] [-Skip '#110','#118'] [-DryRun]
 # Richiede SECONDBRAIN_HOME (variabile utente) e la CLI claude. Non fa commit ne push: le modifiche restano nel working tree.
-# -Skip: numeri (#NNN) o id esclusi; il default elenca i task del tracker che chiedono upgrade firmato, UAC reale, LongPaths o il repo SecondBrain.
+# -Skip: numeri (#NNN) o id esclusi; il default elenca i task del tracker che chiedono upgrade firmato, UAC reale o LongPaths.
 # -NoQualification: numeri o id che ricevono il prompt normale invece di quello di qualifica.
 # -DryRun: mostra la selezione e il prompt senza avviare sessioni. -Tracker e -Claude servono ai test con tracker e CLI sintetici.
 param(
   [string]$OnlyId = '',
   [int]$MaxTasks = 20,
-  [string[]]$Skip = @('#110', '#118', '#119', '#036'),
+  [string[]]$Skip = @('#110', '#118', '#119'),
   [string[]]$NoQualification = @('#137', '#138', '#139'),
   [switch]$DryRun,
   [string]$Tracker = '',

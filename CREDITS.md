@@ -54,6 +54,7 @@ Third-party components used by OnlyWorkspace, with the license each one declares
 | `Microsoft.NET.Test.Sdk` | 18.12.0 | MIT | tests |
 | `xunit` | 2.9.3 | Apache-2.0 | tests |
 | `xunit.runner.visualstudio` | 4.0.1 | Apache-2.0 | tests |
+| `Xunit.SkippableFact` | 1.5.61 | MS-PL | tests (visible skips; brings `Validation` 2.6.68, MS-PL, test-only) |
 | `coverlet.collector` | 10.1.0 | MIT | tests |
 
 ## Obligations and owner decisions

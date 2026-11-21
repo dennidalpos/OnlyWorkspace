@@ -105,6 +105,7 @@ public sealed partial class MainConfigForm : Form
     private CheckBox _chkAllowAttachments = null!;
     private CheckBox _chkPseudonymizeAmounts = null!;
     private CheckBox _chkPseudonymizeDates = null!;
+    private CheckBox _chkLocalRecognition = null!;
     private ComboBox _cmbExposure = null!;
     private ComboBox _cmbRegion = null!;
     private SelectableLabel _lblExposure = null!;

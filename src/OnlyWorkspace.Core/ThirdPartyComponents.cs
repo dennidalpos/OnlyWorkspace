@@ -85,6 +85,7 @@ public static class ThirdPartyComponents
         new ThirdPartyComponent("Microsoft.NETFramework.ReferenceAssemblies", "1.0.3", "MIT", "https://www.nuget.org/packages/Microsoft.NETFramework.ReferenceAssemblies", distributed: false),
         new ThirdPartyComponent("xunit", "2.9.3", "Apache-2.0", "https://www.nuget.org/packages/xunit", distributed: false),
         new ThirdPartyComponent("xunit.runner.visualstudio", "4.0.1", "Apache-2.0", "https://www.nuget.org/packages/xunit.runner.visualstudio", distributed: false),
+        new ThirdPartyComponent("Xunit.SkippableFact", "1.5.61", "MS-PL", "https://www.nuget.org/packages/Xunit.SkippableFact", distributed: false),
         new ThirdPartyComponent("Microsoft.NET.Test.Sdk", "18.12.0", "MIT", "https://www.nuget.org/packages/Microsoft.NET.Test.Sdk", distributed: false),
         new ThirdPartyComponent("coverlet.collector", "10.1.0", "MIT", "https://www.nuget.org/packages/coverlet.collector", distributed: false)
     };

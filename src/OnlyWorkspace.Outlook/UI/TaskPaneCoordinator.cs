@@ -244,6 +244,7 @@ public partial class TaskPaneCoordinator : IDisposable
                 // The email being written: the pane offers the writing actions instead of the email ones.
                 compose = draftSubject == null ? null : new { subject = draftSubject, kind = ComposeDraft.KindOf(draftSubject) }
             });
+            PreAnalyzeOpenedEmail(email?.EntryId, email?.StoreId);
         }
         catch (Exception ex)
         {
@@ -667,31 +668,10 @@ public partial class TaskPaneCoordinator : IDisposable
             // Only the summary reads the attachments.
             bool sendsAttachments = op["type"] == "summary" && AttachmentContentAllowed(activeProfile);
 
-            string cleanedBody;
             // A conversation cut to its most recent messages: the model and the reader are told.
             string conversationNotice = isThread ? ConversationNotice(email) : string.Empty;
-            if (isThread)
-            {
-                PostPhase(turn, $"Lettura del thread ({email.ThreadMessages!.Count} messaggi)…");
-                var sbThread = new StringBuilder();
-                if (conversationNotice.Length > 0) sbThread.AppendLine("[" + conversationNotice.Trim() + "]").AppendLine();
-                for (int i = 0; i < email.ThreadMessages.Count; i++)
-                {
-                    var msg = email.ThreadMessages[i];
-                    var cleanedPart = _contextBuilder.CleanEmailBody(msg.Body, msg.Subject);
-                    if (!string.IsNullOrWhiteSpace(cleanedPart))
-                    {
-                        sbThread.AppendLine($"[Messaggio #{i + 1} - {msg.SenderName} ({msg.ReceivedTime:dd/MM/yyyy HH:mm})]:");
-                        sbThread.AppendLine(cleanedPart);
-                        sbThread.AppendLine();
-                    }
-                }
-                cleanedBody = sbThread.ToString().Trim();
-            }
-            else
-            {
-                cleanedBody = _contextBuilder.CleanEmailBody(email.Body, email.Subject);
-            }
+            if (isThread) PostPhase(turn, $"Lettura del thread ({email.ThreadMessages!.Count} messaggi)…");
+            string cleanedBody = CleanBodyOf(email, isThread, conversationNotice);
 
             string? attachmentNotice = null;
             if (op["type"] == "summary")
@@ -1944,7 +1924,8 @@ public partial class TaskPaneCoordinator : IDisposable
             if (turn == _turn) DocumentsDispatched();
             if (profile.IsExternal) PostStream(turn, new { type = "cloud_used" });
         }, null),
-            entities: ct => ReadPrivacyEntitiesOnUiAsync(dispatchUi, ct), audit: _privacyAudit, preview: MaskPreviewHandler(dispatchUi));
+            entities: ct => ReadPrivacyEntitiesOnUiAsync(dispatchUi, ct), audit: _privacyAudit, preview: MaskPreviewHandler(dispatchUi),
+            recognizer: RecognizerFor(profile));
     }
 
     public void Dispose()
@@ -1956,6 +1937,7 @@ public partial class TaskPaneCoordinator : IDisposable
         if (_replay.Running)
             OnlyWorkspaceLog.Logger.Information("Pane work cancelled with its Outlook window: {Action}", _replay.Action);
         CancelActiveTask();
+        DisposeRecognizer();
         _control.ControlReady -= OnControlReady;
         _control.MessageReceived -= OnMessageReceived;
         PaneJobs.Changed -= PostOtherJobs;

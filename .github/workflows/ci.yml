@@ -35,10 +35,10 @@ jobs:
 
       # One target at a time: net48 is the shipped runtime, net10 the modern one.
       - name: Test (net48)
-        run: dotnet test tests/OnlyWorkspace.Tests -c Release --no-build -f net48
+        run: dotnet test tests/OnlyWorkspace.Tests -c Release --no-build -f net48 --logger "console;verbosity=normal"
 
       - name: Test (net10)
-        run: dotnet test tests/OnlyWorkspace.Tests -c Release --no-build -f net10.0-windows
+        run: dotnet test tests/OnlyWorkspace.Tests -c Release --no-build -f net10.0-windows --logger "console;verbosity=normal"
 
       # The add-in loaded by a .NET Framework host without binding redirects, as inside Outlook, at both bitnesses.
       - name: Smoke net48 (64 bit)

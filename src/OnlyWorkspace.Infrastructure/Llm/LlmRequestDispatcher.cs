@@ -158,6 +158,12 @@ public sealed class LlmRequestDispatcher : ILlmClient, IDisposable
             return new Pseudonymizer(entities, _profile.IsExternal || _profile.PseudonymizeAmounts, _profile.IsExternal || _profile.PseudonymizeDates, recognizer: _recognizer);
         }
         catch (OperationCanceledException) { throw; }
+        catch (DataEgressBlockedException ex)
+        {
+            // The reason is already worded for the reader (e.g. the local recognizer's model is missing).
+            WriteRecord(new PseudonymizationAudit { Outcome = "blocked" });
+            throw new DataEgressBlockedException(ex.Message);
+        }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
             WriteRecord(new PseudonymizationAudit { Outcome = "blocked" });

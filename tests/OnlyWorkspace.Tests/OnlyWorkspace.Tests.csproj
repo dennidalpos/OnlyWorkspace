@@ -20,6 +20,8 @@
     <!-- Same version as the extractor: writes the .msg given to it by AttachmentExtractionTests. -->
     <PackageReference Include="OpenMcdf" />
     <PackageReference Include="xunit" />
+    <!-- Tests that cannot verify anything on this machine (small screen, no OCR) report Skipped with the reason. -->
+    <PackageReference Include="Xunit.SkippableFact" />
     <PackageReference Include="xunit.runner.visualstudio" />
   </ItemGroup>
 
@@ -107,6 +109,8 @@
     <!-- Helper exe uses its own net48 target. Do not pass a global TargetFramework:
          solution and test builds must share one project instance and its output files. -->
     <ProjectReference Include="..\..\src\OnlyWorkspace.AttachmentExtractor\OnlyWorkspace.AttachmentExtractor.csproj" ReferenceOutputAssembly="false" SkipGetTargetFrameworkProperties="true" GlobalPropertiesToRemove="TargetFramework" />
+    <!-- Own process too: NerRecognizerProcessTests starts the built exe. -->
+    <ProjectReference Include="..\..\src\OnlyWorkspace.PiiRecognizer\OnlyWorkspace.PiiRecognizer.csproj" ReferenceOutputAssembly="false" SkipGetTargetFrameworkProperties="true" GlobalPropertiesToRemove="TargetFramework" />
     <!-- Build order only: InteropPackageTests reads the add-in built by this run, not one left by an earlier build. -->
     <ProjectReference Include="..\..\src\OnlyWorkspace.Outlook\OnlyWorkspace.Outlook.csproj" ReferenceOutputAssembly="false" SkipGetTargetFrameworkProperties="true" GlobalPropertiesToRemove="TargetFramework" />
   </ItemGroup>
@@ -119,13 +123,14 @@
   </Target>
 
   <Target Name="ResolveTestBuildPaths" BeforeTargets="GetAssemblyAttributes">
-    <MSBuild Projects="..\..\src\OnlyWorkspace.Outlook\OnlyWorkspace.Outlook.csproj;..\..\src\OnlyWorkspace.AttachmentExtractor\OnlyWorkspace.AttachmentExtractor.csproj"
+    <MSBuild Projects="..\..\src\OnlyWorkspace.Outlook\OnlyWorkspace.Outlook.csproj;..\..\src\OnlyWorkspace.AttachmentExtractor\OnlyWorkspace.AttachmentExtractor.csproj;..\..\src\OnlyWorkspace.PiiRecognizer\OnlyWorkspace.PiiRecognizer.csproj"
              Targets="GetOnlyWorkspaceBuildInfo" RemoveProperties="TargetFramework">
       <Output TaskParameter="TargetOutputs" ItemName="_TestBuildInfo" />
     </MSBuild>
     <ItemGroup>
       <_TestOutlook Include="@(_TestBuildInfo)" Condition="'%(_TestBuildInfo.ProjectName)' == 'OnlyWorkspace.Outlook'" />
       <_TestExtractor Include="@(_TestBuildInfo)" Condition="'%(_TestBuildInfo.ProjectName)' == 'OnlyWorkspace.AttachmentExtractor'" />
+      <_TestRecognizer Include="@(_TestBuildInfo)" Condition="'%(_TestBuildInfo.ProjectName)' == 'OnlyWorkspace.PiiRecognizer'" />
       <AssemblyMetadata Include="RepositoryRoot" Value="$(OnlyWorkspaceRepositoryRoot)" />
       <AssemblyMetadata Include="OutlookTargetPath" Value="@(_TestOutlook)" />
       <AssemblyMetadata Include="OutlookAssetsFile" Value="@(_TestOutlook->'%(AssetsFile)')" />
@@ -149,6 +154,19 @@
       <ExtractorFiles Include="$(_TestExtractorDirectory)*.*" />
     </ItemGroup>
     <Copy SourceFiles="@(ExtractorFiles)" DestinationFolder="$(OutDir)extractor" SkipUnchangedFiles="true" />
+  </Target>
+
+  <!-- Same layout as the installation: "recognizer" next to the assemblies. -->
+  <Target Name="CopyRecognizer" AfterTargets="Build" DependsOnTargets="ResolveTestBuildPaths" Condition="'$(TargetFramework)' != ''">
+    <Error Condition="'@(_TestRecognizer->Count())' != '1'" Text="Expected one recognizer output in this build graph." />
+    <Error Condition="!Exists('@(_TestRecognizer)')" Text="Recognizer output is missing from this build graph." />
+    <PropertyGroup>
+      <_TestRecognizerDirectory>@(_TestRecognizer->'%(RootDir)%(Directory)')</_TestRecognizerDirectory>
+    </PropertyGroup>
+    <ItemGroup>
+      <RecognizerFiles Include="$(_TestRecognizerDirectory)*.*" Exclude="$(_TestRecognizerDirectory)*.pdb" />
+    </ItemGroup>
+    <Copy SourceFiles="@(RecognizerFiles)" DestinationFolder="$(OutDir)recognizer" SkipUnchangedFiles="true" />
   </Target>
 
 </Project>
