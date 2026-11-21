@@ -22,7 +22,11 @@ public sealed partial class ArchiveDb
                 "select 1 from email_addr ea join emails e on e.id=ea.email_id join folders f on f.id=e.folder_id where ea.addr_id=a.id and e.present=1" + scope +
                 ") order by a.id limit $take", null, args.ToArray());
             using var reader = cmd.ExecuteReader(); var result = new List<PrivacyEntity>();
-            while (reader.Read()) result.Add(new PrivacyEntity { Id = reader.GetInt64(0), Value = reader.GetString(1) });
+            while (reader.Read())
+            {
+                string name = reader.GetString(1);
+                result.Add(new PrivacyEntity { Id = reader.GetInt64(0), Value = name, Category = PrivacyEntityCategory.OfDisplayName(name) });
+            }
             return result;
         }
     }
