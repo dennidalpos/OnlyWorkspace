@@ -170,10 +170,27 @@ public sealed class NerRecognizerTests : IDisposable
 
         // A model that outlasts the budget blocks and the half-read connection is dropped.
         var slow = new PipeFactory(new SlowModel(TimeSpan.FromSeconds(3)));
-        using var impatient = new PiiRecognizerClient(_dir, slow);
+        using var impatient = new PiiRecognizerClient(_dir, slow, TimeSpan.Zero);
         Assert.Throws<DataEgressBlockedException>(() => impatient.Recognize("Luigi Verdi", TimeSpan.FromMilliseconds(300), CancellationToken.None));
         Assert.Throws<DataEgressBlockedException>(() =>
             new PiiRecognizerClient(_dir, new PipeFactory(new ThrowingModel())).Recognize("Luigi Verdi", TimeSpan.FromSeconds(5), CancellationToken.None));
+    }
+
+    [Fact]
+    public void Client_GivesOnlyTheFirstRequestOfAFreshProcessTheColdStartMargin()
+    {
+        byte[] bytes = Encoding.UTF8.GetBytes("synthetic weights");
+        File.WriteAllBytes(Path.Combine(_dir, "m.bin"), bytes);
+        Manifest("rev-cold", "m.bin", Hash(bytes));
+        var factory = new PipeFactory(new SlowModel(TimeSpan.FromMilliseconds(800)));
+        using var client = new PiiRecognizerClient(_dir, factory, TimeSpan.FromSeconds(5));
+        var budget = TimeSpan.FromMilliseconds(300);
+        // The slow first answer fits only thanks to the margin; the same answer on the warm process is blocked.
+        client.Recognize("Luigi Verdi", budget, CancellationToken.None);
+        Assert.Throws<DataEgressBlockedException>(() => client.Recognize("Luigi Verdi", budget, CancellationToken.None));
+        // A blocked request drops the connection: the next process is fresh and gets the margin again.
+        client.Recognize("Luigi Verdi", budget, CancellationToken.None);
+        Assert.Equal(2, factory.Opened);
     }
 
     [Fact]

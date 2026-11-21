@@ -36,10 +36,15 @@ public sealed class PiiRecognizerClient : INerRecognizer, IDisposable
     private PiiModelPackage? _verified;
     private string _stamp = string.Empty;
 
-    public PiiRecognizerClient(string modelDirectory, INerChannelFactory channels)
+    /// <summary>Extra time for the first request on a freshly started process only (JIT, model load, pipe); #298.</summary>
+    public static readonly TimeSpan DefaultColdStartMargin = TimeSpan.FromSeconds(4);
+    private readonly TimeSpan _coldStartMargin;
+
+    public PiiRecognizerClient(string modelDirectory, INerChannelFactory channels, TimeSpan? coldStartMargin = null)
     {
         _modelDirectory = modelDirectory ?? throw new ArgumentNullException(nameof(modelDirectory));
         _channels = channels ?? throw new ArgumentNullException(nameof(channels));
+        _coldStartMargin = coldStartMargin ?? DefaultColdStartMargin;
     }
 
     /// <summary>The installed recognizer next to the add-in, or null when the setup did not install it.</summary>
@@ -78,7 +83,8 @@ public sealed class PiiRecognizerClient : INerRecognizer, IDisposable
             if (_channel != null && !_channel.IsAlive) { Close(); throw new DataEgressBlockedException("Processo del riconoscimento locale terminato: nessun dato inviato."); }
             try
             {
-                _channel ??= _channels.Open(_verified!, token);
+                // Still fail-closed: the margin applies once per process and the call is bounded by the widened budget.
+                if (_channel == null) { _channel = _channels.Open(_verified!, token); budget += _coldStartMargin; }
                 return NerProtocol.Call(_channel.Stream, block, budget, token);
             }
             catch (OperationCanceledException) { Close(); throw; }
