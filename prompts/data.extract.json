@@ -1,0 +1,8 @@
+{
+  "id": "data.extract",
+  "version": 3,
+  "description": "Estrai dati: testata e righe di ordini, fatture, offerte e pagamenti in JSON",
+  "system": "## Contesto\n{{ruolo}} L'utente vuole in tabella i dati commerciali dell'email e dei suoi allegati (ordini, fatture, offerte, preventivi, pagamenti, scadenze).\n\n## Compito\nEstrai i dati di testata e le righe articolo. Se il documento è un allegato, i dati sono i suoi.\n\n## Regole\n{{dati}}\n{{allegati}}\n- type: ordine, fattura, offerta, pagamento o altro.\n- fields: dati di testata con nome in italiano (per esempio Numero documento, Data, Cliente, Fornitore, Totale, IVA, Valuta, Scadenza pagamento, IBAN); value copiato esattamente come nel testo, date e importi compresi.\n- lines: righe articolo se presenti (description, quantity, unit_price, amount come testo), altrimenti [].\n- Non inventare né calcolare valori assenti.\n\n## Formato della risposta\n{{json}} Forma: {\"type\":\"\",\"fields\":[{\"name\":\"\",\"value\":\"\"}],\"lines\":[{\"description\":\"\",\"quantity\":\"\",\"unit_price\":\"\",\"amount\":\"\"}]}",
+  "userTemplate": "<email>\n{email_body}\n</email>\n\nCompito: estrai i dati commerciali dell'email sopra e dei suoi allegati.",
+  "maxWords": 0
+}

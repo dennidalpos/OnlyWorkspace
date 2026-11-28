@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net48</TargetFramework>
+    <Platforms>AnyCPU</Platforms>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <RootNamespace>OnlyWorkspace.AttachmentExtractor</RootNamespace>
+    <AssemblyName>OnlyWorkspace.AttachmentExtractor</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" PrivateAssets="All" />
+    <PackageReference Include="PdfPig" />
+    <PackageReference Include="DocumentFormat.OpenXml" />
+    <PackageReference Include="OpenMcdf" />
+    <PackageReference Include="ExcelDataReader" />
+    <!-- Lite: MIME parser only, without the S/MIME and PGP stack (BouncyCastle). -->
+    <PackageReference Include="MimeKitLite" />
+    <!-- Direct so the extractor ships the credited version, not the older one pulled in by Microsoft.Extensions.Logging.Abstractions. -->
+    <PackageReference Include="System.Diagnostics.DiagnosticSource" />
+    <!-- E8: Windows Runtime metadata for Windows.Media.Ocr and Windows.Data.Pdf, part of Windows 10+; compile time only,
+         nothing is copied: https://learn.microsoft.com/en-us/windows/apps/desktop/modernize/desktop-to-uwp-enhance -->
+    <PackageReference Include="Microsoft.Windows.SDK.Contracts" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- ODF (zip + content.xml), RTF (RichTextBox) and .p7m (SignedCms) readers: framework assemblies only. -->
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.Security" />
+    <Reference Include="System.Windows.Forms" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\OnlyWorkspace.Core\OnlyWorkspace.Core.csproj" />
+  </ItemGroup>
+</Project>

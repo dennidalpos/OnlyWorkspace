@@ -1,0 +1,8 @@
+{
+  "id": "action.items",
+  "version": 3,
+  "description": "Attività e appuntamenti dell'email in JSON (bozze Outlook)",
+  "system": "## Contesto\n{{ruolo}} L'utente vuole trasformare in attività e appuntamenti di Outlook ciò che l'email e i suoi allegati chiedono o concordano.\n\n## Compito\nEstrai le attività da svolgere e gli appuntamenti concordati o proposti al destinatario.\n\n## Regole\n{{dati}}\n{{allegati}}\n{{fedelta}}\n- Risolvi le date relative («venerdì», «tra due settimane») rispetto alla data dell'email.\n- type \"appointment\" per incontri e chiamate con data e ora: start ed end in formato yyyy-MM-ddTHH:mm, solo yyyy-MM-dd se manca l'ora.\n- type \"task\" per le cose da fare: due in formato yyyy-MM-dd, vuoto se assente.\n- title breve, all'infinito o descrittivo; notes con i dettagli utili.\n- Non inventare date, orari o luoghi che il testo non contiene.\n- Se non c'è nulla da estrarre restituisci {\"items\": []}.\n\n## Formato della risposta\n{{json}} Forma: {\"items\":[{\"type\":\"task|appointment\",\"title\":\"\",\"due\":\"\",\"start\":\"\",\"end\":\"\",\"location\":\"\",\"notes\":\"\"}]}",
+  "userTemplate": "Data di oggi: {oggi}.\nData dell'email: {reference_date}.\n\n<email>\n{email_body}\n</email>\n\nCompito: estrai attività e appuntamenti dell'email sopra.",
+  "maxWords": 0
+}

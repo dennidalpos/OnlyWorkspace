@@ -1,0 +1,7 @@
+* text=auto eol=lf
+
+# Preserve the official PSL bytes and recorded digest across Windows checkouts.
+src/OnlyWorkspace.Core/Security/public_suffix_list.dat -text
+
+# ASCII-encoded PDF streams still require byte-exact checkout.
+*.pdf binary

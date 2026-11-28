@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    # Windows only: net48 add-in, DPAPI and WinForms in the tests. No Office needed (interop types are embedded).
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      # Actions pinned to the commit of the release tag; Dependabot (github-actions) keeps them current.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Install PSScriptAnalyzer
+        shell: pwsh
+        run: Install-Module PSScriptAnalyzer -RequiredVersion 1.25.0 -Scope CurrentUser -Repository PSGallery -Force
+
+      # Builds Release with SDK analyzers, then checks scripts and technical data syntax.
+      - name: Static analysis and build
+        shell: pwsh
+        run: pwsh -NoProfile -File scripts/check-code.ps1
+
+      # One target at a time: net48 is the shipped runtime, net10 the modern one.
+      - name: Test (net48)
+        run: dotnet test tests/OnlyWorkspace.Tests -c Release --no-build -f net48 --logger "console;verbosity=normal"
+
+      - name: Test (net10)
+        run: dotnet test tests/OnlyWorkspace.Tests -c Release --no-build -f net10.0-windows --logger "console;verbosity=normal"
+
+      # The add-in loaded by a .NET Framework host without binding redirects, as inside Outlook, at both bitnesses.
+      - name: Smoke net48 (64 bit)
+        shell: cmd
+        run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests\scripts\Net48.Smoke.ps1
+
+      - name: Smoke net48 (32 bit)
+        shell: cmd
+        run: '%WINDIR%\SysWOW64\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests\scripts\Net48.Smoke.ps1'
+
+      # Packaging.Tests.ps1 compiles an NSIS fixture; the runner image has no NSIS. Same version as build-installer.ps1.
+      # community.chocolatey.org answered 503 on 19/10/2026: retry before failing.
+      - name: Install NSIS
+        shell: pwsh
+        run: |
+          for ($try = 1; $try -le 3; $try++) {
+            choco install nsis --version 3.13.0 -y --no-progress
+            if ($LASTEXITCODE -eq 0) { exit 0 }
+            Start-Sleep -Seconds (30 * $try)
+          }
+          throw 'NSIS was not installed after 3 attempts.'
+
+      # TaskPane.html JavaScript (node), signing and NSIS pipeline (pwsh), archive recovery/capacity and pane policy (Windows PowerShell 5.1).
+      - name: Script tests
+        shell: pwsh
+        run: pwsh -NoProfile -File tests\scripts\Run-Tests.ps1
+
+      # The command exits 0 either way: the JSON report has a "vulnerabilities" entry only when something is found.
+      - name: Vulnerable packages
+        shell: pwsh
+        run: |
+          $report = dotnet package list --project OnlyWorkspace.sln --vulnerable --include-transitive --format json | Out-String
+          if ($LASTEXITCODE -ne 0) { throw "dotnet package list failed" }
+          if ($report -match '"vulnerabilities"') { Write-Host $report; throw "Vulnerable NuGet packages found" }

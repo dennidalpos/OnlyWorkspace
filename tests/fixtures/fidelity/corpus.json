@@ -1,0 +1,776 @@
+{
+  "Version": 1,
+  "Cases": [
+    {
+      "Id": "it-order",
+      "Language": "it",
+      "Tags": [
+        "long",
+        "chain"
+      ],
+      "Thread": "it-chain",
+      "Subject": "Synthetic it-order",
+      "Sender": "fixture@example.test",
+      "ReceivedUtc": "2026-10-21T09:00:00Z",
+      "Sources": [
+        {
+          "Id": "",
+          "Name": "Corpo email",
+          "Text": "Fornitore: Alfa Sintetica\nOrdine ORD-101\nImporto 1000,01 EUR\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nQuesta sezione descrive materiale sintetico di prova senza altri fatti.\nScadenza: 2026-11-30\nInviare il disegno firmato prima della scadenza.\nFattura INV-901\nFattura INV-902\nFattura INV-903\nFattura INV-904\nFattura INV-905\nFattura INV-906\nFattura INV-907\nFattura INV-908",
+          "Expected": [
+            {
+              "Kind": "Party",
+              "Raw": "Fornitore: Alfa Sintetica",
+              "Value": "Alfa Sintetica",
+              "Currency": null
+            },
+            {
+              "Kind": "Order",
+              "Raw": "Ordine ORD-101",
+              "Value": "ORD-101",
+              "Currency": null
+            },
+            {
+              "Kind": "Amount",
+              "Raw": "Importo 1000,01 EUR",
+              "Value": "1000.01",
+              "Currency": "EUR"
+            },
+            {
+              "Kind": "Deadline",
+              "Raw": "2026-11-30",
+              "Value": "2026-11-30",
+              "Currency": null
+            },
+            {
+              "Kind": "Invoice",
+              "Raw": "Fattura INV-901",
+              "Value": "INV-901",
+              "Currency": null
+            },
+            {
+              "Kind": "Invoice",
+              "Raw": "Fattura INV-902",
+              "Value": "INV-902",
+              "Currency": null
+            },
+            {
+              "Kind": "Invoice",
+              "Raw": "Fattura INV-903",
+              "Value": "INV-903",
+              "Currency": null
+            },
+            {
+              "Kind": "Invoice",
+              "Raw": "Fattura INV-904",
+              "Value": "INV-904",
+              "Currency": null
+            },
+            {
+              "Kind": "Invoice",
+              "Raw": "Fattura INV-905",
+              "Value": "INV-905",
+              "Currency": null
+            },
+            {
+              "Kind": "Invoice",
+              "Raw": "Fattura INV-906",
+              "Value": "INV-906",
+              "Currency": null
+            },
+            {
+              "Kind": "Invoice",
+              "Raw": "Fattura INV-907",
+              "Value": "INV-907",
+              "Currency": null
+            },
+            {
+              "Kind": "Invoice",
+              "Raw": "Fattura INV-908",
+              "Value": "INV-908",
+              "Currency": null
+            }
+          ]
+        }
+      ],
+      "Review": [
+        "Alfa è il fornitore; il disegno firmato è richiesto, non già inviato.",
+        "Conservare ordine e importo iniziali e scadenza finale.",
+        "Conservare tutti gli otto riferimenti di fattura anche dopo il parser, oltre al riferimento di ordine."
+      ]
+    },
+    {
+      "Id": "en-order",
+      "Language": "en",
+      "Tags": [
+        "long",
+        "chain"
+      ],
+      "Thread": "en-chain",
+      "Subject": "Synthetic en-order",
+      "Sender": "fixture@example.test",
+      "ReceivedUtc": "2026-10-21T09:00:00Z",
+      "Sources": [
+        {
+          "Id": "",
+          "Name": "Corpo email",
+          "Text": "Supplier: Beta Synthetic\nOrder ORD-201\nAmount 2000.02 USD\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nThis section describes synthetic test material without additional facts.\nDue: 2026-11-29\nPlease send the signed drawing before the due date.\nService A: Amount 101.01 USD\nService B: Amount 102.01 USD\nService C: Amount 103.01 USD\nService D: Amount 104.01 USD\nService E: Amount 105.01 USD\nService F: Amount 106.01 USD\nService G: Amount 107.01 USD\nService H: Amount 108.01 USD",
+          "Expected": [
+            {
+              "Kind": "Party",
+              "Raw": "Supplier: Beta Synthetic",
+              "Value": "Beta Synthetic",
+              "Currency": null
+            },
+            {
+              "Kind": "Order",
+              "Raw": "Order ORD-201",
+              "Value": "ORD-201",
+              "Currency": null
+            },
+            {
+              "Kind": "Amount",
+              "Raw": "Amount 2000.02 USD",
+              "Value": "2000.02",
+              "Currency": "USD"
+            },
+            {
+              "Kind": "Deadline",
+              "Raw": "2026-11-29",
+              "Value": "2026-11-29",
+              "Currency": null
+            },
+            {
+              "Kind": "Amount",
+              "Raw": "Amount 101.01 USD",
+              "Value": "101.01",
+              "Currency": "USD"
+            },
+            {
+              "Kind": "Amount",
+              "Raw": "Amount 102.01 USD",
+              "Value": "102.01",
+              "Currency": "USD"
+            },
+            {
+              "Kind": "Amount",
+              "Raw": "Amount 103.01 USD",
+              "Value": "103.01",
+              "Currency": "USD"
+            },
+            {
+              "Kind": "Amount",
+              "Raw": "Amount 104.01 USD",
+              "Value": "104.01",
+              "Currency": "USD"
+            },
+            {
+              "Kind": "Amount",
+              "Raw": "Amount 105.01 USD",
+              "Value": "105.01",
+              "Currency": "USD"
+            },
+            {
+              "Kind": "Amount",
+              "Raw": "Amount 106.01 USD",
+              "Value": "106.01",
+              "Currency": "USD"
+            },
+            {
+              "Kind": "Amount",
+              "Raw": "Amount 107.01 USD",
+              "Value": "107.01",
+              "Currency": "USD"
+            },
+            {
+              "Kind": "Amount",
+              "Raw": "Amount 108.01 USD",
+              "Value": "108.01",
+              "Currency": "USD"
+            }
+          ]
+        }
+      ],
+      "Review": [
+        "Verificare richieste, attribuzioni, omissioni e proporzione della sintesi.",
+        "Keep all eight service amounts as well as the order amount; service labels differ."
+      ]
+    },
+    {
+      "Id": "it-update",
+      "Language": "it",
+      "Tags": [
+        "chain"
+      ],
+      "Thread": "it-chain",
+      "Subject": "Synthetic it-update",
+      "Sender": "fixture@example.test",
+      "ReceivedUtc": "2026-10-22T15:00:00Z",
+      "Sources": [
+        {
+          "Id": "",
+          "Name": "Corpo email",
+          "Text": "Ordine ORD-101\nIl preventivo precedente viene sostituito. Totale 1200,02 EUR\nScadenza: 2026-12-05\nNon spedire prima della conferma scritta.",
+          "Expected": [
+            {
+              "Kind": "Order",
+              "Raw": "Ordine ORD-101",
+              "Value": "ORD-101",
+              "Currency": null
+            },
+            {
+              "Kind": "Amount",
+              "Raw": "Totale 1200,02 EUR",
+              "Value": "1200.02",
+              "Currency": "EUR"
+            },
+            {
+              "Kind": "Deadline",
+              "Raw": "2026-12-05",
+              "Value": "2026-12-05",
+              "Currency": null
+            }
+          ]
+        }
+      ],
+      "Review": [
+        "Importo e scadenza aggiornati sostituiscono quelli iniziali.",
+        "Divieto di spedizione prima della conferma; non dichiarare conferma ricevuta."
+      ]
+    },
+    {
+      "Id": "en-update",
+      "Language": "en",
+      "Tags": [
+        "chain"
+      ],
+      "Thread": "en-chain",
+      "Subject": "Synthetic en-update",
+      "Sender": "fixture@example.test",
+      "ReceivedUtc": "2026-10-22T15:00:00Z",
+      "Sources": [
+        {
+          "Id": "",
+          "Name": "Corpo email",
+          "Text": "Order ORD-201\nThe former offer is superseded. Total USD 2200.03\nDue: 2026-12-06\nDo not dispatch before written approval.",
+          "Expected": [
+            {
+              "Kind": "Order",
+              "Raw": "Order ORD-201",
+              "Value": "ORD-201",
+              "Currency": null
+            },
+            {
+              "Kind": "Amount",
+              "Raw": "Total USD 2200.03",
+              "Value": "2200.03",
+              "Currency": "USD"
+            },
+            {
+              "Kind": "Deadline",
+              "Raw": "2026-12-06",
+              "Value": "2026-12-06",
+              "Currency": null
+            }
+          ]
+        }
+      ],
+      "Review": [
+        "Verificare richieste, attribuzioni, omissioni e proporzione della sintesi."
+      ]
+    },
+    {
+      "Id": "it-forward",
+      "Language": "it",
+      "Tags": [
+        "forward"
+      ],
+      "Thread": "",
+      "Subject": "Fwd: Synthetic it-forward",
+      "Sender": "fixture@example.test",
+      "ReceivedUtc": "2026-10-23T09:00:00Z",
+      "Sources": [
+        {
+          "Id": "",
+          "Name": "Corpo email",
+          "Text": "Vi inoltro la richiesta, non confermo il pagamento.\nInizio messaggio inoltrato:\nDa: partner@example.test\nOrdine ORD-301\nTotale EUR 3300,04\nScadenza: 2026-12-07\nChiediamo di verificare il saldo.",
+          "Expected": [
+            {
+              "Kind": "Order",
+              "Raw": "Ordine ORD-301",
+              "Value": "ORD-301",
+              "Currency": null
+            },
+            {
+              "Kind": "Amount",
+              "Raw": "Totale EUR 3300,04",
+              "Value": "3300.04",
+              "Currency": "EUR"
+            },
+            {
+              "Kind": "Deadline",
+              "Raw": "2026-12-07",
+              "Value": "2026-12-07",
+              "Currency": null
+            }
+          ]
+        }
+      ],
+      "Review": [
+        "Richiesta inoltrata attribuita al partner; il mittente non conferma il pagamento."
+      ]
+    },
+    {
+      "Id": "en-forward",
+      "Language": "en",
+      "Tags": [
+        "forward"
+      ],
+      "Thread": "",
+      "Subject": "Fwd: Synthetic en-forward",
+      "Sender": "fixture@example.test",
+      "ReceivedUtc": "2026-10-23T09:00:00Z",
+      "Sources": [
+        {
+          "Id": "",
+          "Name": "Corpo email",
+          "Text": "Forwarding this request; I am not confirming payment.\nForwarded message:\nFrom: partner@example.test\nInvoice INV-401\nTotal GBP 4400.05\nDue: 2026-12-08\nPlease check the balance.",
+          "Expected": [
+            {
+              "Kind": "Invoice",
+              "Raw": "Invoice INV-401",
+              "Value": "INV-401",
+              "Currency": null
+            },
+            {
+              "Kind": "Amount",
+              "Raw": "Total GBP 4400.05",
+              "Value": "4400.05",
+              "Currency": "GBP"
+            },
+            {
+              "Kind": "Deadline",
+              "Raw": "2026-12-08",
+              "Value": "2026-12-08",
+              "Currency": null
+            }
+          ]
+        }
+      ],
+      "Review": [
+        "Verificare richieste, attribuzioni, omissioni e proporzione della sintesi."
+      ]
+    },
+    {
+      "Id": "it-attachment",
+      "Language": "it",
+      "Tags": [
+        "attachment"
+      ],
+      "Thread": "",
+      "Subject": "Synthetic it-attachment",
+      "Sender": "fixture@example.test",
+      "ReceivedUtc": "2026-10-23T09:00:00Z",
+      "Sources": [
+        {
+          "Id": "",
+          "Name": "Corpo email",
+          "Text": "Verificare la fattura allegata e chiedere conferma del saldo, senza disporre pagamenti.",
+          "Expected": []
+        },
+        {
+          "Id": "fattura.txt",
+          "Name": "fattura.txt",
+          "Text": "Fattura INV-501\nImporto 5500,06 EUR\nScadenza: 2026-12-09",
+          "Expected": [
+            {
+              "Kind": "Invoice",
+              "Raw": "Fattura INV-501",
+              "Value": "INV-501",
+              "Currency": null
+            },
+            {
+              "Kind": "Amount",
+              "Raw": "Importo 5500,06 EUR",
+              "Value": "5500.06",
+              "Currency": "EUR"
+            },
+            {
+              "Kind": "Deadline",
+              "Raw": "2026-12-09",
+              "Value": "2026-12-09",
+              "Currency": null
+            }
+          ]
+        }
+      ],
+      "Review": [
+        "Verificare richieste, attribuzioni, omissioni e proporzione della sintesi."
+      ]
+    },
+    {
+      "Id": "en-attachment",
+      "Language": "en",
+      "Tags": [
+        "attachment"
+      ],
+      "Thread": "",
+      "Subject": "Synthetic en-attachment",
+      "Sender": "fixture@example.test",
+      "ReceivedUtc": "2026-10-23T09:00:00Z",
+      "Sources": [
+        {
+          "Id": "",
+          "Name": "Corpo email",
+          "Text": "Check the attached invoice and ask for balance confirmation; do not initiate payment.",
+          "Expected": []
+        },
+        {
+          "Id": "invoice.txt",
+          "Name": "invoice.txt",
+          "Text": "Invoice INV-601\nAmount 6600.07 CHF\nDue: 2026-12-10",
+          "Expected": [
+            {
+              "Kind": "Invoice",
+              "Raw": "Invoice INV-601",
+              "Value": "INV-601",
+              "Currency": null
+            },
+            {
+              "Kind": "Amount",
+              "Raw": "Amount 6600.07 CHF",
+              "Value": "6600.07",
+              "Currency": "CHF"
+            },
+            {
+              "Kind": "Deadline",
+              "Raw": "2026-12-10",
+              "Value": "2026-12-10",
+              "Currency": null
+            }
+          ]
+        }
+      ],
+      "Review": [
+        "Verificare richieste, attribuzioni, omissioni e proporzione della sintesi."
+      ]
+    },
+    {
+      "Id": "it-auto",
+      "Language": "it",
+      "Tags": [
+        "automatic"
+      ],
+      "Thread": "",
+      "Subject": "Synthetic it-auto",
+      "Sender": "fixture@example.test",
+      "ReceivedUtc": "2026-10-23T09:00:00Z",
+      "Sources": [
+        {
+          "Id": "",
+          "Name": "Corpo email",
+          "Text": "Auto-Submitted: auto-generated\nList-Unsubscribe: <https://example.test/unsubscribe>\nNotifica automatica: nessuna azione richiesta. Protocollo AUTO-701",
+          "Expected": [
+            {
+              "Kind": "Protocol",
+              "Raw": "Protocollo AUTO-701",
+              "Value": "AUTO-701",
+              "Currency": null
+            }
+          ]
+        }
+      ],
+      "Review": [
+        "Email automatica; E6 dovrà evitarne la scheda IA. Nessuna richiesta operativa."
+      ]
+    },
+    {
+      "Id": "en-auto",
+      "Language": "en",
+      "Tags": [
+        "automatic"
+      ],
+      "Thread": "",
+      "Subject": "Synthetic en-auto",
+      "Sender": "fixture@example.test",
+      "ReceivedUtc": "2026-10-23T09:00:00Z",
+      "Sources": [
+        {
+          "Id": "",
+          "Name": "Corpo email",
+          "Text": "Auto-Submitted: auto-generated\nPrecedence: bulk\nFrom: noreply@example.test\nAutomatic notice; no action required. Protocol AUTO-801",
+          "Expected": [
+            {
+              "Kind": "Protocol",
+              "Raw": "Protocol AUTO-801",
+              "Value": "AUTO-801",
+              "Currency": null
+            }
+          ]
+        }
+      ],
+      "Review": [
+        "Automatic email: E6 must skip the AI card. No operational request."
+      ]
+    },
+    {
+      "Id": "it-ambiguous",
+      "Language": "it",
+      "Tags": [
+        "ambiguous"
+      ],
+      "Thread": "",
+      "Subject": "Synthetic it-ambiguous",
+      "Sender": "fixture@example.test",
+      "ReceivedUtc": "2026-10-23T09:00:00Z",
+      "Sources": [
+        {
+          "Id": "",
+          "Name": "Corpo email",
+          "Text": "Importo 1.000 EUR\nScadenza: 03/04/2026\nTotale 10 $\nNon indovinare la valuta del simbolo o il formato locale.",
+          "Expected": [
+            {
+              "Kind": "Amount",
+              "Raw": "Importo 1.000 EUR",
+              "Value": null,
+              "Currency": "EUR"
+            },
+            {
+              "Kind": "Deadline",
+              "Raw": "03/04/2026",
+              "Value": null,
+              "Currency": null
+            },
+            {
+              "Kind": "Amount",
+              "Raw": "Totale 10 $",
+              "Value": "10",
+              "Currency": null
+            }
+          ]
+        }
+      ],
+      "Review": [
+        "Non risolvere il separatore o la data ambigui; $ non identifica USD."
+      ]
+    },
+    {
+      "Id": "en-ambiguous",
+      "Language": "en",
+      "Tags": [
+        "ambiguous"
+      ],
+      "Thread": "",
+      "Subject": "Synthetic en-ambiguous",
+      "Sender": "fixture@example.test",
+      "ReceivedUtc": "2026-10-23T09:00:00Z",
+      "Sources": [
+        {
+          "Id": "",
+          "Name": "Corpo email",
+          "Text": "Amount 1,000 USD\nDue: 04/03/2026\nTotal 20 $\nDo not guess the locale or the dollar currency.",
+          "Expected": [
+            {
+              "Kind": "Amount",
+              "Raw": "Amount 1,000 USD",
+              "Value": null,
+              "Currency": "USD"
+            },
+            {
+              "Kind": "Deadline",
+              "Raw": "04/03/2026",
+              "Value": null,
+              "Currency": null
+            },
+            {
+              "Kind": "Amount",
+              "Raw": "Total 20 $",
+              "Value": "20",
+              "Currency": null
+            }
+          ]
+        }
+      ],
+      "Review": [
+        "Verificare richieste, attribuzioni, omissioni e proporzione della sintesi."
+      ]
+    }
+  ],
+  "Scenarios": [
+    {
+      "Id": "chain",
+      "CaseIds": [
+        "it-order",
+        "it-update"
+      ],
+      "Goal": "Ricostruisci le variazioni dell ordine ORD-101: importi, scadenze e condizioni di spedizione, distinguendo prima e dopo.",
+      "Review": [
+        "Distinguere 1000,01 da 1200,02 EUR e 30 novembre da 5 dicembre; la conferma è ancora richiesta."
+      ],
+      "Expected": [
+        {
+          "Kind": "Order",
+          "Raw": "Ordine ORD-101",
+          "Value": "ORD-101",
+          "Currency": null,
+          "CaseId": "it-order",
+          "SourceId": ""
+        },
+        {
+          "Kind": "Amount",
+          "Raw": "Importo 1000,01 EUR",
+          "Value": "1000.01",
+          "Currency": "EUR",
+          "CaseId": "it-order",
+          "SourceId": ""
+        },
+        {
+          "Kind": "Deadline",
+          "Raw": "2026-11-30",
+          "Value": "2026-11-30",
+          "Currency": null,
+          "CaseId": "it-order",
+          "SourceId": ""
+        },
+        {
+          "Kind": "Amount",
+          "Raw": "Totale 1200,02 EUR",
+          "Value": "1200.02",
+          "Currency": "EUR",
+          "CaseId": "it-update",
+          "SourceId": ""
+        },
+        {
+          "Kind": "Deadline",
+          "Raw": "2026-12-05",
+          "Value": "2026-12-05",
+          "Currency": null,
+          "CaseId": "it-update",
+          "SourceId": ""
+        }
+      ]
+    },
+    {
+      "Id": "forward",
+      "CaseIds": [
+        "it-forward",
+        "en-forward"
+      ],
+      "Goal": "Riepiloga le due richieste inoltrate, con riferimenti, importi e scadenze, distinguendo chi chiede da chi inoltra.",
+      "Review": [
+        "Non attribuire al mittente la richiesta del partner e non dichiarare pagamenti eseguiti."
+      ],
+      "Expected": [
+        {
+          "Kind": "Order",
+          "Raw": "Ordine ORD-301",
+          "Value": "ORD-301",
+          "Currency": null,
+          "CaseId": "it-forward",
+          "SourceId": ""
+        },
+        {
+          "Kind": "Amount",
+          "Raw": "Totale EUR 3300,04",
+          "Value": "3300.04",
+          "Currency": "EUR",
+          "CaseId": "it-forward",
+          "SourceId": ""
+        },
+        {
+          "Kind": "Deadline",
+          "Raw": "2026-12-07",
+          "Value": "2026-12-07",
+          "Currency": null,
+          "CaseId": "it-forward",
+          "SourceId": ""
+        },
+        {
+          "Kind": "Invoice",
+          "Raw": "Invoice INV-401",
+          "Value": "INV-401",
+          "Currency": null,
+          "CaseId": "en-forward",
+          "SourceId": ""
+        },
+        {
+          "Kind": "Amount",
+          "Raw": "Total GBP 4400.05",
+          "Value": "4400.05",
+          "Currency": "GBP",
+          "CaseId": "en-forward",
+          "SourceId": ""
+        },
+        {
+          "Kind": "Deadline",
+          "Raw": "2026-12-08",
+          "Value": "2026-12-08",
+          "Currency": null,
+          "CaseId": "en-forward",
+          "SourceId": ""
+        }
+      ]
+    },
+    {
+      "Id": "attachment",
+      "CaseIds": [
+        "it-attachment",
+        "en-attachment"
+      ],
+      "Goal": "Elenca fatture, importi, valute, scadenze e azioni richieste nei due allegati, senza dichiarare pagamenti eseguiti.",
+      "Review": [
+        "Dati nei due allegati attribuiti alla rispettiva email; verifiche richieste, nessun pagamento disposto."
+      ],
+      "Expected": [
+        {
+          "Kind": "Invoice",
+          "Raw": "Fattura INV-501",
+          "Value": "INV-501",
+          "Currency": null,
+          "CaseId": "it-attachment",
+          "SourceId": "fattura.txt"
+        },
+        {
+          "Kind": "Amount",
+          "Raw": "Importo 5500,06 EUR",
+          "Value": "5500.06",
+          "Currency": "EUR",
+          "CaseId": "it-attachment",
+          "SourceId": "fattura.txt"
+        },
+        {
+          "Kind": "Deadline",
+          "Raw": "2026-12-09",
+          "Value": "2026-12-09",
+          "Currency": null,
+          "CaseId": "it-attachment",
+          "SourceId": "fattura.txt"
+        },
+        {
+          "Kind": "Invoice",
+          "Raw": "Invoice INV-601",
+          "Value": "INV-601",
+          "Currency": null,
+          "CaseId": "en-attachment",
+          "SourceId": "invoice.txt"
+        },
+        {
+          "Kind": "Amount",
+          "Raw": "Amount 6600.07 CHF",
+          "Value": "6600.07",
+          "Currency": "CHF",
+          "CaseId": "en-attachment",
+          "SourceId": "invoice.txt"
+        },
+        {
+          "Kind": "Deadline",
+          "Raw": "2026-12-10",
+          "Value": "2026-12-10",
+          "Currency": null,
+          "CaseId": "en-attachment",
+          "SourceId": "invoice.txt"
+        }
+      ]
+    }
+  ]
+}

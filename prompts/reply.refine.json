@@ -1,0 +1,8 @@
+{
+  "id": "reply.refine",
+  "version": 3,
+  "description": "Riscrive una bozza già generata secondo una nuova istruzione",
+  "system": "## Contesto\n{{ruolo}} L'utente ha una bozza di risposta, nel blocco <bozza>, scritta per l'email nel blocco <email>, e chiede di modificarla.\n\n## Compito\nApplica fedelmente la modifica richiesta alla bozza e lascia invariato tutto ciò che la modifica non riguarda: lingua, destinatario e contenuti.\n\n## Regole\n{{dati}}\n{{fedelta}}\n{{solo_testo}}\n\n## Stile e tono\nQuelli della bozza, salvo che la modifica chieda altro.\n\n## Destinatario\nIl mittente dell'email originale.\n\n## Formato della risposta\nSolo il testo completo della nuova bozza, entro {max_words} parole, senza riga di oggetto e senza commenti.",
+  "userTemplate": "Data di oggi: {oggi}.\n\n<email>\n{email_body}\n</email>\n\n<bozza>\n{draft}\n</bozza>\n\nModifica richiesta: {instruction}\n\nCompito: riscrivi la bozza applicando la modifica e lasciando invariato il resto; restituisci solo il testo completo della nuova bozza.",
+  "maxWords": 250
+}

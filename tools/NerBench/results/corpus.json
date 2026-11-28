@@ -1,0 +1,354 @@
+[
+  {
+    "Id": "p01",
+    "Text": "Da: Mario Bianchi <mario.bianchi@esempio.example>\nOggetto: Preventivo cantiere\n\nGentile Laura Verdi, in allegato il preventivo della Edilsud S.r.l. per il cantiere di via Roma."
+  },
+  {
+    "Id": "p02",
+    "Text": "Buongiorno, sono Giulia Ferrari della Tecnoservice SpA. Ci sentiamo domani con Paolo Neri per chiudere l'ordine."
+  },
+  {
+    "Id": "p03",
+    "Text": "Il contratto con Aurora Costruzioni è stato firmato dal dott. Luca Moretti il 12 marzo."
+  },
+  {
+    "Id": "p04",
+    "Text": "Cordiali saluti,\nFrancesca Romano\nResponsabile acquisti\nGruppo Alfa Logistica\nTel. 02 1234567"
+  },
+  {
+    "Id": "p05",
+    "Text": "L'ing. Andrea Colombo ha confermato che la Meccanica Brianza consegnerà i pezzi entro venerdì."
+  },
+  {
+    "Id": "p06",
+    "Text": "Ho parlato con Chiara De Luca dello Studio Associato Conti & Galli: la pratica è pronta per la firma."
+  },
+  {
+    "Id": "p07",
+    "Text": "ho sentito sara conti della ditta rossi impianti e conferma la visita di martedì."
+  },
+  {
+    "Id": "p08",
+    "Text": "Spett.le Cantina Valdelsa, alla c.a. di Roberto Esposito, trasmettiamo l'ordine di fornitura n. 4471."
+  },
+  {
+    "Id": "p09",
+    "Text": "Elena Gallo e Marco Fontana partecipano al corso organizzato da AreaJob nel mese di luglio."
+  },
+  {
+    "Id": "p10",
+    "Text": "Fattura n. 2026/118 intestata a Pellegrini Forniture S.n.c., referente Davide Pellegrini."
+  },
+  {
+    "Id": "p11",
+    "Text": "Hi John Smith, please find the contract with Northwind Traders attached. Best regards, Emily Clark."
+  },
+  {
+    "Id": "p12",
+    "Text": "Riunione con Silvia Marchetti, Antonio Greco e Federica Bruno presso Officine Meridionali giovedì alle 15."
+  },
+  {
+    "Id": "p13",
+    "Text": "Il signor Giuseppe Rizzi ha richiesto un rimborso alla Banca Popolare del Lago per un bonifico errato."
+  },
+  {
+    "Id": "p14",
+    "Text": "Inoltrato da Matteo Villa\nA: Alessia Sala\nOggetto: Rinnovo licenze Microsoft\n\nBuongiorno, vi giro la richiesta del fornitore."
+  },
+  {
+    "Id": "p15",
+    "Text": "La Fondazione Il Girasole ringrazia Anna Maria Longo per la generosa donazione ricevuta."
+  },
+  {
+    "Id": "p16",
+    "Text": "Attestato di frequenza rilasciato da Formazione Nord S.r.l. a Stefano Barbieri per il corso di sicurezza sul lavoro."
+  },
+  {
+    "Id": "q01",
+    "Text": "Ordine confermato con la Verdemare Logistica S.r.l.: referente Nicola Basile."
+  },
+  {
+    "Id": "q02",
+    "Text": "Irene Caputo lavora presso Lumen Digitale e segue il progetto dal mese scorso."
+  },
+  {
+    "Id": "q03",
+    "Text": "Spett.le Cartiera del Serio SpA, vi inviamo la conferma d'ordine firmata da Valerio Monti."
+  },
+  {
+    "Id": "q04",
+    "Text": "Vi presento Sofia Gentile, nuova responsabile commerciale di Orizzonte Energia."
+  },
+  {
+    "Id": "q05",
+    "Text": "Fattura emessa da Pasticceria Bellavista S.a.s. a Carla Fabbri per la fornitura di dicembre."
+  },
+  {
+    "Id": "q06",
+    "Text": "Il tecnico della Termoidraulica Vega passerà giovedì: chiedere di Enrico Sartori."
+  },
+  {
+    "Id": "q07",
+    "Text": "Dear Olivia Brown, the meeting with Harbor Lane Consulting is moved to Friday."
+  },
+  {
+    "Id": "q08",
+    "Text": "L'Associazione Amici del Parco ha invitato Tommaso Leone e Marta Piras all'assemblea."
+  },
+  {
+    "Id": "q09",
+    "Text": "Pratica seguita dallo Studio Legale Ferri & Partners, avvocato Michele Ferri."
+  },
+  {
+    "Id": "q10",
+    "Text": "Beatrice Conte della Nuova Serigrafia Adriatica S.r.l. chiede un campione del lotto 12."
+  },
+  {
+    "Id": "q11",
+    "Text": "Abbiamo ricevuto la candidatura di Simone Orlando tramite TalentBridge."
+  },
+  {
+    "Id": "q12",
+    "Text": "Il contratto di manutenzione con Ascensori Fenice scade a giugno, contattare Daniela Costa."
+  },
+  {
+    "Id": "q13",
+    "Text": "Ciao Luigi Mancini, ti inoltro il listino di Mobilificio Casalini S.n.c.."
+  },
+  {
+    "Id": "q14",
+    "Text": "Consegna presso Ortofrutta Delle Colline, c.a. Patrizia Vitale."
+  },
+  {
+    "Id": "q15",
+    "Text": "Giorgio Amato ha firmato per conto della Cooperativa Sociale Primavera."
+  },
+  {
+    "Id": "q16",
+    "Text": "Hello Daniel Wright, the invoice from Bluebird Analytics Ltd is attached."
+  },
+  {
+    "Id": "q17",
+    "Text": "Il preventivo di Tipografia Moderna è stato approvato da Roberta Neri."
+  },
+  {
+    "Id": "q18",
+    "Text": "Riunione con Fondazione Casa Serena: partecipano Alberto Ricci e Lucia Marini."
+  },
+  {
+    "Id": "q19",
+    "Text": "L'ordine n. 8812 della Calzaturificio Rondine S.p.A. è in ritardo, ne parlo con Fabio Cattaneo."
+  },
+  {
+    "Id": "q20",
+    "Text": "Elisa Parisi ci segnala un errore nel listino di Ferramenta Centrale."
+  },
+  {
+    "Id": "q21",
+    "Text": "Abbiamo incontrato Claudio Benedetti di Vinicola Montecchio alla fiera di Verona."
+  },
+  {
+    "Id": "q22",
+    "Text": "Scrivere a Monica Lombardi, Banca Territoriale del Piave, filiale di Treviso."
+  },
+  {
+    "Id": "q23",
+    "Text": "Il corriere Rapido Express S.r.l. ha consegnato il pacco a Gianni Pellegrino."
+  },
+  {
+    "Id": "q24",
+    "Text": "Studio Associato Rossetti ha trasmesso la dichiarazione di Valentina Sala."
+  },
+  {
+    "Id": "q25",
+    "Text": "Gentile Pietro Fiore, la Idrotecnica Sud S.r.l. conferma l'intervento di lunedì."
+  },
+  {
+    "Id": "q26",
+    "Text": "La mostra è organizzata da Galleria Palazzo Vecchio con Cristina Bellini come curatrice."
+  },
+  {
+    "Id": "q27",
+    "Text": "Hi Sarah Johnson, can you send the quote from Maple Street Printing again?"
+  },
+  {
+    "Id": "q28",
+    "Text": "Massimo Rinaldi è il nuovo amministratore della Immobiliare Colle Verde S.r.l. e di Servizi Casa."
+  },
+  {
+    "Id": "q29",
+    "Text": "Alessandro Gatti ha scritto a Veltro per chiedere una proroga."
+  },
+  {
+    "Id": "q30",
+    "Text": "Ordine n. 5521 per Officina Meccanica Tre Ponti, riferimento Lorenzo Silvestri."
+  },
+  {
+    "Id": "q31",
+    "Text": "La Blu Cielo Viaggi propone un pacchetto per Anna De Santis e famiglia."
+  },
+  {
+    "Id": "q32",
+    "Text": "Dear Michael Turner, please confirm the delivery to Greenfield Logistics by Monday."
+  },
+  {
+    "Id": "q33",
+    "Text": "ZETA Informatica S.r.l. ha aperto il ticket per conto di Giada Ferraro."
+  },
+  {
+    "Id": "q34",
+    "Text": "Il sig. Paolo Fiore è il titolare di Panificio Sant'Anna."
+  },
+  {
+    "Id": "q35",
+    "Text": "Contattare Gian Luca Bruni presso Rossi & Figli per il preventivo."
+  },
+  {
+    "Id": "q36",
+    "Text": "Tecnomar ha vinto la gara; il responsabile è Silvia Pagano."
+  },
+  {
+    "Id": "q37",
+    "Text": "Il corso è tenuto da Riccardo Marchi per conto di Accademia delle Arti."
+  },
+  {
+    "Id": "q38",
+    "Text": "Hi Laura Evans, the proposal from Redwood Software is ready for review."
+  },
+  {
+    "Id": "q39",
+    "Text": "Monte Rosa Editori ringrazia Federico Longhi per il manoscritto."
+  },
+  {
+    "Id": "q40",
+    "Text": "Fattura 2026/77 di Elettroimpianti Dalmasso S.n.c. intestata a Rita Gallo."
+  },
+  {
+    "Id": "q41",
+    "Text": "Appuntamento con Stefano Leoni e Marina Zanetti della Società Agricola La Quercia."
+  },
+  {
+    "Id": "q42",
+    "Text": "Il bonifico a favore di Novaterra è stato eseguito da Cesare Amoroso."
+  },
+  {
+    "Id": "q43",
+    "Text": "Ilaria Santoro lavora per Studio 21 e si occupa di grafica."
+  },
+  {
+    "Id": "q44",
+    "Text": "Spett.le Libreria Il Faro, in allegato l'ordine firmato da Giulio Rizzo."
+  },
+  {
+    "Id": "q45",
+    "Text": "La Pro Loco di Valmare ha invitato Chiara Sorrentino all'inaugurazione."
+  },
+  {
+    "Id": "q46",
+    "Text": "Hello Thomas Baker, the invoice from Ironwood Partners LLC is overdue."
+  },
+  {
+    "Id": "q47",
+    "Text": "Autofficina Delta conferma l'intervento di Mauro Bellucci per mercoledì."
+  },
+  {
+    "Id": "q48",
+    "Text": "Il referente di Cantieri Navali Liguri è Antonella Guidi."
+  },
+  {
+    "Id": "q49",
+    "Text": "Ho inoltrato la richiesta a Solaria e a Idroservice Nord S.r.l. tramite Franco Villani."
+  },
+  {
+    "Id": "q50",
+    "Text": "Noemi Carbone ha prenotato la sala presso Hotel Belvedere."
+  },
+  {
+    "Id": "q51",
+    "Text": "La Casa Editrice Orsa Maggiore e il Circolo Culturale Aurelio organizzano l'evento con Davide Moretti."
+  },
+  {
+    "Id": "q52",
+    "Text": "Dear Emma Collins, thank you for choosing Silverline Travel."
+  },
+  {
+    "Id": "q53",
+    "Text": "Pellicceria Montanari ha spedito il pacco a Luciana Ferri."
+  },
+  {
+    "Id": "q54",
+    "Text": "Bruno Esposito ha aperto una pratica con Credito Valdarno S.p.A.."
+  },
+  {
+    "Id": "q55",
+    "Text": "La riunione con Fornaci Riunite è fissata per giovedì: avvisare Elisabetta Greco."
+  },
+  {
+    "Id": "q56",
+    "Text": "Walter Conti segnala che Datacore Systems non risponde dal 3 novembre."
+  },
+  {
+    "Id": "n01",
+    "Text": "Buongiorno, confermo la riunione di lunedì alle 10. Porterò il materiale per la presentazione del progetto Aurora."
+  },
+  {
+    "Id": "n02",
+    "Text": "Il corso di sicurezza sul lavoro si svolgerà a gennaio e durerà 8 ore. Iscrizioni entro fine mese."
+  },
+  {
+    "Id": "n03",
+    "Text": "Promemoria: scadenza del pagamento il 30 novembre, importo 1.250,00 euro. Grazie."
+  },
+  {
+    "Id": "n04",
+    "Text": "Ordine ricevuto. La consegna avverrà in 3-5 giorni lavorativi. Per assistenza risponda a questa email."
+  },
+  {
+    "Id": "n05",
+    "Text": "Ho aggiornato il foglio di calcolo con i dati di ottobre e il grafico delle vendite per trimestre."
+  },
+  {
+    "Id": "n06",
+    "Text": "Vi informiamo che l'ufficio resterà chiuso a Pasqua e il giorno di Natale."
+  },
+  {
+    "Id": "n07",
+    "Text": "Allego il verbale dell'assemblea condominiale. Si discute di ascensore, tetto e giardino."
+  },
+  {
+    "Id": "n08",
+    "Text": "La nuova versione del software corregge alcuni errori e migliora le prestazioni generali."
+  },
+  {
+    "Id": "n09",
+    "Text": "Il progetto Atlante entra nella fase due. Aggiornamento previsto per il 15 dicembre."
+  },
+  {
+    "Id": "n10",
+    "Text": "Ricordo che il corso di aggiornamento Excel avanzato si terrà in aula Sirio, secondo piano."
+  },
+  {
+    "Id": "n11",
+    "Text": "La riunione del comitato Qualità è spostata a mercoledì; ordine del giorno in allegato."
+  },
+  {
+    "Id": "n12",
+    "Text": "Totale ordine 3.480,50 euro, pagamento a 30 giorni data fattura."
+  },
+  {
+    "Id": "n13",
+    "Text": "Il servizio Assistenza Clienti risponde dal lunedì al venerdì, dalle 9 alle 18."
+  },
+  {
+    "Id": "n14",
+    "Text": "Si prega di compilare il modulo Richiesta Ferie entro il 20 del mese."
+  },
+  {
+    "Id": "n15",
+    "Text": "Il piano Marketing 2027 prevede tre campagne: Primavera, Estate e Autunno."
+  },
+  {
+    "Id": "n16",
+    "Text": "Nuova release Orion disponibile: correzioni di stabilità e miglioramenti all'interfaccia."
+  }
+]

@@ -1,0 +1,8 @@
+{
+  "id": "compose.translate",
+  "version": 3,
+  "description": "Traduce un testo scritto dall'utente",
+  "system": "## Contesto\n{{ruolo}} L'utente sta scrivendo un'email e chiede di tradurre il testo nel blocco <testo>.\n\n## Compito\nTraduci il testo nella lingua indicata nel compito in fondo al messaggio.\n\n## Regole\n{{dati}}\n- Mantieni nomi, date, importi, elenchi e a capo.\n- Mantieni negazioni, condizioni e chi fa che cosa: una richiesta tradotta resta una richiesta.\n- Restituisci solo la traduzione, senza commenti, virgolette o titoli.\n\n## Stile e tono\nRegistro adatto a un'email di lavoro.\n\n## Formato della risposta\nSolo la traduzione.",
+  "userTemplate": "<testo>\n{text}\n</testo>\n\nCompito: traduci il testo sopra in {language}.",
+  "maxWords": 0
+}

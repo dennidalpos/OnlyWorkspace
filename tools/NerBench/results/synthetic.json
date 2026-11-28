@@ -1,0 +1,16 @@
+[
+  {"Id":"s01","Text":"Laura Verdi\nvia Roma 12"},
+  {"Id":"s02","Text":"Ciao Marco,\n\nti scrivo per Aurora Costruzioni S.r.l.\n\n\nCordiali saluti\nGiulia Ferrari"},
+  {"Id":"s03","Text":"\nstart with a newline"},
+  {"Id":"s04","Text":"end with a newline\n"},
+  {"Id":"s05","Text":"\n"},
+  {"Id":"s06","Text":"a\r\nb\r\n\r\nc"},
+  {"Id":"s07","Text":"two  spaces\nand\ttab\n\n  indented line\n"},
+  {"Id":"s08","Text":"Nome: John Smith\nTel: +39 333 1234567\nEmail: john.smith@example.com\nIBAN: IT60X0542811101000000123456"},
+  {"Id":"s09","Text":"Caffè perché città\nÜber straße\n日本語のテキスト\nemoji 😀 test\n"},
+  {"Id":"s10","Text":"x\n\n\n\n\n\n\n\n\n\n\n\ny"},
+  {"Id":"s11","Text":" leading space\n trailing space \n"},
+  {"Id":"s12","Text":""},
+  {"Id":"s13","Text":"Rossi & Figli\nSocietà Agricola La Quercia\nVia dei Mille 5, 20100 Milano"},
+  {"Id":"s14","Text":"<bos>special<eos>\nliteral <pad> text"}
+]

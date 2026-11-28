@@ -1,0 +1,8 @@
+{
+  "id": "web.failed",
+  "version": 1,
+  "description": "Nota al modello quando la ricerca web non è riuscita",
+  "system": "La ricerca web non è riuscita ({error}): rispondi con i soli dati di Outlook e dichiara all'inizio che mancano i riscontri web.",
+  "userTemplate": "",
+  "maxWords": 0
+}

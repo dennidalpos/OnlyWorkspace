@@ -1,0 +1,205 @@
+using System.Drawing;
+using System.Runtime.ExceptionServices;
+using System.Windows.Forms;
+using OnlyWorkspace.ConfigTool.Forms;
+
+using static OnlyWorkspace.Tests.FormFields;
+
+namespace OnlyWorkspace.Tests;
+
+[Collection(WinFormsCollection.Name)]
+public sealed class ArchiveSearchFormTests
+{
+    // #244: zero results suggest the next step; a later page with nothing left says so.
+    [Theory]
+    [InlineData(3, 0, "3 risultati nella pagina")]
+    [InlineData(0, 0, "Nessun risultato: prova con meno parole o togli un filtro")]
+    [InlineData(0, 50, "Nessun altro risultato")]
+    public void ResultCount_SuggestsTheNextStep(int count, int offset, string expected) =>
+        Assert.Equal(expected, ArchiveSearchForm.ResultCount(count, offset));
+
+    // #244: «Recupero annullato» belongs to Annulla of the retrieval only; a search shows «in corso» while it runs.
+    [Fact]
+    public void SearchAndRetrievalStatusTexts_AreDistinct()
+    {
+        string source = File.ReadAllText(Path.Combine(TestBuildPaths.RepositoryRoot, "src", "OnlyWorkspace.ConfigTool", "Forms", "ArchiveSearchForm.cs"));
+        string guard = source.Substring(source.IndexOf("private async Task GuardAsync", StringComparison.Ordinal));
+        guard = guard.Substring(0, guard.IndexOf("private async Task RefreshAsync", StringComparison.Ordinal));
+        Assert.DoesNotContain("Recupero annullato", guard);
+        Assert.Contains("_retrievalCancelled ? \"Recupero annullato.\"", source);
+        Assert.Contains("_searchStatus.Text = \"Ricerca in corso…\";", source);
+    }
+
+    [Theory]
+    [InlineData(1.0f)]
+    [InlineData(1.25f)]
+    [InlineData(1.5f)]
+    public void ArchiveWindow_SeparatesSearchStatusAndMaintenance_AtScaledFonts(float scale)
+    {
+        Exception? error = null;
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                using var form = new ArchiveSearchForm(false, IsolatedArchive.NewPath()) { Size = new Size(1000, 650), Font = new Font("Segoe UI", 9 * scale) };
+                form.Show();
+                Application.DoEvents();
+                var tabs = Assert.Single(Descendants(form).OfType<TabControl>());
+                Assert.Equal(new[] { "Ricerca", "Stato e sincronizzazione", "Manutenzione" },
+                    tabs.TabPages.Cast<TabPage>().Select(page => page.Text));
+                // The pages are switched from a bar of focusable section buttons.
+                var sections = Descendants(form).OfType<Button>().Where(b => !Descendants(tabs).Contains(b) && b.Text is "Ricerca" or "Stato e sincronizzazione" or "Manutenzione").ToList();
+                Assert.Equal(3, sections.Count);
+                // One Tab stop, on the selected section; arrows move between sections.
+                Assert.Equal(new[] { true, false, false }, sections.Select(b => b.TabStop));
+                sections[2].PerformClick();
+                Assert.Equal(2, tabs.SelectedIndex);
+                Assert.Equal(new[] { false, false, true }, sections.Select(b => b.TabStop));
+                Assert.Contains(Descendants(tabs.TabPages[0]).OfType<SplitContainer>(), split =>
+                    split.Orientation == Orientation.Horizontal && split.Panel1.Controls.Count > 0 && split.Panel2.Controls.Count > 0);
+                Assert.Contains(Descendants(tabs.TabPages[0]).OfType<Button>(), button => button.Text == "Cerca");
+                Assert.DoesNotContain(Descendants(tabs.TabPages[0]).OfType<Button>(), button => button.Text == "Mostra scheda");
+                Assert.DoesNotContain(Descendants(tabs.TabPages[0]).OfType<Button>(), button => button.Text == "Rigenera scheda");
+                Assert.Contains(Descendants(tabs.TabPages[1]).OfType<Button>(), button => button.Text == "Aggiorna da Outlook");
+                Assert.Contains(Descendants(tabs.TabPages[1]).OfType<Button>(), button => button.Text == "Pausa");
+                Assert.Contains(Descendants(tabs.TabPages[2]).OfType<Button>(), button => button.Text == "Compatta database");
+                foreach (TabPage page in tabs.TabPages) { tabs.SelectTab(page); Assert.Same(page, tabs.SelectedTab); }
+                tabs.SelectTab(0);
+                Application.DoEvents();
+                using var bitmap = new Bitmap(form.Width, form.Height);
+                form.DrawToBitmap(bitmap, form.ClientRectangle);
+                var split = Assert.Single(Descendants(tabs.TabPages[0]).OfType<SplitContainer>());
+                Assert.True(split.Height > 180, $"Search results and preview need room below the commands (height {split.Height}).");
+                Assert.True(split.Panel1.Height > 70 && split.Panel2.Height > 70, "Both search panes must remain visible.");
+                form.Size = new Size(680, 480);
+                Application.DoEvents();
+                Assert.True(split.Panel1.Height > 45 && split.Panel2.Height > 45, "Both panes must remain visible at the minimum window size.");
+                // #253: at the minimum size no header word is cut (headers wrap between words); the grid scrolls instead of cutting «Restano» to «itano».
+                tabs.SelectTab(1);
+                Application.DoEvents();
+                foreach (var grid in new[] { Field<DataGridView>(form, "_stores"), Field<DataGridView>(form, "_metrics") })
+                {
+                    var font = grid.ColumnHeadersDefaultCellStyle.Font ?? grid.Font;
+                    foreach (DataGridViewColumn column in grid.Columns)
+                        Assert.True(column.Width >= ArchiveSearchForm.HeaderWordWidth(column.HeaderText, font),
+                            $"Header «{column.HeaderText}» cut at the minimum size ({column.Width} px).");
+                }
+                tabs.SelectTab(0);
+                Application.DoEvents();
+                var fields = Descendants(form).Where(c => c.Name.StartsWith("Fact", StringComparison.Ordinal)).ToDictionary(c => c.Name);
+                fields["FactAmountMin"].Text = "1.000,00"; fields["FactAmountMax"].Text = "1000.01"; fields["FactCurrency"].Text = "eur";
+                var from = (DateFilterBox)fields["FactDueFrom"]; from.Value = new DateTime(2026, 11, 1); from.Checked = true;
+                var to = (DateFilterBox)fields["FactDueTo"]; to.Value = new DateTime(2026, 11, 30); to.Checked = true;
+                var query = form.CreateQuery();
+                Assert.Equal(2, query.FactFilters.Count);
+                Assert.Equal(1000m, query.FactFilters[0].AmountMin); Assert.Equal(1000.01m, query.FactFilters[0].AmountMax); Assert.Equal("EUR", query.FactFilters[0].Currency);
+                Assert.Equal(OnlyWorkspace.Core.Archive.ArchiveFactKind.Deadline, query.FactFilters[1].Kind);
+                Assert.Equal("2026-11-01", query.FactFilters[1].DateFrom); Assert.Equal("2026-11-30", query.FactFilters[1].DateTo);
+                var text = Field<Control>(form, "_query");
+                text.Text = "ordine ORD-2026/118";
+                Assert.Equal(3, form.CreateQuery().FactFilters.Count);
+                Assert.Equal("ORD-2026/118", form.CreateQuery().FactFilters[2].Value);
+                text.Text = "2026/118"; Assert.Equal("2026/118", form.CreateQuery().Text);
+                fields["FactAmountMin"].Text = "1.000"; Assert.Throws<ArgumentException>(() => form.CreateQuery());
+                fields["FactAmountMin"].Text = "1000"; from.Value = to.Value.AddDays(1); Assert.Throws<ArgumentException>(() => form.CreateQuery());
+                from.Value = new DateTime(2026, 11, 1);
+                ((Control)fields["FactDueFrom"]).Controls.Cast<Control>().SelectMany(Descendants).OfType<TextBox>().Single().Text = "non una data";
+                Assert.Throws<ArgumentException>(() => form.CreateQuery());
+            }
+            catch (Exception ex) { error = ex; }
+        });
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        Assert.True(thread.Join(TimeSpan.FromSeconds(10)));
+        if (error != null) ExceptionDispatchInfo.Capture(error).Throw();
+    }
+
+    // #260: mailbox name and state wrap (no ellipsis) at 1020x720, 100% and 150%; optional synthetic capture of the Stato page.
+    [Theory]
+    [InlineData(1.0f)]
+    [InlineData(1.5f)]
+    public void StatusGrid_WrapsNameAndState_At1020x720(float scale)
+    {
+        Exception? error = null;
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                using var form = new ArchiveSearchForm(false, IsolatedArchive.NewPath()) { StartPosition = FormStartPosition.Manual, Location = new Point(-4000, -4000), Size = new Size(1020, 720), Font = new Font("Segoe UI", 9 * scale) };
+                form.Show();
+                Application.DoEvents();
+                var tabs = Assert.Single(Descendants(form).OfType<TabControl>());
+                tabs.SelectTab(1);
+                var stores = Field<DataGridView>(form, "_stores");
+                stores.Rows.Add("Archivio sintetico principale di prova Utente Esempio", "Inventario in corso", "1.200", "80%", "240", "10/12", "5/6", "16/11/2026 09:00", "");
+                Application.DoEvents();
+                Assert.Equal(DataGridViewTriState.True, stores.Columns[0].DefaultCellStyle.WrapMode);
+                Assert.Equal(DataGridViewTriState.True, stores.Columns[1].DefaultCellStyle.WrapMode);
+                var dir = Environment.GetEnvironmentVariable("ONLYWORKSPACE_SHOT_DIR");
+                if (!string.IsNullOrEmpty(dir))
+                {
+                    using var bitmap = new Bitmap(form.Width, form.Height);
+                    form.DrawToBitmap(bitmap, form.ClientRectangle);
+                    bitmap.Save(Path.Combine(dir, $"archive-status-1020x720-{(int)(scale * 100)}.png"), System.Drawing.Imaging.ImageFormat.Png);
+                }
+            }
+            catch (Exception ex) { error = ex; }
+        });
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        Assert.True(thread.Join(TimeSpan.FromSeconds(10)));
+        if (error != null) ExceptionDispatchInfo.Capture(error).Throw();
+    }
+
+    /// <summary>INT01: invoice filters are folded away, a hint tells when one is set, results get the height, compacting is not red.</summary>
+    [Fact]
+    public void ArchiveWindow_FoldsInvoiceFilters_GivesResultsTheHeight_AndKeepsCompactNeutral()
+    {
+        Exception? error = null;
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                using var form = new ArchiveSearchForm(false, IsolatedArchive.NewPath()) { StartPosition = FormStartPosition.Manual, Location = new Point(-4000, -4000) };
+                form.Show();
+                Application.DoEvents();
+                var factBar = Descendants(form).Single(c => c.Name == "FactFilters");
+                var toggle = Descendants(form).OfType<Button>().Single(b => b.Name == "FactFiltersToggle");
+                Assert.False(factBar.Visible, "Filters on amounts and due dates start folded.");
+                Assert.EndsWith("▸", toggle.Text);
+                toggle.PerformClick();
+                Assert.True(factBar.Visible);
+                Assert.EndsWith("▾", toggle.Text);
+                Assert.Equal("Espanso", toggle.AccessibleDescription);
+                // Opened filters push the rest down: nothing is cut or covered by the note below.
+                Application.DoEvents();
+                var note = Descendants(form).OfType<Label>().Single(l => l.Text.StartsWith("Cerca nell'indice anche a Outlook chiuso", StringComparison.Ordinal));
+                int factBottom = factBar.RectangleToScreen(new Rectangle(Point.Empty, factBar.Size)).Bottom;
+                Assert.True(factBar.Controls.Cast<Control>().All(c => c.Bottom <= factBar.Height), "Every filter field fits inside its bar.");
+                Assert.True(note.RectangleToScreen(Rectangle.Empty).Top >= factBottom, "The note starts below the opened filters.");
+                toggle.PerformClick();
+                Descendants(form).Single(c => c.Name == "FactCurrency").Text = "EUR";
+                Assert.Contains("(attivi)", toggle.Text);
+
+                var split = Assert.Single(Descendants(form).OfType<SplitContainer>());
+                Assert.True(split.Panel1.Height > split.Panel2.Height, $"Results {split.Panel1.Height} px vs preview {split.Panel2.Height} px.");
+                var compact = Descendants(form).OfType<FlatButton>().Single(b => b.Text == "Compatta database");
+                Assert.NotEqual(ButtonKind.Danger, compact.Kind);
+            }
+            catch (Exception ex) { error = ex; }
+        });
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        Assert.True(thread.Join(TimeSpan.FromSeconds(10)));
+        if (error != null) ExceptionDispatchInfo.Capture(error).Throw();
+    }
+
+    private static IEnumerable<Control> Descendants(Control root)
+    {
+        foreach (Control child in root.Controls)
+        {
+            yield return child;
+            foreach (Control nested in Descendants(child)) yield return nested;
+        }
+    }
+}

@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "defaultProfile": "compatible",
+  "profiles": [
+    {
+      "id": "compatible",
+      "displayName": "Servizio compatibile OpenAI",
+      "type": "openai-compatible",
+      "baseUrl": "https://servizio.example.invalid/v1",
+      "model": "nome-del-modello",
+      "authType": "bearer",
+      "secretRef": "profile_compatible_token",
+      "external": true,
+      "webSearchEnabled": false
+    }
+  ]
+}

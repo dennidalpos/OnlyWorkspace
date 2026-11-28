@@ -1,0 +1,46 @@
+## Visual Studio / .NET
+.vs/
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+## Build & Artifacts
+artifacts/
+publish/
+dist/
+tmp/
+logs/
+
+## OS & Secrets
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.bin
+*.owbak
+*.pfx
+*.p12
+*.pem
+*.key
+*.snk
+.env
+.env.*
+.local-secrets/
+TestResults/
+
+## Local tooling (workstation-specific)
+.secondbrain/
+.playwright-cli/
+
+## Local NER bench (models are downloaded, never committed)
+tools/NerBench/models/
+tools/NerBench/.venv/
+tools/NerBench/results/*.tmp
+
+# Local agent files
+.claude/settings.local.json
+.claude/worktrees/
+CLAUDE.local.md
